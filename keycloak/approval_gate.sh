@@ -15,15 +15,19 @@ ROLE=metaos-user
 
 : "${KEYCLOAK_ADMIN_USERNAME:?}" "${KEYCLOAK_ADMIN_PASSWORD:?}"
 
-TOKEN=$(curl -sS --fail-with-body "$KC/realms/master/protocol/openid-connect/token" \
+# Keycloak's own words when it refuses, which would otherwise go into jq or a variable and be lost
+signin=$(curl -sS --fail-with-body "$KC/realms/master/protocol/openid-connect/token" \
   -d client_id=admin-cli -d grant_type=password \
-  --data-urlencode "username=$KEYCLOAK_ADMIN_USERNAME" --data-urlencode "password=$KEYCLOAK_ADMIN_PASSWORD" |
-  jq -r .access_token)
+  --data-urlencode "username=$KEYCLOAK_ADMIN_USERNAME" --data-urlencode "password=$KEYCLOAK_ADMIN_PASSWORD") ||
+  { echo "Keycloak refused $KEYCLOAK_ADMIN_USERNAME's sign-in to realm master: $signin" >&2; exit 1; }
+TOKEN=$(jq -r .access_token <<<"$signin")
 
 # api METHOD PATH [JSON] - PATH is relative to the realm's admin API
 api() {
-  curl -sS --fail-with-body -X "$1" -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-    "$KC/admin/realms/$REALM$2" ${3:+-d "$3"}
+  local response
+  response=$(curl -sS --fail-with-body -X "$1" -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+    "$KC/admin/realms/$REALM$2" ${3:+-d "$3"}) || { echo "Keycloak refused $1 $2: $response" >&2; return 1; }
+  echo "$response"
 }
 
 # approval_gate FLOW PROVIDER - the role and the post-login flow FLOW (e.g. discord-post-login), unless they exist
