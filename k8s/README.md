@@ -95,7 +95,9 @@ Then point an MCP client at `https://metaos.ogrodje.si/mcp`, e.g.
   for ChatGPT's. `keycloak/trusted_hosts.sh` adds them to a realm imported before; another hosted client needs its
   host added there.
 - **Actions → Keycloak → Run workflow** (`.github/workflows/keycloak.yml`) runs `trusted_hosts.sh` or `sessions.sh`
-  against production's realm, through a port-forward and as `admin` with the password from `keycloak-secret`.
+  against production's realm, through a port-forward. It signs in with the repo secrets `KEYCLOAK_ADMIN_USERNAME` and
+  `KEYCLOAK_ADMIN_PASSWORD`, or without them as `admin` with `keycloak-secret`'s password, which Keycloak only uses to
+  create the first admin.
 - Every deploy rolls Keycloak too, since both images get the same tag. It's a rolling update, so the old pod serves
   until the new one is ready, and for 10 s after it's told to stop, until ingress-nginx has dropped it.
 - The registry isn't cleaned up: tags are commit hashes, which don't sort by age, so boo-run's keep-the-newest-three

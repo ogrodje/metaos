@@ -20,9 +20,20 @@ The diagram is drawn in [`architecture.svg`](architecture.svg); `just architectu
 
 ## Installing MCP
 
+Claude Code (then `/mcp` → ogrodje → Authenticate):
+
 ```bash
-claude mcp add --transport http ogrodje https://metaos.ogrodje.si/mcp
+claude mcp add --transport http --scope user ogrodje https://metaos.ogrodje.si/mcp
 ```
+
+Codex (CLI, IDE extension and app; signs in right away, `codex mcp login ogrodje` signs in again):
+
+```bash
+codex mcp add ogrodje --url https://metaos.ogrodje.si/mcp
+```
+
+ChatGPT, on chatgpt.com in a browser: Plugins → Add → Add custom MCP server, with `https://metaos.ogrodje.si/mcp`,
+OAuth and Dynamic Client Registration (DCR). The front-end's Usage page (`/usage`) has the steps for each.
 
 ## Development && Infrastructure notes
 

@@ -81,7 +81,7 @@ const toolCount = TOOL_GROUPS.reduce((n, group) => n + group.tools.length, 0)
               <p class="title">Add MetaOS to Codex</p>
               <p class="details">
                 In a terminal. It goes into your own <code>~/.codex/config.toml</code>, so it's in all your projects, in
-                the CLI and in Codex's IDE extension.
+                the CLI, Codex's IDE extension and its app.
               </p>
               <CopyCommand :command="codexCommand"/>
             </div>
@@ -91,8 +91,8 @@ const toolCount = TOOL_GROUPS.reduce((n, group) => n + group.tools.length, 0)
             <div>
               <p class="title">Sign in</p>
               <p class="details">
-                Your browser opens MetaOS's sign-in, where you sign in with Discord or Google. Codex keeps the sign-in
-                and refreshes it as it needs to.
+                Adding it opens MetaOS's sign-in in your browser, where you sign in with Discord or Google. Codex keeps
+                the sign-in and refreshes it; to sign in again, e.g. once you're approved:
               </p>
               <CopyCommand :command="codexLogin"/>
             </div>
@@ -105,11 +105,12 @@ const toolCount = TOOL_GROUPS.reduce((n, group) => n + group.tools.length, 0)
             <div>
               <p class="title">Add MetaOS to ChatGPT</p>
               <p class="details">
-                On chatgpt.com, in <strong>Settings → Apps → Advanced settings</strong>, turn on <strong>Developer
-                mode</strong>, then choose <strong>Create app</strong>. Name it <strong>Ogrodje</strong>, with
-                <code>{{ mcpUrl }}</code> as its MCP server URL and <strong>OAuth</strong> as its authentication. Under
-                the OAuth settings, keep <strong>Dynamic Client Registration (DCR)</strong>: ChatGPT's note that CIMD is
-                unavailable is expected.
+                On chatgpt.com, in a browser: ChatGPT's apps can't add MCP servers. Under <strong>Plugins</strong>,
+                choose <strong>Add → Add custom MCP server</strong>. Name it <strong>Ogrodje</strong>, with
+                <code>{{ mcpUrl }}</code> as its URL and <strong>OAuth</strong> as its authentication. In the OAuth
+                settings, keep <strong>Dynamic Client Registration (DCR)</strong>; that CIMD is unavailable is expected.
+                Where there's no Plugins, turn on <strong>Developer mode</strong> in <strong>Settings → Apps → Advanced
+                settings</strong> and create it in <strong>Apps</strong>. Which plans may add one is up to OpenAI.
               </p>
             </div>
           </li>
@@ -119,7 +120,7 @@ const toolCount = TOOL_GROUPS.reduce((n, group) => n + group.tools.length, 0)
               <p class="title">Sign in</p>
               <p class="details">
                 Creating it opens MetaOS's sign-in, where you sign in with Discord or Google and allow ChatGPT access.
-                In a chat, pick <strong>Ogrodje</strong> from <strong>+ → More</strong> for ChatGPT to use it.
+                In a new chat, type <strong>@</strong> and pick <strong>Ogrodje</strong> for ChatGPT to use it.
               </p>
             </div>
           </li>

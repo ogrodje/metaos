@@ -3,8 +3,10 @@ name: Keycloak
 # Runs one of the keycloak/ scripts against production's realm, for changes metaos-realm.json can't make there, as
 # Keycloak imports it only once. Started by hand: Actions → Keycloak → Run workflow.
 #
-# Reaches Keycloak through a port-forward over Tailscale, as admin with the password from keycloak-secret, so it needs
-# only the deploy's secrets (deploy.yml): TS_OAUTH_CLIENT_ID, TS_OAUTH_SECRET and KUBECONFIG.
+# Reaches Keycloak through a port-forward over Tailscale, with the deploy's secrets (deploy.yml): TS_OAUTH_CLIENT_ID,
+# TS_OAUTH_SECRET and KUBECONFIG. It signs in to realm master as KEYCLOAK_ADMIN_USERNAME with KEYCLOAK_ADMIN_PASSWORD,
+# repo or environment secrets; without them as admin with keycloak-secret's password, which only creates the first
+# admin, so it's wrong once that admin's password has been changed.
 
 on:
   workflow_dispatch:
@@ -47,9 +49,15 @@ jobs:
       - name: Run ${{ inputs.script || 'trusted_hosts.sh' }}
         env:
           SCRIPT: ${{ inputs.script || 'trusted_hosts.sh' }}
+          KEYCLOAK_ADMIN_USERNAME: ${{ secrets.KEYCLOAK_ADMIN_USERNAME || 'admin' }}
+          KEYCLOAK_ADMIN_PASSWORD: ${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}
         run: |
-          password=$(kubectl -n metaos-prod get secret keycloak-secret -o jsonpath='{.data.keycloak_admin_password}' | base64 -d)
-          echo "::add-mask::$password"
+          if [ -z "$KEYCLOAK_ADMIN_PASSWORD" ]; then
+            KEYCLOAK_ADMIN_PASSWORD=$(kubectl -n metaos-prod get secret keycloak-secret \
+              -o jsonpath='{.data.keycloak_admin_password}' | base64 -d)
+            echo "::add-mask::$KEYCLOAK_ADMIN_PASSWORD"
+            export KEYCLOAK_ADMIN_PASSWORD
+          fi
 
           kubectl -n metaos-prod port-forward svc/keycloak 8180:80 &
           forward=$!
@@ -59,5 +67,4 @@ jobs:
             sleep 1
           done
 
-          KEYCLOAK_URL=http://localhost:8180 KEYCLOAK_ADMIN_USERNAME=admin KEYCLOAK_ADMIN_PASSWORD="$password" \
-            "keycloak/$SCRIPT"
+          KEYCLOAK_URL=http://localhost:8180 "keycloak/$SCRIPT"
