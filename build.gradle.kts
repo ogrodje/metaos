@@ -22,6 +22,16 @@ dependencyManagement {
     imports {
         mavenBom("org.springframework.ai:spring-ai-bom:2.0.1")
     }
+    // MCP's Java SDK 2.1 rather than Spring AI 2.0.1's 2.0, which answers a method it doesn't know with an HTTP 500:
+    // ChatGPT starts with the newer revision's server/discover and gave up on that, where "method not found" makes it
+    // fall back to initialize (SecurityTest)
+    dependencies {
+        dependencySet("io.modelcontextprotocol.sdk:2.1.0") {
+            entry("mcp")
+            entry("mcp-core")
+            entry("mcp-json-jackson3")
+        }
+    }
 }
 
 dependencies {

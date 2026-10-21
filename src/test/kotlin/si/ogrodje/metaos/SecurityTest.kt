@@ -74,6 +74,22 @@ class SecurityTest @Autowired constructor(private val mvc: MockMvc, private val 
         }
     }
 
+    // ChatGPT starts with server/discover, of MCP's newer revision, and falls back to initialize when told the method
+    // isn't known - as a JSON-RPC error; it gave up on the HTTP 500 that MCP's SDK 2.0 answered (build.gradle.kts)
+    @Test
+    fun `answers a method it doesn't know with method not found`() {
+        mvc.post("/mcp") {
+            contentType = MediaType.APPLICATION_JSON
+            accept(MediaType.APPLICATION_JSON, MediaType.TEXT_EVENT_STREAM)
+            content = """{"jsonrpc":"2.0","id":7,"method":"server/discover","params":{}}"""
+            with(jwt().jwt { it.claim("realm_access", APPROVED).claim("scope", MCP_SCOPE) })
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.id") { value(7) }
+            jsonPath("$.error.code") { value(-32601) }
+        }
+    }
+
     // Keycloak can issue the scope to more than approved users (Security.kt, APPROVED_ROLE)
     @Test
     fun `rejects the MCP scope without approval`() {
