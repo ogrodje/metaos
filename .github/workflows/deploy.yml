@@ -13,6 +13,13 @@ on:
     branches: [ master ]
   workflow_dispatch:
 
+# One run at a time, so the last commit is what's deployed: runs that overlapped raced to `kubectl apply`, and an older
+# one finishing last would roll production back. A run waits for the one in progress, and a newer one replaces it while
+# it waits; the one in progress isn't cancelled, which could stop it halfway through a rollout.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
 env:
   REGISTRY: registry.folk-decibel.ts.net
   APP_IMAGE: registry.folk-decibel.ts.net/metaos/metaos

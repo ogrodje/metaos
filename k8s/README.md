@@ -28,7 +28,8 @@ serves traffic; those two are public, but only answer UP or DOWN.
 ## Day to day
 
 Pushing to `master` runs `.github/workflows/deploy.yml`: tests, builds and pushes both images, applies `k8s/base` and
-smoke-tests the public URLs. By hand (needs Tailscale up and `KUBECONFIG` pointing at `ogrodje-one-config`):
+smoke-tests the public URLs. One run at a time: a push while one runs waits for it, and only the newest of those waiting
+runs. By hand (needs Tailscale up and `KUBECONFIG` pointing at `ogrodje-one-config`):
 
 ```bash
 just push        # boot jar, both images (linux/amd64), push, point kustomization.yaml at the tag
