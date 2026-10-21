@@ -12,6 +12,8 @@ on:
       script:
         description: Script to run (each is idempotent)
         type: choice
+        # Runs started without inputs (the GitHub app, the API) get this rather than nothing
+        default: trusted_hosts.sh
         options:
           - trusted_hosts.sh
           - sessions.sh
@@ -42,9 +44,9 @@ jobs:
           chmod 600 ~/.kube/config
 
       # KC_HOSTNAME pins the public URL, so tokens got through the port-forward are the same as through the ingress
-      - name: Run ${{ inputs.script }}
+      - name: Run ${{ inputs.script || 'trusted_hosts.sh' }}
         env:
-          SCRIPT: ${{ inputs.script }}
+          SCRIPT: ${{ inputs.script || 'trusted_hosts.sh' }}
         run: |
           password=$(kubectl -n metaos-prod get secret keycloak-secret -o jsonpath='{.data.keycloak_admin_password}' | base64 -d)
           echo "::add-mask::$password"
