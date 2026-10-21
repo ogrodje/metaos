@@ -47,11 +47,19 @@ class PeopleMCP(
     private val episodes: EpisodesRepository,
 ) {
 
-    @McpTool(name = "list_people", description = "List all people")
+    @McpTool(
+        name = "list_people",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        description = "List all people"
+    )
     fun list(): List<PersonDto> = people.findAll().map { it.toDto() }
 
     @Transactional
-    @McpTool(name = "create_person", description = "Create a new person")
+    @McpTool(
+        name = "create_person",
+        annotations = McpTool.McpAnnotations(destructiveHint = false),
+        description = "Create a new person"
+    )
     fun create(
         @McpToolParam(description = "Full name") name: String,
         @McpToolParam(description = "Unique email address (case-insensitive)", required = false) email: String?,
@@ -63,6 +71,7 @@ class PeopleMCP(
     @Transactional
     @McpTool(
         name = "set_person_email",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
         description = "Set or clear a person's email. A signed-in user with the same verified email is linked to this person"
     )
     fun setEmail(
@@ -78,7 +87,11 @@ class PeopleMCP(
     }
 
     @Transactional
-    @McpTool(name = "set_person_bio", description = "Set or clear the line about who a person is, e.g. their role and company")
+    @McpTool(
+        name = "set_person_bio",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        description = "Set or clear the line about who a person is, e.g. their role and company"
+    )
     fun setBio(
         @McpToolParam(description = "Person ID") personId: UUID,
         @McpToolParam(description = "Bio, e.g. \"CTO @ Koofr\"; omit or empty to clear", required = false) bio: String?,
@@ -91,6 +104,7 @@ class PeopleMCP(
     @Transactional
     @McpTool(
         name = "set_person_link",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
         description = "Set or clear where a person can be found online: their homepage, LinkedIn, Twitter/X, Instagram or Facebook"
     )
     fun setLink(
@@ -106,6 +120,7 @@ class PeopleMCP(
     @Transactional
     @McpTool(
         name = "delete_person",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
         description = "Soft-delete a person. They drop off their episodes, and the episodes they recommended, until " +
             "they are restored"
     )
@@ -119,6 +134,7 @@ class PeopleMCP(
     @Transactional
     @McpTool(
         name = "restore_person",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
         description = "Bring back a soft-deleted person, with their roles on episodes and the episodes they recommended " +
             "(unless someone else has been credited with one since). With another email, or none, if theirs has " +
             "been taken since"
@@ -149,11 +165,19 @@ class PeopleMCP(
     }
 
     @Transactional(readOnly = true)
-    @McpTool(name = "whoami", description = "Show the signed-in user and the person linked to them by verified email")
+    @McpTool(
+        name = "whoami",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        description = "Show the signed-in user and the person linked to them by verified email"
+    )
     fun whoami(): CurrentUserDto = checkNotNull(currentJwt()) { "Not signed in" }.toCurrentUserDto(people)
 
     @Transactional(readOnly = true)
-    @McpTool(name = "my_episodes", description = "List the episodes the signed-in user is on and their roles in each, latest first")
+    @McpTool(
+        name = "my_episodes",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        description = "List the episodes the signed-in user is on and their roles in each, latest first"
+    )
     fun myEpisodes(): List<PersonEpisodeDto> =
         episodePeople.findByPersonWithEpisode(signedInPerson()).toPersonEpisodeDtos()
 
@@ -164,7 +188,11 @@ class PeopleMCP(
     }
 
     @Transactional(readOnly = true)
-    @McpTool(name = "list_person_episodes", description = "List the episodes a person is on and their roles in each, latest first")
+    @McpTool(
+        name = "list_person_episodes",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        description = "List the episodes a person is on and their roles in each, latest first"
+    )
     fun listEpisodes(@McpToolParam(description = "Person ID") personId: UUID): List<PersonEpisodeDto> {
         val person = requireNotNull(people.findByIdOrNull(personId)) { "Person $personId not found" }
         return episodePeople.findByPersonWithEpisode(person).toPersonEpisodeDtos()

@@ -43,12 +43,17 @@ class DropboxMCP(private val dropbox: Dropbox) {
 
     @McpTool(
         name = "list_dropbox_places",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
         description = "List the folders shared with Ogrodje's bot in Dropbox, e.g. Artwork - MetaOS works only in these - and " +
             "whether it may change them"
     )
     fun places(): List<DropboxPlace> = dropbox.places()
 
-    @McpTool(name = "list_dropbox_folder", description = "List the files and folders directly in a Dropbox folder")
+    @McpTool(
+        name = "list_dropbox_folder",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        description = "List the files and folders directly in a Dropbox folder"
+    )
     fun list(
         @McpToolParam(description = DROPBOX_PLACE) place: String,
         @McpToolParam(description = "$DROPBOX_PATH; / when omitted", required = false) path: String?,
@@ -56,6 +61,7 @@ class DropboxMCP(private val dropbox: Dropbox) {
 
     @McpTool(
         name = "search_dropbox",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
         description = "Search the folders shared with Ogrodje's bot in Dropbox for files and folders by name, most relevant " +
             "first, at most $SEARCH_RESULTS"
     )
@@ -69,6 +75,7 @@ class DropboxMCP(private val dropbox: Dropbox) {
 
     @McpTool(
         name = "read_dropbox_file",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
         description = "Read a text file (txt, md, csv, json, srt, ...) from Dropbox, at most ${MAX_READ / 1024} kB of it. " +
             "view_dropbox_image shows pictures; for other files, list_dropbox_folder tells their size and type"
     )
@@ -85,6 +92,7 @@ class DropboxMCP(private val dropbox: Dropbox) {
     // An image, as MCP clients show them to their model, rather than JSON
     @McpTool(
         name = "view_dropbox_image",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
         description = "Look at a picture in Dropbox, e.g. artwork for an episode: a JPEG of it, at most 1024 × 768 " +
             "(jpg, png, gif, webp, tiff or bmp, up to 20 MB)"
     )
@@ -102,6 +110,7 @@ class DropboxMCP(private val dropbox: Dropbox) {
 
     @McpTool(
         name = "upload_dropbox_file",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
         description = "Upload a file into a Dropbox folder: text, or base64 for anything else, at most ${MAX_UPLOAD / 1024 / 1024} MB. " +
             "A file of the same name is only replaced with overwrite, and Dropbox keeps the old one as a version"
     )
@@ -120,7 +129,11 @@ class DropboxMCP(private val dropbox: Dropbox) {
         return dropbox.upload(placeId, dropboxPath(folder), name, bytes, overwrite == true)
     }
 
-    @McpTool(name = "create_dropbox_folder", description = "Create a folder in Dropbox")
+    @McpTool(
+        name = "create_dropbox_folder",
+        annotations = McpTool.McpAnnotations(destructiveHint = false),
+        description = "Create a folder in Dropbox"
+    )
     fun createFolder(
         @McpToolParam(description = DROPBOX_PLACE) place: String,
         @McpToolParam(description = "Folder to create it in; / when omitted", required = false) parent: String?,
@@ -135,6 +148,7 @@ class DropboxMCP(private val dropbox: Dropbox) {
 
     @McpTool(
         name = "move_dropbox_file",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
         description = "Move or rename a file or folder in Dropbox, also into another shared folder. Never replaces what's at " +
             "the new path"
     )

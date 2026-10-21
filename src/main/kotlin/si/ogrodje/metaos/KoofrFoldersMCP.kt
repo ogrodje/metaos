@@ -56,6 +56,7 @@ class KoofrFoldersMCP(
 
     @McpTool(
         name = "list_episode_koofr_folders",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
         description = "List the Koofr folders of an episode: those linked to the episode and those linked to its recording " +
             "session; linkedTo says which. Folders moved outside MetaOS are listed as missing"
     )
@@ -72,6 +73,7 @@ class KoofrFoldersMCP(
     @Transactional
     @McpTool(
         name = "link_episode_koofr_folder",
+        annotations = McpTool.McpAnnotations(destructiveHint = false),
         description = "Link a Koofr folder to an episode it is about, e.g. the folder with its recordings. A folder for " +
             "a whole recording session goes to the session (link_session_koofr_folder)"
     )
@@ -89,7 +91,11 @@ class KoofrFoldersMCP(
     }
 
     @Transactional
-    @McpTool(name = "unlink_episode_koofr_folder", description = "Unlink a Koofr folder from an episode. The folder stays in Koofr")
+    @McpTool(
+        name = "unlink_episode_koofr_folder",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        description = "Unlink a Koofr folder from an episode. The folder stays in Koofr"
+    )
     fun unlinkEpisode(
         @McpToolParam(description = EPISODE_REF) code: String,
         @McpToolParam(description = KOOFR_PLACE) place: String,
@@ -105,6 +111,7 @@ class KoofrFoldersMCP(
 
     @McpTool(
         name = "list_session_koofr_folders",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
         description = "List the Koofr folders linked to a recording session. Folders moved outside MetaOS are listed as missing"
     )
     fun listSessionFolders(@McpToolParam(description = "Session ID") sessionId: UUID): List<KoofrFolderDto> =
@@ -113,6 +120,7 @@ class KoofrFoldersMCP(
     @Transactional
     @McpTool(
         name = "link_session_koofr_folder",
+        annotations = McpTool.McpAnnotations(destructiveHint = false),
         description = "Link a Koofr folder to a recording session it is about, e.g. the folder with everything recorded that day"
     )
     fun linkSession(
@@ -129,7 +137,11 @@ class KoofrFoldersMCP(
     }
 
     @Transactional
-    @McpTool(name = "unlink_session_koofr_folder", description = "Unlink a Koofr folder from a recording session. The folder stays in Koofr")
+    @McpTool(
+        name = "unlink_session_koofr_folder",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        description = "Unlink a Koofr folder from a recording session. The folder stays in Koofr"
+    )
     fun unlinkSession(
         @McpToolParam(description = "Session ID") sessionId: UUID,
         @McpToolParam(description = KOOFR_PLACE) place: String,

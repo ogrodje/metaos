@@ -53,11 +53,16 @@ class KoofrMCP(private val koofr: Koofr, private val events: ApplicationEventPub
 
     @McpTool(
         name = "list_koofr_places",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
         description = "List the folders shared with Ogrodje's bot in Koofr - MetaOS works only in these - and whether it may change them"
     )
     fun places(): List<KoofrPlace> = koofr.places()
 
-    @McpTool(name = "list_koofr_folder", description = "List the files and folders directly in a Koofr folder")
+    @McpTool(
+        name = "list_koofr_folder",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        description = "List the files and folders directly in a Koofr folder"
+    )
     fun list(
         @McpToolParam(description = KOOFR_PLACE) place: String,
         @McpToolParam(description = "$KOOFR_PATH; / when omitted", required = false) path: String?,
@@ -65,6 +70,7 @@ class KoofrMCP(private val koofr: Koofr, private val events: ApplicationEventPub
 
     @McpTool(
         name = "search_koofr",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
         description = "Search the folders shared with Ogrodje's bot in Koofr for files and folders by name, most relevant first, " +
             "at most $SEARCH_RESULTS"
     )
@@ -81,6 +87,7 @@ class KoofrMCP(private val koofr: Koofr, private val events: ApplicationEventPub
 
     @McpTool(
         name = "read_koofr_file",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
         description = "Read a text file (txt, md, csv, json, srt, ...) from Koofr, at most ${MAX_READ / 1024} kB of it. " +
             "For other files, list_koofr_folder tells their size and type"
     )
@@ -98,6 +105,7 @@ class KoofrMCP(private val koofr: Koofr, private val events: ApplicationEventPub
 
     @McpTool(
         name = "upload_koofr_file",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
         description = "Upload a file into a Koofr folder: text, or base64 for anything else, at most ${MAX_UPLOAD / 1024 / 1024} MB. " +
             "A file of the same name is only replaced with overwrite, and Koofr keeps the old one as a version"
     )
@@ -118,7 +126,11 @@ class KoofrMCP(private val koofr: Koofr, private val events: ApplicationEventPub
         return koofr.upload(placeId, koofrPath(folder), name, contentType, bytes, overwrite == true)
     }
 
-    @McpTool(name = "create_koofr_folder", description = "Create a folder in Koofr")
+    @McpTool(
+        name = "create_koofr_folder",
+        annotations = McpTool.McpAnnotations(destructiveHint = false),
+        description = "Create a folder in Koofr"
+    )
     fun createFolder(
         @McpToolParam(description = KOOFR_PLACE) place: String,
         @McpToolParam(description = "Folder to create it in; / when omitted", required = false) parent: String?,
@@ -135,6 +147,7 @@ class KoofrMCP(private val koofr: Koofr, private val events: ApplicationEventPub
     @Transactional
     @McpTool(
         name = "move_koofr_file",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
         description = "Move or rename a file or folder in Koofr, also into another shared folder. Never replaces what's at the " +
             "new path. Folders linked to episodes or sessions stay linked"
     )

@@ -62,6 +62,7 @@ class RecoveryMCP(private val jdbcTemplate: JdbcTemplate, private val auditLog: 
     @Transactional(readOnly = true)
     @McpTool(
         name = "list_deleted",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
         description = "List what has been soft-deleted and can be restored: episodes, people, recording sessions and " +
             "shows, the most recently deleted first, with when and by whom. restore_episode takes an episode's code " +
             "or ID, restore_person and restore_session an ID, restore_show a name"
@@ -94,6 +95,7 @@ class RecoveryMCP(private val jdbcTemplate: JdbcTemplate, private val auditLog: 
     @Transactional
     @McpTool(
         name = "restore_link",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
         description = "Bring back a link that was removed, as it was: a person's role on an episode, or a Google Doc, " +
             "Koofr folder or Dropbox folder linked to an episode or session. Takes the ID of the change that removed " +
             "it, from get_history or list_recent_changes"

@@ -27,6 +27,7 @@ class SearchMCP(private val search: Search) {
 
     @McpTool(
         name = "search",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
         description = "Find episodes (ideas too), people and recording sessions by an episode code, a name or the words " +
             "in their titles, alternative titles, people, show, summaries (not the AI one), bio, place, address or " +
             "date, the best first, with where each matched and, for a summary, the text around the match. An episode " +

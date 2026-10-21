@@ -93,6 +93,7 @@ class EpisodesMCP(
 
     @McpTool(
         name = "list_episodes",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
         description = "List episodes, latest season and episode first, then the bonus season ($BONUS_SEASON) and ideas " +
             "without a code last, optionally only those with a given status. Of the summaries only the tiny one is " +
             "there; get_episode has them all"
@@ -102,7 +103,11 @@ class EpisodesMCP(
     ): List<EpisodeDto> =
         (if (status == null) episodes.findLatestFirst() else episodes.findLatestFirstByStatus(status)).map { it.toDto() }
 
-    @McpTool(name = "get_episode", description = "Find an episode by its code (case-insensitive) or ID, with its summaries")
+    @McpTool(
+        name = "get_episode",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        description = "Find an episode by its code (case-insensitive) or ID, with its summaries"
+    )
     fun get(@McpToolParam(description = EPISODE_REF) code: String): EpisodeDetailsDto? =
         episodes.findByRef(code)?.toDetailsDto()
 
@@ -111,6 +116,7 @@ class EpisodesMCP(
     @Transactional
     @McpTool(
         name = "create_episode",
+        annotations = McpTool.McpAnnotations(destructiveHint = false),
         description = "Create a new episode. It starts as an IDEA, which can do without a code until it is planned. " +
             "It's recommended by the person linked to you, unless you name someone else"
     )
@@ -131,6 +137,7 @@ class EpisodesMCP(
     @Transactional
     @McpTool(
         name = "set_episode_recommended_by",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
         description = "Set who recommended an episode, e.g. someone else than who added it, or clear it"
     )
     fun setRecommendedBy(
@@ -145,6 +152,7 @@ class EpisodesMCP(
     @Transactional
     @McpTool(
         name = "update_episode",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
         description = "Change an episode's code, title, alternative titles (B and C, for A/B tests), summaries or dates. " +
             "Omitted fields are left as they are"
     )
@@ -193,6 +201,7 @@ class EpisodesMCP(
     @Transactional
     @McpTool(
         name = "set_episode_status",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
         description = "Move an episode through its lifecycle: IDEA → PLANNED → SCHEDULED → RECORDED → IN_PRODUCTION → " +
             "READY → EARLY_ACCESS (optional) → PUBLISHED, one step forward or back to any earlier step; ON_HOLD or " +
             "CANCELLED any time before it is published. Each step needs what the ones before it did, plus: PLANNED a " +
@@ -239,6 +248,7 @@ class EpisodesMCP(
     @Transactional
     @McpTool(
         name = "set_episode_link",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
         description = "Set or clear where an episode can be watched or listened to: YouTube, Spotify, Apple Podcasts or Patreon"
     )
     fun setLink(
@@ -252,13 +262,18 @@ class EpisodesMCP(
     }
 
     @Transactional
-    @McpTool(name = "delete_episode", description = "Soft-delete an episode by its code (case-insensitive) or ID")
+    @McpTool(
+        name = "delete_episode",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        description = "Soft-delete an episode by its code (case-insensitive) or ID"
+    )
     fun delete(@McpToolParam(description = EPISODE_REF) code: String): EpisodeDto? =
         episodes.findByRef(code)?.also { episodes.delete(it) }?.toDto()
 
     @Transactional
     @McpTool(
         name = "restore_episode",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
         description = "Bring back a soft-deleted episode by its code (case-insensitive) or ID, with its people, links, " +
             "session, show and who recommended it. Any of those deleted meanwhile come back to it once they're " +
             "restored too. Under a new code, if its own has been taken since"
@@ -286,13 +301,18 @@ class EpisodesMCP(
     }
 
     @Transactional(readOnly = true)
-    @McpTool(name = "list_episode_people", description = "List the people on an episode and their roles")
+    @McpTool(
+        name = "list_episode_people",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        description = "List the people on an episode and their roles"
+    )
     fun listPeople(@McpToolParam(description = EPISODE_REF) code: String): List<EpisodePersonDto> =
         episodePeople.findByEpisodeWithPerson(findEpisode(code)).toEpisodePersonDtos()
 
     @Transactional
     @McpTool(
         name = "assign_person_to_episode",
+        annotations = McpTool.McpAnnotations(destructiveHint = false),
         description = "Give a person a role on an episode and return all of their roles on it. A person can have " +
             "several roles on one episode; assigning a role they already have changes nothing"
     )
@@ -313,6 +333,7 @@ class EpisodesMCP(
     @Transactional
     @McpTool(
         name = "remove_person_from_episode",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
         description = "Take a person off an episode: one of their roles on it, or all of them when no role is given. " +
             "Returns the roles they still have on it"
     )
@@ -336,6 +357,7 @@ class EpisodesMCP(
     @Transactional
     @McpTool(
         name = "confirm_guest",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
         description = "Make a candidate a guest: a person who is a CANDIDATE on an episode, someone who could be its " +
             "guest, becomes its GUEST, e.g. once they've said yes. Returns all of their roles on it"
     )

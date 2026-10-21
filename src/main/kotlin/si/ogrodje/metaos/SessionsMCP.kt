@@ -18,11 +18,19 @@ class SessionsMCP(
     private val episodes: EpisodesRepository,
 ) {
 
-    @McpTool(name = "list_sessions", description = "List all sessions, newest first")
+    @McpTool(
+        name = "list_sessions",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        description = "List all sessions, newest first"
+    )
     fun list(): List<SessionDto> = sessions.findAllByOrderByDateDesc().map { it.toDto() }
 
     @Transactional
-    @McpTool(name = "create_session", description = "Create a new session")
+    @McpTool(
+        name = "create_session",
+        annotations = McpTool.McpAnnotations(destructiveHint = false),
+        description = "Create a new session"
+    )
     fun create(
         @McpToolParam(description = "Date of the session, e.g. 2026-10-19") date: LocalDate,
         @McpToolParam(description = "Location, e.g. the name of the venue", required = false) location: String?,
@@ -32,6 +40,7 @@ class SessionsMCP(
     @Transactional
     @McpTool(
         name = "update_session",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
         description = "Change a session's date, location or address. Omitted fields are left as they are"
     )
     fun update(
@@ -50,6 +59,7 @@ class SessionsMCP(
     @Transactional
     @McpTool(
         name = "delete_session",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
         description = "Soft-delete a session. Its episodes are kept and taken out of the session"
     )
     fun delete(@McpToolParam(description = "Session ID") sessionId: UUID): SessionDto? =
@@ -61,6 +71,7 @@ class SessionsMCP(
     @Transactional
     @McpTool(
         name = "restore_session",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
         description = "Bring back a soft-deleted session, with the episodes deleting it took out of it " +
             "(unless they have been deleted or moved since)"
     )
@@ -71,7 +82,11 @@ class SessionsMCP(
     }
 
     @Transactional(readOnly = true)
-    @McpTool(name = "list_session_episodes", description = "List the episodes of a session, latest season and episode first")
+    @McpTool(
+        name = "list_session_episodes",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        description = "List the episodes of a session, latest season and episode first"
+    )
     fun listEpisodes(@McpToolParam(description = "Session ID") sessionId: UUID): List<EpisodeDto> {
         val session = requireNotNull(sessions.findByIdOrNull(sessionId)) { "Session $sessionId not found" }
         return episodes.findBySessionOrderByCodeDesc(session).map { it.toDto() }
@@ -80,6 +95,7 @@ class SessionsMCP(
     @Transactional
     @McpTool(
         name = "set_episode_session",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
         description = "Move an episode into a session, or take it out of the session it is in"
     )
     fun setEpisodeSession(

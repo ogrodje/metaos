@@ -91,12 +91,17 @@ class DocumentsMCP(
 
     @McpTool(
         name = "list_drive_folder",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
         description = "List the files and folders directly in a folder of Ogrodje's Google Drive folder, by name"
     )
     fun listFolder(@McpToolParam(description = FOLDER_REF, required = false) folder: String?): List<DriveFileDto> =
         drive.children(folderId(folder)).map { it.toDto() }
 
-    @McpTool(name = "read_document", description = "Read a Google Doc in Ogrodje's Google Drive folder, as Markdown")
+    @McpTool(
+        name = "read_document",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        description = "Read a Google Doc in Ogrodje's Google Drive folder, as Markdown"
+    )
     fun read(@McpToolParam(description = DOCUMENT_REF) document: String): DocumentContentDto {
         val file = document(document)
         return DocumentContentDto(file.id, file.name, file.webViewLink, drive.markdown(file.id))
@@ -104,6 +109,7 @@ class DocumentsMCP(
 
     @McpTool(
         name = "search_documents",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
         description = "Search the Google Docs in Ogrodje's Google Drive folder, or in a folder of it and its subfolders, " +
             "by the words in their title or text. Most relevant first, at most $SEARCH_RESULTS"
     )
@@ -121,6 +127,7 @@ class DocumentsMCP(
 
     @McpTool(
         name = "list_episode_documents",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
         description = "List the Google Docs of an episode, by name: those linked to the episode and those linked to " +
             "its recording session, e.g. the recording day plan; linkedTo says which. Docs deleted since are listed " +
             "as missing"
@@ -138,6 +145,7 @@ class DocumentsMCP(
     @Transactional
     @McpTool(
         name = "link_episode_document",
+        annotations = McpTool.McpAnnotations(destructiveHint = false),
         description = "Link a Google Doc in Ogrodje's Google Drive folder to an episode it is about, e.g. its " +
             "preparation doc. A doc can be linked to several episodes; the doc of a recording session goes to the " +
             "session (link_session_document)"
@@ -153,7 +161,11 @@ class DocumentsMCP(
     }
 
     @Transactional
-    @McpTool(name = "unlink_episode_document", description = "Unlink a Google Doc from an episode. The doc stays in Drive")
+    @McpTool(
+        name = "unlink_episode_document",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        description = "Unlink a Google Doc from an episode. The doc stays in Drive"
+    )
     fun unlink(
         @McpToolParam(description = EPISODE_REF) code: String,
         @McpToolParam(description = DOCUMENT_REF) document: String,
@@ -168,6 +180,7 @@ class DocumentsMCP(
 
     @McpTool(
         name = "list_session_documents",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
         description = "List the Google Docs linked to a recording session, by name. Docs deleted since are listed as missing"
     )
     fun listSessionDocuments(@McpToolParam(description = "Session ID") sessionId: UUID): List<DriveFileDto> =
@@ -178,6 +191,7 @@ class DocumentsMCP(
     @Transactional
     @McpTool(
         name = "link_session_document",
+        annotations = McpTool.McpAnnotations(destructiveHint = false),
         description = "Link a Google Doc in Ogrodje's Google Drive folder to a recording session it is about, e.g. " +
             "its recording day plan (\"Ogrodje Snemalni Dan - ...\")"
     )
@@ -192,7 +206,11 @@ class DocumentsMCP(
     }
 
     @Transactional
-    @McpTool(name = "unlink_session_document", description = "Unlink a Google Doc from a recording session. The doc stays in Drive")
+    @McpTool(
+        name = "unlink_session_document",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        description = "Unlink a Google Doc from a recording session. The doc stays in Drive"
+    )
     fun unlinkFromSession(
         @McpToolParam(description = "Session ID") sessionId: UUID,
         @McpToolParam(description = DOCUMENT_REF) document: String,
@@ -208,6 +226,7 @@ class DocumentsMCP(
     @Transactional
     @McpTool(
         name = "match_episode_documents",
+        annotations = McpTool.McpAnnotations(destructiveHint = false),
         description = "Match the Google Docs directly in a folder to episodes by the episode code in their title, " +
             "e.g. \"S05E03 - Guest: Title\" or \"Ogrodje S05E7 - Title\" (S05E07). Only reports what it would link, " +
             "unless apply is true"

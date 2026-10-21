@@ -1,5 +1,6 @@
 package si.ogrodje.metaos
 
+import org.hamcrest.Matchers.contains
 import org.hamcrest.Matchers.containsString
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -59,6 +60,23 @@ class SecurityTest @Autowired constructor(private val mvc: MockMvc, private val 
             initialize()
             with(jwt().jwt { it.claim("realm_access", APPROVED).claim("scope", "profile email") })
         }.andExpect { status { isForbidden() } }
+    }
+
+    // Clients that honour the hints ask before a destructive call (ToolHintsTest checks every tool's)
+    @Test
+    fun `lists the tools with their read-only and destructive hints`() {
+        mvc.post("/mcp") {
+            contentType = MediaType.APPLICATION_JSON
+            accept(MediaType.APPLICATION_JSON, MediaType.TEXT_EVENT_STREAM)
+            content = """{"jsonrpc":"2.0","id":4,"method":"tools/list"}"""
+            with(jwt().jwt { it.claim("realm_access", APPROVED).claim("scope", MCP_SCOPE) })
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.result.tools[?(@.name == 'get_episode')].annotations.readOnlyHint") { value(contains(true)) }
+            jsonPath("$.result.tools[?(@.name == 'delete_episode')].annotations.readOnlyHint") { value(contains(false)) }
+            jsonPath("$.result.tools[?(@.name == 'delete_episode')].annotations.destructiveHint") { value(contains(true)) }
+            jsonPath("$.result.tools[?(@.name == 'create_episode')].annotations.destructiveHint") { value(contains(false)) }
+        }
     }
 
     // Stateless (application.properties): no session to keep, so any pod can answer

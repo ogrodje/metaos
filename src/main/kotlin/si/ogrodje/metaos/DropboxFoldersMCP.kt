@@ -76,6 +76,7 @@ class DropboxFoldersMCP(
 
     @McpTool(
         name = "list_episode_dropbox_folders",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
         description = "List the Dropbox folders of an episode, e.g. its artwork: those linked to the episode and those linked " +
             "to its recording session; linkedTo says which. $STAYS_LINKED"
     )
@@ -92,6 +93,7 @@ class DropboxFoldersMCP(
     @Transactional
     @McpTool(
         name = "link_episode_dropbox_folder",
+        annotations = McpTool.McpAnnotations(destructiveHint = false),
         description = "Link a Dropbox folder to an episode it is about, e.g. the folder with its artwork, $WITH_URL. A folder " +
             "for a whole recording session goes to the session (link_session_dropbox_folder)"
     )
@@ -111,7 +113,11 @@ class DropboxFoldersMCP(
     }
 
     @Transactional
-    @McpTool(name = "unlink_episode_dropbox_folder", description = "Unlink a Dropbox folder from an episode. The folder stays in Dropbox")
+    @McpTool(
+        name = "unlink_episode_dropbox_folder",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        description = "Unlink a Dropbox folder from an episode. The folder stays in Dropbox"
+    )
     fun unlinkEpisode(
         @McpToolParam(description = EPISODE_REF) code: String,
         @McpToolParam(description = DROPBOX_PLACE) place: String,
@@ -128,13 +134,18 @@ class DropboxFoldersMCP(
         return unlinked
     }
 
-    @McpTool(name = "list_session_dropbox_folders", description = "List the Dropbox folders linked to a recording session. $STAYS_LINKED")
+    @McpTool(
+        name = "list_session_dropbox_folders",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        description = "List the Dropbox folders linked to a recording session. $STAYS_LINKED"
+    )
     fun listSessionFolders(@McpToolParam(description = "Session ID") sessionId: UUID): List<DropboxFolderDto> =
         toDtos(sessionFolders.findBySession(findSession(sessionId)).map { DropboxLink(it.place, it.folderId, it.path, it.url, LinkedTo.SESSION) })
 
     @Transactional
     @McpTool(
         name = "link_session_dropbox_folder",
+        annotations = McpTool.McpAnnotations(destructiveHint = false),
         description = "Link a Dropbox folder to a recording session it is about, e.g. the folder with that day's photos, $WITH_URL"
     )
     fun linkSession(
@@ -153,7 +164,11 @@ class DropboxFoldersMCP(
     }
 
     @Transactional
-    @McpTool(name = "unlink_session_dropbox_folder", description = "Unlink a Dropbox folder from a recording session. The folder stays in Dropbox")
+    @McpTool(
+        name = "unlink_session_dropbox_folder",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        description = "Unlink a Dropbox folder from a recording session. The folder stays in Dropbox"
+    )
     fun unlinkSession(
         @McpToolParam(description = "Session ID") sessionId: UUID,
         @McpToolParam(description = DROPBOX_PLACE) place: String,

@@ -22,15 +22,27 @@ class ShowsMCP(
     private val episodes: EpisodesRepository,
 ) {
 
-    @McpTool(name = "list_shows", description = "List all shows by name")
+    @McpTool(
+        name = "list_shows",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        description = "List all shows by name"
+    )
     fun list(): List<ShowDto> = shows.findAllByOrderByName().map { it.toDto() }
 
-    @McpTool(name = "get_show", description = "Find a show by its name (case-insensitive)")
+    @McpTool(
+        name = "get_show",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        description = "Find a show by its name (case-insensitive)"
+    )
     fun get(@McpToolParam(description = "Show name, e.g. Bytes") name: String): ShowDto? =
         shows.findByName(name)?.toDto()
 
     @Transactional
-    @McpTool(name = "create_show", description = "Create a new show")
+    @McpTool(
+        name = "create_show",
+        annotations = McpTool.McpAnnotations(destructiveHint = false),
+        description = "Create a new show"
+    )
     fun create(
         @McpToolParam(description = "Unique show name (case-insensitive)") name: String,
         @McpToolParam(description = "Color as hex RGB, e.g. #0404a4", required = false) color: String?,
@@ -42,7 +54,11 @@ class ShowsMCP(
     }
 
     @Transactional
-    @McpTool(name = "update_show", description = "Rename a show or change its color. Omitted fields are left as they are")
+    @McpTool(
+        name = "update_show",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        description = "Rename a show or change its color. Omitted fields are left as they are"
+    )
     fun update(
         @McpToolParam(description = "Show name (case-insensitive)") name: String,
         @McpToolParam(description = "New unique show name", required = false) newName: String?,
@@ -59,7 +75,11 @@ class ShowsMCP(
     }
 
     @Transactional
-    @McpTool(name = "delete_show", description = "Soft-delete a show. Its episodes are kept and taken out of the show")
+    @McpTool(
+        name = "delete_show",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        description = "Soft-delete a show. Its episodes are kept and taken out of the show"
+    )
     fun delete(@McpToolParam(description = "Show name (case-insensitive)") name: String): ShowDto? =
         shows.findByName(name)?.also { show ->
             episodes.findByShowOrderByCodeDesc(show).forEach { it.show = null }
@@ -69,6 +89,7 @@ class ShowsMCP(
     @Transactional
     @McpTool(
         name = "restore_show",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
         description = "Bring back a soft-deleted show by its name (case-insensitive), with the episodes deleting it " +
             "took out of it (unless they have been deleted or moved since). Under a new name, if its own has been " +
             "taken since"
@@ -93,14 +114,22 @@ class ShowsMCP(
     }
 
     @Transactional(readOnly = true)
-    @McpTool(name = "list_show_episodes", description = "List the episodes of a show, latest season and episode first")
+    @McpTool(
+        name = "list_show_episodes",
+        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        description = "List the episodes of a show, latest season and episode first"
+    )
     fun listEpisodes(@McpToolParam(description = "Show name (case-insensitive)") name: String): List<EpisodeDto> {
         val show = requireNotNull(shows.findByName(name)) { "Show $name not found" }
         return episodes.findByShowOrderByCodeDesc(show).map { it.toDto() }
     }
 
     @Transactional
-    @McpTool(name = "set_episode_show", description = "Move an episode into a show, or take it out of the show it is in")
+    @McpTool(
+        name = "set_episode_show",
+        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        description = "Move an episode into a show, or take it out of the show it is in"
+    )
     fun setEpisodeShow(
         @McpToolParam(description = EPISODE_REF) code: String,
         @McpToolParam(description = "Show name (case-insensitive); omit to take the episode out of its show", required = false) show: String?,
