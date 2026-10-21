@@ -64,7 +64,7 @@
   <rect class="box" x="20" y="470" width="180" height="96" rx="8"/>
   <text class="t" x="36" y="496">MCP clients</text>
   <text x="36" y="516">Claude Code, claude.ai,</text>
-  <text x="36" y="534">MCP Inspector</text>
+  <text x="36" y="534">ChatGPT, MCP Inspector</text>
 
   <!-- Keycloak -->
   <rect class="box" x="410" y="350" width="180" height="140" rx="8"/>

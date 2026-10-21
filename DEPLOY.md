@@ -105,8 +105,10 @@ justfile                     the same steps by hand: just push, just deploy, jus
   `k8s/base/kustomization.yaml`, the two Ingresses and the smoke test in `.github/workflows/deploy.yml`.
 - **Own Keycloak.** MetaOS gets its own Keycloak, as in `compose.yml`. The alternative is a `metaos` realm on goo's
   existing Keycloak at `keycloak.ogrodje.si`.
-- **Login from claude.ai.** The realm only lets clients register themselves with `localhost` redirect URIs. Claude
-  Code and MCP Inspector work; claude.ai would need its host added to the realm's Trusted Hosts policy.
+- **Login from claude.ai and ChatGPT.** The realm lets clients register themselves with redirect URIs on `localhost`,
+  `claude.ai`, `claude.com` and `chatgpt.com` (its Trusted Hosts policy; `keycloak/trusted_hosts.sh` for production's
+  realm, imported before). Anyone can register such a client, but its tokens only work for an approved user who
+  signed in and agreed to the consent screen.
 
 ## Differences from the older projects
 

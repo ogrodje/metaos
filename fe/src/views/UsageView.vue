@@ -95,9 +95,9 @@ const toolCount = TOOL_GROUPS.reduce((n, group) => n + group.tools.length, 0)
       </ol>
 
       <p class="note">
-        Other MCP clients that sign in with OAuth, such as MCP Inspector, connect to <code>{{ mcpUrl }}</code>. They
-        have to run on your computer: MetaOS only lets clients sign in through localhost, so claude.ai's connectors
-        can't use it yet.
+        Other MCP clients that sign in with OAuth, such as MCP Inspector, claude.ai's connectors and ChatGPT, connect to
+        <code>{{ mcpUrl }}</code>. In ChatGPT, add it as a custom MCP server with OAuth and Dynamic Client Registration
+        (DCR).
       </p>
     </section>
 

@@ -95,7 +95,9 @@ docker compose up -d keycloak   # http://localhost:8180 (admin console: admin / 
 ```
 
 - MCP clients (Claude Code, MCP Inspector, ...) discover Keycloak via `/.well-known/oauth-protected-resource/mcp`,
-  register themselves with Dynamic Client Registration (`localhost` redirect URIs only) and log the user in.
+  register themselves with Dynamic Client Registration and log the user in. The realm's Trusted Hosts policy takes
+  redirect URIs on `localhost`, `claude.ai`, `claude.com` and `chatgpt.com` only; for realms imported before,
+  [`keycloak/trusted_hosts.sh`](keycloak/trusted_hosts.sh).
 - Tokens need the `mcp:tools` scope; it also puts the MCP URL into `aud`, which the server checks. They also need the
   realm role `metaos-user`, an approved user's (`APPROVED_ROLE` in `Security.kt`, also on `/graphql`'s team data and
   the thumbnails): Keycloak can issue the scope to more than approved users, e.g. a client registered through DCR for

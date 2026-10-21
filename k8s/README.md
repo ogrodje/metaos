@@ -90,8 +90,10 @@ Then point an MCP client at `https://metaos.ogrodje.si/mcp`, e.g.
 - **The realm is imported once.** Later edits to `keycloak/metaos-realm.json` don't reach production; make them in the
   admin console too. Same for `METAOS_MCP_URL`: changing it in `kustomization.yaml` rolls the app, but Keycloak's
   `mcp:tools` audience mapper keeps the old value until it's edited there.
-- **Dynamic Client Registration allows `localhost` redirect URIs only** (the realm's Trusted Hosts policy). That
-  covers Claude Code and MCP Inspector; a hosted client such as claude.ai needs its host added to that policy.
+- **Dynamic Client Registration allows redirect URIs on a few hosts only** (the realm's Trusted Hosts policy):
+  `localhost` for Claude Code and MCP Inspector, `claude.ai` and `claude.com` for Claude's connectors, `chatgpt.com`
+  for ChatGPT's. `keycloak/trusted_hosts.sh` adds them to a realm imported before; another hosted client needs its
+  host added there.
 - Every deploy rolls Keycloak too, since both images get the same tag. It's a rolling update, so the old pod serves
   until the new one is ready, and for 10 s after it's told to stop, until ingress-nginx has dropped it.
 - The registry isn't cleaned up: tags are commit hashes, which don't sort by age, so boo-run's keep-the-newest-three

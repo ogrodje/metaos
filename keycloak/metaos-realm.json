@@ -219,7 +219,8 @@
             "localhost",
             "127.0.0.1",
             "claude.ai",
-            "claude.com"
+            "claude.com",
+            "chatgpt.com"
           ],
           "host-sending-registration-request-must-match": [
             "false"
