@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { faCopy } from '@fortawesome/free-regular-svg-icons'
-import { faCheck } from '@fortawesome/free-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import CopyCommand from '@/components/CopyCommand.vue'
 import { TOOL_GROUPS } from '@/tools'
 
 // Where MCP clients connect, from /config.json (Frontend.kt): this page's own origin until it answers, which is right
@@ -18,20 +16,20 @@ onMounted(async () => {
   }
 })
 
+// The assistants the steps are for; their first two steps differ, approval and asking don't
+type Client = 'claude' | 'codex' | 'chatgpt'
+const CLIENTS: { id: Client, name: string }[] = [
+  { id: 'claude', name: 'Claude Code' },
+  { id: 'codex', name: 'Codex' },
+  { id: 'chatgpt', name: 'ChatGPT' },
+]
+const client = ref<Client>('claude')
+
 // For all of the user's projects, not only the one they happen to be in
-const command = computed(() => `claude mcp add --transport http --scope user ogrodje ${mcpUrl.value}`)
-
-const copied = ref(false)
-
-async function copy() {
-  try {
-    await navigator.clipboard.writeText(command.value)
-    copied.value = true
-    setTimeout(() => (copied.value = false), 2000)
-  } catch (error) {
-    console.error('The command was not copied', error)
-  }
-}
+const claudeCommand = computed(() => `claude mcp add --transport http --scope user ogrodje ${mcpUrl.value}`)
+// Codex's config.toml is the user's own (~/.codex), so it's in all their projects, and the IDE extension's too
+const codexCommand = computed(() => `codex mcp add ogrodje --url ${mcpUrl.value}`)
+const codexLogin = 'codex mcp login ogrodje'
 
 const toolCount = TOOL_GROUPS.reduce((n, group) => n + group.tools.length, 0)
 </script>
@@ -43,35 +41,90 @@ const toolCount = TOOL_GROUPS.reduce((n, group) => n + group.tools.length, 0)
         <h2 id="install">Install</h2>
       </div>
       <p class="intro">
-        MetaOS is an MCP server. Connect an AI assistant such as Claude Code to it, and the assistant can look up and
-        manage Ogrodje's episodes, people, recording sessions and shows, its Google Docs and its files in Koofr, as you.
+        MetaOS is an MCP server. Connect an AI assistant such as Claude Code, Codex or ChatGPT to it, and the assistant
+        can look up and manage Ogrodje's episodes, people, recording sessions and shows, its Google Docs and its files
+        in Koofr, as you.
       </p>
 
+      <div class="clients" role="group" aria-label="Assistant">
+        <button v-for="c in CLIENTS" :key="c.id" type="button" :aria-pressed="client === c.id" @click="client = c.id">
+          {{ c.name }}
+        </button>
+      </div>
+
       <ol class="steps">
-        <li class="step">
-          <span class="number" aria-hidden="true">1</span>
-          <div>
-            <p class="title">Add MetaOS to Claude Code</p>
-            <p class="details">In a terminal; <code>--scope user</code> makes it available in all your projects.</p>
-            <div class="command">
-              <code>{{ command }}</code>
-              <button type="button" class="icon-link" :aria-label="copied ? 'Copied' : 'Copy the command'"
-                      :title="copied ? 'Copied' : 'Copy'" @click="copy">
-                <FontAwesomeIcon :icon="copied ? faCheck : faCopy"/>
-              </button>
+        <template v-if="client === 'claude'">
+          <li class="step">
+            <span class="number" aria-hidden="true">1</span>
+            <div>
+              <p class="title">Add MetaOS to Claude Code</p>
+              <p class="details">In a terminal; <code>--scope user</code> makes it available in all your projects.</p>
+              <CopyCommand :command="claudeCommand"/>
             </div>
-          </div>
-        </li>
-        <li class="step">
-          <span class="number" aria-hidden="true">2</span>
-          <div>
-            <p class="title">Sign in</p>
-            <p class="details">
-              In Claude Code, run <code>/mcp</code>, pick <strong>ogrodje</strong> and choose Authenticate. Your browser
-              opens MetaOS's sign-in, where you sign in with Discord or Google.
-            </p>
-          </div>
-        </li>
+          </li>
+          <li class="step">
+            <span class="number" aria-hidden="true">2</span>
+            <div>
+              <p class="title">Sign in</p>
+              <p class="details">
+                In Claude Code, run <code>/mcp</code>, pick <strong>ogrodje</strong> and choose Authenticate. Your
+                browser opens MetaOS's sign-in, where you sign in with Discord or Google.
+              </p>
+            </div>
+          </li>
+        </template>
+
+        <template v-else-if="client === 'codex'">
+          <li class="step">
+            <span class="number" aria-hidden="true">1</span>
+            <div>
+              <p class="title">Add MetaOS to Codex</p>
+              <p class="details">
+                In a terminal. It goes into your own <code>~/.codex/config.toml</code>, so it's in all your projects, in
+                the CLI and in Codex's IDE extension.
+              </p>
+              <CopyCommand :command="codexCommand"/>
+            </div>
+          </li>
+          <li class="step">
+            <span class="number" aria-hidden="true">2</span>
+            <div>
+              <p class="title">Sign in</p>
+              <p class="details">
+                Your browser opens MetaOS's sign-in, where you sign in with Discord or Google. Codex keeps the sign-in
+                and refreshes it as it needs to.
+              </p>
+              <CopyCommand :command="codexLogin"/>
+            </div>
+          </li>
+        </template>
+
+        <template v-else>
+          <li class="step">
+            <span class="number" aria-hidden="true">1</span>
+            <div>
+              <p class="title">Add MetaOS to ChatGPT</p>
+              <p class="details">
+                On chatgpt.com, in <strong>Settings → Apps → Advanced settings</strong>, turn on <strong>Developer
+                mode</strong>, then choose <strong>Create app</strong>. Name it <strong>Ogrodje</strong>, with
+                <code>{{ mcpUrl }}</code> as its MCP server URL and <strong>OAuth</strong> as its authentication. Under
+                the OAuth settings, keep <strong>Dynamic Client Registration (DCR)</strong>: ChatGPT's note that CIMD is
+                unavailable is expected.
+              </p>
+            </div>
+          </li>
+          <li class="step">
+            <span class="number" aria-hidden="true">2</span>
+            <div>
+              <p class="title">Sign in</p>
+              <p class="details">
+                Creating it opens MetaOS's sign-in, where you sign in with Discord or Google and allow ChatGPT access.
+                In a chat, pick <strong>Ogrodje</strong> from <strong>+ → More</strong> for ChatGPT to use it.
+              </p>
+            </div>
+          </li>
+        </template>
+
         <li class="step">
           <span class="number" aria-hidden="true">3</span>
           <div>
@@ -87,17 +140,16 @@ const toolCount = TOOL_GROUPS.reduce((n, group) => n + group.tools.length, 0)
           <div>
             <p class="title">Ask</p>
             <p class="details">
-              For example: “Which episodes are in production?” or “Who's on the next recording day?” Claude picks the
-              tools it needs from the ones below and, unless you've allowed them, asks you before it uses one.
+              For example: “Which episodes are in production?” or “Who's on the next recording day?” The assistant picks
+              the tools it needs from the ones below and, unless you've allowed them, asks you before it uses one.
             </p>
           </div>
         </li>
       </ol>
 
       <p class="note">
-        Other MCP clients that sign in with OAuth, such as MCP Inspector, claude.ai's connectors and ChatGPT, connect to
-        <code>{{ mcpUrl }}</code>. In ChatGPT, add it as a custom MCP server with OAuth and Dynamic Client Registration
-        (DCR).
+        Other MCP clients that sign in with OAuth, such as MCP Inspector or claude.ai's connectors, connect to
+        <code>{{ mcpUrl }}</code>.
       </p>
     </section>
 
@@ -178,6 +230,36 @@ strong {
   color: var(--secondary);
 }
 
+// Which assistant the steps are for
+.clients {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-bottom: 8px;
+
+  button {
+    padding: 4px 12px;
+    font: inherit;
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--secondary);
+    background: none;
+    border: 1px solid var(--hairline);
+    border-radius: 6.4px;
+    cursor: pointer;
+
+    &:hover {
+      border-color: #A3A3A3;
+    }
+
+    &[aria-pressed="true"] {
+      font-weight: 500;
+      color: var(--ink);
+      border-color: var(--ink);
+    }
+  }
+}
+
 .steps, .tools {
   padding: 0;
   list-style: none;
@@ -210,39 +292,6 @@ strong {
   font-size: 13px;
   line-height: 20px;
   color: var(--muted);
-}
-
-.command {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 10px;
-  padding: 4px 4px 4px 14px;
-  background: var(--hover);
-  border: 1px solid var(--hairline);
-  border-radius: 8px;
-
-  // Scrolls on its own rather than widening the page
-  code {
-    flex: 1;
-    overflow-x: auto;
-    padding: 5px 0;
-    line-height: 22px;
-    white-space: nowrap;
-    color: var(--ink);
-  }
-
-  button {
-    flex: none;
-    color: var(--secondary);
-    background: none;
-    border: 0;
-    cursor: pointer;
-
-    &:hover {
-      background: #FFFFFF;
-    }
-  }
 }
 
 .note {
