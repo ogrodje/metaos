@@ -19,6 +19,7 @@ on:
         options:
           - trusted_hosts.sh
           - sessions.sh
+          - logs
 
 jobs:
   run:
@@ -45,8 +46,25 @@ jobs:
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
+      # Temporary: why ChatGPT's tool discovery fails
+      - name: Logs
+        if: inputs.script == 'logs'
+        run: |
+          echo "== keycloak: warnings and errors, last 40 min"
+          kubectl -n metaos-prod logs deploy/keycloak --since=40m | grep -E 'WARN|ERROR' | tail -80 || true
+          for pod in $(kubectl -n metaos-prod get pods -l app=metaos -o name); do
+            echo "== $pod: warnings, errors, mcp and auth, last 40 min"
+            kubectl -n metaos-prod logs "$pod" --since=40m | grep -iE 'WARN|ERROR|mcp|jwt|bearer|denied|forbidden' | tail -80 || true
+          done
+          echo "== ingress-nginx: /mcp and discovery requests, last 40 min"
+          for ns in ingress-nginx kube-system; do
+            kubectl -n "$ns" logs -l app.kubernetes.io/name=ingress-nginx --since=40m --tail=-1 2>/dev/null \
+              | grep -E 'metaos\.ogrodje\.si|metaos-prod' | grep -E '/mcp|well-known' | tail -80 || true
+          done
+
       # KC_HOSTNAME pins the public URL, so tokens got through the port-forward are the same as through the ingress
       - name: Run ${{ inputs.script || 'trusted_hosts.sh' }}
+        if: inputs.script != 'logs'
         env:
           SCRIPT: ${{ inputs.script || 'trusted_hosts.sh' }}
           KEYCLOAK_ADMIN_USERNAME: ${{ secrets.KEYCLOAK_ADMIN_USERNAME || 'admin' }}
