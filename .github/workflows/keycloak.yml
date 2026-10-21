@@ -20,9 +20,27 @@ on:
           - trusted_hosts.sh
           - sessions.sh
           - logs
+          - tests
 
 jobs:
+  # Temporary: the tests, as the deploy runs them, for a branch
+  tests:
+    if: inputs.script == 'tests'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: cachix/install-nix-action@v31
+      - uses: cachix/cachix-action@v17
+        with:
+          name: devenv
+      - name: Install devenv
+        run: nix profile add nixpkgs#devenv
+      - uses: gradle/actions/setup-gradle@v5
+      - name: Test
+        run: devenv shell -- ./gradlew test
+
   run:
+    if: inputs.script != 'tests'
     runs-on: ubuntu-latest
     environment:
       name: production
