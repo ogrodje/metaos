@@ -7,7 +7,8 @@
 # connectors, chatgpt.com for ChatGPT's (https://chatgpt.com/connector_platform_oauth_redirect). Whoever registers still
 # has to sign in as an approved user to get a token MetaOS takes.
 #
-# Adds the missing ones and keeps any already there. Idempotent.
+# Adds the missing ones and keeps any already there. Idempotent. For production, also Actions → Keycloak → Run workflow
+# (.github/workflows/keycloak.yml).
 #
 # From the environment:
 #   KEYCLOAK_URL, KEYCLOAK_ADMIN_USERNAME, KEYCLOAK_ADMIN_PASSWORD  see approval_gate.sh

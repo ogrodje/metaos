@@ -94,6 +94,8 @@ Then point an MCP client at `https://metaos.ogrodje.si/mcp`, e.g.
   `localhost` for Claude Code and MCP Inspector, `claude.ai` and `claude.com` for Claude's connectors, `chatgpt.com`
   for ChatGPT's. `keycloak/trusted_hosts.sh` adds them to a realm imported before; another hosted client needs its
   host added there.
+- **Actions → Keycloak → Run workflow** (`.github/workflows/keycloak.yml`) runs `trusted_hosts.sh` or `sessions.sh`
+  against production's realm, through a port-forward and as `admin` with the password from `keycloak-secret`.
 - Every deploy rolls Keycloak too, since both images get the same tag. It's a rolling update, so the old pod serves
   until the new one is ready, and for 10 s after it's told to stop, until ingress-nginx has dropped it.
 - The registry isn't cleaned up: tags are commit hashes, which don't sort by age, so boo-run's keep-the-newest-three
