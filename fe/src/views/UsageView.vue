@@ -17,13 +17,14 @@ onMounted(async () => {
 })
 
 // The assistants the steps are for; their first two steps differ, approval and asking don't
-type Client = 'claude' | 'codex' | 'chatgpt'
+type Client = 'claude-code' | 'claude' | 'codex' | 'chatgpt'
 const CLIENTS: { id: Client, name: string }[] = [
-  { id: 'claude', name: 'Claude Code' },
+  { id: 'claude-code', name: 'Claude Code' },
+  { id: 'claude', name: 'Claude' },
   { id: 'codex', name: 'Codex' },
   { id: 'chatgpt', name: 'ChatGPT' },
 ]
-const client = ref<Client>('claude')
+const client = ref<Client>('claude-code')
 
 // For all of the user's projects, not only the one they happen to be in
 const claudeCommand = computed(() => `claude mcp add --transport http --scope user ogrodje ${mcpUrl.value}`)
@@ -41,7 +42,7 @@ const toolCount = TOOL_GROUPS.reduce((n, group) => n + group.tools.length, 0)
         <h2 id="install">Install</h2>
       </div>
       <p class="intro">
-        MetaOS is an MCP server. Connect an AI assistant such as Claude Code, Codex or ChatGPT to it, and the assistant
+        MetaOS is an MCP server. Connect an AI assistant such as Claude, Codex or ChatGPT to it, and the assistant
         can look up and manage Ogrodje's episodes, people, recording sessions and shows, its Google Docs and its files
         in Koofr, as you.
       </p>
@@ -53,7 +54,7 @@ const toolCount = TOOL_GROUPS.reduce((n, group) => n + group.tools.length, 0)
       </div>
 
       <ol class="steps">
-        <template v-if="client === 'claude'">
+        <template v-if="client === 'claude-code'">
           <li class="step">
             <span class="number" aria-hidden="true">1</span>
             <div>
@@ -69,6 +70,32 @@ const toolCount = TOOL_GROUPS.reduce((n, group) => n + group.tools.length, 0)
               <p class="details">
                 In Claude Code, run <code>/mcp</code>, pick <strong>ogrodje</strong> and choose Authenticate. Your
                 browser opens MetaOS's sign-in, where you sign in with Discord or Google.
+              </p>
+            </div>
+          </li>
+        </template>
+
+        <template v-else-if="client === 'claude'">
+          <li class="step">
+            <span class="number" aria-hidden="true">1</span>
+            <div>
+              <p class="title">Add MetaOS to Claude</p>
+              <p class="details">
+                On claude.ai or in Claude's desktop app, in <strong>Settings → Connectors</strong>, choose <strong>Add
+                custom connector</strong>. Name it <strong>Ogrodje</strong>, with <code>{{ mcpUrl }}</code> as its URL,
+                and leave the advanced settings empty. In a Team or Enterprise organization, an owner adds it for
+                everyone in the organization's settings, and you connect it in yours.
+              </p>
+            </div>
+          </li>
+          <li class="step">
+            <span class="number" aria-hidden="true">2</span>
+            <div>
+              <p class="title">Sign in</p>
+              <p class="details">
+                Choose <strong>Connect</strong> next to it: MetaOS's sign-in opens, where you sign in with Discord or
+                Google. Claude's phone apps use it too, once it's connected. In a chat, turn it on in the
+                <strong>+</strong> menu, under <strong>Connectors</strong>.
               </p>
             </div>
           </li>
@@ -149,8 +176,7 @@ const toolCount = TOOL_GROUPS.reduce((n, group) => n + group.tools.length, 0)
       </ol>
 
       <p class="note">
-        Other MCP clients that sign in with OAuth, such as MCP Inspector or claude.ai's connectors, connect to
-        <code>{{ mcpUrl }}</code>.
+        Other MCP clients that sign in with OAuth, such as MCP Inspector, connect to <code>{{ mcpUrl }}</code>.
       </p>
     </section>
 

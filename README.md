@@ -26,6 +26,9 @@ Claude Code (then `/mcp` → ogrodje → Authenticate):
 claude mcp add --transport http --scope user ogrodje https://metaos.ogrodje.si/mcp
 ```
 
+Claude, on claude.ai or in the desktop app: Settings → Connectors → Add custom connector, with
+`https://metaos.ogrodje.si/mcp`, then Connect. Its phone apps use it once it's connected.
+
 Codex (CLI, IDE extension and app; signs in right away, `codex mcp login ogrodje` signs in again):
 
 ```bash
