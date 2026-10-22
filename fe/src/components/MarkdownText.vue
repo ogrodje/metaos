@@ -5,6 +5,8 @@ import MarkdownIt from 'markdown-it'
 // Raw HTML stays text (html: false) and links go only to safe protocols (markdown-it's own check), so no summary can
 // run a script here, AI-written ones included. Single line breaks stay breaks, as the summaries are written.
 const markdown = new MarkdownIt({ html: false, linkify: true, breaks: true })
+// Bare domains (ogrodje.si) are links too, as before markdown-it 15 turned that off
+markdown.linkify.set({ fuzzyLink: true })
 
 // Links lead out of MetaOS, so they open in a tab of their own
 const linkOpen = markdown.renderer.rules.link_open ?? ((tokens, index, options, _env, self) => self.renderToken(tokens, index, options))

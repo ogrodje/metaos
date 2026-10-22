@@ -1,15 +1,14 @@
 plugins {
     kotlin("jvm") version "2.4.21"
     kotlin("plugin.jpa") version "2.4.21"
-    id("org.springframework.boot") version "4.1.1"
+    id("org.springframework.boot") version "4.1.2"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.jetbrains.kotlin.plugin.spring") version "2.4.21"
 }
 
-// Spring Boot 4.1.1 manages Tomcat 11.0.24 and Jackson 3.1.5 / 2.21.5, which have known advisories: Tomcat's
-// CVE-2026-65905, -65182 and -68525, and Jackson's parser denial of service (CVE-2026-89407, -89425 and others).
-// Drop these once a Boot release manages these versions or later.
-extra["tomcat.version"] = "11.0.27"
+// Jackson's latest patches rather than Spring Boot 4.1.2's 3.1.7 / 2.21.7: those already fix the parser's denial of
+// service (CVE-2026-89407, -89425 and others), and these harden it further, e.g. bound the length of numbers coerced
+// from strings. Drop these once a Boot release manages these versions or later.
 extra["jackson-bom.version"] = "3.1.8"
 extra["jackson-2-bom.version"] = "2.21.8"
 
@@ -25,19 +24,11 @@ repositories {
     }
 }
 
+// Spring AI 2.0.2 brings MCP's Java SDK 2.1, which answers a method it doesn't know with "method not found" rather than
+// an HTTP 500: ChatGPT starts with the newer revision's server/discover and falls back to initialize (SecurityTest)
 dependencyManagement {
     imports {
-        mavenBom("org.springframework.ai:spring-ai-bom:2.0.1")
-    }
-    // MCP's Java SDK 2.1 rather than Spring AI 2.0.1's 2.0, which answers a method it doesn't know with an HTTP 500:
-    // ChatGPT starts with the newer revision's server/discover and gave up on that, where "method not found" makes it
-    // fall back to initialize (SecurityTest)
-    dependencies {
-        dependencySet("io.modelcontextprotocol.sdk:2.1.0") {
-            entry("mcp")
-            entry("mcp-core")
-            entry("mcp-json-jackson3")
-        }
+        mavenBom("org.springframework.ai:spring-ai-bom:2.0.2")
     }
 }
 
@@ -54,7 +45,6 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
 
     // MCP
-    implementation("org.springframework.ai:spring-ai-starter-mcp-server-webmvc")
     implementation("org.springframework.ai:spring-ai-starter-mcp-server-webmvc")
     // implementation("org.springframework.boot:spring-boot-starter-mustache")
 
@@ -104,10 +94,6 @@ dependencies {
     implementation("com.github.koofr:java-koofr:3.8.10")
     // Dropbox, as Ogrodje's bot account (Dropbox.kt)
     implementation("com.dropbox.core:dropbox-core-sdk:8.0.2")
-}
-
-dependencyManagement {
-    imports { mavenBom("org.springframework.ai:spring-ai-bom:2.0.1") }
 }
 
 kotlin {
