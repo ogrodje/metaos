@@ -1,3 +1,4 @@
+import { useRuntimeConfig } from '#imports'
 import { useAuthStore } from '@/stores/auth'
 
 /** What went wrong, for the page to say */
@@ -32,10 +33,18 @@ function graphqlMessage(error: { message: string, extensions?: { classification?
   }
 }
 
-/** Asks MetaOS's GraphQL API (/graphql), as the signed-in user when there is one */
+// How long the server waits for MetaOS before it renders the page with what didn't load, which the browser then loads
+const SERVER_TIMEOUT = 10_000
+
+/**
+ * Asks MetaOS's GraphQL API (/graphql), as the signed-in user when there is one. On the server, while it renders a
+ * page, as someone who isn't signed in, straight from MetaOS (its runtime config's metaosUrl): that page is everyone's.
+ */
 export async function graphql<T>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
-  const token = await useAuthStore().token()
-  const response = await fetch('/graphql', {
+  // Read before anything is awaited, while Nuxt knows which request it's for
+  const url = import.meta.server ? `${useRuntimeConfig().metaosUrl}/graphql` : '/graphql'
+  const token = import.meta.server ? undefined : await useAuthStore().token()
+  const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -44,6 +53,7 @@ export async function graphql<T>(query: string, variables: Record<string, unknow
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify({ query, variables }),
+    signal: import.meta.server ? AbortSignal.timeout(SERVER_TIMEOUT) : undefined,
   }).catch((error) => {
     // Offline, or MetaOS can't be reached at all
     throw new Error("MetaOS can't be reached; check the connection", { cause: error })

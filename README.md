@@ -8,7 +8,9 @@ MetaOS was designed for scaling, optimising and helping grow the [Ogrodje] organ
 
 ![MetaOS's architecture: the browser and MCP clients, Keycloak, MetaOS, Postgres and the outside services](architecture.png)
 
-People use MetaOS through its web front-end or from an AI assistant over MCP. Both sign in with [Keycloak], and
+People use MetaOS through its web front-end or from an AI assistant over MCP. The front-end is a Nuxt server of its
+own, which renders the pages anyone may see from MetaOS's API, so search engines and link previews get them whole,
+and Cloudflare caches them; the browser then carries on as a single-page app. Both sign in with [Keycloak], and
 MetaOS checks their tokens with Keycloak's keys. MetaOS keeps its data in Postgres, where every change is logged, and
 works with Google Drive, Koofr and Dropbox as Ogrodje's bot account. Postgres also tells MetaOS what changed, which it
 passes on to the open pages, so they show it without being reloaded. Pictures everyone may see, like episodes'

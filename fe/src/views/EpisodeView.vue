@@ -14,7 +14,6 @@ import MarkdownText from '@/components/MarkdownText.vue'
 import NotFound from '@/components/NotFound.vue'
 import PhotoStrip from '@/components/PhotoStrip.vue'
 import ShowBadge from '@/components/ShowBadge.vue'
-import SignInPrompt from '@/components/SignInPrompt.vue'
 import StatusLabel from '@/components/StatusLabel.vue'
 import {
   ARTWORK_FIELDS, artworkOf, DROPBOX_FIELDS, type DropboxPicture, EPISODE_FIELDS, type EpisodeDetails, episodePath,
@@ -23,46 +22,51 @@ import {
 } from '@/episodes'
 import { errorMessage, graphql } from '@/graphql'
 import { personPath } from '@/people'
+import { episodeData, plainText, shorten, usePageMeta, useSiteUrl } from '@/seo'
+import { useFirstLoad } from '@/ssr'
 import { useAuthStore } from '@/stores/auth'
 import { usePageTitle } from '@/title'
 
 const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
+const siteUrl = useSiteUrl()
 
-// Undefined while it loads; null when there's no such episode
+// The page is for the episode in the path when it opens: going to another episode opens another page
+const episodeRef = String(route.params.ref)
+
+// Undefined while it loads; null when there's no such episode, or none the user may see
 const episode = ref<EpisodeDetails | null>()
 const error = ref<string>()
-
-// Only the latest load counts: an earlier one may answer after it
-let loads = 0
 
 /** Whether [episodeRef], from the path, is [episode]'s code or ID */
 function names(episode: EpisodeDetails, episodeRef: unknown) {
   return episodeRef === episode.code || episodeRef === episode.id
 }
 
-// The episode by its code or ID. Quietly when MetaOS's data changes: what's shown stays until the new is there, and
-// stays if it doesn't come.
-async function loadEpisode(episodeRef: string, quietly = false) {
+// Everything about it; what's the team's comes back empty for anyone else, e.g. its history (GraphQL.kt)
+async function fetchEpisode(ref: string) {
+  return (await graphql<{ episode: EpisodeDetails | null }>(`query ($ref: String!) {
+    episode(ref: $ref) {
+      ${EPISODE_FIELDS} titleB titleC summary machineSummary addedDate recommendedBy { id name } ${KOOFR_FIELDS} ${DROPBOX_FIELDS} ${ARTWORK_FIELDS}
+      ${PICTURE_FIELDS} ${HISTORY_FIELDS}
+    }
+  }`, { ref })).episode
+}
+
+// Only the latest load counts: an earlier one may answer after it
+let loads = 0
+
+// The episode by its code or ID. Quietly when MetaOS's data changes, when what's shown stays if it doesn't come.
+async function loadEpisode(ref: string, quietly = false) {
   const load = ++loads
-  if (!quietly) {
-    episode.value = undefined
-    error.value = undefined
-  }
-  if (!auth.authenticated) return
   try {
-    const data = await graphql<{ episode: EpisodeDetails | null }>(`query ($ref: String!) {
-      episode(ref: $ref) {
-        ${EPISODE_FIELDS} titleB titleC summary machineSummary addedDate recommendedBy { id name } ${KOOFR_FIELDS} ${DROPBOX_FIELDS} ${ARTWORK_FIELDS}
-        ${PICTURE_FIELDS} ${HISTORY_FIELDS}
-      }
-    }`, { ref: episodeRef })
+    const loaded = await fetchEpisode(ref)
     if (load !== loads) return
-    episode.value = keepUnchanged(episode.value, data.episode)
+    episode.value = keepUnchanged(episode.value, loaded)
     error.value = undefined
     // It got another code, which the path follows
-    if (quietly && data.episode && !names(data.episode, route.params.ref)) void router.replace(episodePath(data.episode))
+    if (quietly && loaded && !names(loaded, route.params.ref)) void router.replace(episodePath(loaded))
   } catch (e) {
     if (load !== loads) return
     if (quietly) throw e
@@ -70,17 +74,36 @@ async function loadEpisode(episodeRef: string, quietly = false) {
   }
 }
 
-// The episode in the path: again when the path changes, unless to the episode shown, or the user signs in or out
-watch([() => route.params.ref, () => auth.authenticated], ([episodeRef, authenticated]) => {
-  if (authenticated && episode.value && names(episode.value, episodeRef)) return
-  void loadEpisode(String(episodeRef))
-}, { immediate: true })
+// First as anyone may see it, as the server rendered it: a released episode without what's the team's
+const first = await useFirstLoad(`episode:${episodeRef}`, () => fetchEpisode(episodeRef))
+episode.value = first.data
+error.value = first.error
+
+// Again when the user signs in or out: on the team, with what's theirs, and also an episode that isn't released, which
+// was none so far, and loads until it's known
+watch(() => auth.team, () => {
+  if (episode.value === null) episode.value = undefined
+  void loadEpisode(episode.value?.id ?? episodeRef)
+})
 
 // By its ID, which stays when its code changes
-useLiveRefresh(() => loadEpisode(episode.value?.id ?? String(route.params.ref), true))
+useLiveRefresh(() => loadEpisode(episode.value?.id ?? episodeRef, true))
 
 // In the browser's tab by its code and title, e.g. S05E08 Poletna vročica
 usePageTitle(() => (episode.value ? [episode.value.code, episode.value.title].filter(Boolean).join(' ') : undefined))
+
+// For search engines and link previews: what it's about, its thumbnail, and, released, that it's a podcast episode
+usePageMeta(() => {
+  const shown = episode.value
+  if (!shown) return {}
+  const about = shown.tinySummary ?? shown.summary
+  return {
+    path: episodePath(shown),
+    description: about ? shorten(plainText(about)) : null,
+    image: shown.thumbnail,
+    structured: shown.status === 'PUBLISHED' ? episodeData(shown, siteUrl) : null,
+  }
+})
 
 // The pictures in its Dropbox folders, which open in the folder of the first; and its photos, in its first Koofr folder.
 // The same lists while they're the same, as the photos page through them from the first again when they change.
@@ -92,15 +115,19 @@ const photos = computed<KoofrPhoto[]>((previous) =>
 
 <template>
   <main class="content">
-    <SignInPrompt v-if="auth.ready && !auth.authenticated" title="Sign in to see this episode">
-      An episode's details and history are for Ogrodje's team. Sign in with Discord or Google, or use MetaOS from your
-      AI assistant over MCP: Usage shows how to connect it.
-    </SignInPrompt>
-    <LoadError v-else-if="error" what="The episode" :error="error" @retry="loadEpisode(String(route.params.ref))"/>
-    <NotFound v-else-if="episode === null" :title="`There's no episode ${route.params.ref}`" :search="String(route.params.ref)">
-      It may have another code now, or have been deleted. Search for it, or find it among the episodes.
+    <LoadError v-if="error" what="The episode" :error="error" @retry="loadEpisode(episodeRef)"/>
+    <!-- None so far, while it's checked whether the user is on the team, who may see it although it isn't released -->
+    <LoadingRows v-else-if="episode === undefined || (episode === null && auth.likelyMember && !auth.ready)" :rows="6"
+                 label="Loading the episode"/>
+    <NotFound v-else-if="episode === null" :title="`There's no episode ${episodeRef}`" :search="episodeRef">
+      <template v-if="auth.team">
+        It may have another code now, or have been deleted. Search for it, or find it among the episodes.
+      </template>
+      <template v-else>
+        It may not be released yet, have another code now, or have been deleted. Find it among the episodes, or sign in if
+        you're on Ogrodje's team.
+      </template>
     </NotFound>
-    <LoadingRows v-else-if="!episode" :rows="6" label="Loading the episode"/>
 
     <template v-else>
       <header class="title">
@@ -125,9 +152,13 @@ const photos = computed<KoofrPhoto[]>((previous) =>
               </ul>
             </dd>
           </div>
+          <!-- A session's page is the team's -->
           <div v-if="episode.session">
             <dt>Session</dt>
-            <dd><RouterLink :to="sessionPath(episode.session)">{{ sessionTitle(episode.session) }}</RouterLink></dd>
+            <dd>
+              <RouterLink v-if="auth.team" :to="sessionPath(episode.session)">{{ sessionTitle(episode.session) }}</RouterLink>
+              <template v-else>{{ sessionTitle(episode.session) }}</template>
+            </dd>
           </div>
           <div v-if="episode.recordingDate">
             <dt>Recording</dt>
@@ -137,7 +168,7 @@ const photos = computed<KoofrPhoto[]>((previous) =>
             <dt>Aired</dt>
             <dd><time :datetime="episode.airedDate">{{ formatDate(episode.airedDate) }}</time></dd>
           </div>
-          <div>
+          <div v-if="auth.team">
             <dt>Added</dt>
             <dd><time :datetime="episode.addedDate">{{ formatDate(episode.addedDate) }}</time></dd>
           </div>
@@ -191,7 +222,7 @@ const photos = computed<KoofrPhoto[]>((previous) =>
         <MarkdownText :source="episode.machineSummary" lang="sl"/>
       </section>
 
-      <section aria-labelledby="history">
+      <section v-if="auth.team" aria-labelledby="history">
         <div class="heading">
           <h2 id="history">History</h2>
           <span class="count">{{ episode.history.length }}</span>

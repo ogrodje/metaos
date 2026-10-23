@@ -8,12 +8,13 @@ import LoadError from '@/components/LoadError.vue'
 import LoadingRows from '@/components/LoadingRows.vue'
 import NotFound from '@/components/NotFound.vue'
 import PersonAvatar from '@/components/PersonAvatar.vue'
-import SignInPrompt from '@/components/SignInPrompt.vue'
 import SocialLinks from '@/components/SocialLinks.vue'
 import { type Episode, EPISODE_FIELDS, type Role, roleName } from '@/episodes'
 import { errorMessage, graphql } from '@/graphql'
 import { IMAGE_FIELDS } from '@/images'
 import { type Person, rolesOf, socialLinks } from '@/people'
+import { personData, shorten, usePageMeta, useSiteUrl } from '@/seo'
+import { useFirstLoad } from '@/ssr'
 import { useAuthStore } from '@/stores/auth'
 import { usePageTitle } from '@/title'
 
@@ -25,10 +26,25 @@ interface PersonDetails extends Omit<Person, 'episodes'> {
 
 const auth = useAuthStore()
 const route = useRoute()
+const siteUrl = useSiteUrl()
 
-// Undefined while it loads; null when there's no such person
+// The page is for the person in the path when it opens: going to another person opens another page
+const id = String(route.params.id)
+
+// Undefined while it loads; null when there's no such person, or none the user may see
 const person = ref<PersonDetails | null>()
 const error = ref<string>()
+
+// Everything about them; for anyone not on the team, only their released episodes, and none they recommended
+async function fetchPerson(id: string) {
+  return (await graphql<{ person: PersonDetails | null }>(`query ($id: ID!) {
+    person(id: $id) {
+      id name bio homepageUrl linkedinUrl twitterUrl instagramUrl facebookUrl avatar { ${IMAGE_FIELDS} }
+      episodes { episode { ${EPISODE_FIELDS} } roles }
+      recommended { ${EPISODE_FIELDS} }
+    }
+  }`, { id })).person
+}
 
 // Only the latest load counts: an earlier one may answer after it
 let loads = 0
@@ -36,21 +52,10 @@ let loads = 0
 // Quietly when MetaOS's data changes: what's shown stays until the new is there, and stays if it doesn't come
 async function loadPerson(id: string, quietly = false) {
   const load = ++loads
-  if (!quietly) {
-    person.value = undefined
-    error.value = undefined
-  }
-  if (!auth.authenticated) return
   try {
-    const data = await graphql<{ person: PersonDetails | null }>(`query ($id: ID!) {
-      person(id: $id) {
-        id name bio homepageUrl linkedinUrl twitterUrl instagramUrl facebookUrl avatar { ${IMAGE_FIELDS} }
-        episodes { episode { ${EPISODE_FIELDS} } roles }
-        recommended { ${EPISODE_FIELDS} }
-      }
-    }`, { id })
+    const loaded = await fetchPerson(id)
     if (load !== loads) return
-    person.value = keepUnchanged(person.value, data.person)
+    person.value = keepUnchanged(person.value, loaded)
     error.value = undefined
   } catch (e) {
     if (load !== loads) return
@@ -59,11 +64,34 @@ async function loadPerson(id: string, quietly = false) {
   }
 }
 
-// The person in the path: again when the path changes, or the user signs in or out
-watch([() => route.params.id, () => auth.authenticated], ([id]) => void loadPerson(String(id)), { immediate: true })
-useLiveRefresh(() => loadPerson(String(route.params.id), true))
+// First as anyone may see them, as the server rendered it
+const first = await useFirstLoad(`person:${id}`, () => fetchPerson(id))
+person.value = first.data
+error.value = first.error
+
+// Again when the user signs in or out: on the team, with all of their episodes, also of someone who isn't on a released
+// one, who was none so far, and loads until it's known
+watch(() => auth.team, () => {
+  if (person.value === null) person.value = undefined
+  void loadPerson(id)
+})
+useLiveRefresh(() => loadPerson(id, true))
 
 usePageTitle(() => person.value?.name)
+
+// For search engines and link previews: who they are and their picture
+usePageMeta(() => {
+  const shown = person.value
+  if (!shown) return {}
+  // E.g. Engineer @ Somewhere. Host, guest on Ogrodje.
+  const about = [shown.bio?.replace(/[\s.]+$/, ''), shown.episodes.length ? `${rolesOf(shown)} on Ogrodje` : null]
+    .filter(Boolean)
+  return {
+    description: about.length ? shorten(`${about.join('. ')}.`) : null,
+    image: shown.avatar,
+    structured: personData(shown, siteUrl),
+  }
+})
 
 // In the order an episode's people are listed
 const ROLES: Role[] = ['HOST', 'CO_HOST', 'GUEST', 'PRODUCER', 'CONSULTANT', 'DESIGNER', 'CANDIDATE']
@@ -85,15 +113,18 @@ const hasLinks = computed(() => (person.value ? socialLinks(person.value).length
 
 <template>
   <main class="content">
-    <SignInPrompt v-if="auth.ready && !auth.authenticated" title="Sign in to see this person">
-      A person's page, with every episode they're on, is for Ogrodje's team. Sign in with Discord or Google, or use
-      MetaOS from your AI assistant over MCP: Usage shows how to connect it.
-    </SignInPrompt>
-    <LoadError v-else-if="error" what="The person" :error="error" @retry="loadPerson(String(route.params.id))"/>
+    <LoadError v-if="error" what="The person" :error="error" @retry="loadPerson(id)"/>
+    <!-- None so far, while it's checked whether the user is on the team, who may see everyone -->
+    <LoadingRows v-else-if="person === undefined || (person === null && auth.likelyMember && !auth.ready)" :rows="6"
+                 label="Loading the person"/>
     <NotFound v-else-if="person === null" title="There's no such person">
-      They may have been deleted, or merged with someone else. The People page lists everyone.
+      <template v-if="auth.team">
+        They may have been deleted, or merged with someone else. The People page lists everyone.
+      </template>
+      <template v-else>
+        They may not be on a released episode yet, or have been deleted. The People page lists everyone who is.
+      </template>
     </NotFound>
-    <LoadingRows v-else-if="!person" :rows="6" label="Loading the person"/>
 
     <template v-else>
       <header class="person">

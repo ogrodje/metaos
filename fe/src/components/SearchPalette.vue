@@ -7,7 +7,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import MarkedText from '@/components/MarkedText.vue'
 import ShowBadge from '@/components/ShowBadge.vue'
 import StatusLabel from '@/components/StatusLabel.vue'
-import { DATE_LOCALE, episodePath, formatDate, guests, sessionPath } from '@/episodes'
+import { DATE_LOCALE, episodePath, formatDate, guests, sessionPath, TIME_ZONE } from '@/episodes'
 import { errorMessage, graphql } from '@/graphql'
 import { personPath, rolesOf } from '@/people'
 import {
@@ -34,7 +34,8 @@ const LIMIT = 5
 // How long typing pauses before it's searched
 const PAUSE = 150
 
-const mac = /Mac|iPhone|iPad/.test(navigator.userAgent)
+// Known in the browser only, once mounted; until then the button says Ctrl K, as the server would
+const mac = ref(false)
 
 type Item =
   | { kind: 'episode', key: string, path: string, hit: EpisodeHit, exact: boolean }
@@ -182,7 +183,10 @@ function onShortcut(event: KeyboardEvent) {
   }
 }
 
-onMounted(() => window.addEventListener('keydown', onShortcut))
+onMounted(() => {
+  mac.value = /Mac|iPhone|iPad/.test(navigator.userAgent)
+  window.addEventListener('keydown', onShortcut)
+})
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onShortcut)
   clearTimeout(timer)
@@ -192,7 +196,8 @@ onBeforeUnmount(() => {
 watch(() => route.fullPath, close)
 
 // A session as lists name it: its place, or else its date
-const shortDate = (date: string) => new Date(date).toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'short' })
+const shortDate = (date: string) =>
+  new Date(date).toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'short', timeZone: TIME_ZONE })
 
 // Under an episode's title: why it was found when the title doesn't say, or else its guests
 function episodeLine(hit: EpisodeHit) {

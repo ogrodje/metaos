@@ -2,12 +2,13 @@
 import { RouterLink } from 'vue-router'
 import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { setResponseStatus, useHead } from '#imports'
 import { searchPath } from '@/search'
 import { useAuthStore } from '@/stores/auth'
 import { usePageTitle } from '@/title'
 
-// What isn't there, e.g. a page, an episode or a person, and where to go instead: signed in, a search for it first, as
-// it may have moved, e.g. to another code
+// What isn't there, e.g. a page, an episode or a person, and where to go instead: on the team, a search for it first,
+// as it may have moved, e.g. to another code
 const props = defineProps<{
   title: string
   // What to search for, e.g. the code that wasn't found
@@ -17,6 +18,11 @@ const props = defineProps<{
 const auth = useAuthStore()
 
 usePageTitle(() => props.title)
+
+// A 404 from the server, for search engines and link previews, which leave it out; the page still loads in the
+// browser, where the team may find what anyone else doesn't, e.g. an episode that isn't released
+setResponseStatus(404)
+useHead({ meta: [{ name: 'robots', content: 'noindex' }] })
 
 const places = [
   { path: '/', title: 'Home' },
@@ -30,7 +36,7 @@ const places = [
     <h1 id="not-found">{{ title }}</h1>
     <p><slot/></p>
     <div class="actions">
-      <RouterLink v-if="auth.authenticated && search" class="button" :to="searchPath(search)">
+      <RouterLink v-if="auth.team && search" class="button" :to="searchPath(search)">
         <FontAwesomeIcon :icon="faMagnifyingGlass"/>Search for “{{ search }}”
       </RouterLink>
       <RouterLink v-for="place in places" :key="place.path" class="button" :to="place.path">{{ place.title }}</RouterLink>

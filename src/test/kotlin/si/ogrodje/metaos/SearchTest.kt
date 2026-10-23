@@ -194,7 +194,10 @@ class SearchTest @Autowired constructor(
             .andExpect(jsonPath("$.data.person.episodes[*].episode.title", contains("Hosted by Pia", "Pia's idea")))
             .andExpect(jsonPath("$.data.person.episodes[0].roles", contains("HOST", "PRODUCER")))
             .andExpect(jsonPath("$.data.person.recommended[*].title", contains("Pia's idea")))
+        // She hosts a released episode, so her page is anyone's, with only that one (GraphQLTest has whose isn't)
         graphql(query, auth = null)
-            .andExpect(jsonPath("$.errors[0].extensions.classification").value("UNAUTHORIZED"))
+            .andExpect(jsonPath("$.errors").doesNotExist())
+            .andExpect(jsonPath("$.data.person.episodes[*].episode.title", contains("Hosted by Pia")))
+            .andExpect(jsonPath("$.data.person.recommended", empty<Any>()))
     }
 }

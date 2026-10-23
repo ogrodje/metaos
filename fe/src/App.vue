@@ -1,18 +1,35 @@
 <script setup lang="ts">
 import {computed, nextTick, ref, watch} from 'vue'
-import {RouterLink, RouterView, useRoute, useRouter} from 'vue-router'
+import {RouterLink, useRoute, useRouter} from 'vue-router'
 import {faDiscord, faGithub} from '@fortawesome/free-brands-svg-icons'
 import {faHouse, faLightbulb, faMicrophone, faPlug, faUserGroup} from '@fortawesome/free-solid-svg-icons'
 import {FontAwesomeIcon} from '@fortawesome/vue-fontawesome'
+import {NuxtPage} from '#components'
+import {useHead, useRuntimeConfig} from '#imports'
 import SearchPalette from '@/components/SearchPalette.vue'
 import UserMenu from '@/components/UserMenu.vue'
 import {graphql} from '@/graphql'
 import {useAuthStore} from '@/stores/auth'
-import {pageName} from '@/title'
+import {announcePage, fullTitle, pageName} from '@/title'
 
 const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
+
+// Every page: its title, by its route until it names itself (usePageTitle), and its one address, without the query, for
+// search engines and link previews; a page about one thing, e.g. an episode, adds what it is (seo.ts)
+const {siteUrl} = useRuntimeConfig().public
+const address = computed(() => siteUrl + route.path)
+useHead({
+  titleTemplate: fullTitle,
+  title: () => route.meta.title,
+  link: [{rel: 'canonical', href: address}],
+  meta: [
+    {property: 'og:title', content: () => route.meta.title ?? 'Ogrodje MetaOS'},
+    {property: 'og:url', content: address},
+    {property: 'og:type', content: 'website'},
+  ],
+})
 
 // Who MetaOS takes the signed-in user for, and their person, once one is linked to them by email
 const name = ref<string>()
@@ -54,6 +71,7 @@ const content = ref<HTMLElement>()
 
 router.afterEach((to, from, failure) => {
   if (failure || from.matched.length === 0 || to.path === from.path) return
+  announcePage(to.meta.title)
   nextTick(() => {
     if (!content.value?.contains(document.activeElement)) content.value?.focus({preventScroll: true})
   })
@@ -74,7 +92,7 @@ function current(path: string) {
       <RouterLink class="logo" to="/" aria-label="Ogrodje MetaOS, home"><img src="/favicon.png" alt=""/></RouterLink>
       <div v-if="auth.ready" class="actions">
         <!-- Search is the team's, as most of what it finds is -->
-        <SearchPalette v-if="auth.authenticated"/>
+        <SearchPalette v-if="auth.team"/>
         <UserMenu :name="name" :person="person"/>
       </div>
     </div>
@@ -87,9 +105,14 @@ function current(path: string) {
     </nav>
   </header>
 
+  <!-- Signed in, but not approved yet: why they see what everyone does -->
+  <div v-if="auth.ready && auth.authenticated && !auth.team" class="approval" role="status">
+    <p>You're signed in, but an admin hasn't approved your account yet. Until they do, you see what everyone sees.</p>
+  </div>
+
   <!-- Takes the height the header and footer leave, so the footer stays at the bottom of short pages -->
   <div id="page" ref="content" class="page" tabindex="-1">
-    <RouterView/>
+    <NuxtPage/>
   </div>
 
   <p class="visually-hidden" aria-live="polite" aria-atomic="true">{{ pageName }}</p>
@@ -240,10 +263,31 @@ header {
   }
 }
 
-:global(#app) {
+:global(#__nuxt) {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+}
+
+// Under the header, in the page's column, as quiet as a note
+.approval {
+  border-bottom: 1px solid var(--hairline);
+  background: var(--hover);
+
+  p {
+    max-width: var(--content-width);
+    margin: 0 auto;
+    padding: 12px 24px;
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--secondary);
+  }
+
+  @media (max-width: 640px) {
+    p {
+      padding: 12px 16px;
+    }
+  }
 }
 
 .page {

@@ -1,0 +1,98 @@
+# The front-end (fe/): Nuxt's server, which renders the pages anyone may see and serves the team's to the browser. It
+# asks the app's GraphQL API inside the cluster, as someone who isn't signed in; the browser asks the app itself, through
+# the Ingress (deployment-metaos.yaml), which sends MetaOS's own paths there and everything else here.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metaos-web
+  namespace: metaos-prod
+  labels: { app: metaos-web }
+spec:
+  # Two, so one keeps answering while the other restarts or rolls out; each keeps its own cache of rendered pages
+  replicas: 2
+  selector: { matchLabels: { app: metaos-web } }
+  template:
+    metadata: { labels: { app: metaos-web } }
+    spec:
+      # preStop sleep + Nitro's graceful shutdown
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532   # distroless "nonroot"
+        runAsGroup: 65532
+      containers:
+        - name: metaos-web
+          image: registry.folk-decibel.ts.net/metaos/metaos-web
+          ports:
+            - { containerPort: 3000, name: http }
+
+          # Keeps the pod serving until ingress-nginx has dropped it from its upstreams (distroless has no `sleep`)
+          lifecycle:
+            preStop:
+              sleep: { seconds: 10 }
+
+          # nuxt.config.ts's runtime config, from the public URLs the app and Keycloak use too (kustomization.yaml)
+          env:
+            # The app's Service, in the cluster
+            - name: NUXT_METAOS_URL
+              value: http://metaos
+            - name: NUXT_PUBLIC_ISSUER
+              valueFrom: { configMapKeyRef: { name: public-urls, key: KEYCLOAK_ISSUER_URI } }
+            - name: NUXT_PUBLIC_MCP_URL
+              valueFrom: { configMapKeyRef: { name: public-urls, key: METAOS_MCP_URL } }
+            - name: NUXT_PUBLIC_SITE_URL
+              valueFrom: { configMapKeyRef: { name: public-urls, key: METAOS_UI_URL } }
+
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          # Node and the cache of rendered pages, which Nitro keeps in memory; no CPU limit, as for the app
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: metaos-web
+  namespace: metaos-prod
+  labels: { app: metaos-web }
+spec:
+  type: ClusterIP
+  selector: { app: metaos-web }
+  ports:
+    - { name: http, port: 80, targetPort: http }
+---
+# Everything on metaos.ogrodje.si that isn't MetaOS's own (metaos-ingress, deployment-metaos.yaml): the pages, their
+# assets, robots.txt and the sitemap. ingress-nginx takes the longest matching path of the two.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: metaos-web-ingress
+  namespace: metaos-prod
+  labels: { version: "1" }
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # No TLS block: Cloudflare terminates TLS at the edge, as for every other service on this cluster
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: metaos.ogrodje.si
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: metaos-web
+                port: { number: 80 }

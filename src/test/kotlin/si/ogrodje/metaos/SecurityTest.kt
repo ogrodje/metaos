@@ -195,4 +195,12 @@ class SecurityTest @Autowired constructor(private val mvc: MockMvc, private val 
             content { string(containsString("jvm_memory_used_bytes")) }
         }
     }
+
+    // The front-end is a service of its own (fe/): a page that reaches MetaOS is a path the Ingress shouldn't have sent
+    @Test
+    fun `serves no pages, which are the front-end's`() {
+        listOf("/", "/episodes/S05E08", "/config.json", "/index.html").forEach { path ->
+            mvc.get(path) { accept(MediaType.TEXT_HTML) }.andExpect { status { isUnauthorized() } }
+        }
+    }
 }

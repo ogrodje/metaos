@@ -28,34 +28,64 @@ MetaOS was designed for scaling, optimising and helping grow the [Ogrodje] organ
 
 ### Front-end
 
-The web front-end lives in [`fe/`](fe): Vue 3 with TypeScript, built by Vite, with Pinia for state and Vue Router.
-Node and Yarn (Berry) come from devenv (`languages.javascript` in `devenv.nix`). Yarn installs into `node_modules`
-(`nodeLinker: node-modules` in `fe/.yarnrc.yml`), as Vite doesn't support Plug'n'Play: under it pinia couldn't find its
-`@vue/devtools-api` peer dependency.
+The web front-end lives in [`fe/`](fe): Vue 3 with TypeScript, rendered by [Nuxt] (Vite builds it, Nitro serves it),
+with Pinia for state and Vue Router. Nuxt keeps the app's own layout (`srcDir: 'src'` in
+[`fe/nuxt.config.ts`](fe/nuxt.config.ts)): `App.vue`, its views and components, its routes in `fe/src/router/index.ts`
+(through `router.options.ts`, not a `pages/` directory), and explicit imports, without Nuxt's auto-imports:
+composables come from `#imports`, `NuxtPage` from `#components`. Node and Yarn (Berry) come from devenv
+(`languages.javascript` in `devenv.nix`). Yarn installs into `node_modules` (`nodeLinker: node-modules` in
+`fe/.yarnrc.yml`), as Vite doesn't support Plug'n'Play: under it pinia couldn't find its `@vue/devtools-api` peer
+dependency.
 
 ```bash
 cd fe
-yarn            # install
-yarn dev        # dev server with hot reload, http://localhost:5173
-yarn build      # type-check (vue-tsc) and build into fe/dist
+yarn            # install, and nuxt prepare (its types, in .nuxt)
+yarn dev        # Nuxt's dev server, rendering on the server too, with hot reload, http://localhost:5173
+yarn build      # type-check (nuxt typecheck) and build into fe/.output
+yarn preview    # run the build, http://localhost:3000
 yarn test       # the tests in src/**/__tests__, with vitest (./gradlew feTest, which CI runs)
 ```
 
-- The devenv shell runs `yarn install` in `fe/` when `yarn.lock` has changed, and `devenv up` runs `yarn dev`. Vite
-  proxies `/graphql`, `/events` and `/config.json` to MetaOS on `:8080`, so in development too the browser sees one
-  origin.
-- `./gradlew bootJar` builds `fe/` (`feInstall`, `feBuild`) with the devenv's Node and Yarn, so it needs the devenv
-  shell, and puts it into the jar's `static/`. [`Frontend.kt`](src/main/kotlin/si/ogrodje/metaos/Frontend.kt) serves
-  it: the files, and `index.html` for the router's paths (`createWebHistory`); its files and pages are public, while
-  its data needs a token. Runs and tests don't build `fe/`.
-- `/config.json` tells the front-end where users sign in (the Keycloak issuer) and as which client
-  (`metaos.frontend.client-id`), and where MCP clients connect (`METAOS_MCP_URL`), so one build works in every
-  environment.
+- The devenv shell runs `yarn install` in `fe/` when `yarn.lock` has changed, and `devenv up` runs `yarn dev`.
+  [`fe/server/middleware/api.ts`](fe/server/middleware/api.ts) passes `/graphql`, `/events`, `/koofr` and `/dropbox`
+  on to MetaOS (`NUXT_METAOS_URL`, by default `:8080`), so in development too the browser sees one origin; in the
+  cluster the Ingress sends them to MetaOS before they get there.
+- The front-end is a service of its own, `metaos-web` ([`docker/web.Dockerfile`](docker/web.Dockerfile),
+  [`k8s/base/deployment-web.yaml`](k8s/base/deployment-web.yaml)): `./gradlew feBuild` (with `feInstall`, the
+  devenv's Node and Yarn) builds it into `fe/.output`, which Node runs. MetaOS itself serves no pages, only its API.
+- Its runtime config (`nuxt.config.ts`) says where users sign in (`NUXT_PUBLIC_ISSUER`, the Keycloak issuer) and as
+  which client, where MCP clients connect (`NUXT_PUBLIC_MCP_URL`), the site's public address (`NUXT_PUBLIC_SITE_URL`)
+  and where its server finds MetaOS (`NUXT_METAOS_URL`), so one build works in every environment.
+- The pages anyone may see (Home, Episodes, People, an episode's and a person's page, Usage) render on the server, as
+  someone who isn't signed in sees them: the server asks the API without a token (`graphql.ts`), so every visitor gets
+  the same page, which Nitro and Cloudflare keep for a minute and serve stale for ten while it's rendered again
+  (`routeRules`). A page's data comes in it (`useFirstLoad` in [`fe/src/ssr.ts`](fe/src/ssr.ts), over `useAsyncData`;
+  not in a `_payload.json` of its own, which a cache could keep apart from its page), and the browser hydrates it
+  rather than loading it again. Going to a page in the browser, it loads there, as the signed-in user.
+- keycloak-js starts once the page is hydrated ([`fe/src/plugins/auth.client.ts`](fe/src/plugins/auth.client.ts)), and
+  a page loads again once the user is known to be on the team (`auth.team`: the realm role `metaos-user` is in their
+  token), when what's the team's comes on top. Until then a page has to render in the browser as it did on the server:
+  what depends on who's signed in waits for `auth.ready`, `auth.team` or `auth.likelyMember`, which are false there;
+  dates are in English and in Ogrodje's time zone (`DATE_LOCALE`, `TIME_ZONE`), whatever the browser's; and
+  `navigator`, `location`, `document` and storage are read in `onMounted` or handlers only. Nothing may write
+  module-level state on the server, which every request shares (`pageName` in `title.ts` is the browser's only).
+- The team's pages, `/ideas`, `/sessions/**` and `/search`, render in the browser only (`ssr: false`), with
+  `no-store` and `noindex`. Signed in but not approved, users see what everyone does, with a note under the header.
+- A page from a cache that's over 30 s old loads its data again once it's shown
+  ([`fe/src/plugins/rendered.ts`](fe/src/plugins/rendered.ts)), as live updates do after a break, since they didn't
+  hear what changed meanwhile.
+- For search engines and link previews, most of which don't run JavaScript, each page has its title, description,
+  picture and canonical address in the server's page (`usePageTitle`, and `usePageMeta` in
+  [`fe/src/seo.ts`](fe/src/seo.ts)), and an episode's and a person's page their schema.org data (`PodcastEpisode`,
+  `Person`). [`fe/server/routes`](fe/server/routes) has `/sitemap.xml`, with every page anyone may see, and
+  `/robots.txt`, which keeps crawlers off the team's pages and the API; and `/healthz`, for the probes. A not-found
+  page answers 404 (`NotFound.vue`).
 - The Usage page (`/usage`) shows how to install the MCP server and lists its tools by hand, from
   [`fe/src/tools.ts`](fe/src/tools.ts), which has to follow every change to the tools (see above).
 - Data comes from the GraphQL API at `/graphql` ([`schema.graphqls`](src/main/resources/graphql/schema.graphqls),
   [`GraphQL.kt`](src/main/kotlin/si/ogrodje/metaos/GraphQL.kt)), through `fe/src/graphql.ts`. It's open to anyone, as
-  some of it is public (`releasedEpisodes`); a bearer token says who is asking (`me`). What isn't public needs
+  some of it is public (`releasedEpisodes`, and `episode` and `person` for a released episode and the people on it);
+  a bearer token says who is asking (`me`). What isn't public needs
   `metaos:read` and an approved user (realm role `metaos-user`, `Security.kt`): whole queries with `@PreAuthorize`, and fields that public episodes and sessions also have (history,
   docs, addresses, ...) come back empty for anyone else.
 - The header ([`App.vue`](fe/src/App.vue)) is two rows: the logo, and at the right Search and you
@@ -63,8 +93,9 @@ yarn test       # the tests in src/**/__tests__, with vitest (./gradlew feTest, 
   Google); under them the pages as tabs, in the order they're used (`pages`), which scroll sideways when they don't
   fit. A new section, e.g. Partners or Analytics, is another tab there. A tab is underlined on its own pages too,
   Episodes on an episode's. The user menu is a button that shows and hides its links, not an ARIA menu.
-- Every page is named in the browser's tab (`meta.title` in `fe/src/router/index.ts`, and `usePageTitle` from
-  `fe/src/title.ts` for one about a thing, e.g. an episode's code and title) and has an `h1`, hidden where its tab
+- Every page is named in the browser's tab and the server's page (`meta.title` in `fe/src/router/index.ts`, and
+  `usePageTitle` from `fe/src/title.ts`, with `useHead`, for one about a thing, e.g. an episode's code and title) and
+  has an `h1`, hidden where its tab
   names it. Going to another page moves focus to it and says its name in a live region (`App.vue`); a skip link leads
   past the header. Anything else is a not-found page (`NotFound.vue`, also an episode, session or person that isn't
   there), with where to go instead.
@@ -75,17 +106,20 @@ yarn test       # the tests in src/**/__tests__, with vitest (./gradlew feTest, 
   attention ([`fe/src/attention.ts`](fe/src/attention.ts): recording dates that passed, recordings in the next two
   weeks with no confirmed guest or doc, and episodes recorded 60 days ago that aren't out), then the upcoming
   recordings and what's in production, by session with how far away it is, then the releases.
-- Signed in, episode titles and session labels lead to their pages, `/episodes/<code or ID>` and `/sessions/<ID>`:
+- Episode titles lead to their pages, `/episodes/<code or ID>`, and for the team session labels to `/sessions/<ID>`:
   everything about them, and their history on a date rail (`HistoryTimeline.vue`), from the audit trail as
-  [`History.kt`](src/main/kotlin/si/ogrodje/metaos/History.kt) tells it.
+  [`History.kt`](src/main/kotlin/si/ogrodje/metaos/History.kt) tells it. A released episode's page is anyone's, without
+  what's the team's (its history, alternative titles, files, ...); any other episode is the team's, and not found for
+  anyone else, as one that isn't there.
 - Episode ideas (`IDEA`) have a page of their own, `/ideas`, from the `ideas` query, which needs `metaos:read`, as
   does its link in the header; the `episodes` query, and so the Episodes page, leaves them out.
 - The People page, `/people`, lists everyone by name (Slovenian order, past a "dr."), from the `people` query: who
   they are, their roles and latest episodes, and links to their website and social profiles. Anyone not signed in
   gets only those on the released episodes, with only those episodes; candidates are the team's.
-- Signed in, people's names (on the People page and an episode's page, and who recommended an idea) lead to their
-  pages, `/people/<ID>`, from the `person` query: who they are, where they're online, their episodes by what they are
-  on them, hosts first, each list as the session page has it, and the episodes they recommended.
+- People's names (on the People page and an episode's page, and who recommended an idea) lead to their pages,
+  `/people/<ID>`, from the `person` query: who they are, where they're online, their episodes by what they are on
+  them, hosts first, each list as the session page has it, and the episodes they recommended. Anyone not signed in
+  gets the page of someone on a released episode, as the People page lists them, with only those episodes.
 - Search is the team's: signed in, the header has a Search button (`SearchPalette.vue`; also ⌘K, Ctrl+K and `/`),
   which opens a few of each kind over the page, and its See all the search page, `/search?q=`, with all of them by
   kind; the address keeps what's searched. Both ask the `search` query, as does the `search` MCP tool:
@@ -95,11 +129,12 @@ yarn test       # the tests in src/**/__tests__, with vitest (./gradlew feTest, 
   show, summaries (not the AI one) or session, a person's name or bio, or a session's place, address or date; case
   and diacritics don't matter (`fold`, also in `fe/src/search.ts`, which marks the words found). Each word counts the
   weight of the field it's best in (`SearchField`), and a row says why it was found when it doesn't show it.
-- Users sign in with keycloak-js (`fe/src/stores/auth.ts`), straight to Discord or Google (`idpHint`). On load it
-  checks for a Keycloak session in a hidden iframe of `fe/public/silent-check-sso.html`, which is why MetaOS's pages
-  may be framed by MetaOS itself (`X-Frame-Options: SAMEORIGIN`). Whether the user was signed in last time is kept
-  in `localStorage`, as a hint only: while Keycloak is asked, the header keeps the team's tabs and pages their places,
-  and the check waits longer before taking them for a guest.
+- Users sign in with keycloak-js (`fe/src/stores/auth.ts`), straight to Discord or Google (`idpHint`). Once the page
+  is hydrated it checks for a Keycloak session in a hidden iframe of `fe/public/silent-check-sso.html`, which is why
+  MetaOS's pages may be framed by MetaOS itself (`X-Frame-Options: SAMEORIGIN`, in `routeRules`). Whether the user was
+  on the team last time is kept in `localStorage`, as a hint only, read once the page is hydrated: while Keycloak is
+  asked, the header keeps the team's tabs and pages their places, and the check waits longer before taking them for a
+  guest.
 
 ### Authentication (Keycloak)
 
@@ -178,7 +213,7 @@ Server-Sent Events at `/events`.
   page loads when it's shown again, if anything changed or it was hidden for a minute (Koofr, Dropbox and Drive don't
   tell MetaOS what changed).
 - A new table with an audit trigger is in it by itself. A new page that shows MetaOS's data should use
-  `useLiveRefresh`.
+  `useLiveRefresh`, and, when anyone may see it, load what it shows first with `useFirstLoad` (Front-end).
 
 ### Google (Drive and Gmail)
 
@@ -329,6 +364,11 @@ and its Keycloak at `https://metaos-auth.ogrodje.si`. Pushes to `master` deploy 
 the one-time setup and the `just` recipes for deploying by hand. [`DEPLOY.md`](DEPLOY.md) explains the setup, the
 decisions behind it and what is left to do.
 
+- The pages are the front-end's own Deployment, `metaos-web`, also two pods: the Ingress sends MetaOS's paths
+  (`/graphql`, `/events`, `/mcp`, `/.well-known`, `/koofr`, `/dropbox`, the probes) to MetaOS and everything else to
+  it; its server asks MetaOS's GraphQL inside the cluster (`http://metaos`). Cloudflare caches the pages anyone may
+  see as their `Cache-Control` says, which a Cache Rule has to allow, as it doesn't cache HTML by default; the team's
+  pages say `no-store`.
 - MetaOS runs as two pods, so one answers while the other restarts or rolls out. Nothing may live in one pod's memory
   that another needs: MCP is stateless (`spring.ai.mcp.server.protocol=STATELESS`, no `Mcp-Session-Id`), as no tool
   needs a session and the bearer token says who's calling; every pod listens for changes (Live updates) and checks its
@@ -338,6 +378,7 @@ decisions behind it and what is left to do.
 [Nix]: https://nixos.org/
 [devenv]: https://devenv.sh/
 [Keycloak]: https://www.keycloak.org/
+[Nuxt]: https://nuxt.com/
 
 
 

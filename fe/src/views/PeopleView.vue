@@ -6,24 +6,30 @@ import LoadingRows from '@/components/LoadingRows.vue'
 import PersonItem from '@/components/PersonItem.vue'
 import { errorMessage, graphql } from '@/graphql'
 import { type Person, PERSON_FIELDS } from '@/people'
+import { usePageMeta } from '@/seo'
+import { useFirstLoad } from '@/ssr'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 
-// Everyone, by name, for signed-in users; for everyone else those on the released episodes
+// Everyone, by name, for the team; for everyone else those on the released episodes
 const people = ref<Person[]>()
 const error = ref<string>()
 
-// Loads again when the user signs in or out, as signed in there's more, and quietly when MetaOS's data changes, when
+async function fetchPeople() {
+  return (await graphql<{ people: Person[] }>(`{ people { ${PERSON_FIELDS} } }`)).people
+}
+
+// Loads again when the user signs in or out, as on the team there's more, and quietly when MetaOS's data changes, when
 // who's shown stays if they don't come; only the latest load counts
 let loads = 0
 
 async function loadPeople(quietly = false) {
   const load = ++loads
   try {
-    const data = await graphql<{ people: Person[] }>(`{ people { ${PERSON_FIELDS} } }`)
+    const loaded = await fetchPeople()
     if (load !== loads) return
-    people.value = keepUnchanged(people.value, data.people)
+    people.value = keepUnchanged(people.value, loaded)
     error.value = undefined
   } catch (e) {
     if (load !== loads) return
@@ -32,8 +38,15 @@ async function loadPeople(quietly = false) {
   }
 }
 
-watch(() => auth.authenticated, () => void loadPeople(), { immediate: true })
+// First those on the released episodes, as the server rendered them
+const first = await useFirstLoad('people', fetchPeople)
+people.value = first.data
+error.value = first.error
+
+watch(() => auth.team, () => void loadPeople())
 useLiveRefresh(() => loadPeople(true))
+
+usePageMeta(() => ({ description: "The hosts and guests of Ogrodje's podcast, who they are and where they're online." }))
 </script>
 
 <template>

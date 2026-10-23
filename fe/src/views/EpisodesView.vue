@@ -7,11 +7,13 @@ import LoadError from '@/components/LoadError.vue'
 import LoadingRows from '@/components/LoadingRows.vue'
 import { type Episode, EPISODE_FIELDS } from '@/episodes'
 import { errorMessage, graphql } from '@/graphql'
+import { usePageMeta } from '@/seo'
+import { useFirstLoad } from '@/ssr'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 
-// Every episode for signed-in users; for everyone else only the released ones
+// Every episode for the team; for everyone else only the released ones
 const episodes = ref<Episode[]>()
 const error = ref<string>()
 
@@ -37,16 +39,20 @@ const seasons = computed(() => {
   return [...groups.values()]
 })
 
-// Loads again when the user signs in or out, as signed in there's more, and quietly when MetaOS's data changes, when
+async function fetchEpisodes() {
+  return (await graphql<{ episodes: Episode[] }>(`{ episodes { ${EPISODE_FIELDS} } }`)).episodes
+}
+
+// Loads again when the user signs in or out, as on the team there's more, and quietly when MetaOS's data changes, when
 // what's shown stays if they don't come; only the latest load counts
 let loads = 0
 
 async function loadEpisodes(quietly = false) {
   const load = ++loads
   try {
-    const data = await graphql<{ episodes: Episode[] }>(`{ episodes { ${EPISODE_FIELDS} } }`)
+    const loaded = await fetchEpisodes()
     if (load !== loads) return
-    episodes.value = keepUnchanged(episodes.value, data.episodes)
+    episodes.value = keepUnchanged(episodes.value, loaded)
     error.value = undefined
   } catch (e) {
     if (load !== loads) return
@@ -55,8 +61,15 @@ async function loadEpisodes(quietly = false) {
   }
 }
 
-watch(() => auth.authenticated, () => void loadEpisodes(), { immediate: true })
+// First the released ones, as the server rendered them
+const first = await useFirstLoad('episodes', fetchEpisodes)
+episodes.value = first.data
+error.value = first.error
+
+watch(() => auth.team, () => void loadEpisodes())
 useLiveRefresh(() => loadEpisodes(true))
+
+usePageMeta(() => ({ description: "Every released episode of Ogrodje's podcast, by season, with where to listen." }))
 </script>
 
 <template>

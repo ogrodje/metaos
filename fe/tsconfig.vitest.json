@@ -1,9 +1,0 @@
-// The tests (src/**/__tests__), which vitest runs (yarn test) and vue-tsc --build checks with the rest
-{
-  "extends": "./tsconfig.app.json",
-  "include": ["env.d.ts", "src/**/__tests__/*"],
-  "exclude": [],
-  "compilerOptions": {
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.vitest.tsbuildinfo"
-  }
-}

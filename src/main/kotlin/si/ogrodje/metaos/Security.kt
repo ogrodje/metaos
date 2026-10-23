@@ -93,20 +93,14 @@ class SecurityConfig {
             it.requestMatchers(HttpMethod.GET, "/events").permitAll()
             // Thumbnails of the pictures in episodes' and sessions' Koofr and Dropbox folders (KoofrPhotos.kt, DropboxPictures.kt)
             it.requestMatchers("/koofr/**", "/dropbox/**").access(approved(API_READ_SCOPE))
-            // The front-end (Frontend.kt): its files and pages are public - its data comes from the API, with a token
-            it.requestMatchers(HttpMethod.GET, "/assets/**", "/favicon.png", "/silent-check-sso.html", "/config.json")
-                .permitAll()
-            it.requestMatchers(frontendPage).permitAll()
-            // The error page of a request let in, e.g. a missing asset's 404, which would otherwise become a 401
+            // The error page of a request let in, e.g. a 404, which would otherwise become a 401
             it.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
+            // The front-end's pages are its own service's (fe/), which the Ingress sends everything else to
             it.anyRequest().authenticated()
         }
         // Bearer tokens only - no cookies, so no CSRF and no HTTP sessions
         .csrf { it.disable() }
         .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
-        // keycloak-js asks Keycloak whether the user is signed in through a hidden iframe of the front-end's
-        // silent-check-sso.html, so MetaOS's pages may be framed - by MetaOS itself only
-        .headers { headers -> headers.frameOptions { it.sameOrigin() } }
         .with(mcpServerOAuth2()) { mcp ->
             mcp.authorizationServer(issuerUri)
             mcp.jwtDecoder(jwtDecoder)

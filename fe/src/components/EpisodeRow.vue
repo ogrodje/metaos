@@ -9,7 +9,7 @@ import { type Episode, episodePath, formatDate } from '@/episodes'
 import type { EpisodeMatch } from '@/search'
 import { useAuthStore } from '@/stores/auth'
 
-// Signed in, the title leads to the episode's page
+// The title leads to the episode's page, which is the team's while it's in the works
 const auth = useAuthStore()
 
 const props = defineProps<{
@@ -36,7 +36,7 @@ const date = computed(() => {
     <span class="code" :aria-hidden="!episode.code">{{ episode.code ?? '—' }}</span>
     <div class="main">
       <p class="title">
-        <RouterLink v-if="auth.authenticated" :to="episodePath(episode)" lang="sl"><MarkedText :text="episode.title" :words="match?.words"/></RouterLink>
+        <RouterLink v-if="auth.team || episode.status === 'PUBLISHED'" :to="episodePath(episode)" lang="sl"><MarkedText :text="episode.title" :words="match?.words"/></RouterLink>
         <span v-else lang="sl">{{ episode.title }}</span>
         <ShowBadge v-if="episode.show" :name="episode.show" :color="episode.showColor"/>
       </p>

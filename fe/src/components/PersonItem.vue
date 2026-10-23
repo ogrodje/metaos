@@ -6,10 +6,6 @@ import PersonAvatar from '@/components/PersonAvatar.vue'
 import SocialLinks from '@/components/SocialLinks.vue'
 import { episodePath } from '@/episodes'
 import { type Person, personPath, rolesOf, socialLinks } from '@/people'
-import { useAuthStore } from '@/stores/auth'
-
-// Signed in, their name leads to their page, and their episodes to the episodes' pages
-const auth = useAuthStore()
 
 const props = defineProps<{
   person: Person
@@ -26,15 +22,14 @@ const roles = computed(() => rolesOf(props.person))
 const hasLinks = computed(() => socialLinks(props.person).length > 0)
 </script>
 
-<!-- A person: their picture, their name and who they are, then what they've been on the episodes and the latest of those,
-     then where they're online. Like an idea's row (IdeaItem), the links where an episode has where to listen. -->
+<!-- A person: their picture, their name, which leads to their page, and who they are, then what they've been on the
+     episodes and the latest of those, then where they're online. Like an idea's row (IdeaItem), the links where an episode has where to listen. -->
 <template>
   <li class="person">
     <PersonAvatar class="picture" :image="person.avatar" :name="person.name" :size="40"/>
     <div class="main">
       <p class="title">
-        <RouterLink v-if="auth.authenticated" :to="personPath(person)"><MarkedText :text="person.name" :words="words"/></RouterLink>
-        <template v-else>{{ person.name }}</template>
+        <RouterLink :to="personPath(person)"><MarkedText :text="person.name" :words="words"/></RouterLink>
       </p>
       <p v-if="person.bio" class="summary"><MarkedText :text="person.bio" :words="words"/></p>
       <p v-if="person.episodes.length" class="details">
@@ -43,8 +38,7 @@ const hasLinks = computed(() => socialLinks(props.person).length > 0)
         <span>
           <template v-for="(episode, i) in latest" :key="episode.id">
             <template v-if="i">, </template>
-            <RouterLink v-if="auth.authenticated" :class="{ code: episode.code }" :to="episodePath(episode)" :title="episode.title" lang="sl">{{ episode.code ?? episode.title }}</RouterLink>
-            <span v-else :class="{ code: episode.code }" :title="episode.title" lang="sl">{{ episode.code ?? episode.title }}</span>
+            <RouterLink :class="{ code: episode.code }" :to="episodePath(episode)" :title="episode.title" lang="sl">{{ episode.code ?? episode.title }}</RouterLink>
           </template>
           <template v-if="more"> and {{ more }} more</template>
         </span>

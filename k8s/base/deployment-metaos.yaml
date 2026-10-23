@@ -140,18 +140,23 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
     # No TLS block: Cloudflare terminates TLS at the edge, as for every other service on this cluster
+# MetaOS's own paths; everything else, the pages, is the front-end's (metaos-web-ingress, deployment-web.yaml)
 spec:
   ingressClassName: nginx
   rules:
     - host: metaos.ogrodje.si
       http:
         paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: metaos
-                port: { number: 80 }
+          # GraphQL, the stream of changes, MCP and its OAuth metadata, the thumbnails of Koofr's and Dropbox's pictures
+          - { path: /graphql, pathType: Prefix, backend: { service: { name: metaos, port: { number: 80 } } } }
+          - { path: /events, pathType: Prefix, backend: { service: { name: metaos, port: { number: 80 } } } }
+          - { path: /mcp, pathType: Prefix, backend: { service: { name: metaos, port: { number: 80 } } } }
+          - { path: /.well-known, pathType: Prefix, backend: { service: { name: metaos, port: { number: 80 } } } }
+          - { path: /koofr, pathType: Prefix, backend: { service: { name: metaos, port: { number: 80 } } } }
+          - { path: /dropbox, pathType: Prefix, backend: { service: { name: metaos, port: { number: 80 } } } }
+          # The probes, public as before: they only say UP or DOWN
+          - { path: /livez, pathType: Exact, backend: { service: { name: metaos, port: { number: 80 } } } }
+          - { path: /readyz, pathType: Exact, backend: { service: { name: metaos, port: { number: 80 } } } }
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor

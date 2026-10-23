@@ -1,20 +1,17 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
+import { useRuntimeConfig } from '#imports'
 import CopyCommand from '@/components/CopyCommand.vue'
+import { usePageMeta } from '@/seo'
 import { TOOL_GROUPS } from '@/tools'
 
-// Where MCP clients connect, from /config.json (Frontend.kt): this page's own origin until it answers, which is right
-// wherever MetaOS serves the front-end itself, but not on Vite's dev server
-const mcpUrl = ref(`${location.origin}/mcp`)
+// Where MCP clients connect, from the runtime config (nuxt.config.ts), so the server's page says it too
+const { mcpUrl } = useRuntimeConfig().public
 
-onMounted(async () => {
-  try {
-    const config: { mcpUrl?: string } = await (await fetch('/config.json')).json()
-    if (config.mcpUrl) mcpUrl.value = config.mcpUrl
-  } catch (error) {
-    console.error('MetaOS did not say where MCP clients connect', error)
-  }
-})
+usePageMeta(() => ({
+  description: 'Use MetaOS from your AI assistant over MCP: how to connect Claude Code, Claude, Codex or ChatGPT, and '
+    + 'what it can do.',
+}))
 
 // The assistants the steps are for; their first two steps differ, approval and asking don't
 type Client = 'claude-code' | 'claude' | 'codex' | 'chatgpt'
@@ -27,9 +24,9 @@ const CLIENTS: { id: Client, name: string }[] = [
 const client = ref<Client>('claude-code')
 
 // For all of the user's projects, not only the one they happen to be in
-const claudeCommand = computed(() => `claude mcp add --transport http --scope user ogrodje ${mcpUrl.value}`)
+const claudeCommand = computed(() => `claude mcp add --transport http --scope user ogrodje ${mcpUrl}`)
 // Codex's config.toml is the user's own (~/.codex), so it's in all their projects, and the IDE extension's too
-const codexCommand = computed(() => `codex mcp add ogrodje --url ${mcpUrl.value}`)
+const codexCommand = computed(() => `codex mcp add ogrodje --url ${mcpUrl}`)
 const codexLogin = 'codex mcp login ogrodje'
 
 const toolCount = TOOL_GROUPS.reduce((n, group) => n + group.tools.length, 0)

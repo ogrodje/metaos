@@ -1,14 +1,11 @@
+// Nuxt makes the actual configs in .nuxt/ (nuxt prepare, which yarn install runs): for the app, its server, what both
+// share, and the Node files, e.g. nuxt.config.ts. vue-tsc checks them all (yarn type-check).
 {
   "files": [],
   "references": [
-    {
-      "path": "./tsconfig.node.json"
-    },
-    {
-      "path": "./tsconfig.app.json"
-    },
-    {
-      "path": "./tsconfig.vitest.json"
-    }
+    { "path": "./.nuxt/tsconfig.app.json" },
+    { "path": "./.nuxt/tsconfig.server.json" },
+    { "path": "./.nuxt/tsconfig.shared.json" },
+    { "path": "./.nuxt/tsconfig.node.json" }
   ]
 }

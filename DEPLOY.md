@@ -13,10 +13,11 @@ Status (2026-10-19): everything is written and verified locally. Nothing is depl
 
 | Piece                       | Where                                         | Notes                                                                                   |
 |-----------------------------|-----------------------------------------------|-----------------------------------------------------------------------------------------|
-| App                         | `https://metaos.ogrodje.si`                   | `/mcp` is the MCP endpoint                                                              |
+| App                         | `https://metaos.ogrodje.si`                   | `/mcp` is the MCP endpoint; `/graphql`, `/events` and the thumbnails are the front-end's |
+| Front-end                   | `https://metaos.ogrodje.si`, all other paths  | `metaos-web`: Nuxt on Node, renders the pages anyone may see; Cloudflare caches them    |
 | Keycloak                    | `https://metaos-auth.ogrodje.si`              | Own instance, realm `metaos` baked into the image and imported on first start           |
 | Postgres                    | `main-cluster` in namespace `pg`              | Databases `metaos` and `metaos_keycloak`, each owned by a role of the same name         |
-| Images                      | `registry.folk-decibel.ts.net/metaos/...`     | `metaos` and `keycloak`, tagged with `git describe`                                     |
+| Images                      | `registry.folk-decibel.ts.net/metaos/...`     | `metaos`, `metaos-web` and `keycloak`, tagged with `git describe`                       |
 | Actuator and metrics        | Port 9090                                     | Never routed by the Ingress; Prometheus scrapes it through a ServiceMonitor             |
 | Probes                      | `/livez`, `/readyz` on port 8080              | Public through the Ingress, but they only answer UP or DOWN                             |
 
@@ -25,10 +26,12 @@ Status (2026-10-19): everything is written and verified locally. Nothing is depl
 ```
 docker/Dockerfile            the app: boot jar on distroless Java 25, Spring Boot layers, runs as non-root
 docker/keycloak.Dockerfile   Keycloak 26.8.1, optimized build, keycloak/metaos-realm.json baked in
-.dockerignore                allowlist: only the boot jar and the realm JSON enter the build context
+docker/web.Dockerfile        the front-end: Nuxt's build (fe/.output) on distroless Node 26, runs as non-root
+.dockerignore                allowlist: only the boot jar, the realm JSON and fe/.output enter the build context
 k8s/base/
   namespace.yaml             metaos-prod
-  deployment-metaos.yaml     ConfigMap, Deployment, Service, Ingress, ServiceMonitor
+  deployment-metaos.yaml     ConfigMap, Deployment, Service, Ingress (MetaOS's own paths), ServiceMonitor
+  deployment-web.yaml        the front-end: Deployment, Service, Ingress (everything else)
   deployment-keycloak.yaml   Deployment, Service, Ingress
   kustomization.yaml         the resources, the public URLs and the image tags
 k8s/set_secrets.sh           database roles and databases, secrets, registry pull secret
@@ -223,6 +226,38 @@ Production has it (2026-10-19).
 - Verified on a throwaway Keycloak 26.8.1 (the realm import, and the script creating and updating) and in dev: a real
   `metaos-ui` token has `/graphql` in `aud`, a login without PKCE is refused, `check-sso` finds an existing Keycloak
   session, signing out comes back to the front-end, and the Google button goes straight to Google.
+
+## Server-rendered front-end
+
+Added on 2026-10-23, on branch `ssr`; not deployed. Until then the app served the front-end, a Vite build in its jar,
+as one `index.html` for every page, which the browser filled in from the API. Search engines that run JavaScript
+could read it eventually; link previews (Discord, Slack, X, ...) and most other crawlers saw an empty page called
+"Ogrodje MetaOS". Now the front-end is Nuxt, a service of its own, which renders the pages anyone may see on the
+server and hydrates them into the same single-page app (CLAUDE.md, Front-end).
+
+- **Two services on one host.** `metaos-web` (`deployment-web.yaml`, two pods) serves everything on
+  `metaos.ogrodje.si` but MetaOS's own paths, which `metaos-ingress` keeps for the app: `/graphql`, `/events`, `/mcp`,
+  `/.well-known`, `/koofr`, `/dropbox`, `/livez` and `/readyz` (ingress-nginx takes the longest matching path). The
+  browser still sees one origin, so there's no CORS, and Keycloak's silent check works as before. The app serves no
+  pages and has no `/config.json` any more: the front-end's runtime config comes from `public-urls`.
+- **Rendered for everyone alike.** The server asks the app's GraphQL (`http://metaos`, inside the cluster) without a
+  token, so a page is the same for every visitor, and caching it can't leak what's the team's. The team's part loads
+  in the browser, after sign-in, with the token, as before. The API's `episode` and `person` queries answer anyone for
+  a released episode and the people on it.
+- **Caching.** Pages anyone may see say `Cache-Control: s-maxage=60, stale-while-revalidate=600`; Nitro keeps them in
+  each pod's memory, and Cloudflare too once a Cache Rule allows HTML (`k8s/README.md`, one-time setup). A page that's
+  over 30 s old loads its data again once it's shown. The team's pages (`/ideas`, `/sessions`, `/search`) say
+  `no-store` and `noindex`, and render in the browser only.
+- **Rollout.** One deploy brings both: the app stops serving pages as the front-end starts. For the seconds between
+  the Ingress changing and the first `metaos-web` pod being ready, pages answer 503; later deploys roll as usual.
+- **Verified locally** (the app on :8081, the front-end's dev server and its build): the test suites pass, also the new
+  tests that anyone gets a released episode's and person's page and nothing else (`GraphQLTest`), and that the app
+  serves no pages (`SecurityTest`); every public page's HTML has its content, title, description, picture and
+  canonical address, an episode's and a person's their schema.org data; an unreleased episode and unknown pages are
+  404s that the team still sees once signed in; the browser hydrates them without mismatches; the team's pages, client
+  navigation, sign-in and live updates work as before; the build caches pages and its assets are immutable.
+- **Not yet verified:** the images, the Ingress split and the Cloudflare rule in production, and real crawlers and
+  link previews (Google's Rich Results Test, a link posted in Discord).
 
 ## Next steps
 

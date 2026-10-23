@@ -144,20 +144,26 @@ class DetailsGraphQL(
     private val episodeRepository: EpisodesRepository,
     private val sessionRepository: SessionsRepository,
     private val peopleRepository: PeopleRepository,
+    private val episodePeople: EpisodePeopleRepository,
     private val history: History,
 ) {
 
+    // A released episode's page is anyone's, as the Episodes page lists it; any other is the team's, and anyone else gets
+    // none, as for a code that isn't there, so it doesn't say that there is one
     @QueryMapping
-    @PreAuthorize(SIGNED_IN)
-    fun episode(@Argument ref: String): Episode? = episodeRepository.findByRef(ref)
+    fun episode(@Argument ref: String): Episode? =
+        episodeRepository.findByRef(ref)?.takeIf { signedIn() || it.status == EpisodeStatus.PUBLISHED }
 
     @QueryMapping
     @PreAuthorize(SIGNED_IN)
     fun session(@Argument id: UUID): Session? = sessionRepository.findByIdOrNull(id)
 
+    // So is the page of someone on a released episode, as the People page lists them; anyone else's is the team's
     @QueryMapping
-    @PreAuthorize(SIGNED_IN)
-    fun person(@Argument id: UUID): Person? = peopleRepository.findByIdOrNull(id)
+    fun person(@Argument id: UUID): Person? =
+        peopleRepository.findByIdOrNull(id)?.takeIf { person ->
+            signedIn() || episodePeople.findByPersonWithEpisode(person).any { it.isPublic() }
+        }
 
     @SchemaMapping(typeName = "Episode")
     fun machineSummary(episode: Episode): String? = episode.machineSummary.takeIf { signedIn() }

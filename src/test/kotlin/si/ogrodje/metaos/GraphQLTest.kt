@@ -133,8 +133,12 @@ class GraphQLTest @Autowired constructor(
         val episode = checkNotNull(episodes.findByCode("gq-h4")).apply { machineSummary = "AI on it"; titleB = "Other title"; this.session = sessions.findById(checkNotNull(session.id)).get() }
         episodes.save(episode)
 
+        // An episode that isn't released is none, as one that isn't there, so its code doesn't say there is one
         graphql("""{ episode(ref: "gq-h4") { title } }""")
-            .andExpect(jsonPath("$.errors[0].extensions.classification").value("UNAUTHORIZED"))
+            .andExpect(jsonPath("$.errors").doesNotExist())
+            .andExpect(jsonPath("$.data.episode").value(null as Any?))
+        graphql("""{ episode(ref: "${episode.id}") { title } }""")
+            .andExpect(jsonPath("$.data.episode").value(null as Any?))
         graphql("""{ session(id: "${session.id}") { location } }""")
             .andExpect(jsonPath("$.errors[0].extensions.classification").value("UNAUTHORIZED"))
 
@@ -147,6 +151,78 @@ class GraphQLTest @Autowired constructor(
         assertNull(details.address(savedSession))
         assertEquals(emptyList(), details.sessionEpisodes(savedSession))
         assertEquals(emptyList(), details.sessionHistory(savedSession))
+    }
+
+    @Test
+    fun `shows anyone a released episode's page, without what's the team's`() {
+        asMcpUser {
+            episodesMCP.create(code = "gq-pub1", title = "Public title")
+            episodesMCP.update(
+                code = "gq-pub1", newCode = null, title = null, titleB = "Other title", summary = "About it",
+                tinySummary = "In short", machineSummary = "AI on it",
+            )
+        }
+        val episode = episodes.save(checkNotNull(episodes.findByCode("gq-pub1")).apply { status = EpisodeStatus.PUBLISHED })
+        episodePeople.save(EpisodePerson(episode = episode, person = people.save(Person(name = "Public Guest", email = null)), role = Role.GUEST))
+        episodePeople.save(EpisodePerson(episode = episode, person = people.save(Person(name = "Public Candidate", email = null)), role = Role.CANDIDATE))
+        episodeFolders.save(EpisodeKoofrFolder(episode, "place-1", "/Epizode/gq-pub1"))
+        val fields = "code title summary tinySummary titleB machineSummary history { summary } koofrFolders { path } people { name }"
+
+        graphql("""{ episode(ref: "gq-pub1") { $fields } }""")
+            .andExpect(jsonPath("$.errors").doesNotExist())
+            .andExpect(jsonPath("$.data.episode.title").value("Public title"))
+            .andExpect(jsonPath("$.data.episode.summary").value("About it"))
+            .andExpect(jsonPath("$.data.episode.tinySummary").value("In short"))
+            .andExpect(jsonPath("$.data.episode.titleB").value(nullValue()))
+            .andExpect(jsonPath("$.data.episode.machineSummary").value(nullValue()))
+            .andExpect(jsonPath("$.data.episode.history", empty<Any>()))
+            .andExpect(jsonPath("$.data.episode.koofrFolders", empty<Any>()))
+            .andExpect(jsonPath("$.data.episode.people[*].name", contains("Public Guest")))
+        // By its ID too
+        graphql("""{ episode(ref: "${episode.id}") { code } }""")
+            .andExpect(jsonPath("$.data.episode.code").value("gq-pub1"))
+        // The team gets all of it
+        graphql("""{ episode(ref: "gq-pub1") { $fields } }""", reader)
+            .andExpect(jsonPath("$.errors").doesNotExist())
+            .andExpect(jsonPath("$.data.episode.titleB").value("Other title"))
+            .andExpect(jsonPath("$.data.episode.history[*].summary", hasItem("Created the episode")))
+            .andExpect(jsonPath("$.data.episode.people[*].name", contains("Public Guest", "Public Candidate")))
+    }
+
+    @Test
+    fun `shows anyone the page of someone on a released episode, with only those episodes, and nobody else's`() {
+        val aired = released("gq-pe1", LocalDate.of(2001, 1, 1))
+        val idea = episodes.save(Episode(title = "gq-pe2, an idea", code = "gq-pe2"))
+        val guest = people.save(Person(name = "Page Guest", email = null).apply { bio = "Engineer @ Somewhere" })
+        val candidate = people.save(Person(name = "Page Candidate", email = null))
+        val ideaOnly = people.save(Person(name = "Page Idea Guest", email = null))
+        val nobody = people.save(Person(name = "Page Nobody", email = null))
+        episodePeople.save(EpisodePerson(episode = aired, person = guest, role = Role.GUEST))
+        episodePeople.save(EpisodePerson(episode = idea, person = guest, role = Role.GUEST))
+        episodePeople.save(EpisodePerson(episode = aired, person = candidate, role = Role.CANDIDATE))
+        episodePeople.save(EpisodePerson(episode = idea, person = ideaOnly, role = Role.GUEST))
+        episodes.save(idea.apply { recommendedBy = guest })
+        fun query(person: Person) = """{ person(id: "${person.id}") { name bio episodes { episode { code } roles } recommended { code } } }"""
+
+        graphql(query(guest))
+            .andExpect(jsonPath("$.errors").doesNotExist())
+            .andExpect(jsonPath("$.data.person.name").value("Page Guest"))
+            .andExpect(jsonPath("$.data.person.bio").value("Engineer @ Somewhere"))
+            .andExpect(jsonPath("$.data.person.episodes[*].episode.code", contains("gq-pe1")))
+            .andExpect(jsonPath("$.data.person.recommended", empty<Any>()))
+        listOf(candidate, ideaOnly, nobody).forEach { person ->
+            graphql(query(person))
+                .andExpect(jsonPath("$.errors").doesNotExist())
+                .andExpect(jsonPath("$.data.person").value(null as Any?))
+        }
+
+        // The team gets everyone, with all of their episodes
+        graphql(query(guest), reader)
+            .andExpect(jsonPath("$.data.person.episodes[*].episode.code", contains("gq-pe2", "gq-pe1")))
+            .andExpect(jsonPath("$.data.person.recommended[*].code", contains("gq-pe2")))
+        listOf(candidate, ideaOnly, nobody).forEach { person ->
+            graphql(query(person), reader).andExpect(jsonPath("$.data.person.name").value(person.name))
+        }
     }
 
     private fun graphql(query: String, auth: RequestPostProcessor? = null): ResultActions {

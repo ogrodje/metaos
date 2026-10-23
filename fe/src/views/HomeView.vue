@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { concerns, LONG_IN_PRODUCTION_DAYS, SOON_DAYS } from '@/attention'
 import { keepUnchanged, useLiveRefresh } from '@/changes'
@@ -14,6 +14,8 @@ import {
   bySession, daysFrom, type Episode, EPISODE_FIELDS, formatDate, relativeDate, sessionPath, type SessionGroup,
 } from '@/episodes'
 import { errorMessage, graphql } from '@/graphql'
+import { usePageMeta } from '@/seo'
+import { useFirstLoad } from '@/ssr'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
@@ -21,7 +23,7 @@ const auth = useAuthStore()
 const released = ref<Episode[]>()
 const releasedError = ref<string>()
 
-// What's being made - for signed-in users only. The episodes as they come, for what needs attention, and by recording
+// What's being made - for the team only. The episodes as they come, for what needs attention, and by recording
 // session, for their lists.
 const making = ref<{ upcoming: Episode[], inProduction: Episode[] }>()
 const upcoming = ref<SessionGroup[]>()
@@ -53,18 +55,22 @@ function overdue(section: Section, group: SessionGroup) {
   return section.id === 'upcoming-recordings' && !!group.session && daysFrom(new Date(), group.session.date) < 0
 }
 
-// The lists load again when the user signs in or out, as signed in they have more in them, e.g. docs, and quietly
+async function fetchReleased() {
+  return (await graphql<{ releasedEpisodes: Episode[] }>(`{
+    releasedEpisodes(limit: 3) { ${EPISODE_FIELDS} }
+  }`)).releasedEpisodes
+}
+
+// The lists load again when the user signs in or out, as on the team they have more in them, e.g. docs, and quietly
 // when MetaOS's data changes: what's shown stays until the new lists are there, and stays if they don't come. Only the
 // latest load counts: an earlier one may answer after it.
 let loads = 0
 
 async function loadReleased(load: number, quietly: boolean) {
   try {
-    const data = await graphql<{ releasedEpisodes: Episode[] }>(`{
-      releasedEpisodes(limit: 3) { ${EPISODE_FIELDS} }
-    }`)
+    const loaded = await fetchReleased()
     if (load !== loads) return
-    released.value = keepUnchanged(released.value, data.releasedEpisodes)
+    released.value = keepUnchanged(released.value, loaded)
     releasedError.value = undefined
   } catch (error) {
     if (load !== loads) return
@@ -100,11 +106,24 @@ function loadLists(quietly = false) {
     makingError.value = undefined
     releasedError.value = undefined
   }
-  return Promise.all([loadReleased(load, quietly), auth.authenticated && loadMaking(load, quietly)])
+  return Promise.all([loadReleased(load, quietly), auth.team && loadMaking(load, quietly)])
 }
 
-watch(() => auth.authenticated, () => void loadLists(), { immediate: true })
+// First the releases, as the server rendered them; what's being made, the team's, in the browser only, once it's known
+// the user is on the team, which it already is when they came from another page
+const first = await useFirstLoad('releases', fetchReleased)
+released.value = first.data
+releasedError.value = first.error
+
+watch(() => auth.team, () => void loadLists())
+onMounted(() => {
+  if (auth.team) void loadMaking(++loads, false)
+})
 useLiveRefresh(() => loadLists(true))
+
+usePageMeta(() => ({
+  description: "MetaOS runs Ogrodje: the podcast's latest episodes, the people on them and where to listen.",
+}))
 </script>
 
 <template>

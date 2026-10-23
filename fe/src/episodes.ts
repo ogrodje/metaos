@@ -246,11 +246,13 @@ export function candidates(episode: Pick<Episode, 'people'>) {
   return named(episode, 'CANDIDATE')
 }
 
-// Dates as the rest of the page is written, in English, e.g. 22 Oct 2026, whatever the browser's language
+// Dates as the rest of the page is written, in English, e.g. 22 Oct 2026, whatever the browser's language, and in
+// Ogrodje's time zone, wherever the browser is: the server renders them so too, and the browser's have to match
 export const DATE_LOCALE = 'en-GB'
+export const TIME_ZONE = 'Europe/Ljubljana'
 
 export function formatDate(date: string) {
-  return new Date(date).toLocaleDateString(DATE_LOCALE, { dateStyle: 'medium' })
+  return new Date(date).toLocaleDateString(DATE_LOCALE, { dateStyle: 'medium', timeZone: TIME_ZONE })
 }
 
 const DAY = 24 * 60 * 60 * 1000

@@ -1,6 +1,6 @@
 name: Build and Deploy
 
-# Tests, builds both images and rolls them out to metaos-prod. The private registry and the API server are reached
+# Tests, builds the images and rolls them out to metaos-prod. The private registry and the API server are reached
 # over Tailscale as tag:ci.
 #
 # Repo secrets:
@@ -23,6 +23,7 @@ concurrency:
 env:
   REGISTRY: registry.folk-decibel.ts.net
   APP_IMAGE: registry.folk-decibel.ts.net/metaos/metaos
+  WEB_IMAGE: registry.folk-decibel.ts.net/metaos/metaos-web
   KEYCLOAK_IMAGE: registry.folk-decibel.ts.net/metaos/keycloak
 
 jobs:
@@ -47,10 +48,10 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v5
 
-      # Testcontainers runs its Postgres on the runner's Docker; feTest and bootJar test and build fe/ with devenv's Node
-      # and Yarn
-      - name: Test and build the boot jar
-        run: devenv shell -- ./gradlew test feTest bootJar
+      # Testcontainers runs its Postgres on the runner's Docker; feTest and feBuild test, type-check and build fe/ with
+      # devenv's Node and Yarn, into fe/.output for its image
+      - name: Test and build the boot jar and the front-end
+        run: devenv shell -- ./gradlew test feTest bootJar feBuild
 
       - name: Connect to Tailscale
         uses: tailscale/github-action@v4
@@ -82,6 +83,8 @@ jobs:
           TAG=${{ steps.get-tag.outputs.tag }}
           docker buildx build --platform linux/amd64 -f docker/Dockerfile \
             -t "$APP_IMAGE:latest" -t "$APP_IMAGE:$TAG" --push .
+          docker buildx build --platform linux/amd64 -f docker/web.Dockerfile \
+            -t "$WEB_IMAGE:latest" -t "$WEB_IMAGE:$TAG" --push .
           docker buildx build --platform linux/amd64 -f docker/keycloak.Dockerfile \
             -t "$KEYCLOAK_IMAGE:latest" -t "$KEYCLOAK_IMAGE:$TAG" --push .
 
@@ -125,6 +128,7 @@ jobs:
           cd k8s/base
           kustomize edit set image \
             "$APP_IMAGE:${{ needs.build.outputs.tag }}" \
+            "$WEB_IMAGE:${{ needs.build.outputs.tag }}" \
             "$KEYCLOAK_IMAGE:${{ needs.build.outputs.tag }}"
 
       - name: Deploy
@@ -132,7 +136,7 @@ jobs:
           kubectl apply -k k8s/base/
 
           # Own keys: deployment.kubernetes.io/revision belongs to the Deployment controller
-          kubectl annotate deployment metaos -n metaos-prod \
+          kubectl annotate deployment metaos metaos-web -n metaos-prod \
             ogrodje.si/git-sha="${GITHUB_SHA}" \
             ogrodje.si/deployed-by="${GITHUB_ACTOR}" \
             ogrodje.si/deployed-at="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
@@ -140,6 +144,7 @@ jobs:
 
           kubectl rollout status deployment/keycloak -n metaos-prod --timeout=5m
           kubectl rollout status deployment/metaos -n metaos-prod --timeout=5m
+          kubectl rollout status deployment/metaos-web -n metaos-prod --timeout=5m
 
       - name: Smoke the deployed app
         run: |
@@ -154,6 +159,12 @@ jobs:
             https://metaos-auth.ogrodje.si/realms/metaos/.well-known/openid-configuration)
           if ! echo "$oidc" | grep -q '"issuer":"https://metaos-auth.ogrodje.si/realms/metaos"'; then
             echo "::error::unexpected Keycloak issuer"
+            exit 1
+          fi
+          # The front-end renders its pages on the server, from the app's API: the episodes are in the HTML itself
+          page=$(curl -sf --retry 6 --retry-delay 5 --retry-all-errors https://metaos.ogrodje.si/episodes)
+          if ! echo "$page" | grep -q 'href="/episodes/S'; then
+            echo "::error::the Episodes page came without its episodes"
             exit 1
           fi
           # Actuator is on the management port, which no Ingress routes

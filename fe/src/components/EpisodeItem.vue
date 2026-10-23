@@ -7,10 +7,6 @@ import MarkedText from '@/components/MarkedText.vue'
 import ShowBadge from '@/components/ShowBadge.vue'
 import { type Episode, episodePath, formatDate, guests } from '@/episodes'
 import type { EpisodeMatch } from '@/search'
-import { useAuthStore } from '@/stores/auth'
-
-// Signed in, the title leads to the episode's page
-const auth = useAuthStore()
 
 const props = defineProps<{
   episode: Episode
@@ -21,15 +17,14 @@ const props = defineProps<{
 const guestNames = computed(() => guests(props.episode).join(', '))
 </script>
 
-<!-- A released episode: the code, then its title, tiny summary, when it aired and its guests, then where to listen.
+<!-- A released episode: the code, then its title, which leads to its page, tiny summary, when it aired and its guests, then where to listen.
      The episodes in the works have a row of their own, EpisodeRow. Found by a search, what it was found by. -->
 <template>
   <li class="episode">
     <span class="code" :aria-hidden="!episode.code">{{ episode.code ?? '—' }}</span>
     <div class="main">
       <p class="title">
-        <RouterLink v-if="auth.authenticated" :to="episodePath(episode)" lang="sl"><MarkedText :text="episode.title" :words="match?.words"/></RouterLink>
-        <span v-else lang="sl">{{ episode.title }}</span>
+        <RouterLink :to="episodePath(episode)" lang="sl"><MarkedText :text="episode.title" :words="match?.words"/></RouterLink>
         <ShowBadge v-if="episode.show" :name="episode.show" :color="episode.showColor"/>
       </p>
       <MarkdownText v-if="episode.tinySummary" class="summary" :source="episode.tinySummary" lang="sl"/>

@@ -1,24 +1,26 @@
 # Deploying MetaOS
 
-The app and its Keycloak in namespace `metaos-prod` on the ogrodje-one cluster, the way goo, boo-run and bongbong
+The app, its front-end and its Keycloak in namespace `metaos-prod` on the ogrodje-one cluster, the way goo, boo-run and bongbong
 deploy there: images in the tailnet registry, `kustomize` picks the tags, Postgres is the shared CNPG `main-cluster`,
 ingress-nginx routes and Cloudflare terminates TLS.
 
 ```
 k8s/base/
   namespace.yaml             metaos-prod
-  deployment-metaos.yaml     ConfigMap, Deployment, Service, Ingress, ServiceMonitor
+  deployment-metaos.yaml     ConfigMap, Deployment, Service, Ingress (MetaOS's own paths), ServiceMonitor
+  deployment-web.yaml        the front-end (metaos-web): Deployment, Service, Ingress (everything else)
   deployment-keycloak.yaml   Deployment, Service, Ingress
   kustomization.yaml         the resources, the public URLs and the image tags
 k8s/set_secrets.sh           Postgres roles + databases, secrets, registry pull secret
 k8s/ci/deployer.yaml         what CI may do in the cluster
 docker/Dockerfile            the app: boot jar on distroless java25, non-root
+docker/web.Dockerfile        the front-end: Nuxt's build (fe/.output) on distroless Node 26, non-root
 docker/keycloak.Dockerfile   Keycloak, optimized build, realm "metaos" baked in
 ```
 
 | Host                     | What                                                                       |
 |--------------------------|----------------------------------------------------------------------------|
-| `metaos.ogrodje.si`      | the app; `/mcp` is the MCP endpoint                                        |
+| `metaos.ogrodje.si`      | the front-end's pages; the app's `/graphql`, `/events`, `/mcp`, ...        |
 | `metaos-auth.ogrodje.si` | Keycloak; realm `metaos` issues the tokens, `/admin` is the admin console |
 
 Actuator (`/actuator/health/*`, `/actuator/prometheus`) is on port 9090, which no Ingress routes - Prometheus reaches
@@ -27,15 +29,16 @@ serves traffic; those two are public, but only answer UP or DOWN.
 
 ## Day to day
 
-Pushing to `master` runs `.github/workflows/deploy.yml`: tests, builds and pushes both images, applies `k8s/base` and
+Pushing to `master` runs `.github/workflows/deploy.yml`: tests, builds and pushes the images, applies `k8s/base` and
 smoke-tests the public URLs. One run at a time: a push while one runs waits for it, and only the newest of those waiting
 runs. By hand (needs Tailscale up and `KUBECONFIG` pointing at `ogrodje-one-config`):
 
 ```bash
-just push        # boot jar, both images (linux/amd64), push, point kustomization.yaml at the tag
-just deploy      # kubectl apply -k, wait for both rollouts
+just push        # boot jar, front-end, the images (linux/amd64), push, point kustomization.yaml at the tag
+just deploy      # kubectl apply -k, wait for the rollouts
 just manifests   # what would be applied
 just logs        # follow the app
+just web-logs    # follow the front-end
 ```
 
 ## One-time setup
@@ -57,15 +60,21 @@ just logs        # follow the app
 
    It creates roles `metaos` and `metaos_keycloak`, each owning a database of the same name on `main-cluster`.
 
-3. **First deploy:** `just push deploy`. Keycloak imports realm `metaos` from the image on its first start, with
+3. **Cloudflare caches the pages** anyone may see, as their `Cache-Control` says (`s-maxage=60,
+   stale-while-revalidate=600`), but only with a Cache Rule, as it doesn't cache HTML by default: for host
+   `metaos.ogrodje.si`, *Eligible for cache*, Edge TTL *Use cache-control header if present, bypass cache if not*,
+   Browser TTL *Respect origin*. The team's pages say `no-store`, and the API's answers aren't cacheable, so they pass
+   through.
+
+4. **First deploy:** `just push deploy`. Keycloak imports realm `metaos` from the image on its first start, with
    `METAOS_MCP_URL` as the token audience and `PROD_KEYCLOAK_DEV_PASSWORD` as the `dev` user's password.
 
-4. **Keycloak, once it's up** (`https://metaos-auth.ogrodje.si/admin`, `admin` / `PROD_KEYCLOAK_ADMIN_PASSWORD`):
+5. **Keycloak, once it's up** (`https://metaos-auth.ogrodje.si/admin`, `admin` / `PROD_KEYCLOAK_ADMIN_PASSWORD`):
     - The bootstrap admin is temporary - create a permanent admin in the master realm and delete it.
     - Delete the `dev` user from realm `metaos`, or keep it as a smoke-test account.
     - Add real users with **verified** emails; that's how a login is linked to a person (`Security.kt`).
 
-5. **CI** (once the repo is on GitHub):
+6. **CI** (once the repo is on GitHub):
     - Repo secrets `TS_OAUTH_CLIENT_ID`, `TS_OAUTH_SECRET`, `DOCKER_REGISTRY_USERNAME`, `DOCKER_REGISTRY_PASSWORD`,
       `KUBECONFIG` - the same ones boo-run and bongbong have. `KUBECONFIG` is base64 of the credential-less Tailscale
       operator kubeconfig (`tailscale configure kubeconfig tailscale-operator`), not `ogrodje-one-config`.
@@ -78,6 +87,8 @@ just logs        # follow the app
 ```bash
 curl -s https://metaos.ogrodje.si/.well-known/oauth-protected-resource/mcp   # resource + authorization server
 curl -s https://metaos-auth.ogrodje.si/realms/metaos/.well-known/openid-configuration
+curl -sI https://metaos.ogrodje.si/episodes | grep -i 'cf-cache-status\|cache-control'   # HIT on the second try
+curl -s https://metaos.ogrodje.si/episodes | grep -c 'href="/episodes/S'               # rendered on the server
 kubectl -n metaos-prod get pods,svc,ingress
 kubectl -n metaos-prod port-forward deploy/metaos 9090 &
 curl -s localhost:9090/actuator/health
@@ -99,7 +110,7 @@ Then point an MCP client at `https://metaos.ogrodje.si/mcp`, e.g.
   against production's realm, through a port-forward. It signs in with the repo secrets `KEYCLOAK_ADMIN_USERNAME` and
   `KEYCLOAK_ADMIN_PASSWORD`, or without them as `admin` with `keycloak-secret`'s password, which Keycloak only uses to
   create the first admin.
-- Every deploy rolls Keycloak too, since both images get the same tag. It's a rolling update, so the old pod serves
+- Every deploy rolls Keycloak and the front-end too, since the images get the same tag. It's a rolling update, so the old pod serves
   until the new one is ready, and for 10 s after it's told to stop, until ingress-nginx has dropped it.
 - The registry isn't cleaned up: tags are commit hashes, which don't sort by age, so boo-run's keep-the-newest-three
   job can't be reused as is.

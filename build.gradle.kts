@@ -119,8 +119,8 @@ tasks.withType<Test> {
     }
 }
 
-// The front-end (fe/), with devenv's Node and Yarn. Only bootJar builds it, into the jar's static/ (Frontend.kt):
-// runs and tests do without, as in development Vite serves fe/ itself.
+// The front-end (fe/), with devenv's Node and Yarn: a service of its own, which Nuxt builds into fe/.output for its
+// image (docker/web.Dockerfile). The app's runs, tests and jar do without it.
 val fe = layout.projectDirectory.dir("fe")
 
 // Looked up on this build's PATH: Java finds commands on the PATH its JVM started with, and the Gradle daemon may have
@@ -148,18 +148,17 @@ val feTest by tasks.registering(Exec::class) {
 
 val feBuild by tasks.registering(Exec::class) {
     group = "build"
-    description = "Type-checks fe/ and builds it into fe/dist."
+    description = "Type-checks fe/ and builds it into fe/.output, for its image."
     dependsOn(feInstall)
     workingDir(fe)
     commandLine(yarn, "build")
-    inputs.files(fileTree(fe) { exclude("node_modules/**", "dist/**", ".git/**", ".yarn/**") })
-    outputs.dir(fe.dir("dist"))
+    inputs.files(fileTree(fe) { exclude("node_modules/**", ".nuxt/**", ".output/**", ".data/**", ".git/**", ".yarn/**") })
+    outputs.dir(fe.dir(".output"))
 }
 
 // Fixed name, so docker/Dockerfile doesn't depend on the version
 tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
     archiveFileName = "metaos.jar"
-    from(feBuild) { into("BOOT-INF/classes/static") }
 }
 
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {

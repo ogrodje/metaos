@@ -23,13 +23,19 @@ type Query {
     "The episode ideas (IDEA), the most recently added first. Needs a signed-in user."
     ideas: [Episode!]!
 
-    "An episode by its code (e.g. S05E08) or ID; null if there's none. Needs a signed-in user."
+    """
+    An episode by its code (e.g. S05E08) or ID; null if there's none. Anyone not signed in gets only a released
+    (PUBLISHED) one, and null for any other.
+    """
     episode(ref: String!): Episode
 
     "A recording session by its ID; null if there's none. Needs a signed-in user."
     session(id: ID!): Session
 
-    "A person by their ID; null if there's none. Needs a signed-in user."
+    """
+    A person by their ID; null if there's none. Anyone not signed in gets only someone on the released (PUBLISHED)
+    episodes, as anything but a candidate, as people lists them, and null for anyone else.
+    """
     person(id: ID!): Person
 
     """

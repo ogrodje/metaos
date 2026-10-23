@@ -32,7 +32,8 @@ in {
     yarn.package = unstable.yarn-berry;
   };
 
-  # `devenv up`: Vite's dev server for fe/, with hot reload, on http://localhost:5173
+  # `devenv up`: Nuxt's dev server for fe/, which renders pages on the server as production does, with hot reload, on
+  # http://localhost:5173, from MetaOS on :8080 (NUXT_METAOS_URL points it at another)
   processes.fe = {
     exec = "yarn dev";
     cwd = "${config.devenv.root}/fe";

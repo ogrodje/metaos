@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="810" viewBox="0 0 1240 810" role="img" aria-label="MetaOS's architecture: the browser and MCP clients reach MetaOS and Keycloak through Cloudflare and ingress-nginx. MetaOS checks tokens with Keycloak's keys, keeps its data in the shared Postgres, which tells it what changed for the browser's pages to show right away, and calls Cloud Storage, Google Drive, Gmail, Koofr and Dropbox, and fetches pictures from Hygraph. It copies pictures to its public bucket in Cloud Storage, from which the browser loads them at media.ogrodje.si, cached by Cloudflare.">
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="810" viewBox="0 0 1240 810" role="img" aria-label="MetaOS's architecture: the browser and MCP clients reach MetaOS and Keycloak through Cloudflare and ingress-nginx. The browser gets its pages from the front-end, metaos-web, which renders those anyone may see from MetaOS's GraphQL API, and Cloudflare caches them; then it asks MetaOS itself. MetaOS checks tokens with Keycloak's keys, keeps its data in the shared Postgres, which tells it what changed for the browser's pages to show right away, and calls Cloud Storage, Google Drive, Gmail, Koofr and Dropbox, and fetches pictures from Hygraph. It copies pictures to its public bucket in Cloud Storage, from which the browser loads them at media.ogrodje.si, cached by Cloudflare.">
   <!--
     MetaOS's architecture, the source of architecture.png (`just architecture` renders it). Keep it in step with the
     system: CLAUDE.md says when.
@@ -42,7 +42,7 @@
 
   <!-- The edge: TLS at Cloudflare, then the cluster's ingress -->
   <rect class="band" x="232" y="92" width="30" height="608" rx="6"/>
-  <text class="m" transform="translate(251 612) rotate(-90)" text-anchor="middle">Cloudflare TLS → ingress-nginx</text>
+  <text class="m" transform="translate(251 396) rotate(-90)" text-anchor="middle">Cloudflare: TLS, caches public pages → ingress-nginx, by path</text>
 
   <!-- Cluster and namespace -->
   <rect class="zone" x="276" y="66" width="748" height="694" rx="12"/>
@@ -51,14 +51,22 @@
   <text class="zl" x="308" y="122">namespace metaos-prod</text>
 
   <!-- Browser -->
-  <rect class="box" x="20" y="180" width="180" height="180" rx="8"/>
-  <text class="t" x="36" y="206">Browser</text>
-  <text x="36" y="226">Vue 3 front-end</text>
-  <text class="m" x="36" y="248">keycloak-js keeps the</text>
-  <text class="m" x="36" y="264">token in memory</text>
-  <text class="m" x="36" y="290">pages show changes as</text>
-  <text class="m" x="36" y="306">they happen, without</text>
-  <text class="m" x="36" y="322">reloading</text>
+  <rect class="box" x="20" y="140" width="180" height="220" rx="8"/>
+  <text class="t" x="36" y="166">Browser</text>
+  <text x="36" y="186">Vue 3 front-end</text>
+  <text class="m" x="36" y="206">hydrates the server's page</text>
+  <text class="m" x="36" y="232">keycloak-js keeps the</text>
+  <text class="m" x="36" y="248">token in memory</text>
+  <text class="m" x="36" y="274">pages show changes as</text>
+  <text class="m" x="36" y="290">they happen, without</text>
+  <text class="m" x="36" y="306">reloading</text>
+
+  <!-- The front-end: renders the pages anyone may see, from MetaOS's API, as someone who isn't signed in -->
+  <rect class="box" x="410" y="136" width="180" height="70" rx="8"/>
+  <text class="t" x="426" y="158">metaos-web</text>
+  <text class="m" x="574" y="158" text-anchor="end">Nuxt</text>
+  <text class="m" x="426" y="178">renders the public pages,</text>
+  <text class="m" x="426" y="194">as for one not signed in</text>
 
   <!-- MCP clients -->
   <rect class="box" x="20" y="470" width="180" height="96" rx="8"/>
@@ -82,23 +90,20 @@
   <text class="mono m" x="680" y="188">metaos.ogrodje.si</text>
 
   <rect class="row" x="676" y="196" width="300" height="36" rx="5"/>
-  <text class="mono" x="688" y="218">/</text>
-  <text x="812" y="218">the front-end's pages</text>
+  <text class="mono" x="688" y="218">/graphql</text>
+  <text x="812" y="218">data, the team's with a token</text>
   <rect class="row" x="676" y="238" width="300" height="36" rx="5"/>
-  <text class="mono" x="688" y="260">/graphql</text>
-  <text x="812" y="260">data, with the token</text>
+  <text class="mono" x="688" y="260">/koofr, /dropbox</text>
+  <text x="812" y="260">picture thumbnails</text>
   <rect class="row" x="676" y="280" width="300" height="36" rx="5"/>
-  <text class="mono" x="688" y="302">/koofr, /dropbox</text>
-  <text x="812" y="302">picture thumbnails</text>
-  <rect class="row" x="676" y="322" width="300" height="36" rx="5"/>
-  <text class="mono" x="688" y="344">/events</text>
-  <text x="812" y="344">what changed, as it does</text>
+  <text class="mono" x="688" y="302">/events</text>
+  <text x="812" y="302">what changed, as it does</text>
 
-  <text class="col" x="680" y="388">INSIDE</text>
-  <text x="680" y="410">episodes, people, sessions, shows</text>
-  <text x="680" y="430">every change logged: who, with</text>
-  <text x="680" y="448">which client and which MCP tool</text>
-  <text x="680" y="470">outside connections checked hourly</text>
+  <text class="col" x="680" y="366">INSIDE</text>
+  <text x="680" y="388">episodes, people, sessions, shows</text>
+  <text x="680" y="408">every change logged: who, with</text>
+  <text x="680" y="426">which client and which MCP tool</text>
+  <text x="680" y="448">outside connections checked hourly</text>
 
   <rect class="row" x="676" y="500" width="300" height="36" rx="5"/>
   <text class="mono" x="688" y="522">/mcp</text>
@@ -146,11 +151,16 @@
   <text class="m" x="1060" y="594">hourly, reported as</text>
   <text class="mono m" x="1060" y="612">metaos_*_connected</text>
 
+  <!-- Browser to the front-end for its pages, which asks MetaOS's GraphQL API inside the cluster -->
+  <path class="edge" d="M200 166 H408" marker-end="url(#arrow)"/>
+  <text class="m" x="350" y="160" text-anchor="middle">pages</text>
+  <path class="edge" d="M590 172 H662" marker-end="url(#arrow)"/>
+  <text class="m" x="626" y="165" text-anchor="middle">GraphQL</text>
+
   <!-- Browser to MetaOS and Keycloak -->
   <path class="edge" d="M200 214 H662" marker-end="url(#arrow)"/>
   <path class="edge" d="M200 256 H662" marker-end="url(#arrow)"/>
   <path class="edge" d="M200 298 H662" marker-end="url(#arrow)"/>
-  <path class="edge" d="M200 340 H662" marker-end="url(#arrow)"/>
   <path class="edge" d="M110 360 V400 H408" marker-end="url(#arrow)"/>
   <text class="m" x="402" y="394" text-anchor="end">signs in, PKCE</text>
 
@@ -182,7 +192,7 @@
   <text class="m" x="1023" y="152" text-anchor="middle">copies</text>
 
   <!-- The browser loads pictures from the public bucket, past MetaOS: at media.ogrodje.si, cached by Cloudflare -->
-  <path class="edge" d="M140 180 V-8 H1204 V130" marker-end="url(#arrow)"/>
+  <path class="edge" d="M140 140 V-8 H1204 V130" marker-end="url(#arrow)"/>
   <text class="m" x="620" y="-14" text-anchor="middle">pictures for everyone: media.ogrodje.si, cached by Cloudflare</text>
   </g>
 </svg>

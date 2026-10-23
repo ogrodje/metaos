@@ -2,9 +2,11 @@ resources:
 - namespace.yaml
 - deployment-keycloak.yaml
 - deployment-metaos.yaml
+- deployment-web.yaml
 
-# Public URLs, read by both Deployments: Keycloak stamps them into tokens and the app checks tokens against them, so
-# they have to agree. The name gets a content hash, so changing one rolls both Deployments.
+# Public URLs, read by the Deployments: Keycloak stamps them into tokens and the app checks tokens against them, so
+# they have to agree; the front-end tells the browser and search engines about them. The name gets a content hash, so
+# changing one rolls the Deployments.
 # The METAOS_* URLs only reach Keycloak at realm import (first start) - later METAOS_MCP_URL has to be changed in the
 # admin console too (Client scopes -> mcp:tools -> Mappers -> metaos-mcp-audience), and METAOS_API_URL and
 # METAOS_UI_URL with keycloak/frontend_client.sh.
@@ -22,6 +24,8 @@ images:
 - name: registry.folk-decibel.ts.net/metaos/keycloak
   newTag: "9156827"
 - name: registry.folk-decibel.ts.net/metaos/metaos
+  newTag: "9156827"
+- name: registry.folk-decibel.ts.net/metaos/metaos-web
   newTag: "9156827"
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization

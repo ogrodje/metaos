@@ -49,6 +49,10 @@ export function createChangeFeed(url = '/events', retry = { first: 1000, max: 30
         listeners.delete(listener)
       }
     },
+    /** Says '*' to the listeners, as when changes may have gone unsaid */
+    resync() {
+      tell('*')
+    },
   }
 }
 
@@ -111,6 +115,14 @@ export function createRefresher(
 }
 
 let feed: ReturnType<typeof createChangeFeed> | undefined
+
+/**
+ * Has the pages' live updates load their data again, as anything may have changed, e.g. since the server rendered the
+ * page, which may have been a while ago (plugins/rendered.ts)
+ */
+export function resync() {
+  feed?.resync()
+}
 
 /**
  * Loads a page's data again with [refresh] when MetaOS's data changes, so the page shows it without being reloaded.

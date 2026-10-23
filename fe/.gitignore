@@ -10,6 +10,11 @@ lerna-debug.log*
 node_modules
 .DS_Store
 
+# Nuxt: what it makes for development and types (.nuxt), its build (.output) and its dev server's storage (.data)
+.nuxt
+.output
+.data
+
 # Yarn (Berry), without Zero-Installs: https://yarnpkg.com/getting-started/qa#which-files-should-be-gitignored
 .yarn/*
 !.yarn/patches
