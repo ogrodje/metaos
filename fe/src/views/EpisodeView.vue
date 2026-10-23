@@ -18,17 +18,19 @@ import LoadingRows from '@/components/LoadingRows.vue'
 import MarkdownText from '@/components/MarkdownText.vue'
 import MediaStrip from '@/components/MediaStrip.vue'
 import NotFound from '@/components/NotFound.vue'
+import PanelTitle from '@/components/PanelTitle.vue'
 import PersonLine from '@/components/PersonLine.vue'
 import ShowBadge from '@/components/ShowBadge.vue'
 import StatusLabel from '@/components/StatusLabel.vue'
 import {
   ARTWORK_FIELDS, artworkOf, DROPBOX_FIELDS, type DropboxPicture, EPISODE_FIELDS, type EpisodeDetails, episodePath,
-  formatDate, HISTORY_FIELDS, KOOFR_FIELDS, type KoofrPhoto, links, photosOf, PICTURE_FIELDS, relativeDate, roleName,
-  sessionPath, sessionTitle,
+  formatDate, HISTORY_FIELDS, KOOFR_FIELDS, type KoofrPhoto, links, listPicture, photosOf, PICTURE_FIELDS, relativeDate,
+  roleName, sessionPath, sessionTitle,
 } from '@/episodes'
 import { errorMessage, graphql } from '@/graphql'
 import { IMAGE_FIELDS } from '@/images'
 import { personPath } from '@/people'
+import { useScrolledPast } from '@/scroll'
 import { episodeData, plainText, shorten, usePageMeta, useSiteUrl } from '@/seo'
 import { useFirstLoad } from '@/ssr'
 import { useAuthStore } from '@/stores/auth'
@@ -127,6 +129,10 @@ const photos = computed<KoofrPhoto[]>((previous) =>
 // What needs the team's attention, by the home page's rules, e.g. recorded months ago and not out yet
 const concerns = computed(() => (auth.team && episode.value ? episodeConcerns(episode.value) : []))
 
+// Once its title has scrolled away, the panel says what the page is about
+const titleBlock = ref<HTMLElement>()
+const pastTitle = useScrolledPast(titleBlock)
+
 const hasFiles = computed(() => !!episode.value
   && (episode.value.documents.length > 0 || episode.value.koofrFolders.length > 0 || episode.value.dropboxFolders.length > 0))
 </script>
@@ -148,7 +154,7 @@ const hasFiles = computed(() => !!episode.value
     </NotFound>
 
     <template v-else>
-      <header class="title">
+      <header ref="titleBlock" class="title">
         <p class="kicker">
           <span v-if="episode.code" class="code">{{ episode.code }}</span>
           <ShowBadge v-if="episode.show" :name="episode.show" :color="episode.showColor"/>
@@ -161,6 +167,7 @@ const hasFiles = computed(() => !!episode.value
       <!-- The facts at the right, what the team works on in the main column; on phones the facts come first -->
       <div class="workspace">
         <FactPanel label="About the episode">
+          <PanelTitle :title="episode.title" :code="episode.code" :picture="listPicture(episode)" :shown="pastTitle"/>
           <FactGroup>
             <dl>
               <Fact v-if="episode.airedDate" label="Aired">

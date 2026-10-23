@@ -21,7 +21,8 @@ defineProps<{
   padding: 16px 0;
   border-top: 1px solid var(--rule);
 
-  &:first-child {
+  // The first group, under a PanelTitle when there's one
+  &:first-of-type {
     padding-top: 0;
     border-top: 0;
   }

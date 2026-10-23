@@ -15,6 +15,7 @@ import KoofrFolderList from '@/components/KoofrFolderList.vue'
 import LoadError from '@/components/LoadError.vue'
 import LoadingRows from '@/components/LoadingRows.vue'
 import NotFound from '@/components/NotFound.vue'
+import PanelTitle from '@/components/PanelTitle.vue'
 import PhotoStrip from '@/components/PhotoStrip.vue'
 import SignInPrompt from '@/components/SignInPrompt.vue'
 import {
@@ -22,6 +23,7 @@ import {
   type SessionDetails, sessionTitle,
 } from '@/episodes'
 import { errorMessage, graphql } from '@/graphql'
+import { useScrolledPast } from '@/scroll'
 import { useAuthStore } from '@/stores/auth'
 import { usePageTitle } from '@/title'
 
@@ -75,6 +77,10 @@ function reloadQuietly(id: string) {
 const photos = computed<KoofrPhoto[]>((previous) =>
   keepUnchanged(previous, session.value ? photosOf(session.value.koofrFolders) : []))
 
+// Once its title has scrolled away, the panel says what the page is about
+const titleBlock = ref<HTMLElement>()
+const pastTitle = useScrolledPast(titleBlock)
+
 const hasFiles = computed(() => !!session.value
   && (session.value.documents.length > 0 || session.value.koofrFolders.length > 0 || session.value.dropboxFolders.length > 0))
 </script>
@@ -93,7 +99,7 @@ const hasFiles = computed(() => !!session.value
     <LoadingRows v-else-if="!session" :rows="6" label="Loading the session"/>
 
     <template v-else>
-      <header class="title">
+      <header ref="titleBlock" class="title">
         <p class="kicker">Recording session</p>
         <h1><time :datetime="session.date">{{ formatDate(session.date) }}</time></h1>
         <p v-if="session.location" class="subtitle">{{ session.location }}</p>
@@ -102,6 +108,7 @@ const hasFiles = computed(() => !!session.value
       <!-- Where and when at the right, its episodes and activity in the main column; on phones the facts come first -->
       <div class="workspace">
         <FactPanel label="About the session">
+          <PanelTitle :title="sessionTitle(session)" :shown="pastTitle"/>
           <FactGroup>
             <dl>
               <Fact label="When">

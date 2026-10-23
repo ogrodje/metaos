@@ -123,7 +123,9 @@ yarn test       # the tests in src/**/__tests__, with vitest (./gradlew feTest, 
 - Episode titles lead to their pages, `/episodes/<code or ID>`, and for the team session labels to `/sessions/<ID>`:
   a workspace (`.workspace` in `page.scss`), with the facts in a panel at the right (`FactPanel.vue`, `FactGroup.vue`,
   `Fact.vue`: dates, session, people with their pictures (`PersonLine.vue`), where to listen, files, and what needs
-  attention by Home's rules, `episodeConcerns`), first in the page, so above the rest on phones. The main column has
+  attention by Home's rules, `episodeConcerns`), first in the page, so above the rest on phones. Once the page's title
+  has scrolled away, the panel, which stays in view, says what it's about: its cover, code and title (`PanelTitle.vue`,
+  `useScrolledPast`), also a way back to the top; a session's says its date and place. The main column has
   the episode's media (`MediaStrip.vue`: its titles with the thumbnails they're A/B tested with and the cover, its
   artwork marked with what each file is used as, its photos), the summaries folded when long (`FoldedText.vue`), and
   for the team its activity (`ActivityFeed.vue`, see Discussions): comments and history in one feed, from the audit
