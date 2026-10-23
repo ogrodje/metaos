@@ -24,14 +24,20 @@ class ShowsMCP(
 
     @McpTool(
         name = "list_shows",
-        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "List shows",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
         description = "List all shows by name"
     )
     fun list(): List<ShowDto> = shows.findAllByOrderByName().map { it.toDto() }
 
     @McpTool(
         name = "get_show",
-        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Get show",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
         description = "Find a show by its name (case-insensitive)"
     )
     fun get(@McpToolParam(description = "Show name, e.g. Bytes") name: String): ShowDto? =
@@ -40,7 +46,10 @@ class ShowsMCP(
     @Transactional
     @McpTool(
         name = "create_show",
-        annotations = McpTool.McpAnnotations(destructiveHint = false),
+        annotations = McpTool.McpAnnotations(
+            title = "Create show",
+            readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
         description = "Create a new show"
     )
     fun create(
@@ -56,7 +65,10 @@ class ShowsMCP(
     @Transactional
     @McpTool(
         name = "update_show",
-        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Update show",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
+        ),
         description = "Rename a show or change its color. Omitted fields are left as they are"
     )
     fun update(
@@ -77,7 +89,10 @@ class ShowsMCP(
     @Transactional
     @McpTool(
         name = "delete_show",
-        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Delete show",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
+        ),
         description = "Soft-delete a show. Its episodes are kept and taken out of the show"
     )
     fun delete(@McpToolParam(description = "Show name (case-insensitive)") name: String): ShowDto? =
@@ -89,7 +104,10 @@ class ShowsMCP(
     @Transactional
     @McpTool(
         name = "restore_show",
-        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Restore show",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
+        ),
         description = "Bring back a soft-deleted show by its name (case-insensitive), with the episodes deleting it " +
             "took out of it (unless they have been deleted or moved since). Under a new name, if its own has been " +
             "taken since"
@@ -116,7 +134,10 @@ class ShowsMCP(
     @Transactional(readOnly = true)
     @McpTool(
         name = "list_show_episodes",
-        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "List show episodes",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
         description = "List the episodes of a show, latest season and episode first"
     )
     fun listEpisodes(@McpToolParam(description = "Show name (case-insensitive)") name: String): List<EpisodeDto> {
@@ -127,7 +148,10 @@ class ShowsMCP(
     @Transactional
     @McpTool(
         name = "set_episode_show",
-        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Set episode show",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
+        ),
         description = "Move an episode into a show, or take it out of the show it is in"
     )
     fun setEpisodeShow(

@@ -20,7 +20,10 @@ class SessionsMCP(
 
     @McpTool(
         name = "list_sessions",
-        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "List sessions",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
         description = "List all sessions, newest first"
     )
     fun list(): List<SessionDto> = sessions.findAllByOrderByDateDesc().map { it.toDto() }
@@ -28,7 +31,10 @@ class SessionsMCP(
     @Transactional
     @McpTool(
         name = "create_session",
-        annotations = McpTool.McpAnnotations(destructiveHint = false),
+        annotations = McpTool.McpAnnotations(
+            title = "Create session",
+            readOnlyHint = false, destructiveHint = false, idempotentHint = false, openWorldHint = false
+        ),
         description = "Create a new session"
     )
     fun create(
@@ -40,7 +46,10 @@ class SessionsMCP(
     @Transactional
     @McpTool(
         name = "update_session",
-        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Update session",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
+        ),
         description = "Change a session's date, location or address. Omitted fields are left as they are"
     )
     fun update(
@@ -59,7 +68,10 @@ class SessionsMCP(
     @Transactional
     @McpTool(
         name = "delete_session",
-        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Delete session",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
+        ),
         description = "Soft-delete a session. Its episodes are kept and taken out of the session"
     )
     fun delete(@McpToolParam(description = "Session ID") sessionId: UUID): SessionDto? =
@@ -71,7 +83,10 @@ class SessionsMCP(
     @Transactional
     @McpTool(
         name = "restore_session",
-        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Restore session",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
+        ),
         description = "Bring back a soft-deleted session, with the episodes deleting it took out of it " +
             "(unless they have been deleted or moved since)"
     )
@@ -84,7 +99,10 @@ class SessionsMCP(
     @Transactional(readOnly = true)
     @McpTool(
         name = "list_session_episodes",
-        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "List session episodes",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
         description = "List the episodes of a session, latest season and episode first"
     )
     fun listEpisodes(@McpToolParam(description = "Session ID") sessionId: UUID): List<EpisodeDto> {
@@ -95,7 +113,10 @@ class SessionsMCP(
     @Transactional
     @McpTool(
         name = "set_episode_session",
-        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Set episode session",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
+        ),
         description = "Move an episode into a session, or take it out of the session it is in"
     )
     fun setEpisodeSession(

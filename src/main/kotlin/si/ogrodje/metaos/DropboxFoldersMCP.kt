@@ -76,7 +76,10 @@ class DropboxFoldersMCP(
 
     @McpTool(
         name = "list_episode_dropbox_folders",
-        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "List episode Dropbox folders",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
         description = "List the Dropbox folders of an episode, e.g. its artwork: those linked to the episode and those linked " +
             "to its recording session; linkedTo says which. $STAYS_LINKED"
     )
@@ -93,7 +96,10 @@ class DropboxFoldersMCP(
     @Transactional
     @McpTool(
         name = "link_episode_dropbox_folder",
-        annotations = McpTool.McpAnnotations(destructiveHint = false),
+        annotations = McpTool.McpAnnotations(
+            title = "Link Dropbox folder to episode",
+            readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
         description = "Link a Dropbox folder to an episode it is about, e.g. the folder with its artwork, $WITH_URL. A folder " +
             "for a whole recording session goes to the session (link_session_dropbox_folder)"
     )
@@ -115,7 +121,10 @@ class DropboxFoldersMCP(
     @Transactional
     @McpTool(
         name = "unlink_episode_dropbox_folder",
-        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Unlink Dropbox folder from episode",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
+        ),
         description = "Unlink a Dropbox folder from an episode. The folder stays in Dropbox"
     )
     fun unlinkEpisode(
@@ -136,7 +145,10 @@ class DropboxFoldersMCP(
 
     @McpTool(
         name = "list_session_dropbox_folders",
-        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "List session Dropbox folders",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
         description = "List the Dropbox folders linked to a recording session. $STAYS_LINKED"
     )
     fun listSessionFolders(@McpToolParam(description = "Session ID") sessionId: UUID): List<DropboxFolderDto> =
@@ -145,7 +157,10 @@ class DropboxFoldersMCP(
     @Transactional
     @McpTool(
         name = "link_session_dropbox_folder",
-        annotations = McpTool.McpAnnotations(destructiveHint = false),
+        annotations = McpTool.McpAnnotations(
+            title = "Link Dropbox folder to session",
+            readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
         description = "Link a Dropbox folder to a recording session it is about, e.g. the folder with that day's photos, $WITH_URL"
     )
     fun linkSession(
@@ -166,7 +181,10 @@ class DropboxFoldersMCP(
     @Transactional
     @McpTool(
         name = "unlink_session_dropbox_folder",
-        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Unlink Dropbox folder from session",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
+        ),
         description = "Unlink a Dropbox folder from a recording session. The folder stays in Dropbox"
     )
     fun unlinkSession(

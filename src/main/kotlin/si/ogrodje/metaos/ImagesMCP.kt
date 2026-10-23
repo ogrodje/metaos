@@ -46,7 +46,10 @@ class ImagesMCP(
     @Transactional
     @McpTool(
         name = "set_episode_image",
-        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Set episode image",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = true
+        ),
         description = "Make a picture, e.g. new artwork in Dropbox, one of an episode's pictures: its THUMBNAIL (16:9), " +
             "THUMBNAIL_B or THUMBNAIL_C, which go with its alternative titles B and C as they're A/B tested together, " +
             "or its COVER (square, e.g. for podcast apps). In the Artwork folder in Dropbox, an episode's folder usually " +
@@ -70,7 +73,10 @@ class ImagesMCP(
     @Transactional
     @McpTool(
         name = "remove_episode_image",
-        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Remove episode image",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
+        ),
         description = "Take one of an episode's pictures off it, e.g. a thumbnail B no longer tested. Returns the one it had"
     )
     fun removeEpisodeImage(
@@ -86,7 +92,10 @@ class ImagesMCP(
     @Transactional(readOnly = true)
     @McpTool(
         name = "list_episode_images",
-        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "List episode images",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
         description = "List an episode's pictures: its thumbnail, thumbnails B and C, and cover, with their URLs; none where it has none"
     )
     fun listEpisodeImages(@McpToolParam(description = EPISODE_REF) code: String): List<EpisodeImageDto> {
@@ -97,7 +106,10 @@ class ImagesMCP(
     @Transactional
     @McpTool(
         name = "set_person_avatar",
-        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Set person avatar",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = true
+        ),
         description = "Make a picture a person's avatar, e.g. one from Hygraph, the CMS, or a photo in Dropbox or Koofr. $PUBLISHED"
     )
     fun setPersonAvatar(
@@ -117,7 +129,10 @@ class ImagesMCP(
     @Transactional
     @McpTool(
         name = "remove_person_avatar",
-        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Remove person avatar",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
+        ),
         description = "Take a person's avatar off them. Returns the one they had"
     )
     fun removePersonAvatar(@McpToolParam(description = "Person ID") personId: UUID): ImageDto? {
@@ -128,7 +143,10 @@ class ImagesMCP(
     @Transactional(readOnly = true)
     @McpTool(
         name = "get_person_avatar",
-        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Get person avatar",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
         description = "A person's avatar, with its URLs; none when they have none"
     )
     fun getPersonAvatar(@McpToolParam(description = "Person ID") personId: UUID): ImageDto? =

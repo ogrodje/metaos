@@ -49,7 +49,10 @@ class PeopleMCP(
 
     @McpTool(
         name = "list_people",
-        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "List people",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
         description = "List all people"
     )
     fun list(): List<PersonDto> = people.findAll().map { it.toDto() }
@@ -57,7 +60,10 @@ class PeopleMCP(
     @Transactional
     @McpTool(
         name = "create_person",
-        annotations = McpTool.McpAnnotations(destructiveHint = false),
+        annotations = McpTool.McpAnnotations(
+            title = "Create person",
+            readOnlyHint = false, destructiveHint = false, idempotentHint = false, openWorldHint = false
+        ),
         description = "Create a new person"
     )
     fun create(
@@ -71,7 +77,10 @@ class PeopleMCP(
     @Transactional
     @McpTool(
         name = "set_person_email",
-        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Set person email",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
+        ),
         description = "Set or clear a person's email. A signed-in user with the same verified email is linked to this person"
     )
     fun setEmail(
@@ -89,7 +98,10 @@ class PeopleMCP(
     @Transactional
     @McpTool(
         name = "set_person_bio",
-        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Set person bio",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
+        ),
         description = "Set or clear the line about who a person is, e.g. their role and company"
     )
     fun setBio(
@@ -104,7 +116,10 @@ class PeopleMCP(
     @Transactional
     @McpTool(
         name = "set_person_link",
-        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Set person link",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
+        ),
         description = "Set or clear where a person can be found online: their homepage, LinkedIn, Twitter/X, Instagram or Facebook"
     )
     fun setLink(
@@ -120,7 +135,10 @@ class PeopleMCP(
     @Transactional
     @McpTool(
         name = "delete_person",
-        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Delete person",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
+        ),
         description = "Soft-delete a person. They drop off their episodes, and the episodes they recommended, until " +
             "they are restored"
     )
@@ -134,7 +152,10 @@ class PeopleMCP(
     @Transactional
     @McpTool(
         name = "restore_person",
-        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Restore person",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
+        ),
         description = "Bring back a soft-deleted person, with their roles on episodes and the episodes they recommended " +
             "(unless someone else has been credited with one since). With another email, or none, if theirs has " +
             "been taken since"
@@ -167,7 +188,10 @@ class PeopleMCP(
     @Transactional(readOnly = true)
     @McpTool(
         name = "whoami",
-        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Who am I",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
         description = "Show the signed-in user and the person linked to them by verified email"
     )
     fun whoami(): CurrentUserDto = checkNotNull(currentJwt()) { "Not signed in" }.toCurrentUserDto(people)
@@ -175,7 +199,10 @@ class PeopleMCP(
     @Transactional(readOnly = true)
     @McpTool(
         name = "my_episodes",
-        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "My episodes",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
         description = "List the episodes the signed-in user is on and their roles in each, latest first"
     )
     fun myEpisodes(): List<PersonEpisodeDto> =
@@ -190,7 +217,10 @@ class PeopleMCP(
     @Transactional(readOnly = true)
     @McpTool(
         name = "list_person_episodes",
-        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "List person episodes",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
         description = "List the episodes a person is on and their roles in each, latest first"
     )
     fun listEpisodes(@McpToolParam(description = "Person ID") personId: UUID): List<PersonEpisodeDto> {

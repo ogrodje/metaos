@@ -62,9 +62,10 @@ class SecurityTest @Autowired constructor(private val mvc: MockMvc, private val 
         }.andExpect { status { isForbidden() } }
     }
 
-    // Clients that honour the hints ask before a destructive call (ToolHintsTest checks every tool's)
+    // Clients that honour the hints ask before a destructive call (ToolHintsTest checks every tool's). The title in the
+    // annotations is also the tool's own
     @Test
-    fun `lists the tools with their read-only and destructive hints`() {
+    fun `lists the tools with their titles and hints`() {
         mvc.post("/mcp") {
             contentType = MediaType.APPLICATION_JSON
             accept(MediaType.APPLICATION_JSON, MediaType.TEXT_EVENT_STREAM)
@@ -76,6 +77,10 @@ class SecurityTest @Autowired constructor(private val mvc: MockMvc, private val 
             jsonPath("$.result.tools[?(@.name == 'delete_episode')].annotations.readOnlyHint") { value(contains(false)) }
             jsonPath("$.result.tools[?(@.name == 'delete_episode')].annotations.destructiveHint") { value(contains(true)) }
             jsonPath("$.result.tools[?(@.name == 'create_episode')].annotations.destructiveHint") { value(contains(false)) }
+            jsonPath("$.result.tools[?(@.name == 'create_episode')].annotations.idempotentHint") { value(contains(false)) }
+            jsonPath("$.result.tools[?(@.name == 'get_episode')].annotations.openWorldHint") { value(contains(false)) }
+            jsonPath("$.result.tools[?(@.name == 'get_episode')].annotations.title") { value(contains("Get episode")) }
+            jsonPath("$.result.tools[?(@.name == 'get_episode')].title") { value(contains("Get episode")) }
         }
     }
 

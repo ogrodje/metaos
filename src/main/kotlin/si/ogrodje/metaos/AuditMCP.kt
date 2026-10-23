@@ -111,7 +111,10 @@ class AuditMCP(private val auditLog: AuditLog) {
 
     @McpTool(
         name = "get_history",
-        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Get history",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
         description = "List every change to an episode, person, session or show, oldest first: what changed, when, " +
             "by whom, through which MCP client and tool. Includes people's roles on an episode, the documents, Koofr " +
             "and Dropbox folders linked to an episode or session, episodes moving in and out of a session or show and " +
@@ -123,7 +126,10 @@ class AuditMCP(private val auditLog: AuditLog) {
 
     @McpTool(
         name = "list_recent_changes",
-        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "List recent changes",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
         description = "List the latest changes to all data, newest first"
     )
     fun recentChanges(

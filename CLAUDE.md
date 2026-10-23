@@ -13,6 +13,10 @@ MetaOS was designed for scaling, optimising and helping grow the [Ogrodje] organ
   changes what it does, update the front-end's Usage page in the same change: the tool's entry in
   [`fe/src/tools.ts`](fe/src/tools.ts) (name, group and one-line description). `UsageToolsTest` fails on a missing
   or extra name, but can't tell when a description no longer fits.
+- **Every MCP tool has a title and all four hints.** Its `McpTool.McpAnnotations` gives its title (also the tool's own)
+  and says whether it only reads, destroys what's there, can be repeated and reaches the open world. Spring AI's
+  defaults are the cautious ones, and are sent when left out. `ToolHintsTest` says what each means here and checks every
+  tool's by its name, so a new tool that doesn't fit its rules changes them too.
 - **The architecture diagram stays in sync.** [`architecture.png`](architecture.png), at the root and in README.md's
   Architecture Overview, is drawn in [`architecture.svg`](architecture.svg). Whenever the architecture or an
   integration changes, update `architecture.svg` in the same change and render the PNG again with `just architecture`

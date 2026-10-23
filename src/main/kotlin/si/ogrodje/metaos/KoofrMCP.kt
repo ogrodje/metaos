@@ -53,14 +53,20 @@ class KoofrMCP(private val koofr: Koofr, private val events: ApplicationEventPub
 
     @McpTool(
         name = "list_koofr_places",
-        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "List Koofr places",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
         description = "List the folders shared with Ogrodje's bot in Koofr - MetaOS works only in these - and whether it may change them"
     )
     fun places(): List<KoofrPlace> = koofr.places()
 
     @McpTool(
         name = "list_koofr_folder",
-        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "List Koofr folder",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
         description = "List the files and folders directly in a Koofr folder"
     )
     fun list(
@@ -70,7 +76,10 @@ class KoofrMCP(private val koofr: Koofr, private val events: ApplicationEventPub
 
     @McpTool(
         name = "search_koofr",
-        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Search Koofr",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
         description = "Search the folders shared with Ogrodje's bot in Koofr for files and folders by name, most relevant first, " +
             "at most $SEARCH_RESULTS"
     )
@@ -87,7 +96,10 @@ class KoofrMCP(private val koofr: Koofr, private val events: ApplicationEventPub
 
     @McpTool(
         name = "read_koofr_file",
-        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Read Koofr file",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
         description = "Read a text file (txt, md, csv, json, srt, ...) from Koofr, at most ${MAX_READ / 1024} kB of it. " +
             "For other files, list_koofr_folder tells their size and type"
     )
@@ -105,7 +117,10 @@ class KoofrMCP(private val koofr: Koofr, private val events: ApplicationEventPub
 
     @McpTool(
         name = "upload_koofr_file",
-        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Upload Koofr file",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
+        ),
         description = "Upload a file into a Koofr folder: text, or base64 for anything else, at most ${MAX_UPLOAD / 1024 / 1024} MB. " +
             "A file of the same name is only replaced with overwrite, and Koofr keeps the old one as a version"
     )
@@ -128,7 +143,10 @@ class KoofrMCP(private val koofr: Koofr, private val events: ApplicationEventPub
 
     @McpTool(
         name = "create_koofr_folder",
-        annotations = McpTool.McpAnnotations(destructiveHint = false),
+        annotations = McpTool.McpAnnotations(
+            title = "Create Koofr folder",
+            readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
         description = "Create a folder in Koofr"
     )
     fun createFolder(
@@ -147,7 +165,10 @@ class KoofrMCP(private val koofr: Koofr, private val events: ApplicationEventPub
     @Transactional
     @McpTool(
         name = "move_koofr_file",
-        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Move Koofr file",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
+        ),
         description = "Move or rename a file or folder in Koofr, also into another shared folder. Never replaces what's at the " +
             "new path. Folders linked to episodes or sessions stay linked"
     )

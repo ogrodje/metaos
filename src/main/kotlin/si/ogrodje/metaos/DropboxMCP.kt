@@ -43,7 +43,10 @@ class DropboxMCP(private val dropbox: Dropbox) {
 
     @McpTool(
         name = "list_dropbox_places",
-        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "List Dropbox places",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
         description = "List the folders shared with Ogrodje's bot in Dropbox, e.g. Artwork - MetaOS works only in these - and " +
             "whether it may change them"
     )
@@ -51,7 +54,10 @@ class DropboxMCP(private val dropbox: Dropbox) {
 
     @McpTool(
         name = "list_dropbox_folder",
-        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "List Dropbox folder",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
         description = "List the files and folders directly in a Dropbox folder"
     )
     fun list(
@@ -61,7 +67,10 @@ class DropboxMCP(private val dropbox: Dropbox) {
 
     @McpTool(
         name = "search_dropbox",
-        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Search Dropbox",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
         description = "Search the folders shared with Ogrodje's bot in Dropbox for files and folders by name, most relevant " +
             "first, at most $SEARCH_RESULTS"
     )
@@ -75,7 +84,10 @@ class DropboxMCP(private val dropbox: Dropbox) {
 
     @McpTool(
         name = "read_dropbox_file",
-        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Read Dropbox file",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
         description = "Read a text file (txt, md, csv, json, srt, ...) from Dropbox, at most ${MAX_READ / 1024} kB of it. " +
             "view_dropbox_image shows pictures; for other files, list_dropbox_folder tells their size and type"
     )
@@ -92,7 +104,10 @@ class DropboxMCP(private val dropbox: Dropbox) {
     // An image, as MCP clients show them to their model, rather than JSON
     @McpTool(
         name = "view_dropbox_image",
-        annotations = McpTool.McpAnnotations(readOnlyHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "View Dropbox image",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
         description = "Look at a picture in Dropbox, e.g. artwork for an episode: a JPEG of it, at most 1024 × 768 " +
             "(jpg, png, gif, webp, tiff or bmp, up to 20 MB)"
     )
@@ -110,7 +125,10 @@ class DropboxMCP(private val dropbox: Dropbox) {
 
     @McpTool(
         name = "upload_dropbox_file",
-        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Upload Dropbox file",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
+        ),
         description = "Upload a file into a Dropbox folder: text, or base64 for anything else, at most ${MAX_UPLOAD / 1024 / 1024} MB. " +
             "A file of the same name is only replaced with overwrite, and Dropbox keeps the old one as a version"
     )
@@ -131,7 +149,10 @@ class DropboxMCP(private val dropbox: Dropbox) {
 
     @McpTool(
         name = "create_dropbox_folder",
-        annotations = McpTool.McpAnnotations(destructiveHint = false),
+        annotations = McpTool.McpAnnotations(
+            title = "Create Dropbox folder",
+            readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
         description = "Create a folder in Dropbox"
     )
     fun createFolder(
@@ -148,7 +169,10 @@ class DropboxMCP(private val dropbox: Dropbox) {
 
     @McpTool(
         name = "move_dropbox_file",
-        annotations = McpTool.McpAnnotations(destructiveHint = true),
+        annotations = McpTool.McpAnnotations(
+            title = "Move Dropbox file",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
+        ),
         description = "Move or rename a file or folder in Dropbox, also into another shared folder. Never replaces what's at " +
             "the new path"
     )
