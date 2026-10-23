@@ -1,7 +1,7 @@
 // What on the home page needs the team's attention: episodes whose recording date passed while they're still to be
 // recorded, recordings coming up without what they need, and episodes long in production
 
-import { candidates, daysFrom, type Episode, guests, statusName } from '@/episodes'
+import { candidates, daysFrom, type Episode, type EpisodeStatus, guests, statusName } from '@/episodes'
 
 // How far ahead a recording should have its guest confirmed and a doc to prepare from
 export const SOON_DAYS = 14
@@ -56,4 +56,15 @@ export function concerns(upcoming: Episode[], inProduction: Episode[], today = n
   }
 
   return found.sort((a, b) => a.rank - b.rank)
+}
+
+// Still to be recorded, as upcomingRecordings has them, and being made, as inProduction has them (GraphQL.kt)
+const TO_RECORD: EpisodeStatus[] = ['IDEA', 'PLANNED', 'SCHEDULED']
+const BEING_MADE: EpisodeStatus[] = ['RECORDED', 'IN_PRODUCTION', 'READY', 'EARLY_ACCESS']
+
+/** What needs attention of one [episode], e.g. on its page, by the same rules as the home page's */
+export function episodeConcerns(episode: Episode, today = new Date()): string[] {
+  const upcoming = TO_RECORD.includes(episode.status) ? [episode] : []
+  const inProduction = BEING_MADE.includes(episode.status) ? [episode] : []
+  return concerns(upcoming, inProduction, today).flatMap((concern) => concern.reasons)
 }

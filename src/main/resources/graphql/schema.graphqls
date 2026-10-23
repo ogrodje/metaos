@@ -224,6 +224,10 @@ type Change {
     client: String
     "The MCP tool that made it"
     tool: String
+    "What it's a change to, e.g. the episode itself, or someone's role on it"
+    kind: ChangeKind!
+    "The comment it's a change to, when it's one to a comment"
+    commentId: ID
     "What happened, e.g. Added Jure Čuhalev as host"
     summary: String!
     "The fields that changed, by their names"
@@ -308,6 +312,8 @@ type EpisodePerson {
     personId: ID!
     name: String!
     roles: [Role!]!
+    "Their picture, as their avatar"
+    avatar: Image
 }
 
 enum Role {
@@ -353,6 +359,25 @@ type Account {
     linkedBy: String
     "When MetaOS first saw it"
     createdAt: String!
+}
+
+"What a change in the history is to"
+enum ChangeKind {
+    "The episode itself, or an episode moving in or out of the session"
+    EPISODE
+    "The session itself"
+    SESSION
+    "Someone added to the episode, removed from it, or given another role on it"
+    PERSON
+    "A Google Doc linked or unlinked"
+    DOCUMENT
+    KOOFR_FOLDER
+    DROPBOX_FOLDER
+    "A comment written, edited or deleted"
+    COMMENT
+    "A sign-in linked to a person or unlinked"
+    ACCOUNT
+    OTHER
 }
 
 enum AccountLink {

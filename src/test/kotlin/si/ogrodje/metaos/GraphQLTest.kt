@@ -81,7 +81,7 @@ class GraphQLTest @Autowired constructor(
 
         graphql(
             """{ episode(ref: "gq-h1") { title titleB titleC summary tinySummary machineSummary addedDate koofrFolders { path url }
-                 history { actor tool summary fields { field from to } } } }""",
+                 history { actor tool kind summary fields { field from to } } } }""",
             reader,
         )
             .andExpect(jsonPath("$.errors").doesNotExist())
@@ -96,6 +96,7 @@ class GraphQLTest @Autowired constructor(
                 "Created the episode", "Changed the episode", "Added History Host as host",
                 "Linked the Koofr folder /Epizode/S05E04 - Jure in Jošt (SAP)",
             )))
+            .andExpect(jsonPath("$.data.episode.history[*].kind", contains("EPISODE", "EPISODE", "PERSON", "KOOFR_FOLDER")))
             .andExpect(jsonPath("$.data.episode.history[0].actor").value("ana"))
             .andExpect(jsonPath("$.data.episode.history[0].tool").value("create_episode"))
             .andExpect(jsonPath("$.data.episode.history[1].fields[*].field", contains("Title", "Title B", "Summary", "Tiny summary", "AI summary")))
@@ -117,12 +118,13 @@ class GraphQLTest @Autowired constructor(
             checkNotNull(session.id)
         }
 
-        graphql("""{ session(id: "$sessionId") { location address episodes { code } history { summary fields { field to } } } }""", reader)
+        graphql("""{ session(id: "$sessionId") { location address episodes { code } history { kind summary fields { field to } } } }""", reader)
             .andExpect(jsonPath("$.errors").doesNotExist())
             .andExpect(jsonPath("$.data.session.address").value("Hidden street 1"))
             .andExpect(jsonPath("$.data.session.episodes[*].code", contains("gq-h2", "gq-h3")))
             .andExpect(jsonPath("$.data.session.history[*].summary",
                 contains("Created the session", "Added gq-h3 to the session", "Added gq-h2 to the session")))
+            .andExpect(jsonPath("$.data.session.history[*].kind", contains("SESSION", "EPISODE", "EPISODE")))
             .andExpect(jsonPath("$.data.session.history[0].fields[*].to", contains("1 Jul 2099", "History Hall", "Hidden street 1")))
     }
 

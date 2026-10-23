@@ -2,27 +2,32 @@
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { keepUnchanged, useLiveRefresh } from '@/changes'
+import { episodeConcerns } from '@/attention'
 import { COMMENT_FIELDS } from '@/comments'
-import DiscussionSection from '@/components/DiscussionSection.vue'
+import ActivityFeed from '@/components/ActivityFeed.vue'
 import DocLinks from '@/components/DocLinks.vue'
 import DropboxFolderList from '@/components/DropboxFolderList.vue'
-import EpisodePictures from '@/components/EpisodePictures.vue'
-import HistoryTimeline from '@/components/HistoryTimeline.vue'
+import Fact from '@/components/Fact.vue'
+import FactGroup from '@/components/FactGroup.vue'
+import FactPanel from '@/components/FactPanel.vue'
+import FoldedText from '@/components/FoldedText.vue'
 import KoofrFolderList from '@/components/KoofrFolderList.vue'
 import ListenLinks from '@/components/ListenLinks.vue'
 import LoadError from '@/components/LoadError.vue'
 import LoadingRows from '@/components/LoadingRows.vue'
 import MarkdownText from '@/components/MarkdownText.vue'
+import MediaStrip from '@/components/MediaStrip.vue'
 import NotFound from '@/components/NotFound.vue'
-import PhotoStrip from '@/components/PhotoStrip.vue'
+import PersonLine from '@/components/PersonLine.vue'
 import ShowBadge from '@/components/ShowBadge.vue'
 import StatusLabel from '@/components/StatusLabel.vue'
 import {
   ARTWORK_FIELDS, artworkOf, DROPBOX_FIELDS, type DropboxPicture, EPISODE_FIELDS, type EpisodeDetails, episodePath,
-  formatDate, HISTORY_FIELDS, KOOFR_FIELDS, type KoofrPhoto, links, photosOf, PICTURE_FIELDS, roleName, sessionPath,
-  sessionTitle,
+  formatDate, HISTORY_FIELDS, KOOFR_FIELDS, type KoofrPhoto, links, photosOf, PICTURE_FIELDS, relativeDate, roleName,
+  sessionPath, sessionTitle,
 } from '@/episodes'
 import { errorMessage, graphql } from '@/graphql'
+import { IMAGE_FIELDS } from '@/images'
 import { personPath } from '@/people'
 import { episodeData, plainText, shorten, usePageMeta, useSiteUrl } from '@/seo'
 import { useFirstLoad } from '@/ssr'
@@ -51,7 +56,7 @@ async function fetchEpisode(ref: string) {
   return (await graphql<{ episode: EpisodeDetails | null }>(`query ($ref: String!) {
     episode(ref: $ref) {
       ${EPISODE_FIELDS} titleB titleC summary machineSummary addedDate recommendedBy { id name } ${KOOFR_FIELDS} ${DROPBOX_FIELDS} ${ARTWORK_FIELDS}
-      ${PICTURE_FIELDS} ${HISTORY_FIELDS} ${COMMENT_FIELDS}
+      ${PICTURE_FIELDS} ${HISTORY_FIELDS} ${COMMENT_FIELDS} people { avatar { ${IMAGE_FIELDS} } }
     }
   }`, { ref })).episode
 }
@@ -118,6 +123,12 @@ const artwork = computed<DropboxPicture[]>((previous) =>
   keepUnchanged(previous, episode.value ? artworkOf(episode.value.dropboxFolders) : []))
 const photos = computed<KoofrPhoto[]>((previous) =>
   keepUnchanged(previous, episode.value ? photosOf(episode.value.koofrFolders) : []))
+
+// What needs the team's attention, by the home page's rules, e.g. recorded months ago and not out yet
+const concerns = computed(() => (auth.team && episode.value ? episodeConcerns(episode.value) : []))
+
+const hasFiles = computed(() => !!episode.value
+  && (episode.value.documents.length > 0 || episode.value.koofrFolders.length > 0 || episode.value.dropboxFolders.length > 0))
 </script>
 
 <template>
@@ -144,102 +155,70 @@ const photos = computed<KoofrPhoto[]>((previous) =>
           <StatusLabel :status="episode.status"/>
         </p>
         <h1 lang="sl">{{ episode.title }}</h1>
-        <MarkdownText v-if="episode.tinySummary" :source="episode.tinySummary" lang="sl"/>
+        <MarkdownText v-if="episode.tinySummary" class="subtitle" :source="episode.tinySummary" lang="sl"/>
       </header>
 
-      <section aria-labelledby="details">
-        <div class="heading"><h2 id="details">Details</h2></div>
-        <dl class="details">
-          <div v-if="episode.titleB || episode.titleC">
-            <dt>Alternative titles</dt>
-            <dd>
-              <ul class="alternatives" lang="sl">
-                <li v-if="episode.titleB"><span class="variant">B</span>{{ episode.titleB }}</li>
-                <li v-if="episode.titleC"><span class="variant">C</span>{{ episode.titleC }}</li>
-              </ul>
-            </dd>
-          </div>
-          <!-- A session's page is the team's -->
-          <div v-if="episode.session">
-            <dt>Session</dt>
-            <dd>
-              <RouterLink v-if="auth.team" :to="sessionPath(episode.session)">{{ sessionTitle(episode.session) }}</RouterLink>
-              <template v-else>{{ sessionTitle(episode.session) }}</template>
-            </dd>
-          </div>
-          <div v-if="episode.recordingDate">
-            <dt>Recording</dt>
-            <dd><time :datetime="episode.recordingDate">{{ formatDate(episode.recordingDate) }}</time></dd>
-          </div>
-          <div v-if="episode.airedDate">
-            <dt>Aired</dt>
-            <dd><time :datetime="episode.airedDate">{{ formatDate(episode.airedDate) }}</time></dd>
-          </div>
-          <div v-if="auth.team">
-            <dt>Added</dt>
-            <dd><time :datetime="episode.addedDate">{{ formatDate(episode.addedDate) }}</time></dd>
-          </div>
-          <div v-if="episode.recommendedBy">
-            <dt>Recommended by</dt>
-            <dd><RouterLink :to="personPath(episode.recommendedBy)">{{ episode.recommendedBy.name }}</RouterLink></dd>
-          </div>
-          <div v-if="links(episode).length">
-            <dt>Listen</dt>
-            <dd class="icons"><ListenLinks :episode="episode"/></dd>
-          </div>
-          <div v-if="episode.documents.length">
-            <dt>Docs</dt>
-            <dd class="icons"><DocLinks :documents="episode.documents"/></dd>
-          </div>
-          <div v-if="episode.koofrFolders.length">
-            <dt>Koofr</dt>
-            <dd><KoofrFolderList :folders="episode.koofrFolders"/></dd>
-          </div>
-          <div v-if="episode.dropboxFolders.length">
-            <dt>Dropbox</dt>
-            <dd><DropboxFolderList :folders="episode.dropboxFolders"/></dd>
-          </div>
-        </dl>
-      </section>
+      <!-- The facts at the right, what the team works on in the main column; on phones the facts come first -->
+      <div class="workspace">
+        <FactPanel label="About the episode">
+          <FactGroup>
+            <dl>
+              <Fact v-if="episode.airedDate" label="Aired">
+                <time :datetime="episode.airedDate">{{ formatDate(episode.airedDate) }}</time>
+                <span v-if="auth.team" class="aside"> · {{ relativeDate(episode.airedDate) }}</span>
+              </Fact>
+              <Fact v-if="episode.recordingDate" label="Recording">
+                <time :datetime="episode.recordingDate">{{ formatDate(episode.recordingDate) }}</time>
+                <span v-if="auth.team" class="aside"> · {{ relativeDate(episode.recordingDate) }}</span>
+              </Fact>
+              <!-- A session's page is the team's -->
+              <Fact v-if="episode.session" label="Session">
+                <RouterLink v-if="auth.team" :to="sessionPath(episode.session)">{{ sessionTitle(episode.session) }}</RouterLink>
+                <template v-else>{{ sessionTitle(episode.session) }}</template>
+              </Fact>
+              <Fact v-if="episode.recommendedBy" label="Recommended by">
+                <RouterLink :to="personPath(episode.recommendedBy)">{{ episode.recommendedBy.name }}</RouterLink>
+              </Fact>
+              <Fact v-if="auth.team" label="Added">
+                <time :datetime="episode.addedDate">{{ formatDate(episode.addedDate) }}</time>
+              </Fact>
+            </dl>
+            <p v-for="concern in concerns" :key="concern" class="concern">{{ concern }}</p>
+          </FactGroup>
 
-      <EpisodePictures :episode="episode"/>
-      <PhotoStrip v-if="artwork.length" title="Artwork" :photos="artwork" :folder="artwork[0]?.url" service="Dropbox" artwork/>
-      <PhotoStrip v-if="photos.length" title="Photos" :photos="photos" :folder="episode.koofrFolders[0]?.url" service="Koofr"/>
+          <FactGroup v-if="episode.people.length" title="People" :count="episode.people.length">
+            <PersonLine v-for="person in episode.people" :id="person.personId" :key="person.personId" :name="person.name"
+                        :avatar="person.avatar" :role="person.roles.map(roleName).join(', ')"/>
+          </FactGroup>
 
-      <section v-if="episode.people.length" aria-labelledby="people">
-        <div class="heading">
-          <h2 id="people">People</h2>
-          <span class="count">{{ episode.people.length }}</span>
+          <FactGroup v-if="links(episode).length" title="Listen">
+            <div class="listen"><ListenLinks :episode="episode" labelled/></div>
+          </FactGroup>
+
+          <!-- The team's, as everyone else gets none -->
+          <FactGroup v-if="hasFiles" title="Files">
+            <dl>
+              <Fact v-if="episode.documents.length" label="Docs"><span class="icons"><DocLinks :documents="episode.documents"/></span></Fact>
+              <Fact v-if="episode.koofrFolders.length" label="Koofr" stacked><KoofrFolderList :folders="episode.koofrFolders"/></Fact>
+              <Fact v-if="episode.dropboxFolders.length" label="Dropbox" stacked><DropboxFolderList :folders="episode.dropboxFolders"/></Fact>
+            </dl>
+          </FactGroup>
+        </FactPanel>
+
+        <div class="main">
+          <MediaStrip :episode="episode" :artwork="artwork" :photos="photos" :team="auth.team"/>
+          <FoldedText v-if="episode.summary" title="Summary" :source="episode.summary"/>
+          <FoldedText v-if="episode.machineSummary" title="AI summary" :source="episode.machineSummary"/>
+
+          <!-- The team's, as are their comments and history, which no one else gets; kept a place while the user who
+               was on the team here last time is checked -->
+          <ActivityFeed v-if="auth.team" :comments="episode.comments" :changes="episode.history" :episode-id="episode.id"
+                        @changed="reloadQuietly(episode.id)"/>
+          <section v-else-if="auth.likelyMember" aria-label="Activity">
+            <LoadingRows :rows="4" label="Loading the activity"/>
+          </section>
         </div>
-        <ul class="rows">
-          <li v-for="person in episode.people" :key="person.personId">
-            <RouterLink :to="personPath({ id: person.personId })">{{ person.name }}</RouterLink>
-            <span class="aside">{{ person.roles.map(roleName).join(', ') }}</span>
-          </li>
-        </ul>
-      </section>
-
-      <section v-if="episode.summary" aria-labelledby="summary">
-        <div class="heading"><h2 id="summary">Summary</h2></div>
-        <MarkdownText :source="episode.summary" lang="sl"/>
-      </section>
-
-      <section v-if="episode.machineSummary" aria-labelledby="ai-summary">
-        <div class="heading"><h2 id="ai-summary">AI summary</h2></div>
-        <MarkdownText :source="episode.machineSummary" lang="sl"/>
-      </section>
-
-      <!-- The team's, as are their comments, which no one else gets -->
-      <DiscussionSection v-if="auth.team" :comments="episode.comments" :episode-id="episode.id"
-                         @changed="reloadQuietly(episode.id)"/>
-
-      <section v-if="auth.team" aria-labelledby="history">
-        <div class="heading">
-          <h2 id="history">History</h2>
-          <span class="count">{{ episode.history.length }}</span>
-        </div>
-        <HistoryTimeline :changes="episode.history"/>
-      </section>
+      </div>
     </template>
   </main>
 </template>
@@ -247,25 +226,34 @@ const photos = computed<KoofrPhoto[]>((previous) =>
 <style scoped lang="scss">
 @use '../assets/page';
 
-// Each after its letter in the A/B test; a long one wraps beside it
-.alternatives {
-  padding: 0;
-  list-style: none;
-
-  li {
-    display: grid;
-    grid-template-columns: 20px minmax(0, 1fr);
-    align-items: baseline;
-  }
-
-  li + li {
-    margin-top: 4px;
-  }
+// What needs attention, under the facts it's about
+.concern {
+  padding: 8px 12px;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--accent-text);
+  background: #FDF0F3;
+  border-radius: 8px;
 }
 
-.variant {
-  font-family: var(--font-mono);
-  font-size: 13px;
+.listen {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+// The doc icons' glyphs, not their hit areas, line up with the text
+.icons {
+  display: flex;
+  flex-wrap: wrap;
+  margin: calc((20px - var(--icon-link)) / 2) 0 calc((20px - var(--icon-link)) / 2) var(--icon-link-inset);
+}
+
+.aside {
   color: var(--muted);
+}
+
+dd a {
+  @include page.link;
 }
 </style>

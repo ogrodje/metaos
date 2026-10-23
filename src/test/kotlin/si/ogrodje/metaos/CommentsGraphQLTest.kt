@@ -109,9 +109,12 @@ class CommentsGraphQLTest @Autowired constructor(
         graphql("""mutation { deleteComment(id: "$id") }""", writer)
             .andExpect(jsonPath("$.data.deleteComment").value(id))
 
-        graphql("""{ episode(ref: "cg-102") { comments { id } history { summary tool } } }""", writer)
+        graphql("""{ episode(ref: "cg-102") { comments { id } history { kind commentId summary tool } } }""", writer)
             .andExpect(jsonPath("$.data.episode.comments").isEmpty())
             .andExpect(jsonPath("$.data.episode.history[1].summary").value("Commented"))
+            .andExpect(jsonPath("$.data.episode.history[1].kind").value("COMMENT"))
+            .andExpect(jsonPath("$.data.episode.history[1].commentId").value(id))
+            .andExpect(jsonPath("$.data.episode.history[0].commentId").value(null as Any?))
             .andExpect(jsonPath("$.data.episode.history[2].summary").value("Edited a comment"))
             .andExpect(jsonPath("$.data.episode.history[3].summary").value("Deleted a comment"))
             .andExpect(jsonPath("$.data.episode.history[3].tool").value(null as Any?))

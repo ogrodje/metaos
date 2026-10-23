@@ -3,12 +3,14 @@ import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { keepUnchanged, useLiveRefresh } from '@/changes'
 import { COMMENT_FIELDS } from '@/comments'
-import DiscussionSection from '@/components/DiscussionSection.vue'
+import ActivityFeed from '@/components/ActivityFeed.vue'
 import DocLinks from '@/components/DocLinks.vue'
 import DropboxFolderList from '@/components/DropboxFolderList.vue'
 import EpisodeItem from '@/components/EpisodeItem.vue'
 import EpisodeRow from '@/components/EpisodeRow.vue'
-import HistoryTimeline from '@/components/HistoryTimeline.vue'
+import Fact from '@/components/Fact.vue'
+import FactGroup from '@/components/FactGroup.vue'
+import FactPanel from '@/components/FactPanel.vue'
 import KoofrFolderList from '@/components/KoofrFolderList.vue'
 import LoadError from '@/components/LoadError.vue'
 import LoadingRows from '@/components/LoadingRows.vue'
@@ -16,8 +18,8 @@ import NotFound from '@/components/NotFound.vue'
 import PhotoStrip from '@/components/PhotoStrip.vue'
 import SignInPrompt from '@/components/SignInPrompt.vue'
 import {
-  DROPBOX_FIELDS, EPISODE_FIELDS, formatDate, HISTORY_FIELDS, KOOFR_FIELDS, type KoofrPhoto, photosOf, type SessionDetails,
-  sessionTitle,
+  DROPBOX_FIELDS, EPISODE_FIELDS, formatDate, HISTORY_FIELDS, KOOFR_FIELDS, type KoofrPhoto, photosOf, relativeDate,
+  type SessionDetails, sessionTitle,
 } from '@/episodes'
 import { errorMessage, graphql } from '@/graphql'
 import { useAuthStore } from '@/stores/auth'
@@ -72,6 +74,9 @@ function reloadQuietly(id: string) {
 // The same list while it's the same, as the photos page through them from the first again when they change
 const photos = computed<KoofrPhoto[]>((previous) =>
   keepUnchanged(previous, session.value ? photosOf(session.value.koofrFolders) : []))
+
+const hasFiles = computed(() => !!session.value
+  && (session.value.documents.length > 0 || session.value.koofrFolders.length > 0 || session.value.dropboxFolders.length > 0))
 </script>
 
 <template>
@@ -94,61 +99,66 @@ const photos = computed<KoofrPhoto[]>((previous) =>
         <p v-if="session.location" class="subtitle">{{ session.location }}</p>
       </header>
 
-      <section v-if="session.address || session.documents.length || session.koofrFolders.length || session.dropboxFolders.length"
-               aria-labelledby="details">
-        <div class="heading"><h2 id="details">Details</h2></div>
-        <dl class="details">
-          <div v-if="session.address">
-            <dt>Address</dt>
-            <dd>{{ session.address }}</dd>
-          </div>
-          <div v-if="session.documents.length">
-            <dt>Docs</dt>
-            <dd class="icons"><DocLinks :documents="session.documents"/></dd>
-          </div>
-          <div v-if="session.koofrFolders.length">
-            <dt>Koofr</dt>
-            <dd><KoofrFolderList :folders="session.koofrFolders"/></dd>
-          </div>
-          <div v-if="session.dropboxFolders.length">
-            <dt>Dropbox</dt>
-            <dd><DropboxFolderList :folders="session.dropboxFolders"/></dd>
-          </div>
-        </dl>
-      </section>
+      <!-- Where and when at the right, its episodes and activity in the main column; on phones the facts come first -->
+      <div class="workspace">
+        <FactPanel label="About the session">
+          <FactGroup>
+            <dl>
+              <Fact label="When">
+                <time :datetime="session.date">{{ formatDate(session.date) }}</time>
+                <span class="aside"> · {{ relativeDate(session.date) }}</span>
+              </Fact>
+              <Fact v-if="session.address" label="Address">{{ session.address }}</Fact>
+            </dl>
+          </FactGroup>
+          <FactGroup v-if="hasFiles" title="Files">
+            <dl>
+              <Fact v-if="session.documents.length" label="Docs"><span class="icons"><DocLinks :documents="session.documents"/></span></Fact>
+              <Fact v-if="session.koofrFolders.length" label="Koofr" stacked><KoofrFolderList :folders="session.koofrFolders"/></Fact>
+              <Fact v-if="session.dropboxFolders.length" label="Dropbox" stacked><DropboxFolderList :folders="session.dropboxFolders"/></Fact>
+            </dl>
+          </FactGroup>
+        </FactPanel>
 
-      <PhotoStrip v-if="photos.length" title="Photos" :photos="photos" :folder="session.koofrFolders[0]?.url" service="Koofr"/>
+        <div class="main">
+          <section aria-labelledby="episodes">
+            <div class="heading">
+              <h2 id="episodes">Episodes</h2>
+              <span class="count">{{ session.episodes.length }}</span>
+            </div>
+            <p v-if="!session.episodes.length" class="note">No episodes are in this session yet.</p>
+            <!-- Each as the other lists have it: a line while it's in the works, its summary once it's released -->
+            <ul v-else class="episodes">
+              <template v-for="episode in session.episodes" :key="episode.id">
+                <EpisodeItem v-if="episode.status === 'PUBLISHED'" :episode="episode"/>
+                <EpisodeRow v-else :episode="episode" under-session/>
+              </template>
+            </ul>
+          </section>
 
-      <section aria-labelledby="episodes">
-        <div class="heading">
-          <h2 id="episodes">Episodes</h2>
-          <span class="count">{{ session.episodes.length }}</span>
+          <PhotoStrip v-if="photos.length" title="Photos" :photos="photos" :folder="session.koofrFolders[0]?.url" service="Koofr"/>
+
+          <ActivityFeed :comments="session.comments" :changes="session.history" :session-id="session.id"
+                        @changed="reloadQuietly(session.id)"/>
         </div>
-        <p v-if="!session.episodes.length" class="note">No episodes are in this session yet.</p>
-        <!-- Each as the other lists have it: a line while it's in the works, its summary once it's released -->
-        <ul v-else class="episodes">
-          <template v-for="episode in session.episodes" :key="episode.id">
-            <EpisodeItem v-if="episode.status === 'PUBLISHED'" :episode="episode"/>
-            <EpisodeRow v-else :episode="episode" under-session/>
-          </template>
-        </ul>
-      </section>
-
-      <DiscussionSection :comments="session.comments" :session-id="session.id" @changed="reloadQuietly(session.id)"/>
-
-      <section aria-labelledby="history">
-        <div class="heading">
-          <h2 id="history">History</h2>
-          <span class="count">{{ session.history.length }}</span>
-        </div>
-        <HistoryTimeline :changes="session.history"/>
-      </section>
+      </div>
     </template>
   </main>
 </template>
 
 <style scoped lang="scss">
 @use '../assets/page';
+
+.aside {
+  color: var(--muted);
+}
+
+// The doc icons' glyphs, not their hit areas, line up with the text
+.icons {
+  display: flex;
+  flex-wrap: wrap;
+  margin: calc((20px - var(--icon-link)) / 2) 0 calc((20px - var(--icon-link)) / 2) var(--icon-link-inset);
+}
 
 // API and MCP usage, which is in the footer, from the sign-in prompt's words
 .usage {

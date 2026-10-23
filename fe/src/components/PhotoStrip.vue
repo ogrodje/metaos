@@ -9,13 +9,17 @@ import { fetchObjectUrl } from '@/graphql'
 const PAGE = 8
 
 // A section of photos, a page at a time, with a link that opens [folder] in [service] by its title. Artwork is shown
-// whole, as it comes in all shapes (covers, thumbnails, stories), and by name, as its file names say what each is for.
+// whole, as it comes in all shapes (covers, thumbnails, stories), and by name, as its file names say what each is for,
+// and with what each is used as, e.g. Thumbnail A, when [uses] says so. Bare, it's without its heading, e.g. in a tab of
+// MediaStrip, which names it.
 const props = defineProps<{
   title: string
   photos: (KoofrPhoto | DropboxPicture)[]
   folder?: string
   service: 'Koofr' | 'Dropbox'
   artwork?: boolean
+  uses?: Record<string, string>
+  bare?: boolean
 }>()
 
 // For the section's label: photos, artwork
@@ -70,10 +74,12 @@ onBeforeUnmount(release)
 </script>
 
 <template>
-  <section :aria-labelledby="headingId">
-    <div class="heading">
-      <h2 :id="headingId">{{ title }}</h2>
-      <span class="count">{{ photos.length }}</span>
+  <section :aria-labelledby="bare ? undefined : headingId" :aria-label="bare ? title : undefined">
+    <div v-if="!bare || folder || pages > 1" class="heading" :class="{ bare }">
+      <template v-if="!bare">
+        <h2 :id="headingId">{{ title }}</h2>
+        <span class="count">{{ photos.length }}</span>
+      </template>
       <a v-if="folder" class="open" :href="folder" target="_blank" rel="noopener">
         Open on {{ service }} <FontAwesomeIcon :icon="faArrowUpRightFromSquare"/>
       </a>
@@ -98,6 +104,7 @@ onBeforeUnmount(release)
               <img v-if="sources[photo.thumbnail]" :src="sources[photo.thumbnail]" :alt="artwork ? '' : photo.name">
             </span>
             <span v-if="artwork" class="name">{{ photo.name }}</span>
+            <span v-if="artwork && uses" class="use" :class="{ unused: !uses[photo.name] }">{{ uses[photo.name] ?? 'Not used' }}</span>
           </a>
         </li>
         <li v-for="filler in fillers" :key="`filler-${filler}`" class="filler" aria-hidden="true">
@@ -224,6 +231,25 @@ onBeforeUnmount(release)
   a:hover .name {
     color: var(--accent-text);
   }
+
+  // What it's used as: a thumbnail, the cover; or not used, e.g. a thumbnail not set as B or C yet
+  .use {
+    display: block;
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 500;
+    color: var(--ink);
+
+    &.unused {
+      font-weight: 400;
+      color: var(--muted);
+    }
+  }
+}
+
+// In a tab that names it: only the link and the pager, smaller
+.heading.bare {
+  padding-bottom: 8px;
 }
 
 // A page slides out one way and the next one in from the other

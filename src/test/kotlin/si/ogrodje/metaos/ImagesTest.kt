@@ -120,6 +120,7 @@ class ImagesTest @Autowired constructor(
     private val mcp: ImagesMCP,
     private val episodes: EpisodesRepository,
     private val people: PeopleRepository,
+    private val episodePeople: EpisodePeopleRepository,
     private val history: History,
     private val mvc: MockMvc,
 ) {
@@ -285,9 +286,10 @@ class ImagesTest @Autowired constructor(
         val person = people.saveAndFlush(Person(name = "Gost", email = null))
         dropbox.put("2001", "/S09E74/gost.png", picture(400, 400, "png"))
         val avatar = mcp.setPersonAvatar(checkNotNull(person.id), ImageSource.DROPBOX, "Artwork", "/S09E74/gost.png", null)
+        episodePeople.saveAndFlush(EpisodePerson(episode, person, Role.GUEST))
 
         val released = "$.data.releasedEpisodes[0]"
-        graphql("""{ releasedEpisodes(limit: 1) { code thumbnail { url width height sizes { width url } } thumbnailB { url } cover { url } } }""")
+        graphql("""{ releasedEpisodes(limit: 1) { code thumbnail { url width height sizes { width url } } thumbnailB { url } cover { url } people { name avatar { url } } } }""")
             .andExpect(jsonPath("$.errors").doesNotExist())
             .andExpect(jsonPath("$released.code").value("S09E74"))
             .andExpect(jsonPath("$released.thumbnail.url").value(thumbnail.url))
@@ -295,6 +297,8 @@ class ImagesTest @Autowired constructor(
             .andExpect(jsonPath("$released.thumbnail.sizes[*].width", contains(320, 640)))
             .andExpect(jsonPath("$released.thumbnailB").value(null as Any?))
             .andExpect(jsonPath("$released.cover").value(null as Any?))
+            .andExpect(jsonPath("$released.people[0].name").value("Gost"))
+            .andExpect(jsonPath("$released.people[0].avatar.url").value(avatar.url))
 
         val team = jwt().jwt { it.claim("realm_access", APPROVED).claim("scope", API_READ_SCOPE) }
         graphql("""{ episode(ref: "${episode.id}") { thumbnailB { url name } thumbnailC { url } } person(id: "${person.id}") { avatar { url } } }""", team)

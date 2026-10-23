@@ -22,6 +22,8 @@ export interface EpisodePerson {
   personId: string
   name: string
   roles: Role[]
+  // Only where a page asks for it, e.g. an episode's
+  avatar?: Image | null
 }
 
 /** A Google Doc linked to an episode or a session; only signed-in users get them */
@@ -117,12 +119,19 @@ export interface FieldChange {
   to: string | null
 }
 
+/** What a change is to (ChangeKind in the schema) */
+export type ChangeKind =
+  | 'EPISODE' | 'SESSION' | 'PERSON' | 'DOCUMENT' | 'KOOFR_FOLDER' | 'DROPBOX_FOLDER' | 'COMMENT' | 'ACCOUNT' | 'OTHER'
+
 /** A change from the audit log, told as what happened */
 export interface Change {
   at: string
   actor: string | null
   client: string | null
   tool: string | null
+  kind: ChangeKind
+  // The comment it's a change to, when it's one to a comment
+  commentId: string | null
   summary: string
   fields: FieldChange[]
 }
@@ -185,7 +194,7 @@ export function photosOf(folders: KoofrFolder[]) {
 export function artworkOf(folders: DropboxFolderWithPictures[]) {
   return folders.flatMap((folder) => folder.pictures)
 }
-export const HISTORY_FIELDS = 'history { at actor client tool summary fields { field from to } }'
+export const HISTORY_FIELDS = 'history { at actor client tool kind commentId summary fields { field from to } }'
 // An episode's thumbnails and cover, from MetaOS's public bucket
 export const PICTURE_FIELDS = ['thumbnail', 'thumbnailB', 'thumbnailC', 'cover'].map((kind) => `${kind} { ${IMAGE_FIELDS} }`).join(' ')
 

@@ -11,15 +11,34 @@ import java.util.UUID
 /** One field of a change, as people read it; from and to are null where there's nothing short to show, e.g. a summary */
 data class FieldChangeDto(val field: String, val from: String?, val to: String?)
 
+/** What a change is to, so the front-end can tell changes apart without reading their words, e.g. to group them */
+enum class ChangeKind { EPISODE, SESSION, PERSON, DOCUMENT, KOOFR_FOLDER, DROPBOX_FOLDER, COMMENT, ACCOUNT, OTHER }
+
 /** A change to an episode or session, or to what's linked to it, as the front-end shows it */
 data class HistoryEntryDto(
     val at: OffsetDateTime,
     val actor: String?,
     val client: String?,
     val tool: String?,
+    val kind: ChangeKind,
+    // The comment a change is to, which the discussion may still show
+    val commentId: UUID?,
     val summary: String,
     val fields: List<FieldChangeDto>,
 )
+
+// Each table by what its changes are to; an episode moving in or out of a session is one to the episode
+private fun kindOf(table: String) = when (table) {
+    "episodes" -> ChangeKind.EPISODE
+    "sessions" -> ChangeKind.SESSION
+    "episode_people" -> ChangeKind.PERSON
+    "episode_documents", "session_documents" -> ChangeKind.DOCUMENT
+    "episode_koofr_folders", "session_koofr_folders" -> ChangeKind.KOOFR_FOLDER
+    "episode_dropbox_folders", "session_dropbox_folders" -> ChangeKind.DROPBOX_FOLDER
+    "comments" -> ChangeKind.COMMENT
+    "accounts" -> ChangeKind.ACCOUNT
+    else -> ChangeKind.OTHER
+}
 
 private val DATE = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.UK)
 
@@ -70,7 +89,10 @@ class History(private val auditLog: AuditLog, private val jdbcTemplate: JdbcTemp
         )
         return rows.map { row ->
             val described = names.describe(row, subject = id.toString())
-            HistoryEntryDto(row.at, row.actorId?.let(actors::get)?.name ?: row.actor, row.client, row.tool, described.summary, described.fields)
+            HistoryEntryDto(
+                row.at, row.actorId?.let(actors::get)?.name ?: row.actor, row.client, row.tool, kindOf(row.table),
+                row.rowId.takeIf { row.table == "comments" }, described.summary, described.fields,
+            )
         }
     }
 

@@ -69,6 +69,41 @@
   }
 }
 
+// A thing's page, e.g. an episode's: what it is in the main column, and the facts about it in a FactPanel at the right,
+// which comes first in the page, so on narrower screens it's above what it's about
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  column-gap: 64px;
+  align-items: start;
+
+  > .main {
+    grid-column: 1;
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 48px;
+    min-width: 0;
+  }
+
+  > .fact-panel {
+    grid-column: 2;
+    grid-row: 1;
+  }
+}
+
+@media (max-width: 960px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 40px;
+
+    > .main, > .fact-panel {
+      grid-column: 1;
+      grid-row: auto;
+    }
+  }
+}
+
 // Label and value, one pair a row
 .details {
   > div {

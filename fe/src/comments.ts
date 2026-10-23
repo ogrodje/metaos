@@ -117,7 +117,7 @@ export function linkedComment<T extends Pick<Comment, 'id'>>(hash: string, comme
   return comments.find((comment) => hash === `#${commentAnchor(comment)}`)
 }
 
-/** How a comment was written when it wasn't on MetaOS's pages, as the history says it (HistoryTimeline.vue) */
+/** How a comment was written when it wasn't on MetaOS's pages, as the activity says it (activity.ts) */
 export function toolLabel(comment: Pick<Comment, 'tool'>) {
   return comment.tool ? `MCP · ${comment.tool}` : null
 }

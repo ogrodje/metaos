@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { concerns, LONG_IN_PRODUCTION_DAYS, SOON_DAYS } from '@/attention'
+import { concerns, episodeConcerns, LONG_IN_PRODUCTION_DAYS, SOON_DAYS } from '@/attention'
 import type { Episode, EpisodePerson, EpisodeStatus, Session } from '@/episodes'
 
 const today = new Date(2026, 9, 23)
@@ -71,3 +71,14 @@ describe('concerns', () => {
     expect(found.map((concern) => concern.episode.id)).toEqual(['past', 'sooner', 'soon', 'older', 'old'])
   })
 })
+
+describe('episodeConcerns', () => {
+  it('tells what needs attention of one episode, by its status, as the home page would', () => {
+    expect(episodeConcerns(episode('S5E8', 'IN_PRODUCTION', { recordingDate: '2026-07-09' }), today))
+      .toEqual(['Recorded 106 days ago, not released yet'])
+    expect(episodeConcerns(episode('S5E9', 'SCHEDULED', { recordingDate: '2026-10-22' }), today))
+      .toEqual(['Recording date passed, still scheduled'])
+    expect(episodeConcerns(episode('S5E7', 'PUBLISHED', { recordingDate: '2026-07-09' }), today)).toEqual([])
+  })
+})
+

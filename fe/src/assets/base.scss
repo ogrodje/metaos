@@ -17,7 +17,9 @@
   --font-sans: 'Inter Variable', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
-  --content-width: 880px;
+  // The frame of every page, the header's and the footer's too, so they don't jump between pages; running text in it
+  // keeps a measure of its own, e.g. MarkdownText's
+  --content-width: 1200px;
 
   // An icon link's hit area, bigger for fingers, and how far it reaches past its 16 px glyph on each side: a negative
   // margin of that lines the glyph, not the hit area, up with the text

@@ -379,7 +379,11 @@ class PeopleGraphQL(private val people: PeopleRepository, private val episodePeo
 // Pictures are anyone's who may see the episode or person, but for the thumbnails that go with the alternative titles,
 // which are the team's, as the titles are. Lists of episodes and people have them as well, so they're batched.
 @Controller
-class ImagesGraphQL(private val imagesRepository: ImagesRepository, private val images: ObjectProvider<Images>) {
+class ImagesGraphQL(
+    private val imagesRepository: ImagesRepository,
+    private val images: ObjectProvider<Images>,
+    private val people: PeopleRepository,
+) {
 
     @BatchMapping(typeName = "Episode", field = "thumbnail")
     fun thumbnails(episodes: List<Episode>) = of(episodes) { it.thumbnailImageId }
@@ -395,6 +399,13 @@ class ImagesGraphQL(private val imagesRepository: ImagesRepository, private val 
 
     @BatchMapping(typeName = "Person", field = "avatar")
     fun avatars(people: List<Person>) = of(people) { it.avatarImageId }
+
+    // Who's on an episode, with their pictures, e.g. on its page; whoever may see them there may see their avatars
+    @BatchMapping(typeName = "EpisodePerson", field = "avatar")
+    fun episodePeopleAvatars(onEpisodes: List<EpisodePersonDto>): Map<EpisodePersonDto, ImageDto> {
+        val avatars = people.findAllById(onEpisodes.mapNotNull { it.personId }.toSet()).associate { it.id to it.avatarImageId }
+        return of(onEpisodes) { avatars[it.personId] }
+    }
 
     // None while the public bucket is off; those without one are left out, and so null
     private fun <T : Any> of(items: List<T>, imageId: (T) -> UUID?): Map<T, ImageDto> {
