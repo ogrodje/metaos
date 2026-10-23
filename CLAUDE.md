@@ -139,7 +139,7 @@ yarn test       # the tests in src/**/__tests__, with vitest (./gradlew feTest, 
   one yet), by who recommended it, or not at all, and filtered by show and recommender.
 - The People page, `/people`, lists everyone by name (Slovenian order, past a "dr."), from the `people` query: who
   they are, their roles and latest episodes, and links to their website and social profiles (`PersonCard.vue`). The
-  team first, as cards (`kindOf` in `lists.ts`: anyone credited as host, co-host, producer, consultant or designer),
+  team first, as cards with their pictures large and their bios (`kindOf` in `lists.ts`: anyone credited as host, co-host, producer, consultant or designer),
   then the guests in three columns under their letters, with an A–Z index, then, folded, the candidates. Anyone not
   signed in gets only those on the released episodes, with only those episodes; candidates are the team's.
 - People's names (on the People page and an episode's page, and who recommended an idea) lead to their pages,

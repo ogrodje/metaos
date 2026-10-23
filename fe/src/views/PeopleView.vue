@@ -216,10 +216,10 @@ const candidatesOpen = ref(false)
 <style scoped lang="scss">
 @use '../assets/page';
 
-// The team: five cards a row in the frame, fewer as it narrows
+// The team: three cards a row in the frame, fewer as it narrows
 .team {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   padding: 0;
   list-style: none;
@@ -273,9 +273,9 @@ const candidatesOpen = ref(false)
   }
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 960px) {
   .team {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -287,7 +287,7 @@ const candidatesOpen = ref(false)
 
 @media (max-width: 640px) {
   .team {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .people {

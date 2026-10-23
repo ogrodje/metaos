@@ -7,8 +7,9 @@ import { roleName } from '@/episodes'
 import { roleCounts } from '@/lists'
 import { type Person, personPath } from '@/people'
 
-// Someone on the People page. On the team, a card: their picture, name, and how many episodes they've been on as what,
-// the most first. Anyone else, a line: picture, name, who they are, their episodes, and where they're online.
+// Someone on the People page. On the team, a card: their picture, large, and beside it their name, who they are, and how
+// many episodes they've been on as what, the most first. Anyone else, a line: picture, name, who they are, their
+// episodes, and where they're online.
 const props = defineProps<{
   person: Person
   team?: boolean
@@ -27,9 +28,10 @@ const latest = computed(() => props.person.episodes.slice(0, LATEST).map(({ epis
 
 <template>
   <li v-if="team" class="team-card">
-    <PersonAvatar :image="person.avatar" :name="person.name" :size="48"/>
+    <PersonAvatar :image="person.avatar" :name="person.name" :size="72"/>
     <div class="text">
       <RouterLink class="name" :to="personPath(person)">{{ person.name }}</RouterLink>
+      <p v-if="person.bio" class="about">{{ person.bio }}</p>
       <p class="roles">{{ roles }}</p>
     </div>
   </li>
@@ -64,19 +66,37 @@ const latest = computed(() => props.person.episodes.slice(0, LATEST).map(({ epis
   min-width: 0;
 }
 
-// The team: a card each, its picture above the name
+// The team: a card each, the picture beside who they are
 .team-card {
   display: grid;
-  align-content: start;
-  gap: 10px;
+  grid-template-columns: 72px minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
   min-width: 0;
-  padding: 14px;
+  padding: 16px;
   border: 1px solid var(--hairline);
   border-radius: 12px;
+
+  .name {
+    font-size: 15px;
+    line-height: 22px;
+  }
+}
+
+// Who they are, two lines at most
+.about {
+  display: -webkit-box;
+  overflow: hidden;
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 19px;
+  color: var(--secondary);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .roles {
-  margin-top: 2px;
+  margin-top: 4px;
   font-size: 12.5px;
   line-height: 18px;
   color: var(--muted);
