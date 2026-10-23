@@ -18,7 +18,7 @@ private const val IMAGE_URL = "For URL: an https URL of a picture in Hygraph, th
 private const val IMAGE_NAME = "For URL: the picture's file name, e.g. Hygraph's fileName, as its URL has none; the URL's last part when omitted"
 
 private const val PUBLISHED = "MetaOS copies it to its public bucket, where anyone can see it, with copies of it 320, " +
-    "640, 1280 and 1920 px wide (those narrower than it), and returns their URLs. PNG, JPEG, WebP or GIF, up to " +
+    "640, 1280 and 1920 px wide (those narrower than it), and returns their URLs. Up to " +
     "${MAX_IMAGE_BYTES / 1024 / 1024} MB. The copy stays as it is when the picture changes where it came from; setting " +
     "it again makes a new one"
 
@@ -37,11 +37,15 @@ class ImagesMCP(
 
     private fun image(id: UUID?) = id?.let(imagesRepository::findByIdOrNull)?.let(images::toDto)
 
-    private fun publish(from: ImageSource, place: String?, path: String?, url: String?, name: String?): Image = when (from) {
-        ImageSource.URL ->
-            images.publish(from, null, requireNotNull(url?.trim()?.ifEmpty { null }) { "A picture from a URL needs the url" }, name?.trim()?.ifEmpty { null })
-        else -> images.publish(from, place, requireNotNull(path?.trim()?.ifEmpty { null }) { "A picture in $from needs its path" })
-    }
+    private fun publish(from: ImageSource, place: String?, path: String?, url: String?, name: String?, artwork: EpisodeImage? = null): Image =
+        when (from) {
+            ImageSource.UPLOAD -> throw IllegalArgumentException("Uploads come from MetaOS's pages: Upload artwork on an episode's page")
+            ImageSource.URL -> images.publish(
+                from, null, requireNotNull(url?.trim()?.ifEmpty { null }) { "A picture from a URL needs the url" },
+                name?.trim()?.ifEmpty { null }, artwork,
+            )
+            else -> images.publish(from, place, requireNotNull(path?.trim()?.ifEmpty { null }) { "A picture in $from needs its path" }, artwork = artwork)
+        }
 
     @Transactional
     @McpTool(
@@ -50,10 +54,12 @@ class ImagesMCP(
             title = "Set episode image",
             readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = true
         ),
-        description = "Make a picture, e.g. new artwork in Dropbox, one of an episode's pictures: its THUMBNAIL (16:9), " +
-            "THUMBNAIL_B or THUMBNAIL_C, which go with its alternative titles B and C as they're A/B tested together, " +
-            "or its COVER (square, e.g. for podcast apps). In the Artwork folder in Dropbox, an episode's folder usually " +
-            "has its cover (...-podcast.png) and thumbnails (...-thumb1.png, -thumb2, -thumb3). $PUBLISHED"
+        description = "Make a picture, e.g. new artwork in Dropbox, one of an episode's pictures, each in PNG or JPEG and " +
+            "exactly as big as it says, or it's refused: its THUMBNAIL (1920 × 1080), THUMBNAIL_B or THUMBNAIL_C (1920 × " +
+            "1080), which go with its alternative titles B and C as they're A/B tested together, its WEB picture (1920 × " +
+            "1080), the thumbnail without its words, for ogrodje.si, or its COVER (3000 × 3000, e.g. for podcast apps). In " +
+            "the Artwork folder in Dropbox, an episode's folder usually has its cover (...-podcast.png), thumbnails " +
+            "(...-thumb1.png, -thumb2, -thumb3) and web picture (...-web.png). $PUBLISHED"
     )
     fun setEpisodeImage(
         @McpToolParam(description = EPISODE_REF) code: String,
@@ -65,7 +71,7 @@ class ImagesMCP(
         @McpToolParam(description = IMAGE_NAME, required = false) name: String? = null,
     ): EpisodeImageDto {
         val episode = findEpisode(code)
-        val image = publish(from, place, path, url, name)
+        val image = publish(from, place, path, url, name, kind)
         episode.setImageId(kind, image.id)
         return EpisodeImageDto(kind, images.toDto(image))
     }
@@ -96,7 +102,7 @@ class ImagesMCP(
             title = "List episode images",
             readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
         ),
-        description = "List an episode's pictures: its thumbnail, thumbnails B and C, and cover, with their URLs; none where it has none"
+        description = "List an episode's pictures: its thumbnail, thumbnails B and C, web picture and cover, with their URLs; none where it has none"
     )
     fun listEpisodeImages(@McpToolParam(description = EPISODE_REF) code: String): List<EpisodeImageDto> {
         val episode = findEpisode(code)
@@ -110,7 +116,8 @@ class ImagesMCP(
             title = "Set person avatar",
             readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = true
         ),
-        description = "Make a picture a person's avatar, e.g. one from Hygraph, the CMS, or a photo in Dropbox or Koofr. $PUBLISHED"
+        description = "Make a picture a person's avatar, e.g. one from Hygraph, the CMS, or a photo in Dropbox or Koofr: PNG, " +
+            "JPEG, WebP or GIF, of any size. $PUBLISHED"
     )
     fun setPersonAvatar(
         @McpToolParam(description = "Person ID") personId: UUID,

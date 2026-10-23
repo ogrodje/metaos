@@ -72,7 +72,7 @@ private val EPISODE_COLUMNS = linkedMapOf(
     "youtube_url" to "YouTube", "spotify_url" to "Spotify", "apple_podcasts_url" to "Apple Podcasts",
     "patreon_url" to "Patreon", "summary" to "Summary", "tiny_summary" to "Tiny summary", "machine_summary" to "AI summary",
     "thumbnail_image_id" to "Thumbnail", "thumbnail_b_image_id" to "Thumbnail B", "thumbnail_c_image_id" to "Thumbnail C",
-    "cover_image_id" to "Cover",
+    "web_image_id" to "Web picture", "cover_image_id" to "Cover",
 )
 private val SESSION_COLUMNS = linkedMapOf("date" to "Date", "location" to "Location", "address" to "Address")
 // A person's, but for their email, which their page doesn't show either
@@ -86,7 +86,10 @@ private val LONG_COLUMNS = setOf("summary", "machine_summary")
 private val DATE_COLUMNS = setOf("recording_date", "aired_date", "added_date", "date")
 // Pictures, by the names of the files they were made from
 private val IMAGE_COLUMNS =
-    setOf("thumbnail_image_id", "thumbnail_b_image_id", "thumbnail_c_image_id", "cover_image_id", "avatar_image_id")
+    setOf(
+        "thumbnail_image_id", "thumbnail_b_image_id", "thumbnail_c_image_id", "web_image_id", "cover_image_id",
+        "avatar_image_id",
+    )
 
 // How much of a comment the history shows
 private const val EXCERPT_LENGTH = 100

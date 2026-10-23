@@ -1,18 +1,34 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { faArrowUpFromBracket } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import type { ArtworkKind } from '@/artwork'
+import ArtworkUpload from '@/components/ArtworkUpload.vue'
 import PhotoStrip from '@/components/PhotoStrip.vue'
 import type { DropboxPicture, EpisodeDetails, EpisodeStatus, KoofrPhoto } from '@/episodes'
 import { type Image, src, srcset } from '@/images'
 
-// An episode's pictures in one section. The team gets tabs: its titles with the thumbnails they're A/B tested with and
-// its cover, then its artwork (its Dropbox folders' pictures, each marked with what it's used as) and its photos (its
-// Koofr folders'). Everyone else gets its thumbnail, large, as everyone may see it.
+// An episode's pictures in one section. The team gets tabs: its titles with the thumbnails they're A/B tested with, its
+// web picture and its cover, then its artwork (its Dropbox folders' pictures, each marked with what it's used as) and
+// its photos (its Koofr folders'); and uploads them (ArtworkUpload), from the heading, or a missing one from its place.
+// Everyone else gets its thumbnail, large, as everyone may see it.
 const props = defineProps<{
   episode: EpisodeDetails
   artwork: DropboxPicture[]
   photos: KoofrPhoto[]
   team: boolean
 }>()
+
+const emit = defineEmits<{
+  // One of its pictures was uploaded
+  changed: []
+}>()
+
+const upload = ref<InstanceType<typeof ArtworkUpload>>()
+
+function open(kind?: ArtworkKind) {
+  upload.value?.open(kind)
+}
 
 type Tab = 'titles' | 'artwork' | 'photos'
 const tab = ref<Tab>('titles')
@@ -26,6 +42,7 @@ const tabs = computed(() => [
 const shown = computed(() => (tabs.value.some((t) => t.id === tab.value) ? tab.value : 'titles'))
 
 interface Variant {
+  kind: ArtworkKind
   letter: string
   title: string | null
   image: Image | null
@@ -34,15 +51,16 @@ interface Variant {
 const all = computed<Variant[]>(() => {
   const { episode } = props
   return [
-    { letter: 'A', title: episode.title, image: episode.thumbnail },
-    { letter: 'B', title: episode.titleB, image: episode.thumbnailB },
-    { letter: 'C', title: episode.titleC, image: episode.thumbnailC },
+    { kind: 'THUMBNAIL', letter: 'A', title: episode.title, image: episode.thumbnail },
+    { kind: 'THUMBNAIL_B', letter: 'B', title: episode.titleB, image: episode.thumbnailB },
+    { kind: 'THUMBNAIL_C', letter: 'C', title: episode.titleC, image: episode.thumbnailC },
   ]
 })
 
 // Pictures come once it's recorded: before, a missing one isn't missing yet
 const RECORDED: EpisodeStatus[] = ['RECORDED', 'IN_PRODUCTION', 'READY', 'EARLY_ACCESS', 'PUBLISHED']
-const pictured = computed(() => RECORDED.includes(props.episode.status) || all.value.some((v) => v.image) || !!props.episode.cover)
+const pictured = computed(() => RECORDED.includes(props.episode.status) || all.value.some((v) => v.image)
+  || !!props.episode.cover || !!props.episode.web)
 
 // Once it's recorded, all three, so what's missing shows; before, A, and B and C once they have a title
 const variants = computed(() => (pictured.value ? all.value : all.value.filter((v) => v.letter === 'A' || v.title)))
@@ -51,7 +69,11 @@ const variants = computed(() => (pictured.value ? all.value : all.value.filter((
 const uses = computed(() => {
   const { episode } = props
   const used: Record<string, string> = {}
-  for (const [image, use] of [[episode.cover, 'Cover'], [episode.thumbnailC, 'Thumbnail C'], [episode.thumbnailB, 'Thumbnail B'], [episode.thumbnail, 'Thumbnail A']] as const) {
+  const pictures = [
+    [episode.cover, 'Cover'], [episode.web, 'Web picture'], [episode.thumbnailC, 'Thumbnail C'],
+    [episode.thumbnailB, 'Thumbnail B'], [episode.thumbnail, 'Thumbnail A'],
+  ] as const
+  for (const [image, use] of pictures) {
     if (image) used[image.name] = used[image.name] ? `${use}, ${used[image.name]}` : use
   }
   return used
@@ -77,6 +99,9 @@ const folder = computed(() => props.artwork[0]?.url)
           {{ t.title }}<span class="count">{{ t.count }}</span>
         </button>
       </div>
+      <button type="button" class="button upload" aria-haspopup="dialog" @click="open()">
+        <FontAwesomeIcon :icon="faArrowUpFromBracket"/>Upload artwork
+      </button>
     </div>
 
     <template v-if="shown === 'titles'">
@@ -89,10 +114,22 @@ const folder = computed(() => props.artwork[0]?.url)
                  :width="variant.image.width" :height="variant.image.height" :alt="`Thumbnail ${variant.letter}`" loading="lazy">
             <span class="letter" aria-hidden="true">{{ variant.letter }}</span>
           </a>
-          <span v-else class="shot missing"><span class="letter" aria-hidden="true">{{ variant.letter }}</span>No thumbnail yet</span>
+          <button v-else type="button" class="shot missing" aria-haspopup="dialog" @click="open(variant.kind)">
+            <span class="letter" aria-hidden="true">{{ variant.letter }}</span>Upload thumbnail {{ variant.letter }}
+          </button>
           <p v-if="variant.title" class="title" lang="sl"><span class="visually-hidden">Title {{ variant.letter }}: </span>{{ variant.title }}</p>
           <p v-else class="title none">No title {{ variant.letter }}</p>
           <p v-if="variant.image" class="file">{{ variant.image.name }}</p>
+        </li>
+        <li class="web">
+          <a v-if="episode.web" class="shot" :href="episode.web.url" target="_blank" rel="noopener"
+             :title="`${episode.web.name}, ${episode.web.width} × ${episode.web.height}`">
+            <img :src="src(episode.web, 640)" :srcset="srcset(episode.web)" sizes="(max-width: 640px) 50vw, 260px"
+                 :width="episode.web.width" :height="episode.web.height" alt="Web picture" loading="lazy">
+          </a>
+          <button v-else type="button" class="shot missing" aria-haspopup="dialog" @click="open('WEB')">Upload the web picture</button>
+          <p class="title">Web picture</p>
+          <p v-if="episode.web" class="file">{{ episode.web.name }}</p>
         </li>
         <li class="cover">
           <a v-if="episode.cover" class="shot" :href="episode.cover.url" target="_blank" rel="noopener"
@@ -100,7 +137,7 @@ const folder = computed(() => props.artwork[0]?.url)
             <img :src="src(episode.cover, 640)" :srcset="srcset(episode.cover)" sizes="(max-width: 640px) 50vw, 150px"
                  :width="episode.cover.width" :height="episode.cover.height" alt="Cover" loading="lazy">
           </a>
-          <span v-else class="shot missing">No cover yet</span>
+          <button v-else type="button" class="shot missing" aria-haspopup="dialog" @click="open('COVER')">Upload the cover</button>
           <p class="title">Cover</p>
         </li>
       </ul>
@@ -117,6 +154,8 @@ const folder = computed(() => props.artwork[0]?.url)
     <PhotoStrip v-else-if="shown === 'artwork'" title="Artwork" :photos="artwork" :folder="folder" service="Dropbox"
                 artwork :uses="uses" bare/>
     <PhotoStrip v-else title="Photos" :photos="photos" :folder="episode.koofrFolders[0]?.url" service="Koofr" bare/>
+
+    <ArtworkUpload ref="upload" :episode="episode" @changed="emit('changed')"/>
   </section>
 </template>
 
@@ -125,6 +164,13 @@ const folder = computed(() => props.artwork[0]?.url)
 
 .heading {
   flex-wrap: wrap;
+}
+
+// Upload artwork, at the heading's end
+.upload {
+  min-height: var(--icon-link);
+  margin-left: 8px;
+  padding: 0 10px;
 }
 
 // Which of the pictures, at the heading's end
@@ -185,7 +231,7 @@ const folder = computed(() => props.artwork[0]?.url)
 // Up to three thumbnails and then the cover, which is square, so as tall as they are
 .variants {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 0.5625fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 0.5625fr);
 
 
   gap: 16px 14px;
@@ -216,6 +262,9 @@ const folder = computed(() => props.artwork[0]?.url)
 
   &.missing {
     display: grid;
+    width: 100%;
+    font: inherit;
+    cursor: pointer;
     place-items: center;
     padding: 8px;
     font-size: 12px;

@@ -27,7 +27,8 @@ class FakeDropbox : Dropbox {
         val name = if (path == "/") shared.first { it.id == place }.name else path.substringAfterLast('/')
         val contentType = content?.let { URLConnection.guessContentTypeFromName(name) }
         val id = if (path == "/") null else files[place to path]?.first?.id ?: "id:${++ids}"
-        files[place to path] = DropboxFile(place, path, name, content == null, content?.size?.toLong(), null, contentType, id) to content
+        files[place to path] =
+            DropboxFile(place, path, name, content == null, content?.size?.toLong(), null, contentType, id, content?.let(::dropboxContentHash)) to content
     }
 
     override fun places() = shared.toList()
@@ -56,8 +57,13 @@ class FakeDropbox : Dropbox {
     override fun thumbnail(place: String, path: String, size: String) =
         DropboxImage("image/jpeg", requireNotNull(files[place to path]?.second) { "Dropbox can't make a picture of $path: path not found" })
 
-    override fun upload(place: String, folder: String, name: String, content: ByteArray, overwrite: Boolean): DropboxFile {
-        val path = "${folder.trimEnd('/')}/$name"
+    // Renamed as Dropbox does, with a number after the name
+    override fun upload(place: String, folder: String, name: String, content: ByteArray, overwrite: Boolean, rename: Boolean): DropboxFile {
+        fun at(name: String) = "${folder.trimEnd('/')}/$name"
+        val (base, extension) = name.substringBeforeLast('.') to name.substringAfterLast('.', "").let { if (it.isEmpty()) "" else ".$it" }
+        val path = if (rename && !overwrite && file(place, at(name)) != null)
+            generateSequence(1) { it + 1 }.map { at("$base ($it)$extension") }.first { file(place, it) == null }
+        else at(name)
         require(overwrite || file(place, path) == null) { "$path is already there" }
         put(place, path, content)
         return file(place, path)!!

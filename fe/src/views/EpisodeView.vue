@@ -206,7 +206,7 @@ const hasFiles = computed(() => !!episode.value
         </FactPanel>
 
         <div class="main">
-          <MediaStrip :episode="episode" :artwork="artwork" :photos="photos" :team="auth.team"/>
+          <MediaStrip :episode="episode" :artwork="artwork" :photos="photos" :team="auth.team" @changed="reloadQuietly(episode.id)"/>
           <FoldedText v-if="episode.summary" title="Summary" :source="episode.summary"/>
           <FoldedText v-if="episode.machineSummary" title="AI summary" :source="episode.machineSummary"/>
 

@@ -340,8 +340,10 @@ gcloud comes from the devenv shell.
 | `media.ogrodje.si`          | `metaos-storage-prod` | the same, public, at `https://media.ogrodje.si` through Cloudflare    |
 
 - All are in Frankfurt (`europe-west3`). The private ones have public access prevention: MetaOS hands out signed URLs
-  instead, which it signs with the key itself: `uploadUrl` starts a resumable upload, so big videos go from the browser
-  straight to the bucket, without MetaOS in between. Their CORS allows that from the front-end's origins.
+  instead, which it signs with the key itself: `uploadUrl` starts a resumable upload, so big files, e.g. an episode's
+  artwork (Pictures), go from the browser straight to the bucket, without MetaOS in between. Their CORS allows that from
+  the front-end's origins. Uploads MetaOS didn't take (`uploads/`) are deleted after a day, a lifecycle rule
+  (`google/storage.sh setup`).
 - The public ones are for what everyone may see, e.g. episodes' thumbnails and people's avatars: anyone can read a file
   whose path they know (`allUsers` has `legacyObjectReader`, which is `storage.objects.get` only), but nobody can list
   them. Dev's is served by Google, at `https://storage.googleapis.com/ogrodje-metaos-public-dev/<path>`. Production's
@@ -363,9 +365,15 @@ gcloud comes from the devenv shell.
 ### Pictures
 
 Pictures everyone may see are copied to the public bucket ([`Images.kt`](src/main/kotlin/si/ogrodje/metaos/Images.kt)):
-an episode's thumbnail (16:9), thumbnails B and C, which go with its alternative titles as they're A/B tested together,
-and its cover (square, for podcast apps); a person's avatar. `ImagesMCP` sets them from Dropbox or Koofr (a place and a
-path), or from Hygraph (an https URL on `*.graphassets.com`, the only hosts MetaOS fetches pictures from).
+an episode's thumbnail, thumbnails B and C, which go with its alternative titles as they're A/B tested together, and its
+web picture, the thumbnail without its words, for ogrodje.si, all 1920 × 1080; and its cover, 3000 × 3000, for podcast
+apps; a person's avatar. `ImagesMCP` sets them from Dropbox or Koofr (a place and a path), or from Hygraph (an https URL
+on `*.graphassets.com`, the only hosts MetaOS fetches pictures from).
+
+- An episode's pictures are PNG or JPEG of exactly their size (`EpisodeImage`), as the Artwork folder in Dropbox has
+  them, wherever they come from: anything else is refused, by its header before it's decoded, and also when MetaOS has
+  the file already, e.g. as an avatar. Avatars may be any size, also WebP or GIF. Pictures set before the sizes were
+  enforced stay as they are.
 
 - A picture is at `images/<sha256>/`: `original.<ext>` as it came (PNG, JPEG, WebP or GIF, up to 50 MB and 40
   megapixels), and copies 320, 640, 1280 and 1920 px wide where it's wider, `<width>.jpg`, or `.png` when it's
@@ -374,16 +382,29 @@ path), or from Hygraph (an https URL on `*.graphassets.com`, the only hosts Meta
   stored once (`images`, by `sha256`), however often it's used; setting a picture again after it changed where it came
   from makes a new one. One at a time, the download too, as a 3000 × 3000 cover takes some 400 MB to decode and
   resize; at a 1Gi limit, 17 at once got the pod OOM-killed, hence its 2.2Gi.
-- `episodes.thumbnail_image_id`, `thumbnail_b_image_id`, `thumbnail_c_image_id`, `cover_image_id` and
+- `episodes.thumbnail_image_id`, `thumbnail_b_image_id`, `thumbnail_c_image_id`, `web_image_id`, `cover_image_id` and
   `people.avatar_image_id` point at them; nothing deletes an image or its files. `History.kt` names them by the file
   they were made from, e.g. "Thumbnail: ogrodje-vresGams-thumb1.png"; Hygraph's URLs have no file name, so the tools
   take one (`name`).
-- GraphQL has them as `Image` (`thumbnail`, `thumbnailB`, `thumbnailC` and `cover` on `Episode`, `avatar` on `Person`
-  and `EpisodePerson`), batched for lists; thumbnails B and C only for the team, as titles B and C are. The front-end
-  shows an episode's on its page (`MediaStrip.vue`) and avatars on the People, person and episode pages
-  (`PersonAvatar.vue`, initials without one), with `srcset` from the copies (`fe/src/images.ts`), never the original,
-  which may be 16 MB.
-- `ImagesTest` runs against a bucket in memory (`FakeStorage`), with fake Dropbox and Koofr.
+- GraphQL has them as `Image` (`thumbnail`, `thumbnailB`, `thumbnailC`, `web` and `cover` on `Episode`, `avatar` on
+  `Person` and `EpisodePerson`), with the original's `sha256`, batched for lists; thumbnails B and C only for the team, as titles B and C are.
+- The team uploads an episode's pictures from its page ([`Artwork.kt`](src/main/kotlin/si/ogrodje/metaos/Artwork.kt)):
+  `artworkUpload` gives the browser a signed URL in the private bucket (`uploads/<id>`), where it sends the file itself,
+  and `setEpisodeImage` publishes it as from Dropbox (`ImageSource.UPLOAD`, kept by its file's name), refusing another
+  size; it replaces a picture the episode has only with `replace`, and the upload goes either way. Then it's saved in
+  the episode's first Dropbox folder too, unless the same content (Dropbox's content hash) is right in it or in a folder
+  right in it, under another name ("(1)") when its own is taken; a read-only place or a missing folder only says so
+  (`dropbox.error`). MCP's `set_episode_image` doesn't take uploads.
+- On the front-end, Upload artwork in the episode's media (`MediaStrip.vue`, which shows the team its five places)
+  opens `ArtworkUpload.vue`: drop the episode's folder or pictures, or choose them, or one on
+  its row. [`fe/src/artwork.ts`](fe/src/artwork.ts) reads each file's size from its header and its SHA-256, and places
+  it by size and name (`-thumb1`/`-thumb-1`/`-thumbnail` A, `-thumb2` B, `-thumb3` C, `-web`, `-podcast`/`-cover`; the
+  only square one is the cover), refusing what fits nowhere; the same file as the current one isn't sent. Upload asks
+  once about every picture that would replace one, then sends them one at a time (`fe/src/uploads.ts`), each with its
+  progress; one refused or failed holds nothing back, and Try again sends only that one. The front-end shows an episode's on
+  its page (`MediaStrip.vue`) and avatars on the People, person and episode pages (`PersonAvatar.vue`, initials
+  without one), with `srcset` from the copies (`fe/src/images.ts`), never the original, which may be 16 MB.
+- `ImagesTest` and `ArtworkTest` run against buckets in memory (`FakeStorage`), with fake Dropbox and Koofr.
 
 ### Koofr
 
