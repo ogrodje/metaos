@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { activity, type ActivityFilter, type ChangeEntry, filtered } from '@/activity'
+import ChipGroup from '@/components/ChipGroup.vue'
 import CommentCard from '@/components/CommentCard.vue'
 import CommentEditor from '@/components/CommentEditor.vue'
 import PersonAvatar from '@/components/PersonAvatar.vue'
@@ -40,16 +41,11 @@ const comments = computed(() => withWritten(props.comments, written.value))
 const entries = computed(() => activity(props.changes, comments.value))
 
 const filter = ref<ActivityFilter>('all')
-const counts = computed(() => ({
-  all: entries.value.length,
-  comments: comments.value.length,
-  changes: entries.value.length - comments.value.length,
-}))
-const FILTERS: { id: ActivityFilter, title: string }[] = [
-  { id: 'all', title: 'All' },
-  { id: 'comments', title: 'Comments' },
-  { id: 'changes', title: 'Changes' },
-]
+const filters = computed(() => [
+  { value: 'all' as ActivityFilter, title: 'All', count: entries.value.length },
+  { value: 'comments' as ActivityFilter, title: 'Comments', count: comments.value.length },
+  { value: 'changes' as ActivityFilter, title: 'Changes', count: entries.value.length - comments.value.length },
+])
 
 const day = (at: string) => new Date(at).toLocaleDateString(DATE_LOCALE, { dateStyle: 'medium', timeZone: TIME_ZONE })
 const time = (at: string) => new Date(at).toLocaleTimeString(DATE_LOCALE, { hour: '2-digit', minute: '2-digit', timeZone: TIME_ZONE })
@@ -149,11 +145,7 @@ onMounted(async () => {
   <section aria-labelledby="activity">
     <div class="heading">
       <h2 id="activity" ref="heading" tabindex="-1">Activity</h2>
-      <div class="filters" role="group" aria-label="Show">
-        <button v-for="f in FILTERS" :key="f.id" type="button" class="chip" :aria-pressed="filter === f.id" @click="filter = f.id">
-          {{ f.title }}<span class="count">{{ counts[f.id] }}</span>
-        </button>
-      </div>
+      <ChipGroup v-model="filter" class="filters" label="Show" :options="filters"/>
     </div>
 
     <p v-if="!shown.length" class="note">{{ filter === 'changes' ? 'No changes yet.' : 'No comments yet.' }}</p>
@@ -205,42 +197,10 @@ h2:focus {
   outline: 0;
 }
 
-.filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-left: auto;
-}
-
-.chip {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
-  padding: 3px 10px;
-  font-size: 13px;
-  line-height: 20px;
-  color: var(--secondary);
-  background: #FFFFFF;
-  border: 1px solid var(--hairline);
-  border-radius: 99px;
-  cursor: pointer;
-
-  &:hover {
-    border-color: #A3A3A3;
-  }
-
-  &[aria-pressed="true"] {
-    color: #FFFFFF;
-    background: var(--ink);
-    border-color: var(--ink);
-
-    .count {
-      color: rgba(255, 255, 255, 0.7);
-    }
-  }
-
-  .count {
-    font-variant-numeric: tabular-nums;
+// At the heading's end; on phones under it, as ChipGroup has it
+@media (min-width: 641px) {
+  .filters {
+    margin-left: auto;
   }
 }
 
@@ -376,10 +336,6 @@ h2:focus {
 }
 
 @media (max-width: 640px) {
-  .filters {
-    margin-left: 0;
-  }
-
   .lines div {
     grid-template-columns: minmax(0, 1fr);
   }

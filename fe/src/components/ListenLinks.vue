@@ -13,7 +13,7 @@ defineProps<{
 
 <template>
   <template v-if="labelled">
-    <a v-for="link in links(episode)" :key="link.platform" class="button listen" :href="link.url"
+    <a v-for="link in links(episode)" :key="link.platform" class="button listen-button" :href="link.url"
        :style="{ '--brand': brands[link.platform].color }">
       <FontAwesomeIcon :icon="brands[link.platform].icon"/>{{ link.platform }}
     </a>
@@ -29,7 +29,7 @@ defineProps<{
 <style scoped lang="scss">
 
 // A button that says where, its icon in the brand's colour
-.listen {
+.listen-button {
   min-height: 36px;
   padding: 0 10px;
   white-space: nowrap;

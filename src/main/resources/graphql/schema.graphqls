@@ -47,6 +47,13 @@ type Query {
     search(text: String!, limit: Int! = 10): SearchResults!
 
     """
+    The latest changes to episodes, sessions and people, and to what's linked to them (people's roles, docs, folders,
+    comments, sign-ins), oldest first, as their histories tell them, each with what it's a change to: at most limit,
+    up to 200. Needs a signed-in user.
+    """
+    recentChanges(limit: Int! = 50): [Change!]!
+
+    """
     Everyone, by name, with who they are and where they're online. Anyone not signed in gets only those on the released
     (PUBLISHED) episodes, as anything but a candidate.
     """
@@ -232,6 +239,18 @@ type Change {
     summary: String!
     "The fields that changed, by their names"
     fields: [FieldChange!]!
+    "What it's a change to, in recentChanges; null in an episode's or session's own history, which is about it"
+    about: ChangeSubject
+}
+
+"The episode, session or person a change is to"
+type ChangeSubject {
+    kind: ChangeKind!
+    id: ID!
+    "An episode's title, a session's date and place, a person's name"
+    name: String!
+    "An episode's code, once it has one"
+    code: String
 }
 
 "One field of a change. From and to are null when there's nothing short to show, e.g. for a summary."
@@ -367,7 +386,7 @@ enum ChangeKind {
     EPISODE
     "The session itself"
     SESSION
-    "Someone added to the episode, removed from it, or given another role on it"
+    "Someone added to the episode, removed from it, or given another role on it; or a person themselves"
     PERSON
     "A Google Doc linked or unlinked"
     DOCUMENT

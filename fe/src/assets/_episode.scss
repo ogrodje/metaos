@@ -1,4 +1,4 @@
-// What episode rows share (EpisodeItem, EpisodeRow, IdeaItem): the code's column, so codes and titles line up in a
+// What episode rows share (EpisodeItem, EpisodeRow): the code's column, so codes and titles line up in a
 // list and from one list to the next, and the rule between rows
 
 $code-width: 72px;
@@ -16,7 +16,7 @@ $code-width-phone: 60px;
   color: var(--muted);
 }
 
-// A row with the tiny summary (EpisodeItem, IdeaItem): the title, the summary under it, two lines at most so a long one
+// A row with the tiny summary (EpisodeItem): the title, the summary under it, two lines at most so a long one
 // doesn't push the list apart, a line of details, and the links on the title's line. On phones the summary gets more
 // lines and the links go under the details.
 @mixin summary-row {

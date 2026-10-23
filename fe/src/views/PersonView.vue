@@ -1,20 +1,26 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import { type Account, ACCOUNT_FIELDS } from '@/accounts'
 import { keepUnchanged, useLiveRefresh } from '@/changes'
-import EpisodeItem from '@/components/EpisodeItem.vue'
+import EpisodeCard from '@/components/EpisodeCard.vue'
 import EpisodeRow from '@/components/EpisodeRow.vue'
+import Fact from '@/components/Fact.vue'
+import FactGroup from '@/components/FactGroup.vue'
+import FactPanel from '@/components/FactPanel.vue'
 import LoadError from '@/components/LoadError.vue'
 import LoadingRows from '@/components/LoadingRows.vue'
 import NotFound from '@/components/NotFound.vue'
 import PersonAvatar from '@/components/PersonAvatar.vue'
 import PersonSignIns, { type MyAccount } from '@/components/PersonSignIns.vue'
 import SocialLinks from '@/components/SocialLinks.vue'
-import { type Episode, EPISODE_FIELDS, type Role, roleName } from '@/episodes'
+import ViewToggle, { type ListView } from '@/components/ViewToggle.vue'
+import { type Episode, EPISODE_FIELDS, episodePath, type Role, roleName, THUMBNAIL_FIELDS } from '@/episodes'
 import { errorMessage, graphql } from '@/graphql'
 import { IMAGE_FIELDS } from '@/images'
+import { seasonOf, seasonTitle } from '@/lists'
 import { type Person, rolesOf, socialLinks } from '@/people'
+import { useQueryState } from '@/query'
 import { personData, shorten, usePageMeta, useSiteUrl } from '@/seo'
 import { useFirstLoad } from '@/ssr'
 import { useAuthStore } from '@/stores/auth'
@@ -52,7 +58,7 @@ async function fetchPerson(id: string) {
   return graphql<PersonPage>(`query ($id: ID!) {
     person(id: $id) {
       id name bio homepageUrl linkedinUrl twitterUrl instagramUrl facebookUrl avatar { ${IMAGE_FIELDS} }
-      episodes { episode { ${EPISODE_FIELDS} } roles }
+      episodes { episode { ${EPISODE_FIELDS} ${THUMBNAIL_FIELDS} } roles }
       recommended { ${EPISODE_FIELDS} }
       accounts { ${ACCOUNT_FIELDS} }
     }
@@ -121,17 +127,48 @@ function reloadQuietly() {
 // In the order an episode's people are listed
 const ROLES: Role[] = ['HOST', 'CO_HOST', 'GUEST', 'PRODUCER', 'CONSULTANT', 'DESIGNER', 'CANDIDATE']
 
-// Their episodes by what they are on them, hosts first; one they're two things on is under both
-const byRole = computed(() => ROLES.flatMap((role) => {
-  const episodes = (person.value?.episodes ?? []).filter((on) => on.roles.includes(role)).map((on) => on.episode)
-  return episodes.length ? [{ role, title: `As ${roleName(role)}`, episodes }] : []
+// How many episodes they're on as each role, hosts first: also which of them are shown
+const roleCounts = computed(() => ROLES.flatMap((role) => {
+  const count = (person.value?.episodes ?? []).filter((on) => on.roles.includes(role)).length
+  return count ? [{ role, count }] : []
 }))
+const role = useQueryState<Role | 'all'>('role', 'all', ['all', ...ROLES])
+function pick(picked: Role) {
+  role.value = role.value === picked ? 'all' : picked
+}
 
-// Host on 61, guest on 2
-const onEpisodes = computed(() => byRole.value
-  .map(({ role, episodes }) => `${roleName(role)} on ${episodes.length}`)
-  .join(', ')
-  .replace(/^./, (first) => first.toUpperCase()))
+// Their episodes, those of the role picked, each with what they are on it
+const theirs = computed(() => (person.value?.episodes ?? [])
+  .filter((on) => role.value === 'all' || on.roles.includes(role.value))
+  .map((on) => ({ episode: on.episode, as: on.roles.map(roleName).join(', ') })))
+
+// Being made, and ideas, the team's: first, as that's what's next
+const comingUp = computed(() => theirs.value.filter(({ episode }) => episode.status !== 'PUBLISHED'))
+const released = computed(() => theirs.value.filter(({ episode }) => episode.status === 'PUBLISHED'))
+
+// Released ones by season, as the Episodes page lists them
+const bySeason = computed(() => {
+  const groups = new Map<string, typeof released.value>()
+  for (const on of released.value) {
+    const title = seasonTitle(seasonOf(on.episode))
+    groups.set(title, [...(groups.get(title) ?? []), on])
+  }
+  return [...groups].map(([title, episodes]) => ({ title, episodes }))
+})
+
+const view = useQueryState<ListView>('view', 'list', ['list', 'grid'])
+
+// Where it began: their first released episode, the oldest
+const firstOn = computed(() => released.value.length ? (person.value?.episodes ?? [])
+  .filter((on) => on.episode.status === 'PUBLISHED').at(-1)?.episode : undefined)
+
+// What they recommended: the first few, until all are asked for
+const RECOMMENDED = 5
+const allRecommended = ref(false)
+const recommended = computed(() => {
+  const all = person.value?.recommended ?? []
+  return allRecommended.value ? all : all.slice(0, RECOMMENDED)
+})
 
 const hasLinks = computed(() => (person.value ? socialLinks(person.value).length > 0 : false))
 </script>
@@ -153,7 +190,7 @@ const hasLinks = computed(() => (person.value ? socialLinks(person.value).length
 
     <template v-else>
       <header class="person">
-        <PersonAvatar v-if="person.avatar" :image="person.avatar" :name="person.name" :size="72"/>
+        <PersonAvatar :image="person.avatar" :name="person.name" :size="88"/>
         <div class="title">
           <p class="kicker">{{ person.episodes.length ? rolesOf(person) : 'Person' }}</p>
           <h1>{{ person.name }}</h1>
@@ -161,58 +198,79 @@ const hasLinks = computed(() => (person.value ? socialLinks(person.value).length
         </div>
       </header>
 
-      <section v-if="hasLinks || person.homepageUrl || byRole.length || person.recommended.length" aria-labelledby="details">
-        <div class="heading"><h2 id="details">Details</h2></div>
-        <dl class="details">
-          <div v-if="person.homepageUrl">
-            <dt>Website</dt>
-            <dd><a class="link" :href="person.homepageUrl">{{ person.homepageUrl.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') }}</a></dd>
-          </div>
-          <div v-if="hasLinks">
-            <dt>Online</dt>
-            <dd class="icons"><SocialLinks :person="person"/></dd>
-          </div>
-          <div v-if="byRole.length">
-            <dt>Episodes</dt>
-            <dd>{{ onEpisodes }}</dd>
-          </div>
-          <div v-if="person.recommended.length">
-            <dt>Recommended</dt>
-            <dd>{{ person.recommended.length }} {{ person.recommended.length === 1 ? 'episode' : 'episodes' }}</dd>
-          </div>
-        </dl>
-      </section>
+      <div class="workspace">
+        <FactPanel :label="`About ${person.name}`">
+          <FactGroup v-if="roleCounts.length || person.recommended.length" title="On episodes" :count="person.episodes.length">
+            <!-- Each also shows only those -->
+            <div class="roles" role="group" aria-label="Show their episodes as">
+              <button v-for="{ role: r, count } in roleCounts" :key="r" type="button" class="role" :aria-pressed="role === r" @click="pick(r)">
+                <b>{{ count }}</b><span>as {{ roleName(r) }}</span>
+              </button>
+              <a v-if="person.recommended.length" class="role" href="#recommended">
+                <b>{{ person.recommended.length }}</b><span>recommended</span>
+              </a>
+            </div>
+          </FactGroup>
+          <FactGroup v-if="hasLinks || firstOn">
+            <dl>
+              <Fact v-if="hasLinks" label="Online"><span class="icons"><SocialLinks :person="person"/></span></Fact>
+              <Fact v-if="person.homepageUrl" label="Website">
+                <a :href="person.homepageUrl">{{ person.homepageUrl.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') }}</a>
+              </Fact>
+              <Fact v-if="firstOn" label="First on">
+                <RouterLink :to="episodePath(firstOn)">{{ firstOn.code ?? firstOn.title }}</RouterLink> <span class="aside" lang="sl">{{ firstOn.title }}</span>
+              </Fact>
+            </dl>
+          </FactGroup>
+        </FactPanel>
 
-      <PersonSignIns :person="person" :accounts="person.accounts" :me="me" :can-link="canLinkAccounts" @changed="reloadQuietly"/>
+        <div class="main">
+          <p v-if="!person.episodes.length && !person.recommended.length" class="note">Not on any episode yet.</p>
 
-      <p v-if="!byRole.length && !person.recommended.length" class="note">Not on any episode yet.</p>
+          <section v-if="comingUp.length" aria-labelledby="coming-up">
+            <div class="heading">
+              <h2 id="coming-up">Coming up</h2>
+              <span class="count">{{ comingUp.length }}</span>
+            </div>
+            <ul class="episodes">
+              <EpisodeRow v-for="on in comingUp" :key="on.episode.id" :episode="on.episode" :role="on.as"/>
+            </ul>
+          </section>
 
-      <!-- Each as the other lists have it: a line while it's in the works, its summary once it's released -->
-      <section v-for="group in byRole" :key="group.role" :aria-labelledby="`as-${group.role}`">
-        <div class="heading">
-          <h2 :id="`as-${group.role}`">{{ group.title }}</h2>
-          <span class="count">{{ group.episodes.length }}</span>
+          <section v-if="released.length" aria-labelledby="released">
+            <div class="heading">
+              <h2 id="released">Released</h2>
+              <span class="count">{{ released.length }}</span>
+              <ViewToggle v-model="view" class="view"/>
+            </div>
+            <ul v-if="view === 'grid'" class="episode-cards">
+              <EpisodeCard v-for="on in released" :key="on.episode.id" :episode="on.episode" :role="`as ${on.as}`"/>
+            </ul>
+            <template v-for="group in bySeason" v-else :key="group.title">
+              <h3 class="subheading">{{ group.title }} <span class="count">{{ group.episodes.length }}</span></h3>
+              <ul class="episodes">
+                <EpisodeRow v-for="on in group.episodes" :key="on.episode.id" :episode="on.episode" :role="on.as" thumbnail/>
+              </ul>
+            </template>
+          </section>
+
+          <section v-if="person.recommended.length" id="recommended" aria-labelledby="recommended-heading">
+            <div class="heading">
+              <h2 id="recommended-heading">Recommended</h2>
+              <span class="count">{{ person.recommended.length }}</span>
+              <button v-if="person.recommended.length > RECOMMENDED" type="button" class="more" :aria-expanded="allRecommended"
+                      @click="allRecommended = !allRecommended">
+                {{ allRecommended ? 'Show the first few' : `Show all ${person.recommended.length}` }}
+              </button>
+            </div>
+            <ul class="episodes">
+              <EpisodeRow v-for="episode in recommended" :key="episode.id" :episode="episode"/>
+            </ul>
+          </section>
+
+          <PersonSignIns :person="person" :accounts="person.accounts" :me="me" :can-link="canLinkAccounts" @changed="reloadQuietly"/>
         </div>
-        <ul class="episodes">
-          <template v-for="episode in group.episodes" :key="episode.id">
-            <EpisodeItem v-if="episode.status === 'PUBLISHED'" :episode="episode"/>
-            <EpisodeRow v-else :episode="episode"/>
-          </template>
-        </ul>
-      </section>
-
-      <section v-if="person.recommended.length" aria-labelledby="recommended">
-        <div class="heading">
-          <h2 id="recommended">Recommended</h2>
-          <span class="count">{{ person.recommended.length }}</span>
-        </div>
-        <ul class="episodes">
-          <template v-for="episode in person.recommended" :key="episode.id">
-            <EpisodeItem v-if="episode.status === 'PUBLISHED'" :episode="episode"/>
-            <EpisodeRow v-else :episode="episode"/>
-          </template>
-        </ul>
-      </section>
+      </div>
     </template>
   </main>
 </template>
@@ -227,11 +285,67 @@ const hasLinks = computed(() => (person.value ? socialLinks(person.value).length
   gap: 20px;
 }
 
-.link {
-  color: var(--accent-text);
+// How many episodes as what, each a button that shows only those
+.roles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.role {
+  display: grid;
+  padding: 6px 10px;
+  text-align: left;
+  background: #FFFFFF;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  cursor: pointer;
+
+  b {
+    font-size: 17px;
+    line-height: 24px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  span {
+    font-size: 11.5px;
+    line-height: 16px;
+    color: var(--muted);
+  }
 
   &:hover {
-    text-decoration: underline;
+    border-color: #A3A3A3;
+  }
+
+  &[aria-pressed="true"] {
+    border-color: var(--ink);
+    box-shadow: inset 0 0 0 1px var(--ink);
+  }
+}
+
+.view {
+  margin-left: auto;
+  align-self: center;
+}
+
+.icons {
+  display: flex;
+  flex-wrap: wrap;
+  margin: calc((20px - var(--icon-link)) / 2) 0 calc((20px - var(--icon-link)) / 2) var(--icon-link-inset);
+}
+
+.aside {
+  color: var(--muted);
+}
+
+dd a {
+  @include page.link;
+}
+
+@media (max-width: 640px) {
+  .person {
+    gap: 14px;
   }
 }
 </style>

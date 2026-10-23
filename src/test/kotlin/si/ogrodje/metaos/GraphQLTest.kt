@@ -2,6 +2,7 @@ package si.ogrodje.metaos
 
 import com.jayway.jsonpath.JsonPath
 import graphql.introspection.IntrospectionQuery
+import org.hamcrest.Matchers.anyOf
 import org.hamcrest.Matchers.contains
 import org.hamcrest.Matchers.containsString
 import org.hamcrest.Matchers.empty
@@ -321,6 +322,31 @@ class GraphQLTest @Autowired constructor(
         graphql(query)
             .andExpect(jsonPath("$.errors").doesNotExist())
             .andExpect(jsonPath("$.data.episodes[?(@.code == 'gq-c1')].people[*].name", contains("Confirmed Guest")))
+    }
+
+    @Test
+    fun `tells signed-in users the latest changes, oldest first, each with what it's a change to`() {
+        asMcpUser {
+            episodesMCP.create(code = "gq-rc1", title = "Recently made")
+            val guest = checkNotNull(peopleMCP.create(name = "Recent Guest", email = null).id)
+            episodesMCP.assignPerson("gq-rc1", guest, Role.GUEST)
+        }
+
+        graphql("""{ recentChanges(limit: 3) { actor tool kind summary about { kind name code } } }""", reader)
+            .andExpect(jsonPath("$.errors").doesNotExist())
+            .andExpect(jsonPath("$.data.recentChanges[*].summary",
+                contains("Created the episode", "Created the person", "Added Recent Guest as guest")))
+            .andExpect(jsonPath("$.data.recentChanges[*].kind", contains("EPISODE", "PERSON", "PERSON")))
+            .andExpect(jsonPath("$.data.recentChanges[*].about.name", contains("Recently made", "Recent Guest", "Recently made")))
+            .andExpect(jsonPath("$.data.recentChanges[*].about.kind", contains("EPISODE", "PERSON", "EPISODE")))
+            .andExpect(jsonPath("$.data.recentChanges[0].about.code").value("gq-rc1"))
+            .andExpect(jsonPath("$.data.recentChanges[2].actor").value("ana"))
+            .andExpect(jsonPath("$.data.recentChanges[2].tool").value("assign_person_to_episode"))
+
+        // Without a token: either answer says no, as for the comments' mutations (CommentsGraphQLTest)
+        graphql("{ recentChanges { summary } }")
+            .andExpect(jsonPath("$.errors[0].extensions.classification", anyOf(equalTo("UNAUTHORIZED"), equalTo("FORBIDDEN"))))
+            .andExpect(jsonPath("$.data").value(null as Any?))
     }
 
     @Test

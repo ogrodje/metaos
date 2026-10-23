@@ -4,15 +4,18 @@ import { RouterLink } from 'vue-router'
 import { concerns, LONG_IN_PRODUCTION_DAYS, SOON_DAYS } from '@/attention'
 import { keepUnchanged, useLiveRefresh } from '@/changes'
 import ConcernRow from '@/components/ConcernRow.vue'
-import EpisodeItem from '@/components/EpisodeItem.vue'
-import EpisodeRow from '@/components/EpisodeRow.vue'
-import FileLinks from '@/components/FileLinks.vue'
+import EpisodeCard from '@/components/EpisodeCard.vue'
 import LoadError from '@/components/LoadError.vue'
 import LoadingRows from '@/components/LoadingRows.vue'
+import RecentActivity from '@/components/RecentActivity.vue'
+import SessionCard from '@/components/SessionCard.vue'
 import SignInPrompt from '@/components/SignInPrompt.vue'
+import StageBar from '@/components/StageBar.vue'
 import {
-  bySession, daysFrom, type Episode, EPISODE_FIELDS, formatDate, relativeDate, sessionPath, type SessionGroup,
+  bySession, type Change, CHANGE_FIELDS, daysFrom, type Episode, EPISODE_FIELDS, episodePath, type EpisodeStatus,
+  relativeDate, type SessionGroup, THUMBNAIL_FIELDS,
 } from '@/episodes'
+import { src, srcset } from '@/images'
 import { errorMessage, graphql } from '@/graphql'
 import { usePageMeta } from '@/seo'
 import { useFirstLoad } from '@/ssr'
@@ -29,6 +32,11 @@ const making = ref<{ upcoming: Episode[], inProduction: Episode[] }>()
 const upcoming = ref<SessionGroup[]>()
 const inProduction = ref<SessionGroup[]>()
 const makingError = ref<string>()
+
+// How many episodes are at each stage, and what the team did lately: the team's too
+const stages = ref<{ status: EpisodeStatus, count: number }[]>()
+const recent = ref<Change[]>()
+const STAGES: EpisodeStatus[] = ['IDEA', 'PLANNED', 'SCHEDULED', 'RECORDED', 'IN_PRODUCTION', 'READY', 'EARLY_ACCESS', 'PUBLISHED']
 
 // What needs attention, the most pressing first: a recording date that passed, then what's coming up without what it
 // needs, then what's been in production long
@@ -57,7 +65,7 @@ function overdue(section: Section, group: SessionGroup) {
 
 async function fetchReleased() {
   return (await graphql<{ releasedEpisodes: Episode[] }>(`{
-    releasedEpisodes(limit: 3) { ${EPISODE_FIELDS} }
+    releasedEpisodes(limit: 6) { ${EPISODE_FIELDS} ${THUMBNAIL_FIELDS} }
   }`)).releasedEpisodes
 }
 
@@ -81,12 +89,25 @@ async function loadReleased(load: number, quietly: boolean) {
 
 async function loadMaking(load: number, quietly: boolean) {
   try {
-    const data = await graphql<{ upcomingRecordings: Episode[], inProduction: Episode[] }>(`{
+    const data = await graphql<{
+      upcomingRecordings: Episode[]
+      inProduction: Episode[]
+      episodes: { status: EpisodeStatus }[]
+      ideas: { id: string }[]
+      recentChanges: Change[]
+    }>(`{
       upcomingRecordings { ${EPISODE_FIELDS} }
       inProduction { ${EPISODE_FIELDS} }
+      episodes { status }
+      ideas { id }
+      recentChanges(limit: 60) { ${CHANGE_FIELDS} about { kind id name code } }
     }`)
     if (load !== loads) return
     making.value = keepUnchanged(making.value, { upcoming: data.upcomingRecordings, inProduction: data.inProduction })
+    stages.value = keepUnchanged(stages.value, STAGES.map((status) => ({
+      status, count: status === 'IDEA' ? data.ideas.length : data.episodes.filter((e) => e.status === status).length,
+    })))
+    recent.value = keepUnchanged(recent.value, data.recentChanges)
     upcoming.value = keepUnchanged(upcoming.value, bySession(data.upcomingRecordings))
     inProduction.value = keepUnchanged(inProduction.value, bySession(data.inProduction))
     makingError.value = undefined
@@ -137,64 +158,84 @@ usePageMeta(() => ({
       <RouterLink class="usage" to="/usage">API and MCP usage</RouterLink> shows how to connect it.
     </SignInPrompt>
 
-    <!-- Signed in, what's being made comes first, and of it first what needs attention; the releases are last. Its
-         place is kept while one who was signed in last time is checked, so the releases don't jump down. -->
-    <template v-if="auth.likelyMember">
-      <LoadError v-if="makingError" what="The upcoming recordings and what's in production" :error="makingError"
-                 @retry="loadLists()"/>
-      <section v-else-if="!making" aria-labelledby="needs-attention">
-        <div class="heading"><h2 id="needs-attention">Needs attention</h2></div>
-        <LoadingRows :rows="3" label="Loading what's being made"/>
-      </section>
+    <!-- Signed in, what's being made, and of it first what needs attention; the releases and what the team did lately
+         at the side. Its place is kept while one who was signed in last time is checked. -->
+    <div v-if="auth.likelyMember" class="home">
+      <div class="main">
+        <StageBar v-if="stages" :counts="stages"/>
 
-      <template v-else>
-        <section aria-labelledby="needs-attention">
-          <div class="heading">
-            <h2 id="needs-attention">Needs attention</h2>
-            <span class="count">{{ attention.length }}</span>
-          </div>
-          <ul v-if="attention.length" class="episodes">
-            <ConcernRow v-for="concern in attention" :key="concern.episode.id" :concern="concern"/>
-          </ul>
-          <p v-else class="all-clear">
-            Nothing right now. The recordings in the next {{ SOON_DAYS }} days have their guests and docs, and nothing
-            recorded {{ LONG_IN_PRODUCTION_DAYS }} days ago or more is waiting to be released.
-          </p>
+        <LoadError v-if="makingError" what="The upcoming recordings and what's in production" :error="makingError"
+                   @retry="loadLists()"/>
+        <section v-else-if="!making" aria-labelledby="needs-attention">
+          <div class="heading"><h2 id="needs-attention">Needs attention</h2></div>
+          <LoadingRows :rows="3" label="Loading what's being made"/>
         </section>
 
-        <!-- What's being made, a line an episode, as the Episodes page lists what's in the works -->
-        <section v-for="section in sections" :key="section.id" :aria-labelledby="section.id">
-          <div class="heading">
-            <h2 :id="section.id">{{ section.title }}</h2>
-            <span class="count">{{ section.count }}</span>
-          </div>
-          <!-- Episodes without a session are listed as they are, without a heading -->
-          <template v-for="group in section.groups" :key="group.key">
-            <h3 v-if="group.session" class="subheading session">
-              <RouterLink :to="sessionPath(group.session)">
-                <time :datetime="group.session.date">{{ formatDate(group.session.date) }}</time>
-                <span class="when" :class="{ overdue: overdue(section, group) }">{{ relativeDate(group.session.date) }}</span>
-                <span v-if="group.session.location" class="location">{{ group.session.location }}</span>
-              </RouterLink>
-              <span class="files"><FileLinks :of="group.session"/></span>
-            </h3>
-            <ul class="episodes">
-              <EpisodeRow v-for="episode in group.episodes" :key="episode.id" :episode="episode" under-session/>
+        <template v-else>
+          <section aria-labelledby="needs-attention">
+            <div class="heading">
+              <h2 id="needs-attention">Needs attention</h2>
+              <span class="count">{{ attention.length }}</span>
+            </div>
+            <ul v-if="attention.length" class="episodes">
+              <ConcernRow v-for="concern in attention" :key="concern.episode.id" :concern="concern"/>
             </ul>
-          </template>
-        </section>
-      </template>
-    </template>
+            <p v-else class="all-clear">
+              Nothing right now. The recordings in the next {{ SOON_DAYS }} days have their guests and docs, and nothing
+              recorded {{ LONG_IN_PRODUCTION_DAYS }} days ago or more is waiting to be released.
+            </p>
+          </section>
 
-    <section aria-labelledby="latest-releases">
+          <!-- What's being made, by recording session, each a card with its episodes a line each -->
+          <section v-for="section in sections" :key="section.id" :aria-labelledby="section.id">
+            <div class="heading">
+              <h2 :id="section.id">{{ section.title }}</h2>
+              <span class="count">{{ section.count }}</span>
+            </div>
+            <SessionCard v-for="group in section.groups" :key="group.key" :group="group" :overdue="overdue(section, group)"/>
+          </section>
+        </template>
+      </div>
+
+      <aside class="rail" aria-label="Lately">
+        <section aria-labelledby="latest-releases">
+          <div class="heading">
+            <h2 id="latest-releases">Latest releases</h2>
+            <RouterLink class="more" to="/episodes">All</RouterLink>
+          </div>
+          <LoadError v-if="releasedError" what="The latest releases" :error="releasedError" @retry="loadLists()"/>
+          <LoadingRows v-else-if="!released" :rows="3" label="Loading the latest releases"/>
+          <ul v-else class="releases">
+            <li v-for="episode in released.slice(0, 3)" :key="episode.id">
+              <RouterLink class="shot" :to="episodePath(episode)" tabindex="-1" aria-hidden="true">
+                <img v-if="episode.thumbnail" :src="src(episode.thumbnail, 320)" :srcset="srcset(episode.thumbnail)" sizes="112px" alt="">
+              </RouterLink>
+              <div>
+                <RouterLink class="title" :to="episodePath(episode)" lang="sl">{{ episode.title }}</RouterLink>
+                <p class="meta"><span class="code">{{ episode.code }}</span><template v-if="episode.airedDate"> · {{ relativeDate(episode.airedDate) }}</template></p>
+              </div>
+            </li>
+          </ul>
+        </section>
+
+        <section aria-labelledby="recent-activity">
+          <div class="heading"><h2 id="recent-activity">Recent activity</h2></div>
+          <RecentActivity v-if="recent" :changes="recent"/>
+          <LoadingRows v-else-if="!makingError" :rows="4" label="Loading what the team did lately"/>
+        </section>
+      </aside>
+    </div>
+
+    <!-- Everyone else: the releases, as the server renders them -->
+    <section v-else aria-labelledby="latest-releases">
       <div class="heading">
         <h2 id="latest-releases">Latest releases</h2>
-        <span v-if="released" class="count">{{ released.length }}</span>
+        <RouterLink class="more" to="/episodes">All episodes</RouterLink>
       </div>
       <LoadError v-if="releasedError" what="The latest releases" :error="releasedError" @retry="loadLists()"/>
       <LoadingRows v-else-if="!released" :rows="3" tall label="Loading the latest releases"/>
-      <ul v-else class="episodes">
-        <EpisodeItem v-for="episode in released" :key="episode.id" :episode="episode"/>
+      <ul v-else class="episode-cards">
+        <EpisodeCard v-for="episode in released" :key="episode.id" :episode="episode"/>
       </ul>
     </section>
   </main>
@@ -212,36 +253,70 @@ usePageMeta(() => ({
   }
 }
 
-// The date, then where, which on phones goes on a line of its own when it doesn't fit
-.session {
-  a {
+// What's being made, and at the side the releases and what the team did lately
+.home {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  column-gap: 56px;
+  align-items: start;
+
+  > .main, > .rail {
     display: flex;
-    flex-wrap: wrap;
-    column-gap: 8px;
+    flex-direction: column;
+    gap: 48px;
+    min-width: 0;
   }
 
-  .when, .location {
-    font-weight: 400;
-  }
-
-  .when {
-    color: var(--muted);
-  }
-
-  .location {
-    color: var(--secondary);
-  }
-
-  // A recording date that passed: what needs attention says why
-  .when.overdue {
-    color: var(--accent-text);
-  }
-
-  .files {
-    display: flex;
+  > .rail {
+    gap: 40px;
   }
 }
 
+.releases {
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr);
+    gap: 12px;
+    padding: 10px 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .shot {
+    display: block;
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+    background: var(--hover);
+    border-radius: 6px;
+
+    img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
+  .title {
+    display: block;
+    font-size: 13.5px;
+    line-height: 19px;
+    font-weight: 600;
+  }
+
+  .meta {
+    margin-top: 2px;
+    font-size: 12px;
+    line-height: 18px;
+    color: var(--muted);
+  }
+
+  .code {
+    font-family: var(--font-mono);
+  }
+}
 
 .all-clear {
   max-width: 70ch;
@@ -250,4 +325,11 @@ usePageMeta(() => ({
   color: var(--secondary);
 }
 
+// One column on narrower screens: what's being made, then the rest
+@media (max-width: 960px) {
+  .home {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 48px;
+  }
+}
 </style>

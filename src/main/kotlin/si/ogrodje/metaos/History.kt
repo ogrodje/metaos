@@ -25,7 +25,12 @@ data class HistoryEntryDto(
     val commentId: UUID?,
     val summary: String,
     val fields: List<FieldChangeDto>,
+    // What it's a change to, where the page it's on doesn't say: among the latest changes to everything
+    val about: ChangeSubjectDto? = null,
 )
+
+/** The episode, session or person a change is to, by name, e.g. Poletna vročica, with its code */
+data class ChangeSubjectDto(val kind: ChangeKind, val id: UUID, val name: String, val code: String?)
 
 // Each table by what its changes are to; an episode moving in or out of a session is one to the episode
 private fun kindOf(table: String) = when (table) {
@@ -37,7 +42,24 @@ private fun kindOf(table: String) = when (table) {
     "episode_dropbox_folders", "session_dropbox_folders" -> ChangeKind.DROPBOX_FOLDER
     "comments" -> ChangeKind.COMMENT
     "accounts" -> ChangeKind.ACCOUNT
+    "people" -> ChangeKind.PERSON
     else -> ChangeKind.OTHER
+}
+
+// The episode, session or person a change is to, by kind and ID; null for one no history tells
+private fun AuditRow.subject(): Pair<ChangeKind, String>? {
+    fun id(column: String) = (new[column] ?: old[column])?.toString()
+    return when (table) {
+        "episodes" -> ChangeKind.EPISODE to rowId.toString()
+        "sessions" -> ChangeKind.SESSION to rowId.toString()
+        "people" -> ChangeKind.PERSON to rowId.toString()
+        "episode_people", "episode_documents", "episode_koofr_folders", "episode_dropbox_folders" ->
+            id("episode_id")?.let { ChangeKind.EPISODE to it }
+        "session_documents", "session_koofr_folders", "session_dropbox_folders" -> id("session_id")?.let { ChangeKind.SESSION to it }
+        "comments" -> id("episode_id")?.let { ChangeKind.EPISODE to it } ?: id("session_id")?.let { ChangeKind.SESSION to it }
+        "accounts" -> id("person_id")?.let { ChangeKind.PERSON to it }
+        else -> null
+    }
 }
 
 private val DATE = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.UK)
@@ -53,12 +75,18 @@ private val EPISODE_COLUMNS = linkedMapOf(
     "cover_image_id" to "Cover",
 )
 private val SESSION_COLUMNS = linkedMapOf("date" to "Date", "location" to "Location", "address" to "Address")
+// A person's, but for their email, which their page doesn't show either
+private val PERSON_COLUMNS = linkedMapOf(
+    "name" to "Name", "bio" to "Bio", "homepage_url" to "Website", "linkedin_url" to "LinkedIn", "twitter_url" to "X",
+    "instagram_url" to "Instagram", "facebook_url" to "Facebook", "avatar_image_id" to "Avatar",
+)
 
 // Too long to show what they were and what they became
 private val LONG_COLUMNS = setOf("summary", "machine_summary")
 private val DATE_COLUMNS = setOf("recording_date", "aired_date", "added_date", "date")
 // Pictures, by the names of the files they were made from
-private val IMAGE_COLUMNS = setOf("thumbnail_image_id", "thumbnail_b_image_id", "thumbnail_c_image_id", "cover_image_id")
+private val IMAGE_COLUMNS =
+    setOf("thumbnail_image_id", "thumbnail_b_image_id", "thumbnail_c_image_id", "cover_image_id", "avatar_image_id")
 
 // How much of a comment the history shows
 private const val EXCERPT_LENGTH = 100
@@ -77,24 +105,42 @@ class History(private val auditLog: AuditLog, private val jdbcTemplate: JdbcTemp
 
     fun of(id: UUID): List<HistoryEntryDto> {
         val rows = auditLog.history(id)
-        // Who made them, by their person's name once their account is linked
-        val actors = accounts.people(rows.mapNotNull { it.actorId })
-        val names = Names(
-            people = names("select id, name from people", rows.ids("person_id") + rows.ids("recommended_by")),
-            shows = names("select id, name from shows", rows.ids("show_id")),
-            sessions = names("select id, date, location from sessions", rows.ids("session_id")) { rs ->
-                listOfNotNull(DATE.format(rs.getObject("date", LocalDate::class.java)), rs.getString("location")).joinToString(" · ")
-            },
-            images = names("select id, name from images", IMAGE_COLUMNS.flatMap { rows.ids(it) }.toSet()),
-        )
-        return rows.map { row ->
-            val described = names.describe(row, subject = id.toString())
-            HistoryEntryDto(
-                row.at, row.actorId?.let(actors::get)?.name ?: row.actor, row.client, row.tool, kindOf(row.table),
-                row.rowId.takeIf { row.table == "comments" }, described.summary, described.fields,
-            )
+        val names = namesOf(rows)
+        return rows.map { row -> names.entry(row, subject = id.toString()) }
+    }
+
+    /**
+     * The latest [limit] changes to episodes, sessions and people, and to what's linked to them, oldest first, each
+     * with what it's a change to, as no page says it, e.g. on the home page
+     */
+    fun recent(limit: Int): List<HistoryEntryDto> {
+        val rows = auditLog.recentTold(limit).reversed()
+        val subjects = rows.mapNotNull { it.subject() }
+        fun ids(kind: ChangeKind) = subjects.filter { it.first == kind }.map { it.second }.toSet()
+        val names = namesOf(rows, people = ids(ChangeKind.PERSON), sessions = ids(ChangeKind.SESSION))
+        val episodes = byId("select id, code, title from episodes", ids(ChangeKind.EPISODE)) { it.getString(2) to it.getString(3) }
+        return rows.mapNotNull { row ->
+            val (kind, id) = row.subject() ?: return@mapNotNull null
+            val about = when (kind) {
+                ChangeKind.EPISODE -> episodes[id]?.let { (code, title) -> ChangeSubjectDto(kind, UUID.fromString(id), title, code) }
+                ChangeKind.SESSION -> names.sessions[id]?.let { ChangeSubjectDto(kind, UUID.fromString(id), it, null) }
+                else -> names.people[id]?.let { ChangeSubjectDto(kind, UUID.fromString(id), it, null) }
+            }
+            names.entry(row, subject = id, about)
         }
     }
+
+    // Who made the changes, by their person's name once their account is linked, and the people, shows, sessions and
+    // pictures they have by ID, by name
+    private fun namesOf(rows: List<AuditRow>, people: Set<String> = emptySet(), sessions: Set<String> = emptySet()) = Names(
+        actors = accounts.people(rows.mapNotNull { it.actorId }).mapValues { it.value.name },
+        people = names("select id, name from people", rows.ids("person_id") + rows.ids("recommended_by") + people),
+        shows = names("select id, name from shows", rows.ids("show_id")),
+        sessions = names("select id, date, location from sessions", rows.ids("session_id") + sessions) { rs ->
+            listOfNotNull(DATE.format(rs.getObject("date", LocalDate::class.java)), rs.getString("location")).joinToString(" · ")
+        },
+        images = names("select id, name from images", IMAGE_COLUMNS.flatMap { rows.ids(it) }.toSet()),
+    )
 
     private fun List<AuditRow>.ids(column: String): Set<String> =
         flatMap { listOf(it.old[column], it.new[column]) }.mapNotNull { it?.toString() }.toSet()
@@ -104,20 +150,32 @@ class History(private val auditLog: AuditLog, private val jdbcTemplate: JdbcTemp
         select: String,
         ids: Set<String>,
         name: (java.sql.ResultSet) -> String = { it.getString(2) },
-    ): Map<String, String> =
+    ): Map<String, String> = byId(select, ids, name)
+
+    private fun <T> byId(select: String, ids: Set<String>, value: (java.sql.ResultSet) -> T): Map<String, T> =
         if (ids.isEmpty()) emptyMap()
-        else jdbcTemplate.query("$select where id::text in (${ids.joinToString { "?" }})", { rs, _ -> rs.getString(1) to name(rs) },
+        else jdbcTemplate.query("$select where id::text in (${ids.joinToString { "?" }})", { rs, _ -> rs.getString(1) to value(rs) },
             *ids.toTypedArray()).toMap()
 }
 
 private data class Described(val summary: String, val fields: List<FieldChangeDto> = emptyList())
 
 private class Names(
+    // Who made changes, by their accounts' IDs (sub)
+    val actors: Map<String, String>,
     val people: Map<String, String>,
     val shows: Map<String, String>,
     val sessions: Map<String, String>,
     val images: Map<String, String>,
 ) {
+
+    fun entry(row: AuditRow, subject: String, about: ChangeSubjectDto? = null): HistoryEntryDto {
+        val described = describe(row, subject)
+        return HistoryEntryDto(
+            row.at, row.actorId?.let(actors::get) ?: row.actor, row.client, row.tool, kindOf(row.table),
+            row.rowId.takeIf { row.table == "comments" }, described.summary, described.fields, about,
+        )
+    }
 
     fun describe(row: AuditRow, subject: String): Described = when (row.table) {
         "episodes" -> if (row.rowId.toString() == subject) change(row, "episode", EPISODE_COLUMNS) else inSession(row, subject)
@@ -129,6 +187,7 @@ private class Names(
         "episode_dropbox_folders", "session_dropbox_folders" -> folder(row, "Dropbox")
         "comments" -> comment(row)
         "accounts" -> account(row)
+        "people" -> change(row, "person", PERSON_COLUMNS)
         else -> Described("Changed ${row.table}")
     }
 

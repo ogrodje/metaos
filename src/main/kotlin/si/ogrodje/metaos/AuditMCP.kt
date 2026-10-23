@@ -108,6 +108,24 @@ class AuditLog(
     fun recent(limit: Int): List<AuditRow> =
         jdbcTemplate.query("select * from audit_log order by id desc limit ?", toRow, limit)
 
+    /**
+     * The latest changes to episodes, sessions and people and to what's linked to them, newest first: those their
+     * histories tell, without sign-ins kept up to date at sign-in, which change no link (AccountsFilter)
+     */
+    fun recentTold(limit: Int): List<AuditRow> =
+        jdbcTemplate.query(
+            """
+            select * from audit_log
+            where table_name in ('episodes', 'sessions', 'people', 'episode_people', 'episode_documents', 'session_documents',
+                                 'episode_koofr_folders', 'session_koofr_folders', 'episode_dropbox_folders',
+                                 'session_dropbox_folders', 'comments')
+               or (table_name = 'accounts' and old_row ->> 'person_id' is distinct from new_row ->> 'person_id')
+            order by id desc
+            limit ?
+            """.trimIndent(),
+            toRow, limit,
+        )
+
     fun find(id: Long): AuditRow? = jdbcTemplate.query("select * from audit_log where id = ?", toRow, id).singleOrNull()
 
     /** The MCP tools some rows of a table were inserted with, by row; those inserted another way are left out */

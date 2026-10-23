@@ -200,7 +200,15 @@ class DetailsGraphQL(
     @SchemaMapping(typeName = "Session", field = "history")
     fun sessionHistory(session: Session): List<HistoryEntryDto> =
         if (signedIn()) history.of(checkNotNull(session.id)) else emptyList()
+
+    // What the team did lately, as the episodes', sessions' and people's histories tell it, e.g. for the home page
+    @QueryMapping
+    @PreAuthorize(SIGNED_IN)
+    fun recentChanges(@Argument limit: Int): List<HistoryEntryDto> = history.recent(limit.coerceIn(1, MAX_RECENT_CHANGES))
 }
+
+// The most changes recentChanges answers with
+private const val MAX_RECENT_CHANGES = 200
 
 // Koofr folders are the team's too, so others get none. Lists of episodes have them as well, so they're batched, and
 // Koofr itself, slower than the database, is only asked for what a query wants: place names and photos.

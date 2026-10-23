@@ -3,7 +3,7 @@
 // show only when loading takes a moment, so a quick load doesn't flash them.
 withDefaults(defineProps<{
   rows?: number
-  // Episodes and ideas with their summary (EpisodeItem, IdeaItem, PersonItem) are taller than a line (EpisodeRow)
+  // Episodes and ideas with their summary (EpisodeItem, PersonItem) are taller than a line (EpisodeRow)
   tall?: boolean
   // Said to screen readers, e.g. "Loading the episodes"
   label?: string

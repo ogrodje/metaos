@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { activity, BURST_MINUTES, type ChangeEntry, filtered } from '@/activity'
+import { activity, BURST_MINUTES, type ChangeEntry, filtered, recentActivity } from '@/activity'
 import type { Comment } from '@/comments'
-import type { Change, ChangeKind, FieldChange } from '@/episodes'
+import type { Change, ChangeKind, ChangeSubject, FieldChange } from '@/episodes'
 
 function change(at: string, summary: string, kind: ChangeKind = 'EPISODE', fields: FieldChange[] = [], more: Partial<Change> = {}): Change {
   return { at: `2026-10-19T${at}:00Z`, actor: 'Oto Brglez', client: 'claude', tool: 'update_episode', kind, commentId: null, summary, fields, ...more }
@@ -81,6 +81,15 @@ describe('activity', () => {
     expect(entry?.lines.map((line) => line.text)).toEqual(['9 Jul 2026', 'Added Ana as guest', 'Added Bor as guest', 'Linked a Google Doc'])
   })
 
+  it('says a change made more than once once, with how often', () => {
+    const [entry] = changes(activity([
+      change('10:00', 'Commented', 'COMMENT', [], { commentId: 'gone-1' }),
+      change('10:01', 'Commented', 'COMMENT', [], { commentId: 'gone-2' }),
+      change('10:02', "Changed Ana's role", 'PERSON'),
+    ], []))
+    expect(entry?.headline).toBe('Changed roles and commented twice')
+  })
+
   it('links a folder linked, unlinked and linked again once, without the link Dropbox made to it', () => {
     const [entry] = changes(activity([
       change('10:10', 'Linked the Dropbox folder /Season 5/S05E07', 'DROPBOX_FOLDER'),
@@ -121,3 +130,31 @@ describe('activity', () => {
     expect(entries.map((entry) => [entry.actor, entry.how])).toEqual([['Oto Brglez', 'MCP · update_episode'], [null, null]])
   })
 })
+
+describe('recentActivity', () => {
+  const idea = (id: string): ChangeSubject => ({ kind: 'EPISODE', id, name: `Idea ${id}`, code: null })
+
+  it("counts one person's changes to several things by what they're to, the newest entry first", () => {
+    const entries = recentActivity([
+      change('10:00', 'Created the episode', 'EPISODE', [], { about: idea('1'), actor: 'Andraž Sraka' }),
+      change('10:01', 'Added Žan Gojčič as candidate', 'PERSON', [], { about: idea('1'), actor: 'Andraž Sraka' }),
+      change('10:02', 'Created the episode', 'EPISODE', [], { about: idea('2'), actor: 'Andraž Sraka' }),
+      change('10:03', 'Created the episode', 'EPISODE', [], { about: idea('3'), actor: 'Andraž Sraka' }),
+      change('10:04', 'Created the episode', 'EPISODE', [], { about: idea('4'), actor: 'Andraž Sraka' }),
+      change('11:00', 'Linked a Google Doc', 'DOCUMENT', [], { about: idea('1') }),
+    ])
+    expect(entries.map((entry) => entry.headline)).toEqual(['Linked a Google Doc', 'Created 4 episodes'])
+    expect(entries[1]?.about.map((subject) => subject.id)).toEqual(['1', '2', '3'])
+    expect(entries[1]?.more).toBe(1)
+    expect(entries[1]?.count).toBe(5)
+  })
+
+  it('says it changed things when not all of them were created', () => {
+    const [entry] = recentActivity([
+      change('10:00', 'Changed the episode', 'EPISODE', [field('Title', 'A', 'B')], { about: idea('1') }),
+      change('10:01', 'Changed the person', 'PERSON', [field('Bio', null, 'X')], { about: { kind: 'PERSON', id: 'p', name: 'Ana', code: null } }),
+    ])
+    expect(entry?.headline).toBe('Changed 1 episode and 1 person')
+  })
+})
+

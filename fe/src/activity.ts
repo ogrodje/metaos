@@ -2,7 +2,7 @@
 // GitHub. One person's changes made close together read as one entry, e.g. creating an episode and adding its people.
 
 import type { Comment } from '@/comments'
-import type { Change, FieldChange } from '@/episodes'
+import type { Change, ChangeSubject, FieldChange } from '@/episodes'
 
 /** How far apart one person's changes may be and still read as one entry */
 export const BURST_MINUTES = 15
@@ -175,15 +175,75 @@ function headlineOf(changes: Change[], others: string[]): string {
   const parts: string[] = []
   const own = changes.find((change) => OWN.has(change.kind) && change.fields.length)
   if (own) parts.push(own.summary)
-  const people = changes.filter((change) => change.kind === 'PERSON')
+  // People added to the episode, removed from it, or given another role on it, rather than a person's own changes
+  const people = changes.filter((change) => change.kind === 'PERSON'
+    && (/^(Added|Removed) /.test(change.summary) || change.summary.endsWith("'s role")))
   const added = people.filter((change) => change.summary.startsWith('Added '))
   const removed = people.filter((change) => change.summary.startsWith('Removed '))
   if (added.length) parts.push(added.length === 1 ? added[0]!.summary : `added ${added.length} people`)
   if (removed.length) parts.push(removed.length === 1 ? removed[0]!.summary : `removed ${removed.length} people`)
   if (people.length > added.length + removed.length) parts.push('changed roles')
   const counted = new Set(people.map((change) => change.summary))
-  parts.push(...others.filter((summary) => !counted.has(summary)))
+  // The same change more than once, e.g. two comments, once, with how often
+  const times = new Map<string, number>()
+  for (const summary of others.filter((summary) => !counted.has(summary))) times.set(summary, (times.get(summary) ?? 0) + 1)
+  parts.push(...[...times].map(([summary, n]) => (n === 1 ? summary : `${summary} ${n === 2 ? 'twice' : `${n} times`}`)))
   const said = parts.length > 3 ? [...parts.slice(0, 2), `${parts.length - 2} more changes`] : parts
-  const sentence = said.map((part, i) => (i ? part.charAt(0).toLowerCase() + part.slice(1) : part))
+  const sentence = said.map((part, i) => (i ? part.charAt(0).toLowerCase() + part.slice(1) : part.charAt(0).toUpperCase() + part.slice(1)))
   return sentence.length > 1 ? `${sentence.slice(0, -1).join(', ')} and ${sentence.at(-1)}` : sentence[0] ?? `${changes.length} changes`
 }
+
+/** One person's changes made close together, to whatever they were to, for the home page */
+export interface RecentEntry {
+  key: string
+  at: string
+  until: string
+  actor: string | null
+  how: string | null
+  headline: string
+  // What they were to: the first few, and how many more there are
+  about: ChangeSubject[]
+  more: number
+  count: number
+}
+
+// How many of what a burst of changes was to an entry names
+const NAMED = 3
+
+const NOUNS: Record<ChangeSubject['kind'], [string, string]> = {
+  EPISODE: ['episode', 'episodes'],
+  SESSION: ['session', 'sessions'],
+  PERSON: ['person', 'people'],
+}
+
+/**
+ * The latest [changes] to everything (recentChanges, oldest first) as entries, the newest first: one person's changes
+ * within BURST_MINUTES of each other are one, told as an episode's activity tells them when they're to one thing, and
+ * counted by what they're to when to several, e.g. Created 28 episodes
+ */
+export function recentActivity(changes: Change[]): RecentEntry[] {
+  return bursts(changes).map((burst): RecentEntry => {
+    const subjects = new Map<string, ChangeSubject>()
+    for (const change of burst) if (change.about) subjects.set(`${change.about.kind}:${change.about.id}`, change.about)
+    const about = [...subjects.values()]
+    const first = burst[0]!
+    return {
+      key: `recent-${first.at}`, at: first.at, until: burst.at(-1)!.at, actor: first.actor, how: how(burst),
+      headline: about.length > 1 ? counted(burst, about) : told(burst).headline,
+      about: about.slice(0, NAMED), more: Math.max(0, about.length - NAMED), count: burst.length,
+    }
+  }).reverse()
+}
+
+// Created 3 episodes, or Changed 2 episodes and 1 person
+function counted(changes: Change[], about: ChangeSubject[]) {
+  const created = about.every((subject) =>
+    changes.some((change) => change.about?.id === subject.id && change.summary.startsWith('Created the')))
+  const parts = (Object.keys(NOUNS) as ChangeSubject['kind'][]).flatMap((kind) => {
+    const n = about.filter((subject) => subject.kind === kind).length
+    return n ? [`${n} ${NOUNS[kind][n === 1 ? 0 : 1]}`] : []
+  })
+  const listed = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}` : parts[0]
+  return `${created ? 'Created' : 'Changed'} ${listed}`
+}
+

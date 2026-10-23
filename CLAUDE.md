@@ -105,10 +105,18 @@ yarn test       # the tests in src/**/__tests__, with vitest (./gradlew feTest, 
 - A list loads behind rows like its own (`LoadingRows.vue`), so the page doesn't jump, and what didn't load says why
   with Try again (`LoadError.vue`); `graphql.ts` words errors so they say what to do, e.g. an account not approved
   yet. Dates are in English (`DATE_LOCALE`), whatever the browser's language.
-- Home is what's being made for the team, and the latest releases for everyone: signed in, first what needs
-  attention ([`fe/src/attention.ts`](fe/src/attention.ts): recording dates that passed, recordings in the next two
-  weeks with no confirmed guest or doc, and episodes recorded 60 days ago that aren't out), then the upcoming
-  recordings and what's in production, by session with how far away it is, then the releases.
+- Home is what's being made for the team, and the latest releases for everyone (as a grid of `EpisodeCard`s). Signed
+  in, two columns: how many episodes are at each stage (`StageBar.vue`), what needs attention
+  ([`fe/src/attention.ts`](fe/src/attention.ts): recording dates that passed, recordings in the next two weeks with no
+  confirmed guest or doc, and episodes recorded 60 days ago that aren't out), then the upcoming recordings and what's
+  in production, a card a session with how far away it is (`SessionCard.vue`); at the side the latest releases and
+  what the team did lately (`RecentActivity.vue`), from `recentChanges`: the audit trail's latest changes, as
+  `History.kt` tells them, each with what it's a change to, one person's close together as one entry
+  (`recentActivity` in `activity.ts`), e.g. Created 28 episodes.
+- The list pages (Episodes, Ideas, People) have a `PageHeader` and a `FilterBar` (a box that finds as you type, with
+  `fold`, and `ChipGroup`s), and keep their filters and view in the address (`useQueryState`, `fe/src/query.ts`), so
+  a link keeps them and the server renders them. What they filter and group by is in
+  [`fe/src/lists.ts`](fe/src/lists.ts), with tests, and happens in the browser on what's loaded.
 - Every page is in one frame, 1200 px wide (`--content-width`), the header's and the footer's too, so they don't jump
   between pages; running text keeps a measure of its own (`MarkdownText.vue`'s 680 px). The width goes to side panels,
   grids and tables.
@@ -122,14 +130,22 @@ yarn test       # the tests in src/**/__tests__, with vitest (./gradlew feTest, 
   trail as [`History.kt`](src/main/kotlin/si/ogrodje/metaos/History.kt) tells it. A released episode's page is
   anyone's, without what's the team's (its activity, alternative titles, files, ...), its thumbnail large; any other
   episode is the team's, and not found for anyone else, as one that isn't there.
+- The Episodes page lists what's in the works (the team's), then the released episodes by season, as a list
+  (`EpisodeRow`, with its thumbnail) or a grid of `EpisodeCard`s (`?view=grid`), by show and season; seasons older
+  than the two latest show their first row until opened.
 - Episode ideas (`IDEA`) have a page of their own, `/ideas`, from the `ideas` query, which needs `metaos:read`, as
-  does its link in the header; the `episodes` query, and so the Episodes page, leaves them out.
+  does its link in the header; the `episodes` query, and so the Episodes page, leaves them out. It's a table
+  (`IdeaRow.vue`), grouped by how far along each is (`readiness`: in a session, with a guest, with candidates, no
+  one yet), by who recommended it, or not at all, and filtered by show and recommender.
 - The People page, `/people`, lists everyone by name (Slovenian order, past a "dr."), from the `people` query: who
-  they are, their roles and latest episodes, and links to their website and social profiles. Anyone not signed in
-  gets only those on the released episodes, with only those episodes; candidates are the team's.
+  they are, their roles and latest episodes, and links to their website and social profiles (`PersonCard.vue`). The
+  team first, as cards (`kindOf` in `lists.ts`: anyone credited as host, co-host, producer, consultant or designer),
+  then the guests in three columns under their letters, with an A–Z index, then, folded, the candidates. Anyone not
+  signed in gets only those on the released episodes, with only those episodes; candidates are the team's.
 - People's names (on the People page and an episode's page, and who recommended an idea) lead to their pages,
-  `/people/<ID>`, from the `person` query: who they are, where they're online, their episodes by what they are on
-  them, hosts first, each list as the session page has it, and the episodes they recommended. Anyone not signed in
+  `/people/<ID>`, from the `person` query: a workspace like an episode's, with how many episodes they're on as what
+  in its panel, each also a filter (`?role=HOST`), and where they're online; what's coming up (the team's), their
+  released episodes by season, as rows or cards, and the episodes they recommended. Anyone not signed in
   gets the page of someone on a released episode, as the People page lists them, with only those episodes.
 - Search is the team's: signed in, the header has a Search button (`SearchPalette.vue`; also ⌘K, Ctrl+K and `/`),
   which opens a few of each kind over the page, and its See all the search page, `/search?q=`, with all of them by
@@ -225,7 +241,8 @@ read-write transaction with the signed-in user (`sub`, `preferred_username`), th
 that started it; writes made any other way (psql, migrations) are logged without them. `AuditLog` reads it, for the
 `get_history` and `list_recent_changes` MCP tools, for the history on the front-end's episode and session pages
 (`History.kt`, which says each change in words, and what it's a change to, `ChangeKind`, so the front-end can group
-changes without reading their words), and for the MCP tool each comment was written with (Discussions).
+changes without reading their words), for the latest changes on the home page (`recentChanges`, which leaves out
+the sign-ins `AccountsFilter` keeps up to date), and for the MCP tool each comment was written with (Discussions).
 
 A new table needs its own `<table>_audit` trigger, `AuditLog.history` needs to know about new link columns, and
 `History.kt` how to say what a change to it means.

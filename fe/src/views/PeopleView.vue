@@ -1,13 +1,18 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { type Account, ACCOUNT_FIELDS } from '@/accounts'
 import { keepUnchanged, useLiveRefresh } from '@/changes'
+import ChipGroup from '@/components/ChipGroup.vue'
+import FilterBar from '@/components/FilterBar.vue'
 import LoadError from '@/components/LoadError.vue'
 import LoadingRows from '@/components/LoadingRows.vue'
-import PersonItem from '@/components/PersonItem.vue'
+import PageHeader from '@/components/PageHeader.vue'
+import PersonCard from '@/components/PersonCard.vue'
 import UnlinkedAccounts from '@/components/UnlinkedAccounts.vue'
 import { errorMessage, graphql } from '@/graphql'
+import { ALPHABET, type Kind, kindOf, letterOf, matches } from '@/lists'
 import { type Person, PERSON_FIELDS } from '@/people'
+import { useQueryState } from '@/query'
 import { usePageMeta } from '@/seo'
 import { useFirstLoad } from '@/ssr'
 import { useAuthStore } from '@/stores/auth'
@@ -95,43 +100,202 @@ watch(() => auth.team, () => void loadAll())
 useLiveRefresh(() => loadAll(true))
 
 usePageMeta(() => ({ description: "The hosts and guests of Ogrodje's podcast, who they are and where they're online." }))
+
+// Who's shown, as the address says, e.g. ?show=team&q=sraka
+const shown = useQueryState<'all' | Kind>('show', 'all', ['all', 'team', 'guest', 'candidate'])
+const find = useQueryState('q', '')
+
+const everyone = computed(() => people.value ?? [])
+const found = computed(() => everyone.value.filter((person) => matches(`${person.name} ${person.bio ?? ''}`, find.value)))
+const ofKind = (kind: Kind) => found.value.filter((person) => kindOf(person) === kind)
+
+// The team by how many episodes they've been on, the most first; everyone else by name, as the API has them
+const team = computed(() => ofKind('team').sort((a, b) => b.episodes.length - a.episodes.length))
+const guests = computed(() => ofKind('guest'))
+const candidates = computed(() => ofKind('candidate'))
+
+const kinds = computed(() => [
+  { value: 'all' as const, title: 'Everyone', count: everyone.value.length },
+  { value: 'team' as const, title: 'The team', count: everyone.value.filter((p) => kindOf(p) === 'team').length },
+  { value: 'guest' as const, title: 'Guests', count: everyone.value.filter((p) => kindOf(p) === 'guest').length },
+  ...(everyone.value.some((p) => kindOf(p) === 'candidate')
+    ? [{ value: 'candidate' as const, title: 'Candidates', count: everyone.value.filter((p) => kindOf(p) === 'candidate').length }]
+    : []),
+])
+
+// The guests under their names' letters, for the index
+const byLetter = computed(() => {
+  const groups = new Map<string, Person[]>()
+  for (const person of guests.value) {
+    const letter = letterOf(person.name)
+    groups.set(letter, [...(groups.get(letter) ?? []), person])
+  }
+  return [...groups].map(([letter, people]) => ({ letter, people }))
+})
+const letters = computed(() => new Set(byLetter.value.map((group) => group.letter)))
+
+// Candidates, the team's, fold away unless they're what's shown
+const candidatesOpen = ref(false)
 </script>
 
 <template>
   <main class="content">
-    <p v-if="auth.ready && !auth.authenticated" class="note">
-      These are the people on the released episodes. Signed in, you see everyone, also on what's being made.
-    </p>
+    <PageHeader title="People" :count="people?.length">
+      <template v-if="auth.ready && !auth.authenticated">
+        The hosts, guests and everyone else on Ogrodje's released episodes. Signed in, you see everyone, also on what's
+        being made.
+      </template>
+    </PageHeader>
 
-    <!-- The page's name, then for signed-in users, when there are any, what's left to do, then everyone -->
-    <div class="heading">
-      <h1 id="people">People</h1>
-      <span v-if="people" class="count">{{ people.length }}</span>
-    </div>
+    <FilterBar v-model:find="find" placeholder="Find someone by name or what they do">
+      <ChipGroup v-model="shown" label="Show" :options="kinds"/>
+      <template v-if="shown === 'all' || shown === 'guest'" #end>
+        <nav class="index" aria-label="Guests by letter">
+          <template v-for="letter in ALPHABET" :key="letter">
+            <a v-if="letters.has(letter)" :href="`#letter-${letter}`">{{ letter }}</a>
+            <span v-else aria-hidden="true">{{ letter }}</span>
+          </template>
+        </nav>
+      </template>
+    </FilterBar>
 
+    <LoadError v-if="error" what="The people" :error="error" @retry="loadPeople()"/>
+    <LoadingRows v-else-if="!people" :rows="6" tall label="Loading the people"/>
+    <p v-else-if="!found.length" class="note">{{ people.length ? 'No one matches.' : 'No one yet.' }}</p>
+
+    <template v-else>
+      <section v-if="team.length && (shown === 'all' || shown === 'team')" aria-labelledby="the-team">
+        <div class="heading">
+          <h2 id="the-team">The team</h2>
+          <span class="count">{{ team.length }}</span>
+        </div>
+        <ul class="team">
+          <PersonCard v-for="person in team" :key="person.id" :person="person" team/>
+        </ul>
+      </section>
+
+      <section v-if="guests.length && (shown === 'all' || shown === 'guest')" aria-labelledby="guests">
+        <div class="heading">
+          <h2 id="guests">Guests</h2>
+          <span class="count">{{ guests.length }}</span>
+        </div>
+        <div class="guests">
+          <template v-for="group in byLetter" :key="group.letter">
+            <h3 :id="`letter-${group.letter}`" class="letter">{{ group.letter }}</h3>
+            <ul class="people">
+              <PersonCard v-for="person in group.people" :key="person.id" :person="person"/>
+            </ul>
+          </template>
+        </div>
+      </section>
+
+      <!-- The team's: who could be a guest, folded unless they're what's shown -->
+      <section v-if="candidates.length && (shown === 'all' || shown === 'candidate')" aria-labelledby="candidates">
+        <div class="heading">
+          <h2 id="candidates">Candidates</h2>
+          <span class="count">{{ candidates.length }}</span>
+          <button v-if="shown === 'all'" type="button" class="more" :aria-expanded="candidatesOpen"
+                  @click="candidatesOpen = !candidatesOpen">{{ candidatesOpen ? 'Fold' : 'Show' }}</button>
+        </div>
+        <ul v-if="candidatesOpen || shown === 'candidate'" class="people">
+          <PersonCard v-for="person in candidates" :key="person.id" :person="person"/>
+        </ul>
+        <p v-else class="note">Who the team has in mind for an idea, as its guest.</p>
+      </section>
+    </template>
+
+    <!-- For the team, the sign-ins nobody's linked to, which whoever links accounts links -->
     <template v-if="people">
       <p v-if="unlinkedError" class="note">The sign-ins nobody's linked to didn't load: {{ unlinkedError }}</p>
       <UnlinkedAccounts v-else-if="unlinked" :accounts="unlinked" :people="people" :me="myAccount"
                         :can-link="canLinkAccounts" @changed="reloadQuietly"/>
     </template>
-
-    <section aria-labelledby="people">
-      <LoadError v-if="error" what="The people" :error="error" @retry="loadPeople()"/>
-      <LoadingRows v-else-if="!people" :rows="6" tall label="Loading the people"/>
-      <p v-else-if="!people.length" class="note">No one yet.</p>
-      <ul v-else class="people">
-        <PersonItem v-for="person in people" :key="person.id" :person="person"/>
-      </ul>
-    </section>
   </main>
 </template>
 
 <style scoped lang="scss">
 @use '../assets/page';
 
-.people {
+// The team: five cards a row in the frame, fewer as it narrows
+.team {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
   padding: 0;
   list-style: none;
 }
 
+// The guests under their letters, a line each, in three columns
+.letter {
+  padding: 16px 0 6px;
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 600;
+  color: var(--muted);
+  scroll-margin-top: 16px;
+
+  &:first-child {
+    padding-top: 0;
+  }
+}
+
+.people {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: 32px;
+  padding: 0;
+  list-style: none;
+}
+
+// A–Z, the letters without anyone greyed
+.index {
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  line-height: 20px;
+  font-weight: 500;
+
+  a, span {
+    padding: 2px 5px;
+    border-radius: 4px;
+  }
+
+  a {
+    color: var(--secondary);
+
+    &:hover {
+      background: var(--hover);
+    }
+  }
+
+  span {
+    color: #CDCDCD;
+  }
+}
+
+@media (max-width: 1100px) {
+  .team {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 960px) {
+  .people {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .team {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .people {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .index {
+    display: none;
+  }
+}
 </style>

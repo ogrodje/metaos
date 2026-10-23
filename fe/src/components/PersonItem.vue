@@ -23,7 +23,7 @@ const hasLinks = computed(() => socialLinks(props.person).length > 0)
 </script>
 
 <!-- A person: their picture, their name, which leads to their page, and who they are, then what they've been on the
-     episodes and the latest of those, then where they're online. Like an idea's row (IdeaItem), the links where an episode has where to listen. -->
+     episodes and the latest of those, then where they're online. Like a released episode's row (EpisodeItem), the links at the end. -->
 <template>
   <li class="person">
     <PersonAvatar class="picture" :image="person.avatar" :name="person.name" :size="40"/>
