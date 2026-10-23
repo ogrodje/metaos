@@ -12,7 +12,7 @@ import net.koofr.api.rest.v2.data.Files
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression
 import org.springframework.stereotype.Component
-import java.io.ByteArrayInputStream
+import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URI
 import java.time.Instant
@@ -51,7 +51,7 @@ interface Koofr {
     fun search(text: String, place: String?, limit: Int): List<KoofrFile>
 
     /** The start of a file, at most [maxBytes] */
-    fun read(place: String, path: String, maxBytes: Int): ByteArray
+    fun read(place: String, path: String, offset: Long, maxBytes: Int): ByteArray
 
     /**
      * A thumbnail Koofr makes of an image, as wide as its [size] says: small (64 px), shmedium (128), medium (384),
@@ -60,7 +60,7 @@ interface Koofr {
     fun thumbnail(place: String, path: String, size: String): KoofrImage
 
     /** A new file in a folder; one of the same name is only replaced when [overwrite] is set, and Koofr keeps it as a version */
-    fun upload(place: String, folder: String, name: String, contentType: String, content: ByteArray, overwrite: Boolean): KoofrFile
+    fun upload(place: String, folder: String, name: String, contentType: String, content: InputStream, size: Long, overwrite: Boolean): KoofrFile
 
     fun createFolder(place: String, parent: String, name: String)
 
@@ -150,8 +150,9 @@ class KoofrStorage(
         }
     }
 
-    override fun read(place: String, path: String, maxBytes: Int): ByteArray = call {
-        files(place).download(path, null).downloadStream.use { it.readNBytes(maxBytes) }
+    // Koofr sends a file from its start, so the bytes before offset are read past, not kept
+    override fun read(place: String, path: String, offset: Long, maxBytes: Int): ByteArray = call {
+        files(place).download(path, null).downloadStream.use { it.skipNBytes(offset); it.readNBytes(maxBytes) }
     }
 
     override fun thumbnail(place: String, path: String, size: String): KoofrImage = call {
@@ -163,12 +164,12 @@ class KoofrStorage(
         }
     }
 
-    override fun upload(place: String, folder: String, name: String, contentType: String, content: ByteArray, overwrite: Boolean): KoofrFile {
+    override fun upload(place: String, folder: String, name: String, contentType: String, content: InputStream, size: Long, overwrite: Boolean): KoofrFile {
         // Without either, Koofr would pick another name ("name (1).txt") for a file that's already there
         val options = Files.UploadOptions().apply { if (overwrite) forceOverwrite = true else noRename = true }
         return call {
             try {
-                files(place).upload(folder, name, contentType, content.size.toLong(), ByteArrayInputStream(content), options)
+                files(place).upload(folder, name, contentType, size, content, options)
                     .toKoofrFile(place, join(folder, name))
             } catch (_: HttpException.Conflict) {
                 throw IllegalArgumentException("${join(folder, name)} is already there; overwrite replaces it, keeping the old one as a version")
