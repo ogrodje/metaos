@@ -25,6 +25,12 @@ MetaOS was designed for scaling, optimising and helping grow the [Ogrodje] organ
   endpoint or a kind of client comes or goes, when sign-in or tokens work differently, or when what's deployed and
   where changes (a new deployment, database or monitoring). Also update the README's paragraph under the diagram when
   it no longer fits.
+- **The episode workflow is specified in [`docs/episode-workflow.md`](docs/episode-workflow.md), and the code follows
+  it.** It's the source of truth for how episodes are made: their statuses and moves (`EpisodeStatus`), what each
+  status needs (`set_episode_status`) and what Home flags (`fe/src/attention.ts`). To change any of them, change the
+  doc first, in the same change, and its chart with it: render `docs/episode-workflow.png` again with
+  `just episode-workflow` (Mermaid's CLI, in headless Chrome), then look at it. Its "Not in the code yet" lists where
+  the code still differs; take a line off when the code catches up, and add one when the doc gets ahead of it.
 
 ### Front-end
 

@@ -20,6 +20,19 @@ cluster, behind Cloudflare.
 
 The diagram is drawn in [`architecture.svg`](architecture.svg); `just architecture` renders `architecture.png` from it.
 
+## Episode workflow
+
+![An episode's statuses, from IDEA through PLANNED, SCHEDULED, RECORDED, IN_PRODUCTION, READY and EARLY_ACCESS to PUBLISHED, and ON_HOLD and CANCELLED at any time before](docs/episode-workflow.png)
+
+An episode starts as an idea. Once everyone on it, its hosts, guests and producer, has said yes, it's planned and gets
+its code, and then it's scheduled into a recording session, a date, a time and a place, often with other episodes. After
+the recording the producer makes its video and uploads its photos, a host or the editor-in-chief picks its titles, and
+from those the designer makes its artwork; once the video and the artwork are done and the editor-in-chief approves
+them, it's ready. It goes out on Patreon first, and on YouTube and Spotify a week later.
+
+[`docs/episode-workflow.md`](docs/episode-workflow.md) says what each step needs and when Home flags an episode. It's
+the source of truth, which MetaOS follows; `just episode-workflow` renders the chart from it.
+
 ## Installing MCP
 
 Claude Code (then `/mcp` → ogrodje → Authenticate):
