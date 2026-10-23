@@ -31,7 +31,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression
 import org.springframework.stereotype.Component
 import tools.jackson.core.json.JsonWriteFeature
 import tools.jackson.databind.json.JsonMapper
-import java.io.ByteArrayInputStream
+import java.io.InputStream
 import java.net.URI
 import java.net.URLConnection
 import java.net.http.HttpClient
@@ -94,7 +94,7 @@ interface Dropbox {
     fun search(text: String, place: String?, limit: Int): List<DropboxFile>
 
     /** The start of a file, at most [maxBytes] */
-    fun read(place: String, path: String, maxBytes: Int): ByteArray
+    fun read(place: String, path: String, offset: Long, maxBytes: Int): ByteArray
 
     /**
      * A JPEG Dropbox makes of an image (jpg, png, gif, webp, tiff, bmp, up to 20 MB), as big as fits in its [size],
@@ -103,7 +103,7 @@ interface Dropbox {
     fun thumbnail(place: String, path: String, size: String): DropboxImage
 
     /** A new file in a folder; one of the same name is only replaced when [overwrite] is set, and Dropbox keeps it as a version */
-    fun upload(place: String, folder: String, name: String, content: ByteArray, overwrite: Boolean): DropboxFile
+    fun upload(place: String, folder: String, name: String, content: InputStream, size: Long, overwrite: Boolean): DropboxFile
 
     fun createFolder(place: String, parent: String, name: String)
 
@@ -288,8 +288,9 @@ class DropboxStorage(
         }.take(limit)
     }
 
-    override fun read(place: String, path: String, maxBytes: Int): ByteArray = call {
-        val download = client.files().download(at(place, path))
+    // From offset on: Dropbox sends the file from there, and only maxBytes of it are read
+    override fun read(place: String, path: String, offset: Long, maxBytes: Int): ByteArray = call {
+        val download = client.files().downloadBuilder(at(place, path)).apply { if (offset > 0) range(offset) }.start()
         try {
             download.inputStream.readNBytes(maxBytes)
         } finally {
@@ -334,11 +335,11 @@ class DropboxStorage(
     }
 
     // Without autorename Dropbox fails on a file that's already there, where it would otherwise pick another name
-    override fun upload(place: String, folder: String, name: String, content: ByteArray, overwrite: Boolean): DropboxFile = call {
+    override fun upload(place: String, folder: String, name: String, content: InputStream, size: Long, overwrite: Boolean): DropboxFile = call {
         try {
             client.files().uploadBuilder(at(place, join(folder, name)))
                 .withMode(if (overwrite) WriteMode.OVERWRITE else WriteMode.ADD).withAutorename(false)
-                .uploadAndFinish(ByteArrayInputStream(content))
+                .uploadAndFinish(content, size)
                 .toDropboxFile(place, join(folder, name))
         } catch (e: UploadErrorException) {
             if (e.errorValue.isPath && e.errorValue.pathValue.reason.isConflict)

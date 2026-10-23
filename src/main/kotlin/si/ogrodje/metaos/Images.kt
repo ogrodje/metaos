@@ -169,14 +169,14 @@ class Images(
             val shared = dropbox.sharedPlace(requireNotNull(place) { "A picture in Dropbox needs its place" })
             val file = requireNotNull(dropbox.file(shared.id, dropboxPath(path))) { "There's no $path in ${shared.name}" }
             require(!file.folder) { "$path is a folder" }
-            Fetched(file.name, limited(path, file.size) { dropbox.read(shared.id, file.path, it) }, shared.id, file.path)
+            Fetched(file.name, limited(path, file.size) { dropbox.read(shared.id, file.path, 0, it) }, shared.id, file.path)
         }
         ImageSource.KOOFR -> {
             val koofr = checkNotNull(koofr.ifAvailable) { "Koofr is off" }
             val shared = koofr.sharedPlace(requireNotNull(place) { "A picture in Koofr needs its place" })
             val file = requireNotNull(koofr.file(shared.id, koofrPath(path))) { "There's no $path in ${shared.name}" }
             require(!file.folder) { "$path is a folder" }
-            Fetched(file.name, limited(path, file.size) { koofr.read(shared.id, file.path, it) }, shared.id, file.path)
+            Fetched(file.name, limited(path, file.size) { koofr.read(shared.id, file.path, 0, it) }, shared.id, file.path)
         }
         ImageSource.URL -> {
             require(isImageUrl(path)) { "MetaOS fetches pictures only from Hygraph (https://*.${URL_HOSTS.first()})" }

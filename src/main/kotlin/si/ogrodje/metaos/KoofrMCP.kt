@@ -6,16 +6,12 @@ import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import java.net.URLConnection
-import java.util.Base64
 
-data class KoofrContentDto(val file: KoofrFile, val text: String, val truncated: Boolean)
+data class KoofrContentDto(val file: KoofrFile, val text: String, val offset: Long, val next: Long?)
 
 const val KOOFR_PLACE = "A folder shared with Ogrodje's bot in Koofr, by name or ID (list_koofr_places)"
 const val KOOFR_PATH = "Path in the place, e.g. /Epizode/S05E08; / is the shared folder itself"
 
-// What read_koofr_file returns, and what upload_koofr_file takes
-private const val MAX_READ = 200 * 1024
-private const val MAX_UPLOAD = 10 * 1024 * 1024
 private const val SEARCH_RESULTS = 25
 
 private val TEXT_TYPES = setOf("application/json", "application/xml", "application/x-yaml", "application/yaml", "application/x-subrip")
@@ -81,19 +77,21 @@ class KoofrMCP(private val koofr: Koofr, private val events: ApplicationEventPub
 
     @McpTool(
         name = "read_koofr_file",
-        description = "Read a text file (txt, md, csv, json, srt, ...) from Koofr, at most ${MAX_READ / 1024} kB of it. " +
-            "For other files, list_koofr_folder tells their size and type"
+        description = "Read a text file (txt, md, csv, json, srt, ...) from Koofr, ${MAX_READ / 1024} kB at a time: when " +
+            "next isn't null, read on from it. For other files, list_koofr_folder tells their size and type"
     )
     fun read(
         @McpToolParam(description = KOOFR_PLACE) place: String,
         @McpToolParam(description = KOOFR_PATH) path: String,
+        @McpToolParam(description = READ_OFFSET, required = false) offset: Long?,
     ): KoofrContentDto {
         val placeId = place(place).id
         val file = requireNotNull(koofr.file(placeId, koofrPath(path))) { "There's no $path in Koofr" }
         require(!file.folder) { "$path is a folder; list_koofr_folder lists it" }
         require(isTextFile(file.name, file.contentType)) { "$path isn't a text file (${file.contentType}, ${file.size} bytes)" }
-        val bytes = koofr.read(placeId, file.path, MAX_READ + 1)
-        return KoofrContentDto(file, bytes.copyOf(minOf(bytes.size, MAX_READ)).toString(Charsets.UTF_8), bytes.size > MAX_READ)
+        val from = requireOffset(offset, file.size)
+        val piece = textPiece(koofr.read(placeId, file.path, from, MAX_READ + 1), from)
+        return KoofrContentDto(file, piece.text, piece.offset, piece.next)
     }
 
     @McpTool(
@@ -111,11 +109,10 @@ class KoofrMCP(private val koofr: Koofr, private val events: ApplicationEventPub
     ): KoofrFile {
         val placeId = writablePlace(place).id
         require(name.isNotBlank() && '/' !in name) { "A file name, without folders: $name" }
-        val bytes = if (base64 == true) Base64.getMimeDecoder().decode(content) else content.toByteArray()
-        require(bytes.size <= MAX_UPLOAD) { "$name is ${bytes.size} bytes; at most $MAX_UPLOAD" }
+        val upload = uploadContent(name, content, base64 == true)
         val contentType = URLConnection.guessContentTypeFromName(name)
             ?: if (base64 == true) "application/octet-stream" else "text/plain; charset=utf-8"
-        return koofr.upload(placeId, koofrPath(folder), name, contentType, bytes, overwrite == true)
+        return koofr.upload(placeId, koofrPath(folder), name, contentType, upload.stream, upload.size, overwrite == true)
     }
 
     @McpTool(name = "create_koofr_folder", description = "Create a folder in Koofr")
