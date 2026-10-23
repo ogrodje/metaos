@@ -20,6 +20,10 @@ on:
           - trusted_hosts.sh
           - sessions.sh
 
+# Only reads the repo. Actions are pinned to commits and secrets come in through env, as in deploy.yml
+permissions:
+  contents: read
+
 jobs:
   run:
     runs-on: ubuntu-latest
@@ -27,22 +31,26 @@ jobs:
       name: production
       url: https://metaos-auth.ogrodje.si
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Connect to Tailscale
-        uses: tailscale/github-action@v4
+        uses: tailscale/github-action@99a8333667fff04fdd6cffb46dfd409f8329a7bf # v4.3.0
         with:
           ping: tailscale-operator.folk-decibel.ts.net
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
           tags: tag:ci
 
-      - uses: azure/setup-kubectl@v5
+      - uses: azure/setup-kubectl@bda439f5f36b99b262ebdcd3613869bddb064c8e # v5.2.0
 
       - name: Configure kubectl
+        env:
+          KUBECONFIG_BASE64: ${{ secrets.KUBECONFIG }}
         run: |
           mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+          echo "$KUBECONFIG_BASE64" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
       # KC_HOSTNAME pins the public URL, so tokens got through the port-forward are the same as through the ingress
