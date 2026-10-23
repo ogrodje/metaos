@@ -76,8 +76,8 @@ class AuditLog(
 
     /**
      * Every change to an episode, person, session or show, oldest first, with people's roles on an episode, the
-     * documents, Koofr and Dropbox folders linked to an episode or session, and episodes moving in and out of a session
-     * or show
+     * documents, Koofr and Dropbox folders linked to an episode or session, the comments in an episode's or session's
+     * discussion, the accounts linked to a person, and episodes moving in and out of a session or show
      */
     fun history(id: UUID): List<AuditRow> =
         jdbcTemplate.query(
@@ -88,6 +88,11 @@ class AuditLog(
                    and ? in (old_row ->> 'episode_id', new_row ->> 'episode_id', old_row ->> 'person_id', new_row ->> 'person_id'))
                or (table_name in ('session_documents', 'session_koofr_folders', 'session_dropbox_folders')
                    and ? in (old_row ->> 'session_id', new_row ->> 'session_id'))
+               or (table_name = 'comments'
+                   and ? in (old_row ->> 'episode_id', new_row ->> 'episode_id', old_row ->> 'session_id', new_row ->> 'session_id'))
+               or (table_name = 'accounts'
+                   and old_row ->> 'person_id' is distinct from new_row ->> 'person_id'
+                   and ? in (old_row ->> 'person_id', new_row ->> 'person_id'))
                or (table_name = 'episodes'
                    and ((old_row ->> 'session_id' is distinct from new_row ->> 'session_id'
                          and ? in (old_row ->> 'session_id', new_row ->> 'session_id'))
@@ -97,13 +102,23 @@ class AuditLog(
                          and ? in (old_row ->> 'recommended_by', new_row ->> 'recommended_by'))))
             order by id
             """.trimIndent(),
-            toRow, id, id.toString(), id.toString(), id.toString(), id.toString(), id.toString(),
+            toRow, id, id.toString(), id.toString(), id.toString(), id.toString(), id.toString(), id.toString(), id.toString(),
         )
 
     fun recent(limit: Int): List<AuditRow> =
         jdbcTemplate.query("select * from audit_log order by id desc limit ?", toRow, limit)
 
     fun find(id: Long): AuditRow? = jdbcTemplate.query("select * from audit_log where id = ?", toRow, id).singleOrNull()
+
+    /** The MCP tools some rows of a table were inserted with, by row; those inserted another way are left out */
+    fun creatingTools(table: String, rowIds: Collection<UUID>): Map<UUID, String> =
+        if (rowIds.isEmpty()) emptyMap()
+        else jdbcTemplate.query(
+            "select row_id, tool from audit_log where table_name = ? and operation = 'INSERT' and tool is not null " +
+                "and row_id in (${rowIds.joinToString { "?" }})",
+            { rs, _ -> rs.getObject("row_id", UUID::class.java) to rs.getString("tool") },
+            table, *rowIds.toTypedArray(),
+        ).toMap()
 }
 
 @Component
@@ -117,7 +132,8 @@ class AuditMCP(private val auditLog: AuditLog) {
         ),
         description = "List every change to an episode, person, session or show, oldest first: what changed, when, " +
             "by whom, through which MCP client and tool. Includes people's roles on an episode, the documents, Koofr " +
-            "and Dropbox folders linked to an episode or session, episodes moving in and out of a session or show and " +
+            "and Dropbox folders linked to an episode or session, the comments in an episode's or session's discussion, " +
+            "the accounts linked to and unlinked from a person, episodes moving in and out of a session or show and " +
             "the episodes a person is credited with recommending. Soft deletes show up as updates that set deleted_at; " +
             "a removed link comes back with restore_link and the ID of the change that removed it"
     )

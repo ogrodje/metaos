@@ -1,5 +1,6 @@
 // Episodes as MetaOS's GraphQL API has them (src/main/resources/graphql/schema.graphqls)
 
+import type { Comment } from '@/comments'
 import { type Image, IMAGE_FIELDS } from '@/images'
 
 // A candidate could be the episode's guest, until they're confirmed as one; only signed-in users get them
@@ -156,6 +157,7 @@ export interface EpisodeDetails extends Episode {
   koofrFolders: KoofrFolder[]
   dropboxFolders: DropboxFolderWithPictures[]
   history: Change[]
+  comments: Comment[]
 }
 
 /** A session with everything about it, for its page */
@@ -165,6 +167,7 @@ export interface SessionDetails extends Session {
   koofrFolders: KoofrFolder[]
   dropboxFolders: DropboxFolder[]
   history: Change[]
+  comments: Comment[]
 }
 
 // All the photos, as the page shows them a few at a time; their thumbnails it fetches only as they're shown

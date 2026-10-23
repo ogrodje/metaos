@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { RouterLink } from 'vue-router'
 import { keepUnchanged, useLiveRefresh } from '@/changes'
 import IdeaItem from '@/components/IdeaItem.vue'
 import SignInPrompt from '@/components/SignInPrompt.vue'
@@ -46,7 +47,7 @@ useLiveRefresh(() => loadIdeas(true))
   <main class="content">
     <SignInPrompt v-if="auth.ready && !auth.authenticated" title="Sign in to see the ideas">
       Episode ideas are for Ogrodje's team. Sign in with Discord or Google, or use MetaOS from your AI assistant over
-      MCP: Usage shows how to connect it.
+      MCP: <RouterLink class="usage" to="/usage">API and MCP usage</RouterLink> shows how to connect it.
     </SignInPrompt>
     <p v-else-if="error" class="note">The ideas didn't load: {{ error }}</p>
     <p v-else-if="!ideas" class="note">Loading…</p>
@@ -67,4 +68,13 @@ useLiveRefresh(() => loadIdeas(true))
 
 <style scoped lang="scss">
 @use '../assets/page';
+
+// API and MCP usage, which is in the footer, from the sign-in prompt's words
+.usage {
+  color: var(--accent-text);
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
 </style>

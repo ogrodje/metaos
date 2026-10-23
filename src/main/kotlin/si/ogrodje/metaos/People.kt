@@ -100,9 +100,6 @@ class EpisodePerson(
     override fun toString() = "EpisodePerson(id=$id, role=$role)"
 }
 
-/** The person linked to the signed-in user by their verified email; none without one */
-fun PeopleRepository.findSignedIn(): Person? = currentJwt()?.verifiedEmail?.let(::findByEmail)
-
 interface PeopleRepository : JpaRepository<Person, UUID> {
     fun findByEmail(email: String): Person?
 

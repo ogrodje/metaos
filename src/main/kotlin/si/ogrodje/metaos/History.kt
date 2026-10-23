@@ -41,15 +41,25 @@ private val DATE_COLUMNS = setOf("recording_date", "aired_date", "added_date", "
 // Pictures, by the names of the files they were made from
 private val IMAGE_COLUMNS = setOf("thumbnail_image_id", "thumbnail_b_image_id", "thumbnail_c_image_id", "cover_image_id")
 
+// How much of a comment the history shows
+private const val EXCERPT_LENGTH = 100
+private val WHITESPACE = Regex("\\s+")
+
+// The start of a comment, on one line
+private fun excerpt(body: Any?): String? = body?.toString()?.replace(WHITESPACE, " ")?.trim()
+    ?.let { if (it.length > EXCERPT_LENGTH) it.take(EXCERPT_LENGTH).trimEnd() + "…" else it }
+
 /**
  * The history of an episode or a session, from the audit log (AuditLog): each change told as what happened, with
  * people, shows and sessions by name rather than by ID.
  */
 @Component
-class History(private val auditLog: AuditLog, private val jdbcTemplate: JdbcTemplate) {
+class History(private val auditLog: AuditLog, private val jdbcTemplate: JdbcTemplate, private val accounts: Accounts) {
 
     fun of(id: UUID): List<HistoryEntryDto> {
         val rows = auditLog.history(id)
+        // Who made them, by their person's name once their account is linked
+        val actors = accounts.people(rows.mapNotNull { it.actorId })
         val names = Names(
             people = names("select id, name from people", rows.ids("person_id") + rows.ids("recommended_by")),
             shows = names("select id, name from shows", rows.ids("show_id")),
@@ -60,7 +70,7 @@ class History(private val auditLog: AuditLog, private val jdbcTemplate: JdbcTemp
         )
         return rows.map { row ->
             val described = names.describe(row, subject = id.toString())
-            HistoryEntryDto(row.at, row.actor, row.client, row.tool, described.summary, described.fields)
+            HistoryEntryDto(row.at, row.actorId?.let(actors::get)?.name ?: row.actor, row.client, row.tool, described.summary, described.fields)
         }
     }
 
@@ -95,7 +105,32 @@ private class Names(
             Described(if (row.operation == "DELETE") "Unlinked a Google Doc" else "Linked a Google Doc")
         "episode_koofr_folders", "session_koofr_folders" -> folder(row, "Koofr")
         "episode_dropbox_folders", "session_dropbox_folders" -> folder(row, "Dropbox")
+        "comments" -> comment(row)
+        "accounts" -> account(row)
         else -> Described("Changed ${row.table}")
+    }
+
+    // An account linked to a person or unlinked from them, by its username or email
+    private fun account(row: AuditRow): Described {
+        val account = (row.new["username"] ?: row.new["email"] ?: row.old["username"] ?: row.old["email"])?.toString() ?: "An account"
+        val to = row.new["person_id"]?.let { people[it.toString()] ?: "someone deleted since" }
+        val from = row.old["person_id"]?.let { people[it.toString()] ?: "someone deleted since" }
+        return when {
+            to != null -> Described("Linked $account to $to" + if (row.new["linked_how"] == "EMAIL") " (by email)" else "")
+            from != null -> Described("Unlinked $account from $from")
+            else -> Described("Changed the account $account")
+        }
+    }
+
+    // A comment in the discussion, with the start of what it said; comments are long, so an edit doesn't show the text
+    private fun comment(row: AuditRow): Described {
+        val deletedAt = row.diff()["deleted_at"]
+        return when {
+            row.operation == "INSERT" -> Described("Commented", listOf(FieldChangeDto("Comment", null, excerpt(row.new["body"]))))
+            row.operation == "DELETE" -> Described("Deleted a comment for good")
+            deletedAt != null -> Described(if (deletedAt.to != null) "Deleted a comment" else "Restored a comment")
+            else -> Described("Edited a comment")
+        }
     }
 
     // The episode or the session itself; soft deletes set deleted_at

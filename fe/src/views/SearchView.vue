@@ -109,7 +109,8 @@ useLiveRefresh(() => search(true))
   <main class="content">
     <SignInPrompt v-if="auth.ready && !auth.authenticated" title="Sign in to search">
       Search finds Ogrodje's episodes, ideas too, the people on them and the recording sessions, which are for Ogrodje's
-      team. Sign in with Discord or Google, or use MetaOS from your AI assistant over MCP: Usage shows how to connect it.
+      team. Sign in with Discord or Google, or use MetaOS from your AI assistant over MCP:
+      <RouterLink class="usage" to="/usage">API and MCP usage</RouterLink> shows how to connect it.
     </SignInPrompt>
 
     <template v-else>
@@ -193,6 +194,15 @@ useLiveRefresh(() => search(true))
 
 <style scoped lang="scss">
 @use '../assets/page';
+
+// API and MCP usage, which is in the footer, from the sign-in prompt's words
+.usage {
+  color: var(--accent-text);
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
 
 .content {
   gap: 40px;

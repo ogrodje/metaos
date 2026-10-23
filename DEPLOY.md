@@ -151,8 +151,9 @@ API. It's not in the realm JSON, because the realm is imported only once and the
   Discord logins until the user has the realm role `metaos-user`. A first login creates the user and is denied; an admin
   approves them by granting the role. The flow doesn't cover password users that an admin creates, but MetaOS itself
   does: it takes no token without the role (see "Only approved users" below).
-- **Emails aren't trusted.** Discord also returns unverified emails, and a verified email links a login to a Person.
-  When approving someone, also turn on *Email verified* once you know the address is theirs.
+- **Emails aren't trusted.** Discord also returns unverified emails, and a verified email links a login's account to a
+  Person (`Accounts.kt`). When approving someone, also turn on *Email verified* once you know the address is theirs, or
+  link their account to their person by hand (`link_account`, or the People page).
 - Verified on a throwaway Keycloak 26.8.1, with a second realm standing in for Discord: denied without the role,
   allowed with it, denied again once it's removed; password logins unaffected; the Discord button redirects to
   `discord.com/oauth2/authorize` with scope `identify email`.
@@ -234,7 +235,7 @@ Production has it (2026-10-19).
 3. [ ] **First deploy.** `just push deploy`.
 4. [ ] **Keycloak.** At `https://metaos-auth.ogrodje.si/admin`, sign in as `admin`, create a permanent admin in the
    master realm, then delete the temporary bootstrap admin and the `dev` user. Add real users with verified emails;
-   that's how a login is linked to a person.
+   that's how a login's account is linked to a person by itself (otherwise, `link_account`).
 5. [ ] **CI**, once the repo is on GitHub:
     - add the repo secrets `TS_OAUTH_CLIENT_ID`, `TS_OAUTH_SECRET`, `DOCKER_REGISTRY_USERNAME`,
       `DOCKER_REGISTRY_PASSWORD` and `KUBECONFIG` (base64 of the credential-less Tailscale operator kubeconfig, not

@@ -2,6 +2,8 @@
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { keepUnchanged, useLiveRefresh } from '@/changes'
+import { COMMENT_FIELDS } from '@/comments'
+import DiscussionSection from '@/components/DiscussionSection.vue'
 import DocLinks from '@/components/DocLinks.vue'
 import DropboxFolderList from '@/components/DropboxFolderList.vue'
 import EpisodePictures from '@/components/EpisodePictures.vue'
@@ -51,7 +53,7 @@ async function loadEpisode(episodeRef: string, quietly = false) {
     const data = await graphql<{ episode: EpisodeDetails | null }>(`query ($ref: String!) {
       episode(ref: $ref) {
         ${EPISODE_FIELDS} titleB titleC summary machineSummary addedDate recommendedBy { id name } ${KOOFR_FIELDS} ${DROPBOX_FIELDS} ${ARTWORK_FIELDS}
-        ${PICTURE_FIELDS} ${HISTORY_FIELDS}
+        ${PICTURE_FIELDS} ${HISTORY_FIELDS} ${COMMENT_FIELDS}
       }
     }`, { ref: episodeRef })
     if (load !== loads) return
@@ -75,6 +77,11 @@ watch([() => route.params.ref, () => auth.authenticated], ([episodeRef, authenti
 // By its ID, which stays when its code changes
 useLiveRefresh(() => loadEpisode(episode.value?.id ?? String(route.params.ref), true))
 
+// After a comment was written here: the live updates would bring it too, a moment later
+function reloadQuietly(id: string) {
+  loadEpisode(id, true).catch((error) => console.error('The episode did not load again', error))
+}
+
 // The pictures in its Dropbox folders, which open in the folder of the first; and its photos, in its first Koofr folder.
 // The same lists while they're the same, as the photos page through them from the first again when they change.
 const artwork = computed<DropboxPicture[]>((previous) =>
@@ -87,7 +94,8 @@ const photos = computed<KoofrPhoto[]>((previous) =>
   <main class="content">
     <SignInPrompt v-if="auth.ready && !auth.authenticated" title="Sign in to see this episode">
       An episode's details and history are for Ogrodje's team. Sign in with Discord or Google, or use MetaOS from your
-      AI assistant over MCP: Usage shows how to connect it.
+      AI assistant over MCP:
+      <RouterLink class="usage" to="/usage">API and MCP usage</RouterLink> shows how to connect it.
     </SignInPrompt>
     <p v-else-if="error" class="note">The episode didn't load: {{ error }}</p>
     <p v-else-if="episode === null" class="note">There's no episode {{ route.params.ref }}.</p>
@@ -182,6 +190,8 @@ const photos = computed<KoofrPhoto[]>((previous) =>
         <MarkdownText :source="episode.machineSummary" lang="sl"/>
       </section>
 
+      <DiscussionSection :comments="episode.comments" :episode-id="episode.id" @changed="reloadQuietly(episode.id)"/>
+
       <section aria-labelledby="history">
         <div class="heading">
           <h2 id="history">History</h2>
@@ -195,6 +205,15 @@ const photos = computed<KoofrPhoto[]>((previous) =>
 
 <style scoped lang="scss">
 @use '../assets/page';
+
+// API and MCP usage, which is in the footer, from the sign-in prompt's words
+.usage {
+  color: var(--accent-text);
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
 
 // Each after its letter in the A/B test; a long one wraps beside it
 .alternatives {

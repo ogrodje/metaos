@@ -1,6 +1,10 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import Keycloak from 'keycloak-js'
+import Keycloak, { type KeycloakConfig } from 'keycloak-js'
+import {
+  accountConsoleUrl, linkAction, linkedAlias, type LinkOutcome, linkOutcome, loadSignInProviders, providerName,
+  type SignInProvider,
+} from '@/accounts'
 
 /** Realm metaos's identity providers (keycloak/discord_idp.sh, keycloak/google_idp.sh) */
 export type IdentityProvider = 'discord' | 'google'
@@ -13,6 +17,42 @@ interface FrontendConfig {
 
 const SIGN_IN_CHECK_TIMEOUT = 5000
 
+// The identity provider being linked while Keycloak has the page, so the page can name it once it's back
+const LINKING = 'metaos.linking'
+
+type Linking = Pick<SignInProvider, 'alias' | 'name'>
+
+// In the browser's session storage, which may be unavailable, e.g. in a private window: the outcome then names the
+// provider by its alias
+function rememberLinking(provider: Linking) {
+  try {
+    sessionStorage.setItem(LINKING, JSON.stringify({ alias: provider.alias, name: provider.name }))
+  } catch {
+    // Named by its alias instead
+  }
+}
+
+// Once: a later load isn't back from linking it
+function recallLinking(): Linking | undefined {
+  try {
+    const saved = sessionStorage.getItem(LINKING)
+    sessionStorage.removeItem(LINKING)
+    const linking: unknown = saved ? JSON.parse(saved) : undefined
+    if (typeof linking !== 'object' || linking === null) return undefined
+    const { alias, name } = linking as Record<string, unknown>
+    return typeof alias === 'string' && typeof name === 'string' ? { alias, name } : undefined
+  } catch {
+    return undefined
+  }
+}
+
+// What Keycloak said went wrong, when it sent an error back instead of a sign-in (KeycloakError)
+function errorDescription(error: unknown) {
+  if (typeof error !== 'object' || error === null) return null
+  const description = (error as Record<string, unknown>).error_description
+  return typeof description === 'string' && description ? description : null
+}
+
 /** The signed-in user, through Keycloak's client metaos-ui */
 export const useAuthStore = defineStore('auth', () => {
   let keycloak: Keycloak | undefined
@@ -20,6 +60,16 @@ export const useAuthStore = defineStore('auth', () => {
   const ready = ref(false)
   const authenticated = ref(false)
   const username = ref<string>()
+  // The realm, e.g. https://metaos-auth.ogrodje.si/realms/metaos
+  const issuer = ref<string>()
+  // The identity provider this sign-in came through, e.g. google, when Keycloak puts it in the token (a User Session
+  // Note mapper of identity_provider); undefined otherwise, also for Keycloak's own login, e.g. dev's
+  const identityProvider = ref<string>()
+  // How linking an identity provider went, once the page is back from Keycloak, until the user has seen it
+  const linked = ref<LinkOutcome>()
+
+  /** Where users link and unlink identity providers themselves, in Keycloak's Account Console */
+  const accountConsole = computed(() => (issuer.value ? accountConsoleUrl(issuer.value) : undefined))
 
   async function init() {
     try {
@@ -27,20 +77,9 @@ export const useAuthStore = defineStore('auth', () => {
       // An issuer is <Keycloak's URL>/realms/<realm>
       const [, url, realm] = config.issuer.match(/^(.+)\/realms\/([^/]+)$/) ?? []
       if (!url || !realm) throw new Error(`Unexpected issuer ${config.issuer}`)
+      issuer.value = config.issuer
 
-      const client = new Keycloak({ url, realm, clientId: config.clientId })
-      keycloak = client
-      const checked = client.init({
-        // Signed in already? Asked in a hidden iframe (public/silent-check-sso.html), so the page stays where it is
-        onLoad: 'check-sso',
-        silentCheckSsoRedirectUri: `${location.origin}/silent-check-sso.html`,
-        pkceMethod: 'S256',
-        // A sign-out elsewhere shows when the token can't be refreshed any more
-        checkLoginIframe: false,
-      }).then((signedIn) => {
-        authenticated.value = signedIn
-        username.value = client.tokenParsed?.preferred_username
-      }).catch((error) => console.error('Signing in is unavailable', error))
+      const checked = start({ url, realm, clientId: config.clientId }, recallLinking())
       // keycloak-js waits for the iframe for ever when Keycloak doesn't answer, e.g. when it's down. Until it does,
       // the user is a guest, who can still try to sign in.
       await Promise.race([checked, new Promise((resolve) => setTimeout(resolve, SIGN_IN_CHECK_TIMEOUT))])
@@ -51,6 +90,49 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // Signed in already? Also back from Keycloak with how an action went, e.g. linking Discord, which keycloak-js tells
+  // onActionUpdate before it signs the user in
+  async function start(config: KeycloakConfig, linking?: Linking): Promise<void> {
+    const client = new Keycloak(config)
+    keycloak = client
+    let action: { status: string, name?: string } | undefined
+    client.onActionUpdate = (status, name) => {
+      action = { status, name }
+    }
+    try {
+      const signedIn = await client.init({
+        // Asked in a hidden iframe (public/silent-check-sso.html), so the page stays where it is
+        onLoad: 'check-sso',
+        silentCheckSsoRedirectUri: `${location.origin}/silent-check-sso.html`,
+        pkceMethod: 'S256',
+        // A sign-out elsewhere shows when the token can't be refreshed any more
+        checkLoginIframe: false,
+      })
+      authenticated.value = signedIn
+      username.value = client.tokenParsed?.preferred_username
+      const provider = client.tokenParsed?.identity_provider
+      identityProvider.value = typeof provider === 'string' && provider ? provider : undefined
+      // Which action it was, when Keycloak says (kc_action); otherwise the one this page started
+      const alias = action?.name ? linkedAlias(action.name) : linking?.alias
+      if (action && alias) linked.value = linkOutcome(action.status, nameOf(alias, linking))
+    } catch (error) {
+      // Keycloak may answer a link with an error instead, which keycloak-js takes for a failed sign-in and throws. The
+      // user is still signed in to Keycloak, so a new client asks again, once; the address no longer has the answer.
+      if (linking) {
+        const detail = errorDescription(error)
+        const status = action?.status ?? (/cancel/i.test(detail ?? '') ? 'cancelled' : 'error')
+        linked.value = linkOutcome(status, linking.name, status === 'error' ? detail : null)
+        return start(config)
+      }
+      console.error('Signing in is unavailable', error)
+    }
+  }
+
+  // Its name as the menu had it when it was linked, when it's the same provider
+  function nameOf(alias: string, linking?: Linking) {
+    return linking?.alias === alias ? linking.name : providerName(alias)
+  }
+
   /** Straight to the identity provider, past Keycloak's own login page, and back to this page */
   function login(idpHint: IdentityProvider) {
     keycloak?.login({ idpHint })
@@ -58,6 +140,34 @@ export const useAuthStore = defineStore('auth', () => {
 
   function logout() {
     keycloak?.logout({ redirectUri: `${location.origin}/` })
+  }
+
+  /**
+   * Links another identity provider, e.g. Discord, to the signed-in user's Keycloak user: Keycloak's
+   * application-initiated action idp_link, after which the page is back here and says how it went (linked). Their
+   * Keycloak user, and so their account in MetaOS, stays the same.
+   */
+  function linkProvider(provider: Linking) {
+    if (!keycloak) return
+    rememberLinking(provider)
+    // This page, without its #, which keycloak-js puts its answer in
+    keycloak.login({ action: linkAction(provider.alias), redirectUri: location.href.replace(/#.*$/, '') })
+      .catch((error) => {
+        recallLinking()
+        linked.value = linkOutcome('error', provider.name, error instanceof Error ? error.message : null)
+      })
+  }
+
+  /** The realm's identity providers, and which the signed-in user signs in with, from Keycloak's Account REST API */
+  async function signInProviders(): Promise<SignInProvider[]> {
+    const current = await token()
+    if (!current || !issuer.value) throw new Error('Not signed in')
+    return loadSignInProviders(issuer.value, current)
+  }
+
+  /** The user has seen how linking went */
+  function dismissLinked() {
+    linked.value = undefined
   }
 
   /**
@@ -79,5 +189,8 @@ export const useAuthStore = defineStore('auth', () => {
     return keycloak.token
   }
 
-  return { ready, authenticated, username, init, login, logout, token }
+  return {
+    ready, authenticated, username, identityProvider, accountConsole, linked,
+    init, login, logout, linkProvider, signInProviders, dismissLinked, token,
+  }
 })

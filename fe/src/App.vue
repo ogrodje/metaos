@@ -2,8 +2,9 @@
 import {computed, ref, watch} from 'vue'
 import {RouterLink, RouterView, useRoute} from 'vue-router'
 import {faDiscord, faGithub} from '@fortawesome/free-brands-svg-icons'
-import {faHouse, faLightbulb, faMicrophone, faPlug, faUserGroup} from '@fortawesome/free-solid-svg-icons'
+import {faHouse, faLightbulb, faMicrophone, faUserGroup} from '@fortawesome/free-solid-svg-icons'
 import {FontAwesomeIcon} from '@fortawesome/vue-fontawesome'
+import {keepUnchanged, useLiveRefresh} from '@/changes'
 import SearchPalette from '@/components/SearchPalette.vue'
 import UserMenu from '@/components/UserMenu.vue'
 import {graphql} from '@/graphql'
@@ -12,36 +13,54 @@ import {useAuthStore} from '@/stores/auth'
 const auth = useAuthStore()
 const route = useRoute()
 
-// Who MetaOS takes the signed-in user for, and their person, once one is linked to them by email
+// Who MetaOS takes the signed-in user for, and their person, through their account: undefined until MetaOS has said,
+// null when it isn't linked to anyone; and whether they may link accounts to people, which only one user may
 const name = ref<string>()
-const person = ref<{ id: string } | null>(null)
+const person = ref<{ id: string } | null>()
+const canLinkAccounts = ref(false)
 
 interface Me {
   username: string | null
   person: { id: string, name: string } | null
+  canLinkAccounts: boolean
 }
 
-watch(() => auth.authenticated, async (authenticated) => {
-  name.value = auth.username
-  person.value = null
-  if (!authenticated) return
+// Only the latest load counts: an earlier one may answer after it
+let loads = 0
+
+// Again when the user signs in or out, and quietly when MetaOS's data changes, e.g. as someone links their account to
+// their person, when what's shown stays if it doesn't come
+async function loadMe(quietly = false) {
+  const load = ++loads
+  if (!quietly) {
+    name.value = auth.username
+    person.value = undefined
+    canLinkAccounts.value = false
+  }
+  if (!auth.authenticated) return
   try {
-    const {me} = await graphql<{ me: Me | null }>('{ me { username person { id name } } }')
+    const {me} = await graphql<{ me: Me | null }>('{ me { username person { id name } canLinkAccounts } }')
+    if (load !== loads) return
     name.value = me?.person?.name ?? me?.username ?? auth.username
-    person.value = me?.person ?? null
+    person.value = keepUnchanged(person.value, me?.person ? {id: me.person.id} : null)
+    canLinkAccounts.value = me?.canLinkAccounts === true
   } catch (error) {
+    if (load !== loads) return
+    if (quietly) throw error
     console.error('MetaOS does not know the signed-in user', error)
   }
-}, {immediate: true})
+}
+
+watch(() => auth.authenticated, () => void loadMe(), {immediate: true})
+useLiveRefresh(() => (auth.authenticated ? loadMe(true) : undefined))
 
 // The pages, as tabs in the order they're used; the team's only for signed-in users. A new section, e.g. Partners or
-// Analytics, is another tab here.
+// Analytics, is another tab here. API and MCP usage, how to connect to MetaOS, is in the footer.
 const pages = computed(() => [
   {path: '/', title: 'Home', icon: faHouse},
   {path: '/episodes', title: 'Episodes', icon: faMicrophone},
   {path: '/ideas', title: 'Ideas', icon: faLightbulb, team: true},
   {path: '/people', title: 'People', icon: faUserGroup},
-  {path: '/usage', title: 'Usage', icon: faPlug},
 ].filter((page) => !page.team || auth.authenticated))
 
 // A page's tab is underlined on its own pages too: Episodes on an episode's, People on a person's
@@ -58,7 +77,7 @@ function current(path: string) {
       <div v-if="auth.ready" class="actions">
         <!-- Search is the team's, as most of what it finds is -->
         <SearchPalette v-if="auth.authenticated"/>
-        <UserMenu :name="name" :person="person"/>
+        <UserMenu :name="name" :person="person" :can-link-accounts="canLinkAccounts"/>
       </div>
     </div>
 
@@ -78,14 +97,18 @@ function current(path: string) {
   <footer>
     <div class="wrapper">
       <span class="name">Ogrodje MetaOS</span>
-      <nav class="elsewhere" aria-label="Ogrodje elsewhere">
-        <a class="icon-link" href="https://github.com/ogrodje/metaos" title="MetaOS on GitHub" aria-label="MetaOS on GitHub">
-          <FontAwesomeIcon :icon="faGithub"/>
-        </a>
-        <a class="icon-link" href="https://discord.gg/xV2Xc4VX9W" title="Ogrodje on Discord" aria-label="Ogrodje on Discord">
-          <FontAwesomeIcon :icon="faDiscord"/>
-        </a>
-      </nav>
+      <!-- How to connect to MetaOS over MCP or GraphQL, then where Ogrodje is elsewhere -->
+      <div class="links">
+        <RouterLink class="usage" to="/usage">API and MCP usage</RouterLink>
+        <nav class="elsewhere" aria-label="Ogrodje elsewhere">
+          <a class="icon-link" href="https://github.com/ogrodje/metaos" title="MetaOS on GitHub" aria-label="MetaOS on GitHub">
+            <FontAwesomeIcon :icon="faGithub"/>
+          </a>
+          <a class="icon-link" href="https://discord.gg/xV2Xc4VX9W" title="Ogrodje on Discord" aria-label="Ogrodje on Discord">
+            <FontAwesomeIcon :icon="faDiscord"/>
+          </a>
+        </nav>
+      </div>
     </div>
   </footer>
 </template>
@@ -205,6 +228,7 @@ header {
 }
 
 // The header's container, without its line
+// The name, and at the right the links, under it on the narrowest phones rather than broken up
 footer {
   .wrapper {
     max-width: var(--content-width);
@@ -212,15 +236,47 @@ footer {
     margin: 0 auto;
     padding: 0 24px;
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
-    gap: 24px;
+    align-content: center;
+    gap: 0 24px;
   }
 
   .name {
     font-size: 13px;
     line-height: 20px;
     color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .links {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+  }
+
+  // Quiet as the name, in a hit area as tall as the icons' beside it
+  .usage {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--icon-link);
+    padding: 0 8px;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--secondary);
+    white-space: nowrap;
+
+    &:hover {
+      background: var(--hover);
+      color: var(--ink);
+    }
+
+    &[aria-current='page'] {
+      color: var(--ink);
+    }
   }
 
   .elsewhere {
@@ -236,7 +292,7 @@ footer {
 
   @media (max-width: 640px) {
     .wrapper {
-      padding: 0 16px;
+      padding: 8px 16px;
     }
   }
 }

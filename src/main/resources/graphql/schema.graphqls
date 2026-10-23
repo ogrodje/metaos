@@ -1,5 +1,5 @@
 # MetaOS's GraphQL API (GraphQL.kt), at /graphql. Anyone may query what's public, like the released episodes; the
-# rest needs a token from Keycloak with metaos:read, and changes will need one with metaos:write.
+# rest needs a token from Keycloak with metaos:read, and changes (Mutation) one with metaos:write.
 
 type Query {
     "The latest released (PUBLISHED) episodes, the most recently aired first; at most 20"
@@ -48,6 +48,28 @@ type Query {
 
     "The signed-in user, from the bearer token; null without one"
     me: CurrentUser
+
+    """
+    The Keycloak users MetaOS has seen, the newest first: all of them, or only those not linked to a person yet. Needs a
+    signed-in user.
+    """
+    accounts(unlinked: Boolean! = false): [Account!]!
+}
+
+"Changes, as the signed-in user: each needs an approved user's token with metaos:write (CommentsGraphQL.kt)"
+type Mutation {
+    "Comment on an episode (ideas too) by its code or ID, in Markdown"
+    commentOnEpisode(ref: String!, body: String!): Comment!
+    "Comment on a recording session, in Markdown"
+    commentOnSession(id: ID!, body: String!): Comment!
+    "Change the text of one of your comments"
+    editComment(id: ID!, body: String!): Comment!
+    "Delete one of your comments; the history keeps that it was there. Its ID."
+    deleteComment(id: ID!): ID!
+    "Link an account to the person it is. One linked to someone else has to be unlinked first. Only for canLinkAccounts."
+    linkAccount(id: ID!, person: ID!): Account!
+    "Unlink an account from its person. Only for canLinkAccounts."
+    unlinkAccount(id: ID!): Account!
 }
 
 type Episode {
@@ -95,8 +117,10 @@ type Episode {
     koofrFolders: [KoofrFolder!]!
     "Dropbox folders about the episode, e.g. its artwork, by path. None without a signed-in user."
     dropboxFolders: [DropboxFolder!]!
-    "Every change to the episode and to what's linked to it, oldest first. None without a signed-in user."
+    "Every change to the episode, to what's linked to it and to its discussion, oldest first. None without a signed-in user."
     history: [Change!]!
+    "Its discussion, oldest first. None without a signed-in user."
+    comments: [Comment!]!
     "Its thumbnail (16:9)"
     thumbnail: Image
     "The thumbnail that goes with titleB, as they're A/B tested together. Null without a signed-in user."
@@ -188,7 +212,7 @@ type KoofrPhoto {
 type Change {
     "When, e.g. 2026-10-19T21:30:12.345+02:00"
     at: String!
-    "Who made it: their username, when they were signed in"
+    "Who made it, when they were signed in: their person's name, or else their username"
     actor: String
     "The OAuth client it came through, e.g. an MCP client's ID"
     client: String
@@ -229,8 +253,35 @@ type Session {
     koofrFolders: [KoofrFolder!]!
     "Dropbox folders about the session, by path. None without a signed-in user."
     dropboxFolders: [DropboxFolder!]!
-    "Every change to the session, to what's linked to it and to which episodes are in it, oldest first. None without a signed-in user."
+    "Every change to the session, to what's linked to it, to which episodes are in it and to its discussion, oldest first. None without a signed-in user."
     history: [Change!]!
+    "Its discussion, oldest first. None without a signed-in user."
+    comments: [Comment!]!
+}
+
+"A comment in an episode's or a recording session's discussion, as on GitHub"
+type Comment {
+    id: ID!
+    "Markdown"
+    body: String!
+    author: CommentAuthor!
+    "When it was written, e.g. 2026-10-19T21:30:12.345+02:00"
+    createdAt: String!
+    "When its text last changed; null if it never did"
+    editedAt: String
+    "The MCP tool it was written with, e.g. comment_on_episode; null for MetaOS's own pages"
+    tool: String
+    "Whether the signed-in user wrote it, and so may edit and delete it"
+    mine: Boolean!
+}
+
+"Who wrote a comment"
+type CommentAuthor {
+    "Their person's name, or else their username"
+    name: String!
+    username: String
+    "The person linked to them by verified email when they wrote it; null if there was none, or they've been deleted since"
+    person: Person
 }
 
 "Where an episode is in its lifecycle"
@@ -268,8 +319,39 @@ type CurrentUser {
     username: String
     email: String
     emailVerified: Boolean!
-    "The person linked to the user by verified email"
+    "The person the user is: their account's, or else the one with their verified email"
     person: Person
+    "Their account, once MetaOS has seen it"
+    account: Account
+    "Whether they may link accounts to people and unlink them, which only one user may"
+    canLinkAccounts: Boolean!
+}
+
+"""
+A Keycloak user MetaOS has seen, which may sign in with several identity providers (Google, Discord, ...), and the
+person it is. Its details are as the token said them when they last changed.
+"""
+type Account {
+    id: ID!
+    "Keycloak's username, e.g. the email for a Google sign-in"
+    username: String
+    name: String
+    email: String
+    emailVerified: Boolean!
+    person: Person
+    "How it was linked to its person: by its verified email, or by someone"
+    linkedHow: AccountLink
+    "When, e.g. 2026-10-19T21:30:12.345+02:00"
+    linkedAt: String
+    "Who linked it, by name; null when its email did"
+    linkedBy: String
+    "When MetaOS first saw it"
+    createdAt: String!
+}
+
+enum AccountLink {
+    EMAIL
+    MANUAL
 }
 
 "Someone on Ogrodje's episodes, e.g. a host or a guest"
@@ -294,6 +376,8 @@ type Person {
     recommended: [Episode!]!
     "Their picture"
     avatar: Image
+    "The accounts they sign in with. None without a signed-in user."
+    accounts: [Account!]!
 }
 
 "An episode a person is on, with their roles in it"

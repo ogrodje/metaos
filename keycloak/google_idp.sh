@@ -3,9 +3,9 @@
 # Keycloak's built-in Google provider.
 #
 # Logins wait for approval (approval_gate.sh), but unlike Discord's, emails are trusted: Google only hands out
-# addresses it has verified, so approving someone = granting the role, and their login is linked to their Person by
-# email right away (Security.kt). Trusting them doesn't link a Google login to an existing user with the same email -
-# Keycloak still asks to verify that account first.
+# addresses it has verified, so approving someone = granting the role, and their login's account is linked to their
+# Person by email right away (Accounts.kt). Trusting them doesn't link a Google login to an existing user with the same
+# email - Keycloak still asks to verify that account first.
 #
 # Idempotent - re-running it updates the identity provider, e.g. with a new client secret.
 #

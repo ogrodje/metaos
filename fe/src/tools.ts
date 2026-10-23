@@ -45,7 +45,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
     tools: [
       { name: 'list_people', description: 'List all people' },
       { name: 'create_person', description: 'Add a person' },
-      { name: 'set_person_email', description: "Set or clear a person's email; whoever signs in with it is linked to them" },
+      { name: 'set_person_email', description: "Set or clear a person's email; accounts that sign in with it are linked to them" },
       { name: 'set_person_bio', description: 'Set or clear the line about who a person is, e.g. their role and company' },
       { name: 'set_person_link', description: 'Set or clear their homepage, LinkedIn, Twitter/X, Instagram or Facebook' },
       { name: 'delete_person', description: 'Delete a person; they drop off their episodes, and those they recommended, until they are restored' },
@@ -55,8 +55,11 @@ export const TOOL_GROUPS: ToolGroup[] = [
       { name: 'remove_person_from_episode', description: 'Take a person off an episode: one of their roles, or all of them' },
       { name: 'confirm_guest', description: "Make a candidate an episode's guest, once they've said yes" },
       { name: 'list_person_episodes', description: 'The episodes a person is on, and their roles' },
-      { name: 'whoami', description: "Who you're signed in as, and the person linked to you" },
+      { name: 'whoami', description: "Who you're signed in as: your account and the person it's linked to" },
       { name: 'my_episodes', description: "The episodes you're on, and your roles" },
+      { name: 'list_accounts', description: 'The accounts MetaOS has seen and the people they are, or only those not linked to anyone' },
+      { name: 'link_account', description: 'Link an account to the person it is, so its comments and changes go by their name, past ones too; only Oto may' },
+      { name: 'unlink_account', description: 'Unlink an account from its person, e.g. one linked to the wrong person; only Oto may' },
     ],
   },
   {
@@ -71,6 +74,19 @@ export const TOOL_GROUPS: ToolGroup[] = [
       { name: 'restore_session', description: 'Bring back a deleted session, with its episodes' },
       { name: 'list_session_episodes', description: 'The episodes of a session' },
       { name: 'set_episode_session', description: 'Move an episode into a session, or out of one' },
+    ],
+  },
+  {
+    id: 'discussion',
+    title: 'Discussion',
+    about: 'comments on episodes, ideas and recording sessions, in Markdown, as on GitHub',
+    tools: [
+      { name: 'list_episode_comments', description: "An episode's or idea's comments, oldest first, with who wrote them and when" },
+      { name: 'list_session_comments', description: "A recording session's comments, oldest first" },
+      { name: 'comment_on_episode', description: 'Comment on an episode or idea as you, in Markdown' },
+      { name: 'comment_on_session', description: 'Comment on a recording session as you, in Markdown' },
+      { name: 'edit_comment', description: 'Change the text of one of your comments; it shows as edited' },
+      { name: 'delete_comment', description: 'Delete one of your comments; the history keeps that it was there' },
     ],
   },
   {
@@ -164,7 +180,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
     title: 'History',
     about: 'who changed what, and when, and bringing back what was deleted',
     tools: [
-      { name: 'get_history', description: 'Every change to an episode, person, session or show, with when and by whom' },
+      { name: 'get_history', description: 'Every change to an episode, person, session or show, its discussion too, with when and by whom' },
       { name: 'list_recent_changes', description: 'The latest changes to everything' },
       { name: 'list_deleted', description: 'The deleted episodes, people, sessions and shows, with when and by whom, to restore' },
       { name: 'restore_link', description: 'Bring back a removed role, Google Doc, Koofr or Dropbox folder, from the change that removed it' },

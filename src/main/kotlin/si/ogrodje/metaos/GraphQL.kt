@@ -34,8 +34,9 @@ import java.util.UUID
 
 const val MAX_RELEASED_EPISODES = 20
 
-// An approved user's token with metaos:read (Security.kt)
-private const val SIGNED_IN = "@approval.reads(authentication)"
+// An approved user's token with metaos:read, and one with metaos:write, for mutations (Security.kt)
+const val SIGNED_IN = "@approval.reads(authentication)"
+const val WRITES = "@approval.writes(authentication)"
 
 // When an episode is or will be recorded: its own date, or else its session's
 private val byRecordingDate = compareBy<Episode, LocalDate?>(nullsLast()) { it.recordingDate ?: it.session?.date }
@@ -98,7 +99,7 @@ data class DocumentLinkDto(val fileId: String) {
 }
 
 // Whether the caller may see what isn't public - what @PreAuthorize(SIGNED_IN) checks, for fields others get empty
-private fun signedIn() = SecurityContextHolder.getContext().authentication.approvedFor(API_READ_SCOPE)
+fun signedIn() = SecurityContextHolder.getContext().authentication.approvedFor(API_READ_SCOPE)
 
 // Docs are the team's, so others get none
 @Controller
@@ -316,14 +317,17 @@ class DropboxGraphQL(
 }
 
 @Controller
-class CurrentUserGraphQL(private val people: PeopleRepository) {
+class CurrentUserGraphQL(private val people: PeopleRepository, private val accounts: Accounts) {
 
     @QueryMapping
-    fun me(): CurrentUserDto? = currentJwt()?.toCurrentUserDto(people)
+    fun me(): CurrentUserDto? = currentJwt()?.toCurrentUserDto(accounts)
 
-    // The person as the rest of the API has them, so their episodes resolve as everyone else's do
+    // The person and the account as the rest of the API has them, so their episodes resolve as everyone else's do
     @SchemaMapping(typeName = "CurrentUser")
     fun person(user: CurrentUserDto): Person? = user.person?.id?.let(people::findByIdOrNull)
+
+    @SchemaMapping(typeName = "CurrentUser")
+    fun account(user: CurrentUserDto): Account? = accounts.signedInAccount()
 }
 
 /** An episode a person is on, with all of their roles in it */

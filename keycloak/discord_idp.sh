@@ -3,8 +3,8 @@
 # Keycloak has no Discord provider, so this uses its generic OAuth v2 one against Discord's /users/@me.
 #
 # Logins wait for approval (approval_gate.sh). Emails aren't trusted either: Discord also returns unverified ones, and a
-# verified email is what links a login to a Person (Security.kt). Approving someone = granting the role + turning on
-# "Email verified" once you know the address is theirs.
+# verified email is what links a login's account to a Person by itself (Accounts.kt). Approving someone = granting the
+# role + turning on "Email verified" once you know the address is theirs, or linking their account by hand.
 #
 # Idempotent - re-running it updates the identity provider, e.g. with a new client secret.
 #
