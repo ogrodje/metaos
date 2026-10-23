@@ -7,7 +7,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import MarkedText from '@/components/MarkedText.vue'
 import ShowBadge from '@/components/ShowBadge.vue'
 import StatusLabel from '@/components/StatusLabel.vue'
-import { episodePath, formatDate, guests, sessionPath } from '@/episodes'
+import { DATE_LOCALE, episodePath, formatDate, guests, sessionPath } from '@/episodes'
 import { errorMessage, graphql } from '@/graphql'
 import { personPath, rolesOf } from '@/people'
 import {
@@ -134,6 +134,16 @@ function go(path: string | ReturnType<typeof searchPath>) {
   router.push(path)
 }
 
+// A result opens here, or with ⌘ or Ctrl, Shift or the middle button in a new tab, as a link would
+function onItemClick(event: MouseEvent, path: string) {
+  if (event.metaKey || event.ctrlKey || event.shiftKey || event.button === 1) {
+    event.preventDefault()
+    window.open(router.resolve(path).href, '_blank', 'noopener')
+  } else {
+    go(path)
+  }
+}
+
 function seeAll() {
   if (text.value.trim()) go(searchPath(text.value.trim()))
 }
@@ -182,7 +192,7 @@ onBeforeUnmount(() => {
 watch(() => route.fullPath, close)
 
 // A session as lists name it: its place, or else its date
-const shortDate = (date: string) => new Date(date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+const shortDate = (date: string) => new Date(date).toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'short' })
 
 // Under an episode's title: why it was found when the title doesn't say, or else its guests
 function episodeLine(hit: EpisodeHit) {
@@ -215,7 +225,10 @@ defineExpose({ open })
                placeholder="Search episodes, people and sessions" aria-label="Search" role="combobox"
                aria-autocomplete="list" aria-controls="search-items" :aria-expanded="items.length > 0"
                :aria-activedescendant="items.length ? `search-item-${selected}` : undefined" @keydown="onKeydown">
-        <button type="button" class="close" @click="close()"><kbd>esc</kbd></button>
+        <!-- Esc on a keyboard, Cancel on a phone -->
+        <button type="button" class="close" aria-label="Close search" @click="close()">
+          <kbd aria-hidden="true">esc</kbd><span class="cancel" aria-hidden="true">Cancel</span>
+        </button>
       </div>
 
       <div class="results">
@@ -234,13 +247,14 @@ defineExpose({ open })
             <li v-for="item in group.items" :id="`search-item-${indexOf(item)}`" :key="item.key" role="option"
                 :aria-selected="indexOf(item) === selected" class="item"
                 :class="{ selected: indexOf(item) === selected, exact: item.kind === 'episode' && item.exact }"
-                @mousemove="selected = indexOf(item)" @click="go(item.path)">
+                @mousemove="selected = indexOf(item)" @click="onItemClick($event, item.path)"
+                @auxclick="$event.button === 1 && onItemClick($event, item.path)">
               <template v-if="item.kind === 'episode'">
                 <span class="lead code">{{ item.hit.episode.code ?? '—' }}</span>
                 <span class="main">
                   <span class="title" lang="sl"><MarkedText :text="item.hit.episode.title" :words="words"/><ShowBadge v-if="item.hit.episode.show" :name="item.hit.episode.show" :color="item.hit.episode.showColor"/></span>
                   <span v-if="episodeLine(item.hit).text" class="line">
-                    <span v-if="episodeLine(item.hit).label" class="label">{{ episodeLine(item.hit).label }} </span><MarkedText :text="episodeLine(item.hit).text ?? ''" :words="words"/>
+                    <span v-if="episodeLine(item.hit).label" class="label">{{ `${episodeLine(item.hit).label} ` }}</span><MarkedText :text="episodeLine(item.hit).text ?? ''" :words="words"/>
                   </span>
                 </span>
                 <span class="side">
@@ -355,7 +369,7 @@ kbd {
     color: var(--ink);
 
     &::placeholder {
-      color: #9A9A9A;
+      color: var(--muted);
     }
 
     // The field's own clear button would sit beside esc
@@ -366,10 +380,20 @@ kbd {
 
   .close {
     display: flex;
+    align-items: center;
     padding: 6px;
     border: 0;
+    border-radius: 6px;
     background: none;
     cursor: pointer;
+
+    .cancel {
+      display: none;
+      font-size: 15px;
+      line-height: 20px;
+      font-weight: 500;
+      color: var(--accent-text);
+    }
   }
 }
 
@@ -559,6 +583,20 @@ kbd {
 
   .side, .enter, .keys {
     display: none;
+  }
+
+  // A word that means something to a finger, and big enough for one
+  .field .close {
+    min-height: 44px;
+    padding: 0 6px;
+
+    kbd {
+      display: none;
+    }
+
+    .cancel {
+      display: inline;
+    }
   }
 }
 

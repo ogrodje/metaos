@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { keepUnchanged, useLiveRefresh } from '@/changes'
 import EpisodeItem from '@/components/EpisodeItem.vue'
 import EpisodeRow from '@/components/EpisodeRow.vue'
+import LoadError from '@/components/LoadError.vue'
 import MarkedText from '@/components/MarkedText.vue'
 import PersonItem from '@/components/PersonItem.vue'
 import SignInPrompt from '@/components/SignInPrompt.vue'
@@ -13,6 +14,7 @@ import { sessionPath, sessionTitle } from '@/episodes'
 import { errorMessage, graphql } from '@/graphql'
 import { type EpisodeHit, episodeMatch, resultCount, SEARCH_QUERY, type SearchResults, searchWords } from '@/search'
 import { useAuthStore } from '@/stores/auth'
+import { usePageTitle } from '@/title'
 
 // Everything a search finds, by kind, at /search?q=: what the palette's See all opens, and what a shared link to a
 // search does. Typing searches as it pauses and puts the text in the address, so Back and a reload keep it.
@@ -69,6 +71,12 @@ watch(text, (value) => {
 
 onBeforeUnmount(() => clearTimeout(timer))
 
+// Ready to type in, also when it's come to from the search's See all, with what was searched there
+const input = ref<HTMLInputElement>()
+onMounted(() => input.value?.focus())
+
+usePageTitle(() => (queryText() ? `Search: ${queryText()}` : 'Search'))
+
 // Only the latest answer counts
 let asks = 0
 
@@ -107,6 +115,7 @@ useLiveRefresh(() => search(true))
 
 <template>
   <main class="content">
+    <h1 class="visually-hidden">Search</h1>
     <SignInPrompt v-if="auth.ready && !auth.authenticated" title="Sign in to search">
       Search finds Ogrodje's episodes, ideas too, the people on them and the recording sessions, which are for Ogrodje's
       team. Sign in with Discord or Google, or use MetaOS from your AI assistant over MCP: Usage shows how to connect it.
@@ -116,7 +125,7 @@ useLiveRefresh(() => search(true))
       <div class="top">
         <label class="field">
           <FontAwesomeIcon :icon="faMagnifyingGlass"/>
-          <input v-model="text" type="search" autocomplete="off" spellcheck="false" placeholder="A code, a name or a topic"
+          <input ref="input" v-model="text" type="search" autocomplete="off" spellcheck="false" placeholder="A code, a name or a topic"
                  aria-label="Search">
         </label>
         <div v-if="results && resultCount(results)" class="tabs" role="group" aria-label="Show">
@@ -131,7 +140,7 @@ useLiveRefresh(() => search(true))
         <p>Search the episodes, ideas too, the people on them and the recording sessions: by title, name, show, summary, or place.</p>
         <p>A code, <span class="code">S05E08</span>, <span class="code">s5e8</span> or <span class="code">5x08</span>, finds its episode; <span class="code">S04</span> lists a season.</p>
       </div>
-      <p v-else-if="error" class="note">Search didn't work: {{ error }}</p>
+      <LoadError v-else-if="error" what="The results" :error="error" @retry="search()"/>
       <p v-else-if="!found" class="note">Searching…</p>
       <div v-else-if="!resultCount(found.results)" class="note">
         <p>Nothing found for “{{ found.text }}”.</p>
@@ -230,7 +239,7 @@ useLiveRefresh(() => search(true))
     color: var(--ink);
 
     &::placeholder {
-      color: #9A9A9A;
+      color: var(--muted);
     }
   }
 }

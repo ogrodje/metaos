@@ -2,6 +2,8 @@
 import { ref, watch } from 'vue'
 import { keepUnchanged, useLiveRefresh } from '@/changes'
 import IdeaItem from '@/components/IdeaItem.vue'
+import LoadError from '@/components/LoadError.vue'
+import LoadingRows from '@/components/LoadingRows.vue'
 import SignInPrompt from '@/components/SignInPrompt.vue'
 import { EPISODE_FIELDS, type Idea } from '@/episodes'
 import { errorMessage, graphql } from '@/graphql'
@@ -48,16 +50,16 @@ useLiveRefresh(() => loadIdeas(true))
       Episode ideas are for Ogrodje's team. Sign in with Discord or Google, or use MetaOS from your AI assistant over
       MCP: Usage shows how to connect it.
     </SignInPrompt>
-    <p v-else-if="error" class="note">The ideas didn't load: {{ error }}</p>
-    <p v-else-if="!ideas" class="note">Loading…</p>
 
     <!-- Once planned, an idea has a code and is listed with the episodes instead -->
     <section v-else aria-labelledby="ideas">
       <div class="heading">
-        <h2 id="ideas">Ideas</h2>
-        <span class="count">{{ ideas.length }}</span>
+        <h1 id="ideas">Ideas</h1>
+        <span v-if="ideas" class="count">{{ ideas.length }}</span>
       </div>
-      <p v-if="!ideas.length" class="note">No ideas yet.</p>
+      <LoadError v-if="error" what="The ideas" :error="error" @retry="loadIdeas()"/>
+      <LoadingRows v-else-if="!ideas" :rows="6" tall label="Loading the ideas"/>
+      <p v-else-if="!ideas.length" class="note">No ideas yet.</p>
       <ul v-else class="episodes">
         <IdeaItem v-for="idea in ideas" :key="idea.id" :idea="idea"/>
       </ul>

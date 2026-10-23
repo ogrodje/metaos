@@ -8,7 +8,8 @@ import { personPath } from '@/people'
 import { useAuthStore } from '@/stores/auth'
 
 // You, at the right of the header. Signed in, your initials, which open your name, your page and Sign out; otherwise
-// Sign in, which asks with what.
+// Sign in, which asks with what. A button that shows and hides a few links and buttons, which Tab goes through, rather
+// than a menu, whose role would promise arrow keys.
 const props = defineProps<{
   // Who MetaOS takes the signed-in user for, and their person, once one is linked to them by email
   name?: string
@@ -19,6 +20,7 @@ const auth = useAuthStore()
 const route = useRoute()
 
 const root = ref<HTMLElement>()
+const toggle = ref<HTMLButtonElement>()
 const open = ref(false)
 
 // The first letters of the first and the last name, past a "dr.": Oto Brglez is OB
@@ -29,13 +31,17 @@ const initials = computed(() => {
   return (first + last).toUpperCase() || '?'
 })
 
-// Closed by a click anywhere else, Esc, or going somewhere
+// Closed by a click anywhere else, Esc, or going somewhere. Esc puts focus back on the button when it was in the menu,
+// so the keyboard carries on from where it was.
 function onDocumentClick(event: MouseEvent) {
   if (open.value && !root.value?.contains(event.target as Node)) open.value = false
 }
 
 function onKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape') open.value = false
+  if (event.key !== 'Escape' || !open.value) return
+  const inside = root.value?.contains(document.activeElement)
+  open.value = false
+  if (inside) toggle.value?.focus()
 }
 
 onMounted(() => {
@@ -52,24 +58,24 @@ watch(() => route.fullPath, () => { open.value = false })
 <template>
   <div ref="root" class="you">
     <template v-if="auth.authenticated">
-      <button type="button" class="avatar" aria-haspopup="menu" :aria-expanded="open" :title="name"
+      <button ref="toggle" type="button" class="avatar" aria-controls="you-menu" :aria-expanded="open" :title="name"
               :aria-label="`${name ?? 'You'}: your page and signing out`" @click="open = !open">{{ initials }}</button>
-      <div v-if="open" class="menu" role="menu">
+      <div v-if="open" id="you-menu" class="menu">
         <p class="who">
           <b>{{ name }}</b>
           <span v-if="auth.username && auth.username !== name">{{ auth.username }}</span>
         </p>
         <!-- Once a person is linked to the user by their email -->
-        <RouterLink v-if="person" role="menuitem" :to="personPath(person)"><FontAwesomeIcon :icon="faUser"/>Your page</RouterLink>
-        <button type="button" role="menuitem" @click="auth.logout()"><FontAwesomeIcon :icon="faArrowRightFromBracket"/>Sign out</button>
+        <RouterLink v-if="person" :to="personPath(person)"><FontAwesomeIcon :icon="faUser"/>Your page</RouterLink>
+        <button type="button" @click="auth.logout()"><FontAwesomeIcon :icon="faArrowRightFromBracket"/>Sign out</button>
       </div>
     </template>
 
     <template v-else>
-      <button type="button" class="button" aria-haspopup="menu" :aria-expanded="open" @click="open = !open">Sign in</button>
-      <div v-if="open" class="menu" role="menu">
-        <button type="button" role="menuitem" @click="auth.login('discord')"><FontAwesomeIcon :icon="faDiscord"/>Sign in with Discord</button>
-        <button type="button" role="menuitem" @click="auth.login('google')"><FontAwesomeIcon :icon="faGoogle"/>Sign in with Google</button>
+      <button ref="toggle" type="button" class="button" aria-controls="you-menu" :aria-expanded="open" @click="open = !open">Sign in</button>
+      <div v-if="open" id="you-menu" class="menu">
+        <button type="button" @click="auth.login('discord')"><FontAwesomeIcon :icon="faDiscord"/>Sign in with Discord</button>
+        <button type="button" @click="auth.login('google')"><FontAwesomeIcon :icon="faGoogle"/>Sign in with Google</button>
         <p class="note">New accounts get in once an admin has approved them.</p>
       </div>
     </template>

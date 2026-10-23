@@ -39,9 +39,10 @@ const auth = useAuthStore()
   border-radius: 12px;
 
   h2 {
-    font-size: 15px;
-    line-height: 24px;
+    font-size: 18px;
+    line-height: 26px;
     font-weight: 600;
+    letter-spacing: -0.01em;
   }
 
   p {

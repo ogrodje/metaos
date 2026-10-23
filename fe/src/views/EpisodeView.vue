@@ -8,7 +8,10 @@ import EpisodePictures from '@/components/EpisodePictures.vue'
 import HistoryTimeline from '@/components/HistoryTimeline.vue'
 import KoofrFolderList from '@/components/KoofrFolderList.vue'
 import ListenLinks from '@/components/ListenLinks.vue'
+import LoadError from '@/components/LoadError.vue'
+import LoadingRows from '@/components/LoadingRows.vue'
 import MarkdownText from '@/components/MarkdownText.vue'
+import NotFound from '@/components/NotFound.vue'
 import PhotoStrip from '@/components/PhotoStrip.vue'
 import ShowBadge from '@/components/ShowBadge.vue'
 import SignInPrompt from '@/components/SignInPrompt.vue'
@@ -21,6 +24,7 @@ import {
 import { errorMessage, graphql } from '@/graphql'
 import { personPath } from '@/people'
 import { useAuthStore } from '@/stores/auth'
+import { usePageTitle } from '@/title'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -75,6 +79,9 @@ watch([() => route.params.ref, () => auth.authenticated], ([episodeRef, authenti
 // By its ID, which stays when its code changes
 useLiveRefresh(() => loadEpisode(episode.value?.id ?? String(route.params.ref), true))
 
+// In the browser's tab by its code and title, e.g. S05E08 Poletna vročica
+usePageTitle(() => (episode.value ? [episode.value.code, episode.value.title].filter(Boolean).join(' ') : undefined))
+
 // The pictures in its Dropbox folders, which open in the folder of the first; and its photos, in its first Koofr folder.
 // The same lists while they're the same, as the photos page through them from the first again when they change.
 const artwork = computed<DropboxPicture[]>((previous) =>
@@ -89,9 +96,11 @@ const photos = computed<KoofrPhoto[]>((previous) =>
       An episode's details and history are for Ogrodje's team. Sign in with Discord or Google, or use MetaOS from your
       AI assistant over MCP: Usage shows how to connect it.
     </SignInPrompt>
-    <p v-else-if="error" class="note">The episode didn't load: {{ error }}</p>
-    <p v-else-if="episode === null" class="note">There's no episode {{ route.params.ref }}.</p>
-    <p v-else-if="!episode" class="note">Loading…</p>
+    <LoadError v-else-if="error" what="The episode" :error="error" @retry="loadEpisode(String(route.params.ref))"/>
+    <NotFound v-else-if="episode === null" :title="`There's no episode ${route.params.ref}`" :search="String(route.params.ref)">
+      It may have another code now, or have been deleted. Search for it, or find it among the episodes.
+    </NotFound>
+    <LoadingRows v-else-if="!episode" :rows="6" label="Loading the episode"/>
 
     <template v-else>
       <header class="title">

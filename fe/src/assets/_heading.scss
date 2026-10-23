@@ -1,5 +1,6 @@
 // A section's heading, and how many things are in it. In page.scss, and on its own for components that make a whole
-// section, e.g. PhotoStrip
+// section, e.g. PhotoStrip. The type steps up by at least a quarter from role to role: rows' and subheadings' 14 px,
+// sections' 18 px, a page's 24 px, so a heading stands out by its size, not only its weight.
 
 .heading {
   display: flex;
@@ -8,9 +9,18 @@
   padding-bottom: 12px;
 
   h2 {
-    font-size: 15px;
-    line-height: 24px;
+    font-size: 18px;
+    line-height: 26px;
     font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  // A list that's the whole page, e.g. Ideas: its heading is the page's
+  h1 {
+    font-size: 24px;
+    line-height: 32px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
   }
 }
 
@@ -23,7 +33,7 @@
   column-gap: 8px;
   min-height: var(--icon-link);
   padding: 28px 0 8px;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 20px;
   font-weight: 600;
 

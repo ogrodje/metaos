@@ -3,6 +3,8 @@ import { computed, ref, watch } from 'vue'
 import { keepUnchanged, useLiveRefresh } from '@/changes'
 import EpisodeItem from '@/components/EpisodeItem.vue'
 import EpisodeRow from '@/components/EpisodeRow.vue'
+import LoadError from '@/components/LoadError.vue'
+import LoadingRows from '@/components/LoadingRows.vue'
 import { type Episode, EPISODE_FIELDS } from '@/episodes'
 import { errorMessage, graphql } from '@/graphql'
 import { useAuthStore } from '@/stores/auth'
@@ -59,12 +61,13 @@ useLiveRefresh(() => loadEpisodes(true))
 
 <template>
   <main class="content">
+    <h1 class="visually-hidden">Episodes</h1>
     <p v-if="auth.ready && !auth.authenticated" class="note">
       These are the released episodes. Signed in, you also see what's being recorded and produced.
     </p>
 
-    <p v-if="error" class="note">The episodes didn't load: {{ error }}</p>
-    <p v-else-if="!episodes" class="note">Loading…</p>
+    <LoadError v-if="error" what="The episodes" :error="error" @retry="loadEpisodes()"/>
+    <LoadingRows v-else-if="!episodes" :rows="8" label="Loading the episodes"/>
     <section v-for="season in seasons" v-else :key="season.id" :aria-labelledby="season.id">
       <div class="heading">
         <h2 :id="season.id">{{ season.title }}</h2>

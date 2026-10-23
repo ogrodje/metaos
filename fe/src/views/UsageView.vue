@@ -37,6 +37,7 @@ const toolCount = TOOL_GROUPS.reduce((n, group) => n + group.tools.length, 0)
 
 <template>
   <main>
+    <h1 class="visually-hidden">Usage</h1>
     <section aria-labelledby="install">
       <div class="heading">
         <h2 id="install">Install</h2>
@@ -202,8 +203,10 @@ const toolCount = TOOL_GROUPS.reduce((n, group) => n + group.tools.length, 0)
 </template>
 
 <style scoped lang="scss">
+// Sections' headings as the other pages have them; not page.scss, whose .title and .details are something else here
+@use '../assets/heading';
 
-// The home page's shell, headings and rows (HomeView, EpisodeItem)
+// The other pages' column (page.scss)
 main {
   max-width: var(--content-width);
   margin: 0 auto;
@@ -211,25 +214,6 @@ main {
   display: flex;
   flex-direction: column;
   gap: 56px;
-}
-
-.heading {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding-bottom: 12px;
-
-  h2 {
-    font-size: 15px;
-    line-height: 24px;
-    font-weight: 600;
-  }
-}
-
-.count, .note {
-  font-size: 13px;
-  line-height: 20px;
-  color: var(--muted);
 }
 
 code {
@@ -250,7 +234,7 @@ strong {
 }
 
 .intro {
-  max-width: 640px;
+  max-width: 68ch;
   padding-bottom: 16px;
   font-size: 14px;
   line-height: 22px;
@@ -315,6 +299,7 @@ strong {
 }
 
 .details {
+  max-width: 62ch;
   margin-top: 4px;
   font-size: 13px;
   line-height: 20px;
