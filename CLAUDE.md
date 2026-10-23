@@ -396,8 +396,8 @@ on `*.graphassets.com`, the only hosts MetaOS fetches pictures from).
   right in it, under another name ("(1)") when its own is taken; a read-only place or a missing folder only says so
   (`dropbox.error`). MCP's `set_episode_image` doesn't take uploads.
 - On the front-end, Upload artwork in the episode's media (`MediaStrip.vue`, which shows the team its five places)
-  opens `ArtworkUpload.vue`: drop the episode's folder or pictures, or choose them, or one on
-  its row. [`fe/src/artwork.ts`](fe/src/artwork.ts) reads each file's size from its header and its SHA-256, and places
+  opens `ArtworkUpload.vue`, as a missing picture's place does, at its row: drop the episode's folder or pictures, or
+  choose them, or one on its row. [`fe/src/artwork.ts`](fe/src/artwork.ts) reads each file's size from its header and its SHA-256, and places
   it by size and name (`-thumb1`/`-thumb-1`/`-thumbnail` A, `-thumb2` B, `-thumb3` C, `-web`, `-podcast`/`-cover`; the
   only square one is the cover), refusing what fits nowhere; the same file as the current one isn't sent. Upload asks
   once about every picture that would replace one, then sends them one at a time (`fe/src/uploads.ts`), each with its
