@@ -15,7 +15,7 @@ import PersonAvatar from '@/components/PersonAvatar.vue'
 import PersonSignIns, { type MyAccount } from '@/components/PersonSignIns.vue'
 import SocialLinks from '@/components/SocialLinks.vue'
 import ViewToggle, { type ListView } from '@/components/ViewToggle.vue'
-import { type Episode, EPISODE_FIELDS, episodePath, type Role, roleName, THUMBNAIL_FIELDS } from '@/episodes'
+import { type Episode, EPISODE_FIELDS, episodePath, LIST_PICTURE_FIELDS, type Role, roleName } from '@/episodes'
 import { errorMessage, graphql } from '@/graphql'
 import { IMAGE_FIELDS } from '@/images'
 import { seasonOf, seasonTitle } from '@/lists'
@@ -58,7 +58,7 @@ async function fetchPerson(id: string) {
   return graphql<PersonPage>(`query ($id: ID!) {
     person(id: $id) {
       id name bio homepageUrl linkedinUrl twitterUrl instagramUrl facebookUrl avatar { ${IMAGE_FIELDS} }
-      episodes { episode { ${EPISODE_FIELDS} ${THUMBNAIL_FIELDS} } roles }
+      episodes { episode { ${EPISODE_FIELDS} ${LIST_PICTURE_FIELDS} } roles }
       recommended { ${EPISODE_FIELDS} }
       accounts { ${ACCOUNT_FIELDS} }
     }

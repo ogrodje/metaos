@@ -131,7 +131,7 @@ yarn test       # the tests in src/**/__tests__, with vitest (./gradlew feTest, 
   anyone's, without what's the team's (its activity, alternative titles, files, ...), its thumbnail large; any other
   episode is the team's, and not found for anyone else, as one that isn't there.
 - The Episodes page lists what's in the works (the team's), then the released episodes by season, as a list
-  (`EpisodeRow`, with its thumbnail) or a grid of `EpisodeCard`s (`?view=grid`), by show and season; seasons older
+  (`EpisodeRow`, with its cover, square, or else its thumbnail: `listPicture`) or a grid of `EpisodeCard`s (`?view=grid`), by show and season; seasons older
   than the two latest show their first row until opened.
 - Episode ideas (`IDEA`) have a page of their own, `/ideas`, from the `ideas` query, which needs `metaos:read`, as
   does its link in the header; the `episodes` query, and so the Episodes page, leaves them out. It's a table

@@ -13,7 +13,7 @@ import SignInPrompt from '@/components/SignInPrompt.vue'
 import StageBar from '@/components/StageBar.vue'
 import {
   bySession, type Change, CHANGE_FIELDS, daysFrom, type Episode, EPISODE_FIELDS, episodePath, type EpisodeStatus,
-  relativeDate, type SessionGroup, THUMBNAIL_FIELDS,
+  LIST_PICTURE_FIELDS, listPicture, relativeDate, type SessionGroup,
 } from '@/episodes'
 import { src, srcset } from '@/images'
 import { errorMessage, graphql } from '@/graphql'
@@ -65,7 +65,7 @@ function overdue(section: Section, group: SessionGroup) {
 
 async function fetchReleased() {
   return (await graphql<{ releasedEpisodes: Episode[] }>(`{
-    releasedEpisodes(limit: 6) { ${EPISODE_FIELDS} ${THUMBNAIL_FIELDS} }
+    releasedEpisodes(limit: 6) { ${EPISODE_FIELDS} ${LIST_PICTURE_FIELDS} }
   }`)).releasedEpisodes
 }
 
@@ -208,7 +208,7 @@ usePageMeta(() => ({
           <ul v-else class="releases">
             <li v-for="episode in released.slice(0, 3)" :key="episode.id">
               <RouterLink class="shot" :to="episodePath(episode)" tabindex="-1" aria-hidden="true">
-                <img v-if="episode.thumbnail" :src="src(episode.thumbnail, 320)" :srcset="srcset(episode.thumbnail)" sizes="112px" alt="">
+                <img v-if="listPicture(episode)" :src="src(listPicture(episode)!, 320)" :srcset="srcset(listPicture(episode)!)" sizes="56px" alt="">
               </RouterLink>
               <div>
                 <RouterLink class="title" :to="episodePath(episode)" lang="sl">{{ episode.title }}</RouterLink>
@@ -278,7 +278,7 @@ usePageMeta(() => ({
 
   li {
     display: grid;
-    grid-template-columns: 112px minmax(0, 1fr);
+    grid-template-columns: 56px minmax(0, 1fr);
     gap: 12px;
     padding: 10px 0;
     border-top: 1px solid var(--rule);
@@ -287,7 +287,7 @@ usePageMeta(() => ({
   .shot {
     display: block;
     overflow: hidden;
-    aspect-ratio: 16 / 9;
+    aspect-ratio: 1;
     background: var(--hover);
     border-radius: 6px;
 

@@ -58,8 +58,9 @@ export interface Episode {
   patreonUrl: string | null
   // Markdown, e.g. a sentence
   tinySummary: string | null
-  // 16:9, where a list asks for it (THUMBNAIL_FIELDS), e.g. as a grid of them
+  // 16:9, and square, e.g. for podcast apps: where a list asks for them (LIST_PICTURE_FIELDS)
   thumbnail?: Image | null
+  cover?: Image | null
   people: EpisodePerson[]
   documents: GoogleDoc[]
   koofrFolders: KoofrFolderLink[]
@@ -212,8 +213,13 @@ export function artworkOf(folders: DropboxFolderWithPictures[]) {
 // A change's own fields, as an episode's or session's history has them and the latest changes too
 export const CHANGE_FIELDS = 'at actor client tool kind commentId summary fields { field from to }'
 export const HISTORY_FIELDS = `history { ${CHANGE_FIELDS} }`
-// An episode's thumbnail, for a list of them
-export const THUMBNAIL_FIELDS = `thumbnail { ${IMAGE_FIELDS} }`
+// An episode's thumbnail and cover, for a list of them
+export const LIST_PICTURE_FIELDS = `thumbnail { ${IMAGE_FIELDS} } cover { ${IMAGE_FIELDS} }`
+
+/** An episode's picture in a list, a row each: its cover, which is square, or else its thumbnail, cropped to a square */
+export function listPicture(episode: Pick<Episode, 'cover' | 'thumbnail'>) {
+  return episode.cover ?? episode.thumbnail ?? null
+}
 // An episode's thumbnails and cover, from MetaOS's public bucket
 export const PICTURE_FIELDS = ['thumbnail', 'thumbnailB', 'thumbnailC', 'cover'].map((kind) => `${kind} { ${IMAGE_FIELDS} }`).join(' ')
 

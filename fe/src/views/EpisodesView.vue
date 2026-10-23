@@ -9,7 +9,7 @@ import LoadError from '@/components/LoadError.vue'
 import LoadingRows from '@/components/LoadingRows.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import ViewToggle, { type ListView } from '@/components/ViewToggle.vue'
-import { type Episode, EPISODE_FIELDS, THUMBNAIL_FIELDS } from '@/episodes'
+import { type Episode, EPISODE_FIELDS, LIST_PICTURE_FIELDS } from '@/episodes'
 import { errorMessage, graphql } from '@/graphql'
 import { episodeText, matches, seasonOf, seasonTitle } from '@/lists'
 import { useQueryState } from '@/query'
@@ -95,7 +95,7 @@ function open(group: Season) {
 }
 
 async function fetchEpisodes() {
-  return (await graphql<{ episodes: Episode[] }>(`{ episodes { ${EPISODE_FIELDS} ${THUMBNAIL_FIELDS} } }`)).episodes
+  return (await graphql<{ episodes: Episode[] }>(`{ episodes { ${EPISODE_FIELDS} ${LIST_PICTURE_FIELDS} } }`)).episodes
 }
 
 // Loads again when the user signs in or out, as on the team there's more, and quietly when MetaOS's data changes, when

@@ -6,7 +6,7 @@ import ListenLinks from '@/components/ListenLinks.vue'
 import MarkedText from '@/components/MarkedText.vue'
 import ShowBadge from '@/components/ShowBadge.vue'
 import StatusLabel from '@/components/StatusLabel.vue'
-import { type Episode, episodePath, formatDate, guests } from '@/episodes'
+import { type Episode, episodePath, formatDate, guests, listPicture } from '@/episodes'
 import { src, srcset } from '@/images'
 import type { EpisodeMatch } from '@/search'
 import { useAuthStore } from '@/stores/auth'
@@ -20,13 +20,14 @@ const props = defineProps<{
   underSession?: boolean
   // Found by a search: the words to mark, and why it was found when the row doesn't show it
   match?: EpisodeMatch
-  // With its thumbnail, e.g. in the list of released episodes
+  // With its picture, its cover or else its thumbnail, e.g. in the list of released episodes
   thumbnail?: boolean
   // What someone was on it, e.g. host on their page, instead of its status
   role?: string
 }>()
 
 const released = computed(() => props.episode.status === 'PUBLISHED')
+const picture = computed(() => listPicture(props.episode))
 
 // When it aired, once it's out; else when it is or was recorded
 const date = computed(() => {
@@ -47,8 +48,7 @@ const guestNames = computed(() => (released.value ? guests(props.episode).join('
   <li class="episode" :class="{ thumbnailed: thumbnail }">
     <span class="code" :aria-hidden="!episode.code">{{ episode.code ?? '—' }}</span>
     <span v-if="thumbnail" class="thumbnail" aria-hidden="true">
-      <img v-if="episode.thumbnail" :src="src(episode.thumbnail, 320)" :srcset="srcset(episode.thumbnail)" sizes="64px"
-           alt="" loading="lazy">
+      <img v-if="picture" :src="src(picture, 320)" :srcset="srcset(picture)" sizes="40px" alt="" loading="lazy">
     </span>
     <div class="main">
       <p class="title">
@@ -101,15 +101,15 @@ const guestNames = computed(() => (released.value ? guests(props.episode).join('
   }
 }
 
-// A small thumbnail beside the code, in a list of released episodes
+// A small square picture beside the code, its cover, in a list of released episodes
 .thumbnailed {
-  grid-template-columns: episode.$code-width 64px minmax(0, 1fr) 232px 120px;
+  grid-template-columns: episode.$code-width 40px minmax(0, 1fr) 232px 120px;
 }
 
 .thumbnail {
   display: block;
   overflow: hidden;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 1;
   background: var(--hover);
   border-radius: 4px;
 
