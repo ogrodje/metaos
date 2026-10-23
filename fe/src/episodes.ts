@@ -249,8 +249,32 @@ export function candidates(episode: Pick<Episode, 'people'>) {
   return named(episode, 'CANDIDATE')
 }
 
+// Dates as the rest of the page is written, in English, e.g. 22 Oct 2026, whatever the browser's language
+export const DATE_LOCALE = 'en-GB'
+
 export function formatDate(date: string) {
-  return new Date(date).toLocaleDateString(undefined, { dateStyle: 'medium' })
+  return new Date(date).toLocaleDateString(DATE_LOCALE, { dateStyle: 'medium' })
+}
+
+const DAY = 24 * 60 * 60 * 1000
+
+/** Days from [today] to [date], both as calendar days where the user is: 1 is tomorrow, -1 yesterday */
+export function daysFrom(today: Date, date: string) {
+  const [year, month, day] = date.slice(0, 10).split('-').map(Number)
+  const then = Date.UTC(year!, month! - 1, day!)
+  const now = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
+  return Math.round((then - now) / DAY)
+}
+
+const relative = new Intl.RelativeTimeFormat(DATE_LOCALE, { numeric: 'auto' })
+
+/** How far [date] is from [today], e.g. tomorrow, in 5 days, 3 weeks ago, 4 months ago */
+export function relativeDate(date: string, today = new Date()) {
+  const days = daysFrom(today, date)
+  const size = Math.abs(days)
+  if (size < 14) return relative.format(days, 'day')
+  if (size < 60) return relative.format(Math.trunc(days / 7), 'week')
+  return relative.format(Math.trunc(days / 30), 'month')
 }
 
 /** A session as people know it: when and where, e.g. 22 Oct 2026 · AWS Community Day Adria */

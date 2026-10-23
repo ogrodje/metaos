@@ -2,6 +2,18 @@
 
 @use 'heading';
 
+// A link among words that aren't, underlined lightly, and in the accent when pointed at
+@mixin link {
+  text-decoration: underline;
+  text-decoration-color: #C4C4C4;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+
+  &:hover {
+    text-decoration-color: currentColor;
+  }
+}
+
 // The page's one column, under the header
 .content {
   max-width: var(--content-width);
@@ -78,6 +90,11 @@
     overflow-wrap: anywhere;
   }
 
+  // A value that's a link, e.g. a session or a person, looks like one without pointing at it
+  dd > a {
+    @include link;
+  }
+
   // Icon links: the glyphs, not their 32 px hit areas, line up with the text
   .icons {
     display: flex;
@@ -97,6 +114,10 @@
     column-gap: 8px;
     padding: 12px 0;
     border-top: 1px solid var(--rule);
+  }
+
+  li > a {
+    @include link;
   }
 
   .aside {

@@ -10,13 +10,18 @@ import EpisodeItem from '@/components/EpisodeItem.vue'
 import EpisodeRow from '@/components/EpisodeRow.vue'
 import HistoryTimeline from '@/components/HistoryTimeline.vue'
 import KoofrFolderList from '@/components/KoofrFolderList.vue'
+import LoadError from '@/components/LoadError.vue'
+import LoadingRows from '@/components/LoadingRows.vue'
+import NotFound from '@/components/NotFound.vue'
 import PhotoStrip from '@/components/PhotoStrip.vue'
 import SignInPrompt from '@/components/SignInPrompt.vue'
 import {
   DROPBOX_FIELDS, EPISODE_FIELDS, formatDate, HISTORY_FIELDS, KOOFR_FIELDS, type KoofrPhoto, photosOf, type SessionDetails,
+  sessionTitle,
 } from '@/episodes'
 import { errorMessage, graphql } from '@/graphql'
 import { useAuthStore } from '@/stores/auth'
+import { usePageTitle } from '@/title'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -57,6 +62,8 @@ async function loadSession(id: string, quietly = false) {
 watch([() => route.params.id, () => auth.authenticated], ([id]) => void loadSession(String(id)), { immediate: true })
 useLiveRefresh(() => loadSession(String(route.params.id), true))
 
+usePageTitle(() => (session.value ? sessionTitle(session.value) : undefined))
+
 // After a comment was written here: the live updates would bring it too, a moment later
 function reloadQuietly(id: string) {
   loadSession(id, true).catch((error) => console.error('The session did not load again', error))
@@ -74,9 +81,11 @@ const photos = computed<KoofrPhoto[]>((previous) =>
       from your AI assistant over MCP:
       <RouterLink class="usage" to="/usage">API and MCP usage</RouterLink> shows how to connect it.
     </SignInPrompt>
-    <p v-else-if="error" class="note">The session didn't load: {{ error }}</p>
-    <p v-else-if="session === null" class="note">There's no such session.</p>
-    <p v-else-if="!session" class="note">Loading…</p>
+    <LoadError v-else-if="error" what="The session" :error="error" @retry="loadSession(String(route.params.id))"/>
+    <NotFound v-else-if="session === null" title="There's no such recording session">
+      It may have been deleted. The home page lists the upcoming recordings, and each episode's page its session.
+    </NotFound>
+    <LoadingRows v-else-if="!session" :rows="6" label="Loading the session"/>
 
     <template v-else>
       <header class="title">

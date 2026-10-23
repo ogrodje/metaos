@@ -65,8 +65,21 @@ yarn test       # the tests in src/**/__tests__, with vitest (./gradlew feTest, 
 - The header ([`App.vue`](fe/src/App.vue)) is two rows: the logo, and at the right Search and you
   (`UserMenu.vue`: your initials, which open your name, your page, your sign-ins (see Accounts) and Sign out; or
   Sign in, which asks Discord or Google); under them the pages as tabs, in the order they're used (`pages`), which
-  scroll sideways when they don't fit. A new section, e.g. Partners or Analytics, is another tab there. A tab is underlined on its own pages too,
-  Episodes on an episode's. "API and MCP usage" isn't a tab: the footer links to it, as do the sign-in prompts.
+  scroll sideways when they don't fit. A new section, e.g. Partners or Analytics, is another tab there. A tab is
+  underlined on its own pages too, Episodes on an episode's. "API and MCP usage" isn't a tab: the footer links to it,
+  as do the sign-in prompts. The user menu is a button that shows and hides its links, not an ARIA menu.
+- Every page is named in the browser's tab (`meta.title` in `fe/src/router/index.ts`, and `usePageTitle` from
+  `fe/src/title.ts` for one about a thing, e.g. an episode's code and title) and has an `h1`, hidden where its tab
+  names it. Going to another page moves focus to it and says its name in a live region (`App.vue`); a skip link leads
+  past the header. Anything else is a not-found page (`NotFound.vue`, also an episode, session or person that isn't
+  there), with where to go instead.
+- A list loads behind rows like its own (`LoadingRows.vue`), so the page doesn't jump, and what didn't load says why
+  with Try again (`LoadError.vue`); `graphql.ts` words errors so they say what to do, e.g. an account not approved
+  yet. Dates are in English (`DATE_LOCALE`), whatever the browser's language.
+- Home is what's being made for the team, and the latest releases for everyone: signed in, first what needs
+  attention ([`fe/src/attention.ts`](fe/src/attention.ts): recording dates that passed, recordings in the next two
+  weeks with no confirmed guest or doc, and episodes recorded 60 days ago that aren't out), then the upcoming
+  recordings and what's in production, by session with how far away it is, then the releases.
 - Signed in, episode titles and session labels lead to their pages, `/episodes/<code or ID>` and `/sessions/<ID>`:
   everything about them, their discussion (see Discussions) and, under it, their history on a date rail
   (`HistoryTimeline.vue`), from the audit trail as [`History.kt`](src/main/kotlin/si/ogrodje/metaos/History.kt)
@@ -90,7 +103,9 @@ yarn test       # the tests in src/**/__tests__, with vitest (./gradlew feTest, 
   weight of the field it's best in (`SearchField`), and a row says why it was found when it doesn't show it.
 - Users sign in with keycloak-js (`fe/src/stores/auth.ts`), straight to Discord or Google (`idpHint`). On load it
   checks for a Keycloak session in a hidden iframe of `fe/public/silent-check-sso.html`, which is why MetaOS's pages
-  may be framed by MetaOS itself (`X-Frame-Options: SAMEORIGIN`).
+  may be framed by MetaOS itself (`X-Frame-Options: SAMEORIGIN`). Whether the user was signed in last time is kept
+  in `localStorage`, as a hint only: while Keycloak is asked, the header keeps the team's tabs and pages their places,
+  and the check waits longer before taking them for a guest.
 
 ### Authentication (Keycloak)
 

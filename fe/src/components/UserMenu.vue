@@ -14,7 +14,8 @@ import { useAuthStore } from '@/stores/auth'
 
 // You, at the right of the header. Signed in, your initials, which open your name, your page, the identity providers
 // you sign in with, and Sign out; otherwise Sign in, which asks with what. Linking another identity provider is for
-// everyone, as it only adds a way to sign in to the same Keycloak user, not which person that is.
+// everyone, as it only adds a way to sign in to the same Keycloak user, not which person that is. A button that shows
+// and hides a few links and buttons, which Tab goes through, rather than a menu, whose role would promise arrow keys.
 const props = defineProps<{
   // Who MetaOS takes the signed-in user for
   name?: string
@@ -109,7 +110,8 @@ function close() {
   if (focused) void nextTick(() => toggle.value?.focus())
 }
 
-// Closed by a click anywhere else, Esc, or going somewhere
+// Closed by a click anywhere else, Esc, or going somewhere. Esc puts focus back on the button when it was in the menu,
+// so the keyboard carries on from where it was.
 function onDocumentClick(event: MouseEvent) {
   if (!root.value?.contains(event.target as Node)) {
     open.value = false
@@ -185,10 +187,10 @@ watch(() => route.fullPath, () => { open.value = false })
     </template>
 
     <template v-else>
-      <button type="button" class="button" aria-haspopup="menu" :aria-expanded="open" @click="open = !open">Sign in</button>
-      <div v-if="open" class="menu" role="menu">
-        <button type="button" class="item" role="menuitem" @click="auth.login('discord')"><FontAwesomeIcon :icon="faDiscord"/>Sign in with Discord</button>
-        <button type="button" class="item" role="menuitem" @click="auth.login('google')"><FontAwesomeIcon :icon="faGoogle"/>Sign in with Google</button>
+      <button ref="toggle" type="button" class="button" :aria-expanded="open" :aria-controls="`${id}-menu`" @click="open = !open">Sign in</button>
+      <div v-if="open" :id="`${id}-menu`" class="menu sign-in">
+        <button type="button" class="item" @click="auth.login('discord')"><FontAwesomeIcon :icon="faDiscord"/>Sign in with Discord</button>
+        <button type="button" class="item" @click="auth.login('google')"><FontAwesomeIcon :icon="faGoogle"/>Sign in with Google</button>
         <p class="note">New accounts get in once an admin has approved them.</p>
       </div>
     </template>
@@ -249,7 +251,7 @@ watch(() => route.fullPath, () => { open.value = false })
 }
 
 // Not signed in, it only asks with what
-.menu[role='menu'] {
+.menu.sign-in {
   width: auto;
   min-width: 232px;
 }

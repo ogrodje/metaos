@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Change, FieldChange } from '@/episodes'
+import { type Change, DATE_LOCALE, type FieldChange } from '@/episodes'
 
 // Changes oldest first, as the API has them
 const props = defineProps<{ changes: Change[] }>()
@@ -10,12 +10,12 @@ const entries = computed(() => {
   let previousDay: string | undefined
   return [...props.changes].reverse().map((change, index) => {
     const at = new Date(change.at)
-    const day = at.toLocaleDateString(undefined, { dateStyle: 'medium' })
+    const day = at.toLocaleDateString(DATE_LOCALE, { dateStyle: 'medium' })
     const entry = {
       key: `${change.at}-${index}`,
       change,
       day: day !== previousDay ? day : null,
-      time: at.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
+      time: at.toLocaleTimeString(DATE_LOCALE, { hour: '2-digit', minute: '2-digit' }),
       by: by(change),
     }
     previousDay = day

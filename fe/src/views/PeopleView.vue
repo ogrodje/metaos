@@ -2,6 +2,8 @@
 import { ref, watch } from 'vue'
 import { type Account, ACCOUNT_FIELDS } from '@/accounts'
 import { keepUnchanged, useLiveRefresh } from '@/changes'
+import LoadError from '@/components/LoadError.vue'
+import LoadingRows from '@/components/LoadingRows.vue'
 import PersonItem from '@/components/PersonItem.vue'
 import UnlinkedAccounts from '@/components/UnlinkedAccounts.vue'
 import { errorMessage, graphql } from '@/graphql'
@@ -83,25 +85,26 @@ useLiveRefresh(() => loadAll(true))
       These are the people on the released episodes. Signed in, you see everyone, also on what's being made.
     </p>
 
-    <p v-if="error" class="note">The people didn't load: {{ error }}</p>
-    <p v-else-if="!people" class="note">Loading…</p>
-    <template v-else>
-      <!-- For signed-in users, when there are any: what's left to do comes first -->
+    <!-- The page's name, then for signed-in users, when there are any, what's left to do, then everyone -->
+    <div class="heading">
+      <h1 id="people">People</h1>
+      <span v-if="people" class="count">{{ people.length }}</span>
+    </div>
+
+    <template v-if="people">
       <p v-if="unlinkedError" class="note">The sign-ins nobody's linked to didn't load: {{ unlinkedError }}</p>
       <UnlinkedAccounts v-else-if="unlinked" :accounts="unlinked" :people="people" :me="myAccount"
                         :can-link="canLinkAccounts" @changed="reloadQuietly"/>
-
-      <section aria-labelledby="people">
-        <div class="heading">
-          <h2 id="people">People</h2>
-          <span class="count">{{ people.length }}</span>
-        </div>
-        <p v-if="!people.length" class="note">No one yet.</p>
-        <ul v-else class="people">
-          <PersonItem v-for="person in people" :key="person.id" :person="person"/>
-        </ul>
-      </section>
     </template>
+
+    <section aria-labelledby="people">
+      <LoadError v-if="error" what="The people" :error="error" @retry="loadPeople()"/>
+      <LoadingRows v-else-if="!people" :rows="6" tall label="Loading the people"/>
+      <p v-else-if="!people.length" class="note">No one yet.</p>
+      <ul v-else class="people">
+        <PersonItem v-for="person in people" :key="person.id" :person="person"/>
+      </ul>
+    </section>
   </main>
 </template>
 

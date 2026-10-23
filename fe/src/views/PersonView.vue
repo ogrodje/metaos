@@ -5,6 +5,9 @@ import { type Account, ACCOUNT_FIELDS } from '@/accounts'
 import { keepUnchanged, useLiveRefresh } from '@/changes'
 import EpisodeItem from '@/components/EpisodeItem.vue'
 import EpisodeRow from '@/components/EpisodeRow.vue'
+import LoadError from '@/components/LoadError.vue'
+import LoadingRows from '@/components/LoadingRows.vue'
+import NotFound from '@/components/NotFound.vue'
 import PersonAvatar from '@/components/PersonAvatar.vue'
 import PersonSignIns, { type MyAccount } from '@/components/PersonSignIns.vue'
 import SignInPrompt from '@/components/SignInPrompt.vue'
@@ -14,6 +17,7 @@ import { errorMessage, graphql } from '@/graphql'
 import { IMAGE_FIELDS } from '@/images'
 import { type Person, rolesOf, socialLinks } from '@/people'
 import { useAuthStore } from '@/stores/auth'
+import { usePageTitle } from '@/title'
 
 /** A person with everything about them, for their page: their episodes whole, those they recommended, and their sign-ins */
 interface PersonDetails extends Omit<Person, 'episodes' | 'accounts'> {
@@ -72,6 +76,8 @@ async function loadPerson(id: string, quietly = false) {
 watch([() => route.params.id, () => auth.authenticated], ([id]) => void loadPerson(String(id)), { immediate: true })
 useLiveRefresh(() => loadPerson(String(route.params.id), true))
 
+usePageTitle(() => person.value?.name)
+
 // After a link or an unlink, as the Discussion does after a comment
 function reloadQuietly() {
   loadPerson(String(route.params.id), true).catch((e) => console.error('The person did not load again', e))
@@ -102,9 +108,11 @@ const hasLinks = computed(() => (person.value ? socialLinks(person.value).length
       MetaOS from your AI assistant over MCP:
       <RouterLink class="usage" to="/usage">API and MCP usage</RouterLink> shows how to connect it.
     </SignInPrompt>
-    <p v-else-if="error" class="note">The person didn't load: {{ error }}</p>
-    <p v-else-if="person === null" class="note">There's no such person.</p>
-    <p v-else-if="!person" class="note">Loading…</p>
+    <LoadError v-else-if="error" what="The person" :error="error" @retry="loadPerson(String(route.params.id))"/>
+    <NotFound v-else-if="person === null" title="There's no such person">
+      They may have been deleted, or merged with someone else. The People page lists everyone.
+    </NotFound>
+    <LoadingRows v-else-if="!person" :rows="6" label="Loading the person"/>
 
     <template v-else>
       <header class="person">

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import {computed, ref, watch} from 'vue'
-import {RouterLink, RouterView, useRoute} from 'vue-router'
+import {computed, nextTick, ref, watch} from 'vue'
+import {RouterLink, RouterView, useRoute, useRouter} from 'vue-router'
 import {faDiscord, faGithub} from '@fortawesome/free-brands-svg-icons'
 import {faHouse, faLightbulb, faMicrophone, faUserGroup} from '@fortawesome/free-solid-svg-icons'
 import {FontAwesomeIcon} from '@fortawesome/vue-fontawesome'
@@ -9,9 +9,11 @@ import SearchPalette from '@/components/SearchPalette.vue'
 import UserMenu from '@/components/UserMenu.vue'
 import {graphql} from '@/graphql'
 import {useAuthStore} from '@/stores/auth'
+import {pageName} from '@/title'
 
 const auth = useAuthStore()
 const route = useRoute()
+const router = useRouter()
 
 // Who MetaOS takes the signed-in user for, and their person, through their account: undefined until MetaOS has said,
 // null when it isn't linked to anyone; and whether they may link accounts to people, which only one user may
@@ -54,14 +56,27 @@ async function loadMe(quietly = false) {
 watch(() => auth.authenticated, () => void loadMe(), {immediate: true})
 useLiveRefresh(() => (auth.authenticated ? loadMe(true) : undefined))
 
-// The pages, as tabs in the order they're used; the team's only for signed-in users. A new section, e.g. Partners or
-// Analytics, is another tab here. API and MCP usage, how to connect to MetaOS, is in the footer.
+// The pages, as tabs in the order they're used; the team's only for signed-in users, and while one who was signed in
+// last time is checked, so they don't drop out and come back. A new section, e.g. Partners or Analytics, is another tab
+// here. API and MCP usage, how to connect to MetaOS, is in the footer.
 const pages = computed(() => [
   {path: '/', title: 'Home', icon: faHouse},
   {path: '/episodes', title: 'Episodes', icon: faMicrophone},
   {path: '/ideas', title: 'Ideas', icon: faLightbulb, team: true},
   {path: '/people', title: 'People', icon: faUserGroup},
-].filter((page) => !page.team || auth.authenticated))
+].filter((page) => !page.team || auth.likelyMember))
+
+// Going to another page, as a screen reader hears it: focus moves to the page, which starts there for the keyboard too,
+// and its name is said once it's known. Not on the first page, nor when only the query changes, e.g. while a search
+// is typed, nor when the page has put it somewhere itself, e.g. the search page in its field.
+const content = ref<HTMLElement>()
+
+router.afterEach((to, from, failure) => {
+  if (failure || from.matched.length === 0 || to.path === from.path) return
+  nextTick(() => {
+    if (!content.value?.contains(document.activeElement)) content.value?.focus({preventScroll: true})
+  })
+})
 
 // A page's tab is underlined on its own pages too: Episodes on an episode's, People on a person's
 function current(path: string) {
@@ -70,6 +85,8 @@ function current(path: string) {
 </script>
 
 <template>
+  <a class="skip" href="#page">Skip to content</a>
+
   <!-- The logo, and at the right search and you; under them the pages, as tabs -->
   <header>
     <div class="top">
@@ -90,9 +107,11 @@ function current(path: string) {
   </header>
 
   <!-- Takes the height the header and footer leave, so the footer stays at the bottom of short pages -->
-  <div class="page">
+  <div id="page" ref="content" class="page" tabindex="-1">
     <RouterView/>
   </div>
+
+  <p class="visually-hidden" aria-live="polite" aria-atomic="true">{{ pageName }}</p>
 
   <footer>
     <div class="wrapper">
@@ -114,6 +133,27 @@ function current(path: string) {
 </template>
 
 <style scoped lang="scss">
+
+// For the keyboard: past the header's links, straight to the page. Shown only while it's focused.
+.skip {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 30;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: var(--ink);
+  color: #FFFFFF;
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 500;
+  transform: translateY(-200%);
+
+  &:focus-visible {
+    transform: none;
+    color: #FFFFFF;
+  }
+}
 
 header {
   border-bottom: 1px solid var(--hairline);
@@ -177,6 +217,12 @@ header {
       color: var(--muted);
     }
 
+    // Inside the tab, as the strip clips anything outside it
+    &:focus-visible {
+      outline-offset: -4px;
+      border-radius: 8px;
+    }
+
     &.current {
       color: var(--ink);
       font-weight: 500;
@@ -225,6 +271,11 @@ header {
 
 .page {
   flex: 1;
+
+  // Focused by going to another page, not by the user: no ring
+  &:focus {
+    outline: none;
+  }
 }
 
 // The header's container, without its line

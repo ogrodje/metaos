@@ -467,7 +467,7 @@ section {
 }
 
 .intro {
-  max-width: 640px;
+  max-width: 68ch;
   padding-bottom: 16px;
   font-size: 14px;
   line-height: 22px;
