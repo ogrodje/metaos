@@ -144,11 +144,13 @@ export interface EpisodeDetails extends Episode {
   // What the title is A/B tested against
   titleB: string | null
   titleC: string | null
-  // 16:9, and those that go with titles B and C, as they're tested together
+  // 1920 × 1080, and those that go with titles B and C, as they're tested together; and the thumbnail without its words,
+  // for ogrodje.si
   thumbnail: Image | null
   thumbnailB: Image | null
   thumbnailC: Image | null
-  // Square, e.g. for podcast apps
+  web: Image | null
+  // 3000 × 3000, e.g. for podcast apps
   cover: Image | null
   summary: string | null
   machineSummary: string | null
@@ -186,8 +188,8 @@ export function artworkOf(folders: DropboxFolderWithPictures[]) {
   return folders.flatMap((folder) => folder.pictures)
 }
 export const HISTORY_FIELDS = 'history { at actor client tool summary fields { field from to } }'
-// An episode's thumbnails and cover, from MetaOS's public bucket
-export const PICTURE_FIELDS = ['thumbnail', 'thumbnailB', 'thumbnailC', 'cover'].map((kind) => `${kind} { ${IMAGE_FIELDS} }`).join(' ')
+// An episode's thumbnails, web picture and cover, from MetaOS's public bucket
+export const PICTURE_FIELDS = ['thumbnail', 'thumbnailB', 'thumbnailC', 'web', 'cover'].map((kind) => `${kind} { ${IMAGE_FIELDS} }`).join(' ')
 
 /** An episode's page: at its code, or at its ID while it has none */
 export function episodePath(episode: Pick<Episode, 'id' | 'code'>) {

@@ -167,9 +167,9 @@ export const TOOL_GROUPS: ToolGroup[] = [
     title: 'Pictures',
     about: 'thumbnails, covers and avatars for everyone to see, at media.ogrodje.si',
     tools: [
-      { name: 'set_episode_image', description: "Make a picture from Dropbox or Koofr an episode's thumbnail, thumbnail B or C (for its alternative titles) or cover" },
+      { name: 'set_episode_image', description: "Make a picture from Dropbox or Koofr an episode's thumbnail, thumbnail B or C (for its alternative titles) or web picture, 1920 × 1080, or its cover, 3000 × 3000" },
       { name: 'remove_episode_image', description: 'Take one of its pictures off an episode' },
-      { name: 'list_episode_images', description: "An episode's thumbnails and cover, with their URLs" },
+      { name: 'list_episode_images', description: "An episode's thumbnails, web picture and cover, with their URLs" },
       { name: 'set_person_avatar', description: "Make a picture from Hygraph, Dropbox or Koofr a person's avatar" },
       { name: 'remove_person_avatar', description: "Take a person's avatar off them" },
       { name: 'get_person_avatar', description: "A person's avatar, with its URLs" },

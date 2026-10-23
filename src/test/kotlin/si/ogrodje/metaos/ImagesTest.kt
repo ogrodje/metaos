@@ -26,9 +26,11 @@ import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
+import java.net.URI
 import java.nio.ByteBuffer
 import java.security.KeyPairGenerator
 import java.time.Duration
+import java.time.Instant
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.Base64
@@ -62,7 +64,10 @@ class FakeStorage(override val bucket: String = "fake") : Storage {
     }
 
     override fun read(path: String, maxBytes: Int) = requireNotNull(files[storagePath(path)]).bytes.let { it.copyOf(minOf(it.size, maxBytes)) }
-    override fun uploadUrl(path: String, contentType: String, validFor: Duration) = throw UnsupportedOperationException()
+    override fun uploadUrl(path: String, contentType: String, validFor: Duration) = SignedUpload(
+        URI("https://storage.example.com/$bucket/${storagePath(path)}?X-Goog-Signature=fake").toURL(),
+        mapOf("Content-Type" to contentType, "x-goog-resumable" to "start"), Instant.now() + validFor,
+    )
     override fun downloadUrl(path: String, validFor: Duration) = throw UnsupportedOperationException()
     override fun delete(path: String) = files.remove(storagePath(path)) != null
 }
@@ -81,10 +86,10 @@ fun fakeServiceAccountKey(): String {
 }
 
 /** A picture of [width] × [height]: one colour, and see-through on the left half if [seeThrough] */
-fun picture(width: Int, height: Int, format: String, seeThrough: Boolean = false): ByteArray {
+fun picture(width: Int, height: Int, format: String, seeThrough: Boolean = false, color: Color = Color(4, 4, 164)): ByteArray {
     val image = BufferedImage(width, height, if (seeThrough) BufferedImage.TYPE_INT_ARGB else BufferedImage.TYPE_INT_RGB)
     image.createGraphics().apply {
-        color = Color(4, 4, 164)
+        this.color = color
         fillRect(if (seeThrough) width / 2 else 0, 0, width, height)
         dispose()
     }
@@ -157,7 +162,7 @@ class ImagesTest @Autowired constructor(
     @Test
     fun `copies artwork from Dropbox to the public bucket, with smaller copies, once however often it's used`() {
         val episode = episodes.saveAndFlush(Episode(title = "Vres gams", code = "S09E70"))
-        val png = picture(2000, 1125, "png")
+        val png = picture(1920, 1080, "png")
         dropbox.put("2001", "/Season 9/S09E70", null)
         dropbox.put("2001", "/Season 9/S09E70/ogrodje-vresGams-thumb1.png", png)
 
@@ -165,11 +170,11 @@ class ImagesTest @Autowired constructor(
         val image = assertNotNull(set.image)
         assertEquals(EpisodeImage.THUMBNAIL, set.kind)
         assertEquals("ogrodje-vresGams-thumb1.png", image.name)
-        assertEquals(2000 to 1125, image.width to image.height)
+        assertEquals(1920 to 1080, image.width to image.height)
         assertEquals(ImageSource.DROPBOX to "2001", image.from to image.place)
         assertEquals("/Season 9/S09E70/ogrodje-vresGams-thumb1.png", image.path)
         assertTrue(image.url.matches(Regex("https://media\\.example\\.com/images/[0-9a-f]{64}/original\\.png")), image.url)
-        assertEquals(listOf(320, 640, 1280, 1920), image.sizes.map { it.width })
+        assertEquals(listOf(320, 640, 1280), image.sizes.map { it.width })
 
         // The original as it came; JPEGs of the same shape, as it's opaque; all cached for good
         val folder = image.url.removePrefix("https://media.example.com/").substringBeforeLast('/')
@@ -179,7 +184,7 @@ class ImagesTest @Autowired constructor(
             val copy = bucket.files.getValue("$folder/${size.width}.jpg")
             assertEquals("image/jpeg", copy.file.contentType)
             val decoded = decoded(copy.bytes)
-            assertEquals(size.width to Math.round(size.width * 1125 / 2000.0).toInt(), decoded.width to decoded.height)
+            assertEquals(size.width to Math.round(size.width * 1080 / 1920.0).toInt(), decoded.width to decoded.height)
         }
         assertEquals(setOf("public, max-age=31536000, immutable"), bucket.files.values.map { it.cacheControl }.toSet())
 
@@ -191,17 +196,20 @@ class ImagesTest @Autowired constructor(
         assertEquals(uploads, bucket.uploads)
 
         assertEquals(
-            listOf(EpisodeImage.THUMBNAIL to image.url, EpisodeImage.THUMBNAIL_B to image.url, EpisodeImage.THUMBNAIL_C to null, EpisodeImage.COVER to null),
+            listOf(
+                EpisodeImage.THUMBNAIL to image.url, EpisodeImage.THUMBNAIL_B to image.url, EpisodeImage.THUMBNAIL_C to null,
+                EpisodeImage.WEB to null, EpisodeImage.COVER to null,
+            ),
             mcp.listEpisodeImages(checkNotNull(episode.id).toString()).map { it.kind to it.image?.url },
         )
     }
 
     @Test
     fun `keeps see-through pictures PNGs, and makes no copy as wide as the original`() {
-        episodes.saveAndFlush(Episode(title = "Logo", code = "S09E71"))
-        koofr.put("koofr-1", "/Epizode/S09E71/cover.png", picture(500, 500, "png", seeThrough = true), "image/png")
+        val person = people.saveAndFlush(Person(name = "Logo", email = null))
+        koofr.put("koofr-1", "/Ljudje/logo.png", picture(500, 500, "png", seeThrough = true), "image/png")
 
-        val image = assertNotNull(mcp.setEpisodeImage("S09E71", EpisodeImage.COVER, ImageSource.KOOFR, "Ogrodje", "/Epizode/S09E71/cover.png", null).image)
+        val image = mcp.setPersonAvatar(checkNotNull(person.id), ImageSource.KOOFR, "Ogrodje", "/Ljudje/logo.png", null)
         assertEquals(listOf(320), image.sizes.map { it.width })
         assertTrue(image.sizes.single().url.endsWith("/320.png"))
         val copy = decoded(bucket.files.getValue(image.sizes.single().url.removePrefix("${media.url}/")).bytes)
@@ -240,10 +248,52 @@ class ImagesTest @Autowired constructor(
     }
 
     @Test
+    fun `refuses an episode's pictures of another size than it says, or not PNG or JPEG, wherever they come from`() {
+        episodes.saveAndFlush(Episode(title = "Sizes", code = "S09E75"))
+        dropbox.put("2001", "/S09E75", null)
+        dropbox.put("2001", "/S09E75/ogrodje-sizes-thumb1.png", picture(1280, 720, "png"))
+        dropbox.put("2001", "/S09E75/ogrodje-sizes-podcast.png", picture(3000, 3000, "png"))
+        dropbox.put("2001", "/S09E75/ogrodje-sizes-web.gif", picture(1920, 1080, "gif"))
+        val uploads = bucket.uploads
+
+        fun refused(kind: EpisodeImage, path: String) =
+            assertFailsWith<IllegalArgumentException> { mcp.setEpisodeImage("S09E75", kind, ImageSource.DROPBOX, "Artwork", path, null) }.message
+
+        assertEquals(
+            "ogrodje-sizes-thumb1.png is 1280 × 720; an episode's thumbnail has to be exactly 1920 × 1080",
+            refused(EpisodeImage.THUMBNAIL, "/S09E75/ogrodje-sizes-thumb1.png"),
+        )
+        assertEquals(
+            "ogrodje-sizes-podcast.png is 3000 × 3000; an episode's web picture has to be exactly 1920 × 1080",
+            refused(EpisodeImage.WEB, "/S09E75/ogrodje-sizes-podcast.png"),
+        )
+        assertEquals(
+            "ogrodje-sizes-web.gif isn't PNG or JPEG, which an episode's web picture has to be",
+            refused(EpisodeImage.WEB, "/S09E75/ogrodje-sizes-web.gif"),
+        )
+        assertEquals(uploads, bucket.uploads)
+
+        // One MetaOS has already, e.g. as an avatar, which may be any size, is refused all the same
+        val person = people.saveAndFlush(Person(name = "Velikost", email = null))
+        mcp.setPersonAvatar(checkNotNull(person.id), ImageSource.DROPBOX, "Artwork", "/S09E75/ogrodje-sizes-thumb1.png", null)
+        assertEquals(
+            "ogrodje-sizes-thumb1.png is 1280 × 720; an episode's thumbnail B has to be exactly 1920 × 1080",
+            refused(EpisodeImage.THUMBNAIL_B, "/S09E75/ogrodje-sizes-thumb1.png"),
+        )
+        assertEquals(List(5) { null }, mcp.listEpisodeImages("S09E75").map { it.image })
+
+        val cover = assertNotNull(
+            mcp.setEpisodeImage("S09E75", EpisodeImage.COVER, ImageSource.DROPBOX, "Artwork", "/S09E75/ogrodje-sizes-podcast.png", null).image
+        )
+        assertEquals(3000 to 3000, cover.width to cover.height)
+        assertEquals(listOf(320, 640, 1280, 1920), cover.sizes.map { it.width })
+    }
+
+    @Test
     fun `takes pictures off, and says in the history which ones were set`() {
         val episode = episodes.saveAndFlush(Episode(title = "History", code = "S09E73"))
         dropbox.put("2001", "/S09E73", null)
-        dropbox.put("2001", "/S09E73/ogrodje-history-podcast.png", picture(700, 700, "png"))
+        dropbox.put("2001", "/S09E73/ogrodje-history-podcast.png", picture(3000, 3000, "png", color = Color(31, 122, 77)))
         mcp.setEpisodeImage("S09E73", EpisodeImage.COVER, ImageSource.DROPBOX, "Artwork", "/S09E73/ogrodje-history-podcast.png", null)
 
         val removed = mcp.removeEpisodeImage("S09E73", EpisodeImage.COVER)
@@ -278,22 +328,26 @@ class ImagesTest @Autowired constructor(
             Episode(title = "Released", code = "S09E74").apply { status = EpisodeStatus.PUBLISHED; airedDate = LocalDate.now().plusYears(1) }
         )
         dropbox.put("2001", "/S09E74", null)
-        dropbox.put("2001", "/S09E74/thumb1.png", picture(1280, 720, "png"))
-        dropbox.put("2001", "/S09E74/thumb2.png", picture(1280, 721, "png"))
+        dropbox.put("2001", "/S09E74/thumb1.png", picture(1920, 1080, "png", color = Color(236, 72, 112)))
+        dropbox.put("2001", "/S09E74/thumb2.png", picture(1920, 1080, "png", color = Color(20, 20, 20)))
+        dropbox.put("2001", "/S09E74/web.png", picture(1920, 1080, "png", color = Color(250, 250, 250)))
         val thumbnail = mcp.setEpisodeImage("S09E74", EpisodeImage.THUMBNAIL, ImageSource.DROPBOX, "Artwork", "/S09E74/thumb1.png", null).image!!
         val b = mcp.setEpisodeImage("S09E74", EpisodeImage.THUMBNAIL_B, ImageSource.DROPBOX, "Artwork", "/S09E74/thumb2.png", null).image!!
+        val web = mcp.setEpisodeImage("S09E74", EpisodeImage.WEB, ImageSource.DROPBOX, "Artwork", "/S09E74/web.png", null).image!!
         val person = people.saveAndFlush(Person(name = "Gost", email = null))
         dropbox.put("2001", "/S09E74/gost.png", picture(400, 400, "png"))
         val avatar = mcp.setPersonAvatar(checkNotNull(person.id), ImageSource.DROPBOX, "Artwork", "/S09E74/gost.png", null)
 
         val released = "$.data.releasedEpisodes[0]"
-        graphql("""{ releasedEpisodes(limit: 1) { code thumbnail { url width height sizes { width url } } thumbnailB { url } cover { url } } }""")
+        graphql("""{ releasedEpisodes(limit: 1) { code thumbnail { url width height sha256 sizes { width url } } thumbnailB { url } web { url } cover { url } } }""")
             .andExpect(jsonPath("$.errors").doesNotExist())
             .andExpect(jsonPath("$released.code").value("S09E74"))
             .andExpect(jsonPath("$released.thumbnail.url").value(thumbnail.url))
-            .andExpect(jsonPath("$released.thumbnail.width").value(1280))
-            .andExpect(jsonPath("$released.thumbnail.sizes[*].width", contains(320, 640)))
+            .andExpect(jsonPath("$released.thumbnail.width").value(1920))
+            .andExpect(jsonPath("$released.thumbnail.sha256").value(thumbnail.sha256))
+            .andExpect(jsonPath("$released.thumbnail.sizes[*].width", contains(320, 640, 1280)))
             .andExpect(jsonPath("$released.thumbnailB").value(null as Any?))
+            .andExpect(jsonPath("$released.web.url").value(web.url))
             .andExpect(jsonPath("$released.cover").value(null as Any?))
 
         val team = jwt().jwt { it.claim("realm_access", APPROVED).claim("scope", API_READ_SCOPE) }

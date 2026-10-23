@@ -202,7 +202,7 @@ const photos = computed<KoofrPhoto[]>((previous) =>
         </dl>
       </section>
 
-      <EpisodePictures :episode="episode"/>
+      <EpisodePictures :episode="episode" @changed="reloadQuietly(episode.id)"/>
       <PhotoStrip v-if="artwork.length" title="Artwork" :photos="artwork" :folder="artwork[0]?.url" service="Dropbox" artwork/>
       <PhotoStrip v-if="photos.length" title="Photos" :photos="photos" :folder="episode.koofrFolders[0]?.url" service="Koofr"/>
 

@@ -390,6 +390,9 @@ class ImagesGraphQL(private val imagesRepository: ImagesRepository, private val 
     @BatchMapping(typeName = "Episode", field = "thumbnailC")
     fun thumbnailsC(episodes: List<Episode>) = if (signedIn()) of(episodes) { it.thumbnailCImageId } else emptyMap()
 
+    @BatchMapping(typeName = "Episode", field = "web")
+    fun webs(episodes: List<Episode>) = of(episodes) { it.webImageId }
+
     @BatchMapping(typeName = "Episode", field = "cover")
     fun covers(episodes: List<Episode>) = of(episodes) { it.coverImageId }
 

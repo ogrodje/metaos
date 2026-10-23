@@ -62,7 +62,7 @@ type Query {
     accounts(unlinked: Boolean! = false): [Account!]!
 }
 
-"Changes, as the signed-in user: each needs an approved user's token with metaos:write (CommentsGraphQL.kt)"
+"Changes, as the signed-in user: each needs an approved user's token with metaos:write (CommentsGraphQL.kt, Artwork.kt)"
 type Mutation {
     "Comment on an episode (ideas too) by its code or ID, in Markdown"
     commentOnEpisode(ref: String!, body: String!): Comment!
@@ -76,6 +76,65 @@ type Mutation {
     linkAccount(id: ID!, person: ID!): Account!
     "Unlink an account from its person. Only for canLinkAccounts."
     unlinkAccount(id: ID!): Account!
+    """
+    Start uploading a picture for an episode, PNG or JPEG of size bytes, up to 50 MB: the browser sends it straight to
+    MetaOS's bucket, then setEpisodeImage makes it one of the episode's pictures
+    """
+    artworkUpload(ref: String!, contentType: String!, size: Int!): ArtworkUpload!
+    """
+    Make an upload, of a file called name, one of an episode's pictures, which it has to be the size of, and put it in
+    the episode's first Dropbox folder too, unless it's there already. Another picture the episode has there already is
+    only replaced with replace. The upload is gone afterwards, also when it's refused.
+    """
+    setEpisodeImage(ref: String!, kind: EpisodeImage!, upload: ID!, name: String!, replace: Boolean! = false): EpisodeImageSet!
+}
+
+"An episode's pictures, each PNG or JPEG of exactly its size"
+enum EpisodeImage {
+    "1920 × 1080"
+    THUMBNAIL
+    "1920 × 1080, with titleB"
+    THUMBNAIL_B
+    "1920 × 1080, with titleC"
+    THUMBNAIL_C
+    "1920 × 1080: the thumbnail without its words, for ogrodje.si"
+    WEB
+    "3000 × 3000"
+    COVER
+}
+
+"""
+Where the browser sends a picture: a resumable upload, started with a POST to url with exactly these headers and no
+body, after which the file is PUT to the Location that answers. It only starts until expires.
+"""
+type ArtworkUpload {
+    "What setEpisodeImage takes"
+    id: ID!
+    url: String!
+    headers: [Header!]!
+    expires: String!
+}
+
+type Header {
+    name: String!
+    value: String!
+}
+
+"One of an episode's pictures, as an upload made it"
+type EpisodeImageSet {
+    kind: EpisodeImage!
+    image: Image!
+    "Where it is in the episode's first Dropbox folder; null when the episode has none"
+    dropbox: DropboxCopy
+}
+
+type DropboxCopy {
+    "Where it is in the folder's place; null when it isn't there"
+    path: String
+    "Whether MetaOS put it there; false when it was there already"
+    copied: Boolean!
+    "Why it isn't there"
+    error: String
 }
 
 type Episode {
@@ -127,13 +186,15 @@ type Episode {
     history: [Change!]!
     "Its discussion, oldest first. None without a signed-in user."
     comments: [Comment!]!
-    "Its thumbnail (16:9)"
+    "Its thumbnail, 1920 × 1080"
     thumbnail: Image
     "The thumbnail that goes with titleB, as they're A/B tested together. Null without a signed-in user."
     thumbnailB: Image
     "The thumbnail that goes with titleC, as thumbnailB"
     thumbnailC: Image
-    "Its cover (square), e.g. for podcast apps"
+    "Its web picture: the thumbnail without its words, for ogrodje.si, 1920 × 1080"
+    web: Image
+    "Its cover, e.g. for podcast apps, 3000 × 3000"
     cover: Image
 }
 
@@ -150,6 +211,8 @@ type Image {
     height: Int!
     "Copies of it, 320, 640, 1280 and 1920 px wide where it's wider than that, the narrowest first"
     sizes: [ImageSize!]!
+    "The original's SHA-256, in hex: the same file is the same picture"
+    sha256: String!
 }
 
 type ImageSize {

@@ -15,8 +15,9 @@ MetaOS checks their tokens with Keycloak's keys. MetaOS keeps its data in Postgr
 works with Google Drive, Koofr and Dropbox as Ogrodje's bot account. Postgres also tells MetaOS what changed, which it
 passes on to the open pages, so they show it without being reloaded. Pictures everyone may see, like episodes'
 thumbnails from Dropbox and people's avatars from Hygraph, MetaOS copies to its public bucket in Google Cloud Storage,
-from which browsers load them at media.ogrodje.si, cached by Cloudflare. Everything runs on Ogrodje's Kubernetes
-cluster, behind Cloudflare.
+from which browsers load them at media.ogrodje.si, cached by Cloudflare; the team uploads an episode's artwork from
+its page straight to MetaOS's private bucket, and MetaOS publishes it from there. Everything runs on Ogrodje's
+Kubernetes cluster, behind Cloudflare.
 
 The diagram is drawn in [`architecture.svg`](architecture.svg); `just architecture` renders `architecture.png` from it.
 

@@ -9,10 +9,11 @@ const cover: Image = {
   width: 3000,
   height: 3000,
   sizes: [320, 640, 1280, 1920].map((width) => ({ width, url: `${base}/${width}.jpg` })),
+  sha256: 'abc',
 }
 
 // Narrower than the narrowest copy, so there are none
-const small: Image = { name: 'logo.png', url: `${base}/original.png`, width: 200, height: 200, sizes: [] }
+const small: Image = { name: 'logo.png', url: `${base}/original.png`, width: 200, height: 200, sizes: [], sha256: 'abc' }
 
 describe('srcset', () => {
   it('offers the copies, without the original', () => {

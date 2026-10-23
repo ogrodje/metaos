@@ -21,8 +21,8 @@ import java.util.concurrent.locks.ReentrantLock
 import javax.imageio.ImageIO
 import kotlin.concurrent.withLock
 
-/** Where a picture came from: a place and a path in Dropbox or Koofr, or a URL */
-enum class ImageSource { DROPBOX, KOOFR, URL }
+/** Where a picture came from: a place and a path in Dropbox or Koofr, a URL, or an upload from the browser (Artwork) */
+enum class ImageSource { DROPBOX, KOOFR, URL, UPLOAD }
 
 /**
  * A picture in the public bucket (Media), e.g. an episode's thumbnail: its original at [originalPath], as it came, and
@@ -70,10 +70,28 @@ interface ImagesRepository : JpaRepository<Image, UUID> {
 }
 
 /**
- * An episode's pictures: its thumbnail (16:9), and one for each of its alternative titles, as they're A/B tested
- * together; and its cover (square), e.g. for podcast apps
+ * An episode's pictures, each in PNG or JPEG and exactly as big as it says: its thumbnail, and one for each of its
+ * alternative titles, as they're A/B tested together; its web picture, the thumbnail without its words, for ogrodje.si;
+ * and its cover, e.g. for podcast apps, as big as Apple Podcasts takes them. As the Artwork folder in Dropbox has them.
  */
-enum class EpisodeImage { THUMBNAIL, THUMBNAIL_B, THUMBNAIL_C, COVER }
+enum class EpisodeImage(val label: String, val width: Int, val height: Int) {
+    THUMBNAIL("thumbnail", 1920, 1080),
+    THUMBNAIL_B("thumbnail B", 1920, 1080),
+    THUMBNAIL_C("thumbnail C", 1920, 1080),
+    WEB("web picture", 1920, 1080),
+    COVER("cover", 3000, 3000),
+}
+
+// What an episode's pictures may be
+val ARTWORK_TYPES = setOf("image/png", "image/jpeg")
+
+/** Refuses a picture that isn't what the episode's picture has to be: PNG or JPEG, exactly as big as it says */
+private fun EpisodeImage.check(name: String, contentType: String, width: Int, height: Int) {
+    require(contentType in ARTWORK_TYPES) { "$name isn't PNG or JPEG, which an episode's $label has to be" }
+    require(width == this.width && height == this.height) {
+        "$name is $width × $height; an episode's $label has to be exactly ${this.width} × ${this.height}"
+    }
+}
 
 data class ImageSizeDto(val width: Int, val url: String)
 
@@ -87,6 +105,8 @@ data class ImageDto(
     val from: ImageSource,
     val place: String?,
     val path: String,
+    // Of the original: the same file is the same picture
+    val sha256: String,
 )
 
 private class Format(val extension: String, val contentType: String)
@@ -135,6 +155,7 @@ class Images(
     private val images: ImagesRepository,
     private val dropbox: ObjectProvider<Dropbox>,
     private val koofr: ObjectProvider<Koofr>,
+    private val storage: ObjectProvider<Storage>,
 ) {
 
     private val http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build()
@@ -148,19 +169,24 @@ class Images(
     }
 
     /**
-     * The picture at [path] in a place in Dropbox or Koofr, or at a [URL][ImageSource.URL] (in [path]), in the public
-     * bucket. A URL's picture is named after its last part, unless it has a [name], e.g. Hygraph's, whose URLs have none.
+     * The picture at [path] in a place in Dropbox or Koofr, at a [URL][ImageSource.URL] (in [path]), or uploaded to
+     * MetaOS's bucket ([UPLOAD][ImageSource.UPLOAD], at [path] there), in the public bucket. A URL's picture is named
+     * after its last part, unless it has a [name], e.g. Hygraph's, whose URLs have none; an upload by its file's [name].
+     * One of an episode's pictures ([artwork]) has to be what that one is: PNG or JPEG, exactly as big as it says.
      */
-    fun publish(source: ImageSource, place: String?, path: String, name: String? = null): Image = making.withLock {
-        // Fetched only once it's its turn, so pictures asked for at once wait rather than all be in memory together
-        val fetched = fetch(source, place, path, name)
-        val sha256 = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(fetched.bytes))
-        images.findBySha256(sha256) ?: images.save(make(sha256, source, fetched))
-    }
+    fun publish(source: ImageSource, place: String?, path: String, name: String? = null, artwork: EpisodeImage? = null): Image =
+        making.withLock {
+            // Fetched only once it's its turn, so pictures asked for at once wait rather than all be in memory together
+            val fetched = fetch(source, place, path, name)
+            val sha256 = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(fetched.bytes))
+            images.findBySha256(sha256)?.also { artwork?.check(fetched.name, it.contentType, it.width, it.height) }
+                ?: images.save(make(sha256, source, fetched, artwork))
+        }
 
     fun toDto(image: Image) = ImageDto(
         image.name, media.url(image.originalPath()), image.width, image.height,
         image.widths.map { ImageSizeDto(it, media.url(image.path(it))) }, image.source, image.sourcePlace, image.sourcePath,
+        image.sha256,
     )
 
     private fun fetch(source: ImageSource, place: String?, path: String, name: String?): Fetched = when (source) {
@@ -188,6 +214,13 @@ class Images(
             }
             Fetched(name ?: URI(path).path.substringAfterLast('/').ifEmpty { path }, bytes, null, path)
         }
+        // Kept by the file's name, as the upload goes once it's published
+        ImageSource.UPLOAD -> {
+            val storage = checkNotNull(storage.ifAvailable) { "MetaOS has no bucket for uploads" }
+            val named = requireNotNull(name) { "An upload needs its file's name" }
+            val file = requireNotNull(storage.file(path)) { "$named didn't arrive in MetaOS's bucket; upload it again" }
+            Fetched(named, limited(named, file.size) { storage.read(path, it) }, null, named)
+        }
     }
 
     // Reads one byte more than it takes, to tell a file that's too big from one that isn't
@@ -197,8 +230,8 @@ class Images(
         return read(MAX_IMAGE_BYTES + 1).also { require(it.size <= MAX_IMAGE_BYTES) { tooBig } }
     }
 
-    private fun make(sha256: String, source: ImageSource, fetched: Fetched): Image {
-        val (format, picture) = decode(fetched)
+    private fun make(sha256: String, source: ImageSource, fetched: Fetched, artwork: EpisodeImage?): Image {
+        val (format, picture) = decode(fetched, artwork)
         val copies = if (picture.isOpaque()) "jpg" else "png"
         val widths = WIDTHS.filter { it < picture.width }
         val image = Image(
@@ -218,7 +251,8 @@ class Images(
         media.storage.upload(path, contentType, ByteArrayInputStream(bytes), overwrite = true, cacheControl = CACHE_CONTROL)
     }
 
-    private fun decode(fetched: Fetched): Pair<Format, BufferedImage> {
+    // An episode's picture is refused for its size before it's decoded, by what its header says, and once it's turned
+    private fun decode(fetched: Fetched, artwork: EpisodeImage?): Pair<Format, BufferedImage> {
         val unreadable = "${fetched.name} isn't a picture MetaOS can read: PNG, JPEG, WebP or GIF"
         val format = ImageIO.createImageInputStream(ByteArrayInputStream(fetched.bytes)).use { input ->
             val reader = ImageIO.getImageReaders(input).asSequence().firstOrNull() ?: throw IllegalArgumentException(unreadable)
@@ -226,6 +260,7 @@ class Images(
                 reader.input = input
                 val format = FORMATS[reader.formatName.lowercase()] ?: throw IllegalArgumentException(unreadable)
                 val (width, height) = reader.getWidth(0) to reader.getHeight(0)
+                artwork?.check(fetched.name, format.contentType, width, height)
                 require(width.toLong() * height <= MAX_PIXELS) {
                     "${fetched.name} is $width × $height; at most ${MAX_PIXELS / 1_000_000} megapixels"
                 }
@@ -237,6 +272,7 @@ class Images(
         // Turned as its EXIF orientation says, e.g. a photo taken with the phone held upright
         val picture = runCatching { Thumbnails.of(ByteArrayInputStream(fetched.bytes)).scale(1.0).asBufferedImage() }
             .getOrElse { throw IllegalArgumentException(unreadable, it) }
+        artwork?.check(fetched.name, format.contentType, picture.width, picture.height)
         return format to picture
     }
 

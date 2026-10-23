@@ -67,12 +67,14 @@ class Episode(
     @Column(name = "thumbnail_image_id") var thumbnailImageId: UUID? = null
     @Column(name = "thumbnail_b_image_id") var thumbnailBImageId: UUID? = null
     @Column(name = "thumbnail_c_image_id") var thumbnailCImageId: UUID? = null
+    @Column(name = "web_image_id") var webImageId: UUID? = null
     @Column(name = "cover_image_id") var coverImageId: UUID? = null
 
     fun imageId(kind: EpisodeImage): UUID? = when (kind) {
         EpisodeImage.THUMBNAIL -> thumbnailImageId
         EpisodeImage.THUMBNAIL_B -> thumbnailBImageId
         EpisodeImage.THUMBNAIL_C -> thumbnailCImageId
+        EpisodeImage.WEB -> webImageId
         EpisodeImage.COVER -> coverImageId
     }
 
@@ -81,6 +83,7 @@ class Episode(
             EpisodeImage.THUMBNAIL -> thumbnailImageId = id
             EpisodeImage.THUMBNAIL_B -> thumbnailBImageId = id
             EpisodeImage.THUMBNAIL_C -> thumbnailCImageId = id
+            EpisodeImage.WEB -> webImageId = id
             EpisodeImage.COVER -> coverImageId = id
         }
     }

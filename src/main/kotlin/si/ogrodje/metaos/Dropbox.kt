@@ -37,9 +37,11 @@ import java.net.URLConnection
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.security.MessageDigest
 import java.time.Duration
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
+import java.util.HexFormat
 import java.util.concurrent.TimeUnit
 
 /**
@@ -50,7 +52,8 @@ data class DropboxPlace(val id: String, val name: String, val owner: String?, va
 
 /**
  * A file or folder in a place, by its path there ("/" is the shared folder itself), and by Dropbox's [id] for it
- * ("id:..."), which stays with it when it's moved or renamed; the shared folder itself has none
+ * ("id:..."), which stays with it when it's moved or renamed; the shared folder itself has none. A file has Dropbox's
+ * hash of what's in it ([dropboxContentHash]).
  */
 data class DropboxFile(
     val place: String,
@@ -61,7 +64,23 @@ data class DropboxFile(
     val modified: OffsetDateTime?,
     val contentType: String?,
     val id: String? = null,
+    val contentHash: String? = null,
 )
+
+// What Dropbox hashes a file by
+private const val HASH_BLOCK = 4 * 1024 * 1024
+
+/**
+ * Dropbox's hash of a file's content, as its files have it: the SHA-256 of the SHA-256s of its 4 MB blocks
+ * (https://www.dropbox.com/developers/reference/content-hash). The same content is the same file, whatever its name.
+ */
+fun dropboxContentHash(content: ByteArray): String {
+    val blocks = MessageDigest.getInstance("SHA-256")
+    for (start in content.indices step HASH_BLOCK) {
+        blocks.update(MessageDigest.getInstance("SHA-256").digest(content.copyOfRange(start, minOf(start + HASH_BLOCK, content.size))))
+    }
+    return HexFormat.of().formatHex(blocks.digest())
+}
 
 /** An image, e.g. a thumbnail Dropbox made of a picture */
 class DropboxImage(val contentType: String, val bytes: ByteArray)
@@ -102,8 +121,11 @@ interface Dropbox {
      */
     fun thumbnail(place: String, path: String, size: String): DropboxImage
 
-    /** A new file in a folder; one of the same name is only replaced when [overwrite] is set, and Dropbox keeps it as a version */
-    fun upload(place: String, folder: String, name: String, content: ByteArray, overwrite: Boolean): DropboxFile
+    /**
+     * A new file in a folder; one of the same name is only replaced when [overwrite] is set, and Dropbox keeps it as a
+     * version. With [rename], Dropbox gives the new one another name instead, e.g. "ogrodje-zidar-thumb1 (1).png".
+     */
+    fun upload(place: String, folder: String, name: String, content: ByteArray, overwrite: Boolean, rename: Boolean = false): DropboxFile
 
     fun createFolder(place: String, parent: String, name: String)
 
@@ -124,7 +146,8 @@ private fun join(folder: String, name: String) = folder.trimEnd('/') + "/" + nam
 
 private fun Metadata.toDropboxFile(place: String, path: String) = when (this) {
     is FileMetadata -> DropboxFile(
-        place, path, name, false, size, serverModified.toInstant().atOffset(ZoneOffset.UTC), URLConnection.guessContentTypeFromName(name), id
+        place, path, name, false, size, serverModified.toInstant().atOffset(ZoneOffset.UTC), URLConnection.guessContentTypeFromName(name), id,
+        contentHash,
     )
     is FolderMetadata -> DropboxFile(place, path, name, true, null, null, null, id)
     else -> DropboxFile(place, path, name, false, null, null, null)
@@ -333,13 +356,14 @@ class DropboxStorage(
         }
     }
 
-    // Without autorename Dropbox fails on a file that's already there, where it would otherwise pick another name
-    override fun upload(place: String, folder: String, name: String, content: ByteArray, overwrite: Boolean): DropboxFile = call {
+    // Without autorename Dropbox fails on a file that's already there, where it would otherwise pick another name; the
+    // one it picked is the file's
+    override fun upload(place: String, folder: String, name: String, content: ByteArray, overwrite: Boolean, rename: Boolean): DropboxFile = call {
         try {
-            client.files().uploadBuilder(at(place, join(folder, name)))
-                .withMode(if (overwrite) WriteMode.OVERWRITE else WriteMode.ADD).withAutorename(false)
+            val saved = client.files().uploadBuilder(at(place, join(folder, name)))
+                .withMode(if (overwrite) WriteMode.OVERWRITE else WriteMode.ADD).withAutorename(rename)
                 .uploadAndFinish(ByteArrayInputStream(content))
-                .toDropboxFile(place, join(folder, name))
+            saved.toDropboxFile(place, join(folder, saved.name))
         } catch (e: UploadErrorException) {
             if (e.errorValue.isPath && e.errorValue.pathValue.reason.isConflict)
                 throw IllegalArgumentException("${join(folder, name)} is already there; overwrite replaces it, keeping the old one as a version")

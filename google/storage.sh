@@ -49,10 +49,12 @@ settings() {
   esac
 }
 
-# Unfinished multipart uploads are billed until they're aborted; tests' leftovers go after a day
+# Unfinished multipart uploads are billed until they're aborted; uploads from the browser MetaOS didn't take
+# (Artwork.kt), and tests' leftovers, go after a day
 lifecycle() {
   jq -n --arg env "$1" '{rule: ([
-    {action: {type: "AbortIncompleteMultipartUpload"}, condition: {age: 7}}
+    {action: {type: "AbortIncompleteMultipartUpload"}, condition: {age: 7}},
+    {action: {type: "Delete"}, condition: {age: 1, matchesPrefix: ["uploads/"]}}
   ] + if $env == "dev" then [{action: {type: "Delete"}, condition: {age: 1, matchesPrefix: ["test/"]}}] else [] end)}'
 }
 
@@ -70,8 +72,8 @@ setup_bucket() {
   local env=$1 origins
   local bucket=gs://$(bucket "$env") account=$(account "$env")
   case $env in
-    # Vite's dev server, and the app serving the built front-end
-    dev) origins='["http://localhost:5173", "http://localhost:8080"]' ;;
+    # Vite's dev server, the app serving the built front-end, and a second front-end, e.g. a worktree's
+    dev) origins='["http://localhost:5173", "http://localhost:8080", "http://localhost:5175"]' ;;
     prod) origins='["https://metaos.ogrodje.si"]' ;;
   esac
 

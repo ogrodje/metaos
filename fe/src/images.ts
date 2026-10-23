@@ -1,5 +1,5 @@
 // Pictures MetaOS serves to everyone from its public bucket, as its GraphQL API has them
-// (src/main/resources/graphql/schema.graphqls): an episode's thumbnails and cover, a person's avatar
+// (src/main/resources/graphql/schema.graphqls): an episode's thumbnails, web picture and cover, a person's avatar
 
 export interface ImageSize {
   width: number
@@ -14,10 +14,12 @@ export interface Image {
   width: number
   height: number
   sizes: ImageSize[]
+  // Of the original: the same file is the same picture
+  sha256: string
 }
 
 /** The fields of an Image, for a query */
-export const IMAGE_FIELDS = 'name url width height sizes { width url }'
+export const IMAGE_FIELDS = 'name url width height sizes { width url } sha256'
 
 /**
  * For an <img>'s srcset: its copies, for the browser to pick the one that fits. The original only when there are none,
