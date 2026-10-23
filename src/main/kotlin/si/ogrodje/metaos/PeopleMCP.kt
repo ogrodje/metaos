@@ -20,17 +20,28 @@ data class PersonDto(
     val facebookUrl: String? = null,
 )
 data class PersonEpisodeDto(val episodeId: UUID?, val code: String?, val title: String, val roles: List<Role>)
-data class CurrentUserDto(val username: String?, val email: String?, val emailVerified: Boolean, val person: PersonDto?)
+data class CurrentUserDto(
+    val username: String?,
+    val email: String?,
+    val emailVerified: Boolean,
+    val person: PersonDto?,
+    // Once MetaOS has seen it
+    val account: AccountDto?,
+    // Whether they may link accounts to people (ACCOUNT_LINKER)
+    val canLinkAccounts: Boolean,
+)
 
 fun Person.toDto() =
     PersonDto(id, name, email, bio, homepageUrl, linkedinUrl, twitterUrl, instagramUrl, facebookUrl)
 
-/** The user a token belongs to, with the person linked to them by verified email */
-fun Jwt.toCurrentUserDto(people: PeopleRepository) = CurrentUserDto(
+/** The user a token belongs to, with their account and the person they are (Accounts.signedInPerson) */
+fun Jwt.toCurrentUserDto(accounts: Accounts) = CurrentUserDto(
     username = getClaimAsString("preferred_username"),
     email = getClaimAsString("email"),
     emailVerified = getClaimAsBoolean("email_verified") == true,
-    person = verifiedEmail?.let(people::findByEmail)?.toDto(),
+    person = accounts.signedInPerson()?.toDto(),
+    account = accounts.signedInAccount()?.let { accounts.dtos(listOf(it)).single() },
+    canLinkAccounts = mayLinkAccounts(),
 )
 
 // One entry per episode, with all of the person's roles on it
@@ -45,6 +56,7 @@ class PeopleMCP(
     private val people: PeopleRepository,
     private val episodePeople: EpisodePeopleRepository,
     private val episodes: EpisodesRepository,
+    private val accounts: Accounts,
 ) {
 
     @McpTool(
@@ -71,7 +83,7 @@ class PeopleMCP(
         @McpToolParam(description = "Unique email address (case-insensitive)", required = false) email: String?,
     ): PersonDto {
         require(email == null || people.findByEmail(email) == null) { "Person with email $email already exists" }
-        return people.save(Person(name = name, email = email)).toDto()
+        return people.save(Person(name = name, email = email)).also(accounts::linkByEmail).toDto()
     }
 
     @Transactional
@@ -81,7 +93,8 @@ class PeopleMCP(
             title = "Set person email",
             readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
         ),
-        description = "Set or clear a person's email. A signed-in user with the same verified email is linked to this person"
+        description = "Set or clear a person's email. Accounts with the same verified email that aren't linked to anyone " +
+            "are linked to this person (unless someone unlinked them)"
     )
     fun setEmail(
         @McpToolParam(description = "Person ID") personId: UUID,
@@ -92,6 +105,7 @@ class PeopleMCP(
             "Person with email $email already exists"
         }
         person.email = email
+        accounts.linkByEmail(person)
         return person.toDto()
     }
 
@@ -192,9 +206,10 @@ class PeopleMCP(
             title = "Who am I",
             readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
         ),
-        description = "Show the signed-in user and the person linked to them by verified email"
+        description = "Show the signed-in user, their account and the person they are: their account's, or else the " +
+            "one with their verified email"
     )
-    fun whoami(): CurrentUserDto = checkNotNull(currentJwt()) { "Not signed in" }.toCurrentUserDto(people)
+    fun whoami(): CurrentUserDto = checkNotNull(currentJwt()) { "Not signed in" }.toCurrentUserDto(accounts)
 
     @Transactional(readOnly = true)
     @McpTool(
@@ -209,9 +224,10 @@ class PeopleMCP(
         episodePeople.findByPersonWithEpisode(signedInPerson()).toPersonEpisodeDtos()
 
     private fun signedInPerson(): Person {
-        val jwt = checkNotNull(currentJwt()) { "Not signed in" }
-        val email = checkNotNull(jwt.verifiedEmail) { "Signed-in user has no verified email" }
-        return checkNotNull(people.findByEmail(email)) { "No person has email $email; link one with set_person_email" }
+        checkNotNull(currentJwt()) { "Not signed in" }
+        return checkNotNull(accounts.signedInPerson()) {
+            "Your account isn't linked to a person; link it with link_account, or give your person your email with set_person_email"
+        }
     }
 
     @Transactional(readOnly = true)

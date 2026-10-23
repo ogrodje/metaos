@@ -72,7 +72,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/usage',
     name: 'usage',
-    meta: { title: 'Usage' },
+    meta: { title: 'API and MCP usage' },
     // Its own chunk, loaded when the page is first visited
     component: () => import('../views/UsageView.vue'),
   },

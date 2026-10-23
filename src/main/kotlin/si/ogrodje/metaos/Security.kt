@@ -25,6 +25,9 @@ const val MCP_SCOPE = "mcp:tools"
 /** For reading what isn't public through /graphql; the front-end's tokens have it (keycloak/frontend_client.sh) */
 const val API_READ_SCOPE = "metaos:read"
 
+/** For changes through /graphql, e.g. comments; the front-end's tokens have it too */
+const val API_WRITE_SCOPE = "metaos:write"
+
 /**
  * The realm role an admin grants to approve a user (keycloak/approval_gate.sh). MetaOS checks it as well as the scope,
  * as Keycloak can issue a token with the scope to more than approved users: a client registered through DCR for its own
@@ -55,12 +58,18 @@ private fun approved(scope: String) =
 @Component("approval")
 class Approval {
     fun reads(authentication: Authentication?) = authentication.approvedFor(API_READ_SCOPE)
+
+    // GraphQL's mutations (CommentsGraphQL.kt)
+    fun writes(authentication: Authentication?) = authentication.approvedFor(API_WRITE_SCOPE)
 }
 
 /** Keycloak access token of the user calling the MCP tools. */
 fun currentJwt(): Jwt? = (SecurityContextHolder.getContext().authentication as? JwtAuthenticationToken)?.token
 
-/** Users are linked to a [Person] by email - only once Keycloak has verified it, so nobody can claim someone else's. */
+/**
+ * An account is linked to a [Person] by email (Accounts.kt) - only once Keycloak has verified it, so nobody can claim
+ * someone else's.
+ */
 val Jwt.verifiedEmail: String?
     get() = getClaimAsString("email")?.takeIf { getClaimAsBoolean("email_verified") == true }
 

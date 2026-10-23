@@ -80,24 +80,27 @@ yarn test       # the tests in src/**/__tests__, with vitest (./gradlew feTest, 
   `Person`). [`fe/server/routes`](fe/server/routes) has `/sitemap.xml`, with every page anyone may see, and
   `/robots.txt`, which keeps crawlers off the team's pages and the API; and `/healthz`, for the probes. A not-found
   page answers 404 (`NotFound.vue`).
-- The Usage page (`/usage`) shows how to install the MCP server and lists its tools by hand, from
-  [`fe/src/tools.ts`](fe/src/tools.ts), which has to follow every change to the tools (see above).
+- The API and MCP usage page (`/usage`) shows how to install the MCP server and lists its tools by hand, from
+  [`fe/src/tools.ts`](fe/src/tools.ts), which has to follow every change to the tools (see above). It also shows how to
+  use the GraphQL API with curl, with or without a token (a signed-in user copies theirs); its examples have to keep
+  working as the schema changes.
 - Data comes from the GraphQL API at `/graphql` ([`schema.graphqls`](src/main/resources/graphql/schema.graphqls),
   [`GraphQL.kt`](src/main/kotlin/si/ogrodje/metaos/GraphQL.kt)), through `fe/src/graphql.ts`. It's open to anyone, as
-  some of it is public (`releasedEpisodes`, and `episode` and `person` for a released episode and the people on it);
-  a bearer token says who is asking (`me`). What isn't public needs
-  `metaos:read` and an approved user (realm role `metaos-user`, `Security.kt`): whole queries with `@PreAuthorize`, and fields that public episodes and sessions also have (history,
-  docs, addresses, ...) come back empty for anyone else.
+  some of it is public (`releasedEpisodes`, and `episode` and `person` for a released episode and the people on it); a
+  bearer token says who is asking (`me`). What isn't public needs `metaos:read` and an approved user (realm role
+  `metaos-user`, `Security.kt`): whole queries with `@PreAuthorize`, and fields that public episodes and sessions also
+  have (history, comments, docs, addresses, ...) come back empty for anyone else. Changes (`Mutation`: comments of
+  Discussions, linking Accounts) need `metaos:write` and an approved user (`@approval.writes`).
 - The header ([`App.vue`](fe/src/App.vue)) is two rows: the logo, and at the right Search and you
-  (`UserMenu.vue`: your initials, which open your name, your page and Sign out; or Sign in, which asks Discord or
-  Google); under them the pages as tabs, in the order they're used (`pages`), which scroll sideways when they don't
-  fit. A new section, e.g. Partners or Analytics, is another tab there. A tab is underlined on its own pages too,
-  Episodes on an episode's. The user menu is a button that shows and hides its links, not an ARIA menu.
+  (`UserMenu.vue`: your initials, which open your name, your page, your sign-ins (see Accounts) and Sign out; or
+  Sign in, which asks Discord or Google); under them the pages as tabs, in the order they're used (`pages`), which
+  scroll sideways when they don't fit. A new section, e.g. Partners or Analytics, is another tab there. A tab is
+  underlined on its own pages too, Episodes on an episode's. "API and MCP usage" isn't a tab: the footer links to it,
+  as do the sign-in prompts. The user menu is a button that shows and hides its links, not an ARIA menu.
 - Every page is named in the browser's tab and the server's page (`meta.title` in `fe/src/router/index.ts`, and
   `usePageTitle` from `fe/src/title.ts`, with `useHead`, for one about a thing, e.g. an episode's code and title) and
-  has an `h1`, hidden where its tab
-  names it. Going to another page moves focus to it and says its name in a live region (`App.vue`); a skip link leads
-  past the header. Anything else is a not-found page (`NotFound.vue`, also an episode, session or person that isn't
+  has an `h1`, hidden where its tab names it. Going to another page moves focus to it and says its name in a live
+  region (`App.vue`); a skip link leads past the header. Anything else is a not-found page (`NotFound.vue`, also an episode, session or person that isn't
   there), with where to go instead.
 - A list loads behind rows like its own (`LoadingRows.vue`), so the page doesn't jump, and what didn't load says why
   with Try again (`LoadError.vue`); `graphql.ts` words errors so they say what to do, e.g. an account not approved
@@ -107,10 +110,10 @@ yarn test       # the tests in src/**/__tests__, with vitest (./gradlew feTest, 
   weeks with no confirmed guest or doc, and episodes recorded 60 days ago that aren't out), then the upcoming
   recordings and what's in production, by session with how far away it is, then the releases.
 - Episode titles lead to their pages, `/episodes/<code or ID>`, and for the team session labels to `/sessions/<ID>`:
-  everything about them, and their history on a date rail (`HistoryTimeline.vue`), from the audit trail as
-  [`History.kt`](src/main/kotlin/si/ogrodje/metaos/History.kt) tells it. A released episode's page is anyone's, without
-  what's the team's (its history, alternative titles, files, ...); any other episode is the team's, and not found for
-  anyone else, as one that isn't there.
+  everything about them, for the team their discussion (see Discussions) and, under it, their history on a date rail
+  (`HistoryTimeline.vue`), from the audit trail as [`History.kt`](src/main/kotlin/si/ogrodje/metaos/History.kt) tells
+  it. A released episode's page is anyone's, without what's the team's (its discussion, history, alternative titles,
+  files, ...); any other episode is the team's, and not found for anyone else, as one that isn't there.
 - Episode ideas (`IDEA`) have a page of their own, `/ideas`, from the `ideas` query, which needs `metaos:read`, as
   does its link in the header; the `episodes` query, and so the Episodes page, leaves them out.
 - The People page, `/people`, lists everyone by name (Slovenian order, past a "dr."), from the `people` query: who
@@ -153,12 +156,13 @@ docker compose up -d keycloak   # http://localhost:8180 (admin console: admin / 
   [`keycloak/trusted_hosts.sh`](keycloak/trusted_hosts.sh).
 - Tokens need the `mcp:tools` scope; it also puts the MCP URL into `aud`, which the server checks. They also need the
   realm role `metaos-user`, an approved user's (`APPROVED_ROLE` in `Security.kt`, also on `/graphql`'s team data and
-  the thumbnails): Keycloak can issue the scope to more than approved users, e.g. a client registered through DCR for
-  its own service account, which no login and so no approval gate stands in front of. Test JWTs carry it with
-  `claim("realm_access", APPROVED)` (`TestTokens.kt`).
+  changes and the thumbnails): Keycloak can issue the scope to more than approved users, e.g. a client registered
+  through DCR for its own service account, which no login and so no approval gate stands in front of. Test JWTs carry
+  it with `claim("realm_access", APPROVED)` (`TestTokens.kt`).
 - The front-end signs users in as `metaos-ui`, a public client with PKCE. Its tokens carry `metaos:read` and
-  `metaos:write`, which put the `/graphql` URL into `aud` (and don't get them into `/mcp`). They're the client's own
-  scopes, not realm defaults, as MCP clients registering themselves could ask for any realm default.
+  `metaos:write` (`API_READ_SCOPE`, `API_WRITE_SCOPE`: reading the team's data and changing it, e.g. comments), which
+  put the `/graphql` URL into `aud` (and don't get them into `/mcp`). They're the client's own scopes, not realm
+  defaults, as MCP clients registering themselves could ask for any realm default.
   [`keycloak/frontend_client.sh`](keycloak/frontend_client.sh) sets them up in a realm imported without them, e.g.
   production's (`METAOS_UI_URL` and `METAOS_API_URL` default to production's).
 - Dev login: `dev` / `dev`.
@@ -179,14 +183,40 @@ docker compose up -d keycloak   # http://localhost:8180 (admin console: admin / 
   docker compose up -d keycloak
   ```
 
+### Accounts
+
+MetaOS knows who's signed in by their account: one per Keycloak user it has seen, by the token's `sub`, linked to the
+person it is ([`Accounts.kt`](src/main/kotlin/si/ogrodje/metaos/Accounts.kt),
+[`V25__accounts.sql`](src/main/resources/db/migration/V25__accounts.sql)). Keycloak links a user's sign-ins (Google,
+Discord, ...) to one user, so they're one account; a person may have several, e.g. the `dev` user and a Google one.
+
+- `AccountsFilter` writes an approved user's account down as their token says it (username, name, email), once the token
+  says something new or a few minutes on, so most requests write nothing; each pod keeps what it last wrote.
+- An account is linked by its verified email: when it signs in, or when a person gets that email (`create_person`,
+  `set_person_email`), unless someone unlinked it. Or by hand, only by `otobrglez@gmail.com` (`ACCOUNT_LINKER`,
+  hardcoded; `CurrentUser.canLinkAccounts`): `link_account` and `unlink_account` (MCP), `linkAccount` and
+  `unlinkAccount` (GraphQL); one linked to someone else has to be unlinked first. Links stay when emails change, and
+  each link and unlink is in the person's history.
+- `Accounts.signedInPerson()` is who "you" are (`whoami`, `me`, `my_episodes`, who recommended a new episode): your
+  account's person, or, while it isn't linked and wasn't unlinked, the person with your verified email.
+- Comments and the history name people through their accounts (`Accounts.people`, by `sub`) when they're shown, so
+  linking an account names what it did before too.
+- On the front-end: a person's page lists their sign-ins (`PersonSignIns.vue`) and the People page the accounts not
+  linked to anyone (`UnlinkedAccounts.vue`, with `PersonPicker.vue`); only `canLinkAccounts` gets Link, Unlink and
+  This is me. Your menu lists the realm's identity providers from Keycloak's Account API
+  (`<issuer>/account/linked-accounts`, which `metaos-ui`'s tokens may call: they carry the `account` audience and
+  `manage-account-links`), and links another one to your Keycloak user with keycloak-js
+  `login({ action: 'idp_link:<alias>' })`, Keycloak's application-initiated action (the legacy `/broker/.../link` is off
+  since 26.7.2); it falls back to the Account Console's Linked accounts.
+
 ### Audit trail
 
 Postgres triggers ([`V6__audit_log.sql`](src/main/resources/db/migration/V6__audit_log.sql)) write every insert, update
 and delete on the domain tables to `audit_log`, with the old and new row as JSON. `AuditingTransactionManager` tags each
 read-write transaction with the signed-in user (`sub`, `preferred_username`), their OAuth client (`azp`) and the MCP tool
 that started it; writes made any other way (psql, migrations) are logged without them. `AuditLog` reads it, for the
-`get_history` and `list_recent_changes` MCP tools and for the history on the front-end's episode and session pages
-(`History.kt`, which says each change in words).
+`get_history` and `list_recent_changes` MCP tools, for the history on the front-end's episode and session pages
+(`History.kt`, which says each change in words), and for the MCP tool each comment was written with (Discussions).
 
 A new table needs its own `<table>_audit` trigger, `AuditLog.history` needs to know about new link columns, and
 `History.kt` how to say what a change to it means.
@@ -214,6 +244,34 @@ Server-Sent Events at `/events`.
   tell MetaOS what changed).
 - A new table with an audit trigger is in it by itself. A new page that shows MetaOS's data should use
   `useLiveRefresh`, and, when anyone may see it, load what it shows first with `useFirstLoad` (Front-end).
+
+### Discussions
+
+Episodes (ideas too) and recording sessions have a discussion each, as on GitHub: comments in Markdown, oldest first,
+by whoever was signed in, on MetaOS's pages or over MCP. They're the team's: writing one takes an approved user, and
+`Episode.comments` and `Session.comments` are empty for anyone else, on released episodes too.
+
+- A comment ([`V24__comments.sql`](src/main/resources/db/migration/V24__comments.sql)) is on one episode or one
+  session, by ID, so it stays when they're deleted and comes back with them. It keeps its author's Keycloak user ID
+  (`sub`), and goes by the name of the person their account is (see Accounts) when it's shown, else by their username
+  then. At most 20,000 characters (`MAX_COMMENT_LENGTH`, also in `fe/src/comments.ts`).
+- [`Comments.kt`](src/main/kotlin/si/ogrodje/metaos/Comments.kt) has the rules, for MCP and GraphQL alike: an approved
+  user writes as themselves, on an episode or session that isn't deleted, and only the author edits (`edited_at`) or
+  deletes. Deleting is soft (`deleted_at`): the comment leaves the discussion, and the history keeps that it was there.
+- MCP: `list_episode_comments`, `list_session_comments`, `comment_on_episode`, `comment_on_session`, `edit_comment`
+  and `delete_comment` (`CommentsMCP`). GraphQL: `commentOnEpisode`, `commentOnSession`, `editComment` and
+  `deleteComment` (`CommentsGraphQL`), its first mutations, which need an approved user's token with `metaos:write`
+  (`@approval.writes`).
+- `comments` has its own audit trigger, so every comment, edit and delete is in the audit trail, and so in the live
+  updates with no code of their own. `AuditLog.history` takes in an episode's or session's comments, which `History.kt`
+  tells as "Commented" (with the start of its text), "Edited a comment" and "Deleted a comment". A comment's `tool`,
+  shown as e.g. "MCP · comment_on_episode", is the MCP tool its insert in `audit_log` was made by
+  (`AuditLog.creatingTools`); none on MetaOS's pages.
+- On the episode and session pages, the Discussion is above the History (`DiscussionSection.vue`): the comments
+  (`CommentCard.vue`), with Edit and Delete on your own, and a box for a new one (`CommentEditor.vue`), with Write and
+  Preview tabs like GitHub's. The preview renders with `MarkdownText.vue`, as posted comments do; ⌘↵ sends. A
+  comment's "commented <date>" links to it, its page's address with `#comment-<id>`: opened, the page scrolls to it
+  once its comments are there, and outlines it.
 
 ### Google (Drive and Gmail)
 

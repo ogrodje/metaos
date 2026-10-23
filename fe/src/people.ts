@@ -1,5 +1,6 @@
 // People as MetaOS's GraphQL API has them (src/main/resources/graphql/schema.graphqls)
 
+import type { Account } from '@/accounts'
 import { type Episode, type Role, roleName } from '@/episodes'
 import { type Image, IMAGE_FIELDS } from '@/images'
 
@@ -22,6 +23,8 @@ export interface Person {
   avatar: Image | null
   // The latest first; for anyone not signed in only the released ones
   episodes: PersonEpisode[]
+  // The accounts they sign in with, when a query asks for them (not PERSON_FIELDS); none without a signed-in user
+  accounts?: Account[]
 }
 
 /** A person's page */

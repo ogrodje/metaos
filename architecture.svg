@@ -100,7 +100,7 @@
   <text x="812" y="302">what changed, as it does</text>
 
   <text class="col" x="680" y="366">INSIDE</text>
-  <text x="680" y="388">episodes, people, sessions, shows</text>
+  <text x="680" y="388">episodes, people, sessions, shows, comments</text>
   <text x="680" y="408">every change logged: who, with</text>
   <text x="680" y="426">which client and which MCP tool</text>
   <text x="680" y="448">outside connections checked hourly</text>
@@ -162,7 +162,8 @@
   <path class="edge" d="M200 256 H662" marker-end="url(#arrow)"/>
   <path class="edge" d="M200 298 H662" marker-end="url(#arrow)"/>
   <path class="edge" d="M110 360 V400 H408" marker-end="url(#arrow)"/>
-  <text class="m" x="402" y="394" text-anchor="end">signs in, PKCE</text>
+  <text class="m" x="402" y="376" text-anchor="end">signs in, PKCE;</text>
+  <text class="m" x="402" y="394" text-anchor="end">links sign-ins</text>
 
   <!-- MCP clients to Keycloak and MetaOS -->
   <path class="edge" d="M110 470 V440 H408" marker-end="url(#arrow)"/>

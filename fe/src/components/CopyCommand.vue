@@ -3,55 +3,84 @@ import { ref } from 'vue'
 import { faCopy } from '@fortawesome/free-regular-svg-icons'
 import { faCheck } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { withTimeout } from '@/usage'
 
-// A command to run in a terminal, with a button that copies it
-const props = defineProps<{ command: string }>()
+// A command to run in a terminal, or code to use, e.g. a GraphQL query: on the page's one code surface, with what it
+// is and a button that copies it at the top. Long lines scroll inside it rather than widening the page.
+const props = withDefaults(defineProps<{
+  command: string
+  // What it is, e.g. Terminal or GraphQL
+  label?: string
+  // For the button, e.g. Copy the query
+  what?: string
+}>(), { label: 'Terminal', what: 'command' })
 
+const code = ref<HTMLElement>()
 const copied = ref(false)
+// What the button did, for screen readers
+const status = ref('')
+let timer: ReturnType<typeof setTimeout> | undefined
 
 async function copy() {
+  clearTimeout(timer)
   try {
-    await navigator.clipboard.writeText(props.command)
+    await withTimeout(navigator.clipboard.writeText(props.command))
     copied.value = true
-    setTimeout(() => (copied.value = false), 2000)
+    status.value = 'Copied'
   } catch (error) {
-    console.error('The command was not copied', error)
+    // Selected instead, for the keyboard's copy
+    console.error(`The ${props.what} was not copied`, error)
+    const range = document.createRange()
+    if (code.value) range.selectNodeContents(code.value)
+    getSelection()?.removeAllRanges()
+    getSelection()?.addRange(range)
+    status.value = 'Selected, to copy with ⌘C or Ctrl+C'
   }
+  timer = setTimeout(() => {
+    copied.value = false
+    status.value = ''
+  }, 2000)
 }
 </script>
 
 <template>
-  <div class="command">
-    <code>{{ command }}</code>
-    <button type="button" class="icon-link" :aria-label="copied ? 'Copied' : 'Copy the command'"
-            :title="copied ? 'Copied' : 'Copy'" @click="copy">
-      <FontAwesomeIcon :icon="copied ? faCheck : faCopy"/>
-    </button>
+  <div class="code">
+    <div class="bar">
+      <span class="label">{{ label }}</span>
+      <button type="button" class="icon-link" :aria-label="copied ? 'Copied' : `Copy the ${what}`"
+              :title="copied ? 'Copied' : 'Copy'" @click="copy">
+        <FontAwesomeIcon :icon="copied ? faCheck : faCopy"/>
+      </button>
+      <span class="visually-hidden" role="status">{{ status }}</span>
+    </div>
+    <pre><code ref="code">{{ command }}</code></pre>
   </div>
 </template>
 
 <style scoped lang="scss">
 
-.command {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 10px;
-  padding: 4px 4px 4px 14px;
-  background: var(--hover);
+// Monospace on a light surface, in a hairline
+.code {
+  margin-top: 12px;
+  overflow: hidden;
+  background: #FAFAFA;
   border: 1px solid var(--hairline);
   border-radius: 8px;
+}
 
-  // Scrolls on its own rather than widening the page
-  code {
-    flex: 1;
-    overflow-x: auto;
-    padding: 5px 0;
-    font-family: var(--font-mono);
-    font-size: 13px;
-    line-height: 22px;
-    white-space: nowrap;
-    color: var(--ink);
+// What it is, and the copy button at the top right
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 4px 2px 14px;
+  border-bottom: 1px solid var(--rule);
+
+  .label {
+    font-size: 12px;
+    line-height: 18px;
+    color: var(--muted);
   }
 
   button {
@@ -62,9 +91,40 @@ async function copy() {
     cursor: pointer;
 
     &:hover {
-      background: #FFFFFF;
+      color: var(--ink);
+      background: var(--hover);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
     }
   }
+}
+
+// Scrolls on its own rather than widening the page
+pre {
+  margin: 0;
+  padding: 12px 14px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 22px;
+  color: var(--ink);
+  tab-size: 2;
+
+  code {
+    font: inherit;
+  }
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 </style>

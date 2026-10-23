@@ -87,6 +87,7 @@ class EpisodesMCP(
     private val episodes: EpisodesRepository,
     private val people: PeopleRepository,
     private val episodePeople: EpisodePeopleRepository,
+    private val accounts: Accounts,
 ) {
 
     private fun findEpisode(ref: String) = requireNotNull(episodes.findByRef(ref)) { "Episode $ref not found" }
@@ -139,7 +140,7 @@ class EpisodesMCP(
         recommendedBy: UUID? = null,
     ): EpisodeDto {
         val episode = Episode(title = title, code = code?.trim()?.ifEmpty { null })
-        episode.recommendedBy = recommendedBy?.let(::findPerson) ?: people.findSignedIn()
+        episode.recommendedBy = recommendedBy?.let(::findPerson) ?: accounts.signedInPerson()
         return episodes.save(episode).toDto()
     }
 

@@ -133,7 +133,8 @@ usePageMeta(() => ({
     <!-- For visitors who aren't signed in: how to get at the rest -->
     <SignInPrompt v-if="auth.ready && !auth.authenticated" title="Sign in to use MetaOS">
       Sign in with Discord or Google to see the episodes in production and the upcoming recordings. Or use MetaOS from
-      your AI assistant over MCP: Usage shows how to connect it.
+      your AI assistant over MCP:
+      <RouterLink class="usage" to="/usage">API and MCP usage</RouterLink> shows how to connect it.
     </SignInPrompt>
 
     <!-- Signed in, what's being made comes first, and of it first what needs attention; the releases are last. Its
@@ -201,6 +202,15 @@ usePageMeta(() => ({
 
 <style scoped lang="scss">
 @use '../assets/page';
+
+// API and MCP usage, which is in the footer, from the sign-in prompt's words
+.usage {
+  color: var(--accent-text);
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
 
 // The date, then where, which on phones goes on a line of its own when it doesn't fit
 .session {

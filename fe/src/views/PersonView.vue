@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { type Account, ACCOUNT_FIELDS } from '@/accounts'
 import { keepUnchanged, useLiveRefresh } from '@/changes'
 import EpisodeItem from '@/components/EpisodeItem.vue'
 import EpisodeRow from '@/components/EpisodeRow.vue'
@@ -8,6 +9,7 @@ import LoadError from '@/components/LoadError.vue'
 import LoadingRows from '@/components/LoadingRows.vue'
 import NotFound from '@/components/NotFound.vue'
 import PersonAvatar from '@/components/PersonAvatar.vue'
+import PersonSignIns, { type MyAccount } from '@/components/PersonSignIns.vue'
 import SocialLinks from '@/components/SocialLinks.vue'
 import { type Episode, EPISODE_FIELDS, type Role, roleName } from '@/episodes'
 import { errorMessage, graphql } from '@/graphql'
@@ -18,10 +20,11 @@ import { useFirstLoad } from '@/ssr'
 import { useAuthStore } from '@/stores/auth'
 import { usePageTitle } from '@/title'
 
-/** A person with everything about them, for their page: their episodes whole, and those they recommended */
-interface PersonDetails extends Omit<Person, 'episodes'> {
+/** A person with everything about them, for their page: their episodes whole, those they recommended, and their sign-ins */
+interface PersonDetails extends Omit<Person, 'episodes' | 'accounts'> {
   episodes: { episode: Episode, roles: Role[] }[]
   recommended: Episode[]
+  accounts: Account[]
 }
 
 const auth = useAuthStore()
@@ -34,16 +37,33 @@ const id = String(route.params.id)
 // Undefined while it loads; null when there's no such person, or none the user may see
 const person = ref<PersonDetails | null>()
 const error = ref<string>()
+// Your account, which may say this person is you, and whether you may link accounts to people
+const me = ref<MyAccount | null>()
+const canLinkAccounts = ref(false)
 
-// Everything about them; for anyone not on the team, only their released episodes, and none they recommended
+interface PersonPage {
+  person: PersonDetails | null
+  me: { account: MyAccount | null, canLinkAccounts: boolean } | null
+}
+
+// Everything about them, and your account; for anyone not on the team, only their released episodes, and none they
+// recommended nor their sign-ins
 async function fetchPerson(id: string) {
-  return (await graphql<{ person: PersonDetails | null }>(`query ($id: ID!) {
+  return graphql<PersonPage>(`query ($id: ID!) {
     person(id: $id) {
       id name bio homepageUrl linkedinUrl twitterUrl instagramUrl facebookUrl avatar { ${IMAGE_FIELDS} }
       episodes { episode { ${EPISODE_FIELDS} } roles }
       recommended { ${EPISODE_FIELDS} }
+      accounts { ${ACCOUNT_FIELDS} }
     }
-  }`, { id })).person
+    me { account { id username name email person { id } } canLinkAccounts }
+  }`, { id })
+}
+
+function show(data: PersonPage) {
+  person.value = keepUnchanged(person.value, data.person)
+  me.value = keepUnchanged(me.value, data.me?.account ?? null)
+  canLinkAccounts.value = data.me?.canLinkAccounts === true
 }
 
 // Only the latest load counts: an earlier one may answer after it
@@ -53,9 +73,9 @@ let loads = 0
 async function loadPerson(id: string, quietly = false) {
   const load = ++loads
   try {
-    const loaded = await fetchPerson(id)
+    const data = await fetchPerson(id)
     if (load !== loads) return
-    person.value = keepUnchanged(person.value, loaded)
+    show(data)
     error.value = undefined
   } catch (e) {
     if (load !== loads) return
@@ -66,7 +86,7 @@ async function loadPerson(id: string, quietly = false) {
 
 // First as anyone may see them, as the server rendered it
 const first = await useFirstLoad(`person:${id}`, () => fetchPerson(id))
-person.value = first.data
+if (first.data) show(first.data)
 error.value = first.error
 
 // Again when the user signs in or out: on the team, with all of their episodes, also of someone who isn't on a released
@@ -92,6 +112,11 @@ usePageMeta(() => {
     structured: personData(shown, siteUrl),
   }
 })
+
+// After a link or an unlink, as the Discussion does after a comment
+function reloadQuietly() {
+  loadPerson(id, true).catch((e) => console.error('The person did not load again', e))
+}
 
 // In the order an episode's people are listed
 const ROLES: Role[] = ['HOST', 'CO_HOST', 'GUEST', 'PRODUCER', 'CONSULTANT', 'DESIGNER', 'CANDIDATE']
@@ -157,6 +182,8 @@ const hasLinks = computed(() => (person.value ? socialLinks(person.value).length
           </div>
         </dl>
       </section>
+
+      <PersonSignIns :person="person" :accounts="person.accounts" :me="me" :can-link="canLinkAccounts" @changed="reloadQuietly"/>
 
       <p v-if="!byRole.length && !person.recommended.length" class="note">Not on any episode yet.</p>
 

@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import { keepUnchanged, useLiveRefresh } from '@/changes'
+import { COMMENT_FIELDS } from '@/comments'
+import DiscussionSection from '@/components/DiscussionSection.vue'
 import DocLinks from '@/components/DocLinks.vue'
 import DropboxFolderList from '@/components/DropboxFolderList.vue'
 import EpisodeItem from '@/components/EpisodeItem.vue'
@@ -43,7 +45,7 @@ async function loadSession(id: string, quietly = false) {
     const data = await graphql<{ session: SessionDetails | null }>(`query ($id: ID!) {
       session(id: $id) {
         id date location address documents { fileId url } ${KOOFR_FIELDS} ${DROPBOX_FIELDS} ${HISTORY_FIELDS}
-        episodes { ${EPISODE_FIELDS} }
+        ${COMMENT_FIELDS} episodes { ${EPISODE_FIELDS} }
       }
     }`, { id })
     if (load !== loads) return
@@ -62,6 +64,11 @@ useLiveRefresh(() => loadSession(String(route.params.id), true))
 
 usePageTitle(() => (session.value ? sessionTitle(session.value) : undefined))
 
+// After a comment was written here: the live updates would bring it too, a moment later
+function reloadQuietly(id: string) {
+  loadSession(id, true).catch((error) => console.error('The session did not load again', error))
+}
+
 // The same list while it's the same, as the photos page through them from the first again when they change
 const photos = computed<KoofrPhoto[]>((previous) =>
   keepUnchanged(previous, session.value ? photosOf(session.value.koofrFolders) : []))
@@ -71,7 +78,8 @@ const photos = computed<KoofrPhoto[]>((previous) =>
   <main class="content">
     <SignInPrompt v-if="auth.ready && !auth.authenticated" title="Sign in to see this session">
       A recording session's details and history are for Ogrodje's team. Sign in with Discord or Google, or use MetaOS
-      from your AI assistant over MCP: Usage shows how to connect it.
+      from your AI assistant over MCP:
+      <RouterLink class="usage" to="/usage">API and MCP usage</RouterLink> shows how to connect it.
     </SignInPrompt>
     <LoadError v-else-if="error" what="The session" :error="error" @retry="loadSession(String(route.params.id))"/>
     <NotFound v-else-if="session === null" title="There's no such recording session">
@@ -126,6 +134,8 @@ const photos = computed<KoofrPhoto[]>((previous) =>
         </ul>
       </section>
 
+      <DiscussionSection :comments="session.comments" :session-id="session.id" @changed="reloadQuietly(session.id)"/>
+
       <section aria-labelledby="history">
         <div class="heading">
           <h2 id="history">History</h2>
@@ -139,4 +149,13 @@ const photos = computed<KoofrPhoto[]>((previous) =>
 
 <style scoped lang="scss">
 @use '../assets/page';
+
+// API and MCP usage, which is in the footer, from the sign-in prompt's words
+.usage {
+  color: var(--accent-text);
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
 </style>

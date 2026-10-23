@@ -22,7 +22,7 @@ const auth = useAuthStore()
       <button type="button" class="button" @click="auth.login('google')">
         <FontAwesomeIcon :icon="faGoogle"/>Sign in with Google
       </button>
-      <RouterLink class="button" to="/usage">Usage with MCP<FontAwesomeIcon :icon="faArrowRight"/></RouterLink>
+      <RouterLink class="button" to="/usage">API and MCP usage<FontAwesomeIcon :icon="faArrowRight"/></RouterLink>
     </div>
     <p class="approval">New accounts get in once an admin has approved them.</p>
   </section>
