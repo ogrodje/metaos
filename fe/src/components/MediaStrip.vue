@@ -105,12 +105,21 @@ const folder = computed(() => props.artwork[0]?.url)
     </div>
 
     <template v-if="shown === 'titles'">
-      <!-- Each title with the thumbnail it's tested with, then the cover -->
+      <!-- The cover, large, then each title with the thumbnail it's tested with, and the web picture -->
       <ul v-if="pictured" class="variants">
+        <li class="cover">
+          <a v-if="episode.cover" class="shot" :href="episode.cover.url" target="_blank" rel="noopener"
+             :title="`${episode.cover.name}, ${episode.cover.width} × ${episode.cover.height}`">
+            <img :src="src(episode.cover, 640)" :srcset="srcset(episode.cover)" sizes="(max-width: 640px) 50vw, 260px"
+                 :width="episode.cover.width" :height="episode.cover.height" alt="Cover" loading="lazy">
+          </a>
+          <button v-else type="button" class="shot missing" aria-haspopup="dialog" @click="open('COVER')">Upload the cover</button>
+          <p class="title">Cover</p>
+        </li>
         <li v-for="variant in variants" :key="variant.letter">
           <a v-if="variant.image" class="shot" :href="variant.image.url" target="_blank" rel="noopener"
              :title="`${variant.image.name}, ${variant.image.width} × ${variant.image.height}`">
-            <img :src="src(variant.image, 640)" :srcset="srcset(variant.image)" sizes="(max-width: 640px) 50vw, 260px"
+            <img :src="src(variant.image, 640)" :srcset="srcset(variant.image)" sizes="(max-width: 640px) 50vw, 300px"
                  :width="variant.image.width" :height="variant.image.height" :alt="`Thumbnail ${variant.letter}`" loading="lazy">
             <span class="letter" aria-hidden="true">{{ variant.letter }}</span>
           </a>
@@ -130,15 +139,6 @@ const folder = computed(() => props.artwork[0]?.url)
           <button v-else type="button" class="shot missing" aria-haspopup="dialog" @click="open('WEB')">Upload the web picture</button>
           <p class="title">Web picture</p>
           <p v-if="episode.web" class="file">{{ episode.web.name }}</p>
-        </li>
-        <li class="cover">
-          <a v-if="episode.cover" class="shot" :href="episode.cover.url" target="_blank" rel="noopener"
-             :title="`${episode.cover.name}, ${episode.cover.width} × ${episode.cover.height}`">
-            <img :src="src(episode.cover, 640)" :srcset="srcset(episode.cover)" sizes="(max-width: 640px) 50vw, 150px"
-                 :width="episode.cover.width" :height="episode.cover.height" alt="Cover" loading="lazy">
-          </a>
-          <button v-else type="button" class="shot missing" aria-haspopup="dialog" @click="open('COVER')">Upload the cover</button>
-          <p class="title">Cover</p>
         </li>
       </ul>
       <!-- Before the recording, the titles only -->
@@ -228,10 +228,14 @@ const folder = computed(() => props.artwork[0]?.url)
   }
 }
 
-// Up to three thumbnails and then the cover, which is square, so as tall as they are
+// The cover, square, as tall as it's wide, then the thumbnails and the web picture in two rows of two beside it
 .variants {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 0.5625fr);
+  grid-template-columns: minmax(0, 0.9fr) repeat(2, minmax(0, 1fr));
+
+  .cover {
+    grid-row: span 2;
+  }
 
 
   gap: 16px 14px;
@@ -336,6 +340,10 @@ const folder = computed(() => props.artwork[0]?.url)
 @media (max-width: 640px) {
   .variants {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    .cover {
+      grid-row: auto;
+    }
   }
 
   .tabs {
