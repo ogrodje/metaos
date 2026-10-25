@@ -8,9 +8,19 @@ import java.time.LocalDate
 import java.time.format.DateTimeParseException
 import java.util.UUID
 
-// Changing a recording session from MetaOS's pages, e.g. its name, as update_session does over MCP (Sessions.kt)
+// Creating and changing recording sessions over GraphQL, e.g. renaming one on its page, as create_session and
+// update_session do over MCP (Sessions.kt)
 @Controller
 class SessionsGraphQL(private val sessions: Sessions) {
+
+    @MutationMapping
+    @PreAuthorize(WRITES)
+    fun createSession(
+        @Argument date: String,
+        @Argument name: String?,
+        @Argument location: String?,
+        @Argument address: String?,
+    ): Session = sessions.create(day(date), name, location, address)
 
     @MutationMapping
     @PreAuthorize(WRITES)
@@ -20,14 +30,12 @@ class SessionsGraphQL(private val sessions: Sessions) {
         @Argument name: String?,
         @Argument location: String?,
         @Argument address: String?,
-    ): Session {
-        val day = date?.let {
-            try {
-                LocalDate.parse(it)
-            } catch (_: DateTimeParseException) {
-                throw IllegalArgumentException("A session's date is a day, e.g. 2026-10-22, not $it")
-            }
+    ): Session = sessions.update(id, date?.let(::day), name, location, address)
+
+    private fun day(date: String): LocalDate =
+        try {
+            LocalDate.parse(date)
+        } catch (_: DateTimeParseException) {
+            throw IllegalArgumentException("A session's date is a day, e.g. 2026-10-22, not $date")
         }
-        return sessions.update(id, day, name, location, address)
-    }
 }

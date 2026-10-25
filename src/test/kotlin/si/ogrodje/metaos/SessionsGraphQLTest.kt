@@ -1,5 +1,6 @@
 package si.ogrodje.metaos
 
+import com.jayway.jsonpath.JsonPath
 import org.hamcrest.Matchers.anyOf
 import org.hamcrest.Matchers.contains
 import org.hamcrest.Matchers.equalTo
@@ -19,6 +20,9 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import tools.jackson.databind.json.JsonMapper
 import java.time.LocalDate
+import java.util.UUID
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -27,6 +31,8 @@ class SessionsGraphQLTest @Autowired constructor(
     private val mvc: MockMvc,
     private val sessionsMCP: SessionsMCP,
     private val episodesMCP: EpisodesMCP,
+    private val sessions: SessionsRepository,
+    private val auditMCP: AuditMCP,
 ) {
 
     // Approved users, through MetaOS's pages: one who may only read, and one who may also write
@@ -36,6 +42,42 @@ class SessionsGraphQLTest @Autowired constructor(
     private fun user(username: String, scope: String) = jwt().jwt {
         it.subject("$username-id").claim("preferred_username", username).claim("azp", "metaos-ui")
             .claim("realm_access", APPROVED).claim("scope", scope)
+    }
+
+    @Test
+    fun `creates a session as the signed-in user, with metaos write`() {
+        val create = """mutation { createSession(date: "2099-11-05", name: " Create Conf 2099 ", location: "Create Hall", address: "Street 5") { id date name location address } }"""
+
+        graphql(create)
+            .andExpect(jsonPath("$.errors[0].extensions.classification", anyOf(equalTo("UNAUTHORIZED"), equalTo("FORBIDDEN"))))
+            .andExpect(jsonPath("$.data").value(null as Any?))
+        graphql(create, reader).andExpect(jsonPath("$.errors[0].extensions.classification").value("FORBIDDEN"))
+        assertTrue(sessions.findAll().none { it.name == "Create Conf 2099" })
+
+        val answer = graphql(create, writer)
+            .andExpect(jsonPath("$.errors").doesNotExist())
+            .andExpect(jsonPath("$.data.createSession.date").value("2099-11-05"))
+            .andExpect(jsonPath("$.data.createSession.name").value("Create Conf 2099"))
+            .andExpect(jsonPath("$.data.createSession.location").value("Create Hall"))
+            .andExpect(jsonPath("$.data.createSession.address").value("Street 5"))
+        val id = UUID.fromString(JsonPath.read(answer.andReturn().response.contentAsString, "$.data.createSession.id"))
+
+        // In the audit trail as the signed-in user's, through the page's client, and not an MCP tool's
+        val created = auditMCP.history(id).single()
+        assertEquals(listOf("INSERT", "bojan", "metaos-ui", null), listOf(created.operation, created.actor, created.client, created.tool))
+
+        // Only a date; empty text is none
+        graphql("""mutation { createSession(date: "2099-11-06", name: "", location: " ") { date name location address } }""", writer)
+            .andExpect(jsonPath("$.errors").doesNotExist())
+            .andExpect(jsonPath("$.data.createSession.date").value("2099-11-06"))
+            .andExpect(jsonPath("$.data.createSession.name").value(null as Any?))
+            .andExpect(jsonPath("$.data.createSession.location").value(null as Any?))
+            .andExpect(jsonPath("$.data.createSession.address").value(null as Any?))
+
+        graphql("""mutation { createSession(date: "5 Nov 2099", name: "Bad Date Conf") { id } }""", writer)
+            .andExpect(jsonPath("$.errors[0].extensions.classification").value("BAD_REQUEST"))
+            .andExpect(jsonPath("$.data").value(null as Any?))
+        assertTrue(sessions.findAll().none { it.name == "Bad Date Conf" })
     }
 
     @Test

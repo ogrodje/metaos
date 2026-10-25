@@ -87,6 +87,11 @@ type Mutation {
     "Unlink an account from its person. Only for canLinkAccounts."
     unlinkAccount(id: ID!): Account!
     """
+    Create a recording session, as create_session does over MCP: its date, a day, e.g. 2026-10-22, and what it's called,
+    where it is and its address. Empty text is none; without a name it goes by its location, else by its date.
+    """
+    createSession(date: String!, name: String, location: String, address: String): Session!
+    """
     Change a recording session, as update_session does over MCP: what's left out stays as it is, and an empty name,
     location or address clears it. The date is a day, e.g. 2026-10-22.
     """

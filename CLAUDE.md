@@ -90,7 +90,7 @@ yarn test       # the tests in src/**/__tests__, with vitest (./gradlew feTest, 
   bearer token says who is asking (`me`). What isn't public needs `metaos:read` and an approved user (realm role
   `metaos-user`, `Security.kt`): whole queries with `@PreAuthorize`, and fields that public episodes and sessions also
   have (history, comments, docs, addresses, ...) come back empty for anyone else. Changes (`Mutation`: comments of
-  Discussions, linking Accounts, an episode's pictures and links, renaming a session) need `metaos:write` and an approved user
+  Discussions, linking Accounts, an episode's pictures and links, creating and changing sessions) need `metaos:write` and an approved user
   (`@approval.writes`).
 - An episode's links (`Platform` in [`Episodes.kt`](src/main/kotlin/si/ogrodje/metaos/Episodes.kt)) are where it can
   be watched or listened to: YouTube, Spotify, Apple Podcasts, and four on Patreon, each set or cleared on its own
@@ -148,7 +148,8 @@ yarn test       # the tests in src/**/__tests__, with vitest (./gradlew feTest, 
   (`sessionName` and `sessionTitle` in `fe/src/episodes.ts`, the names `History.kt` gives sessions). Its page's
   heading is its name, with its date and, where the name doesn't say it, its location under it; the team renames it
   there (`RenameSession.vue`), through the `updateSession` mutation (`SessionsGraphQL.kt`, with `metaos:write`, as
-  `update_session` does over MCP; both through `Sessions` in `Sessions.kt`).
+  `update_session` does over MCP; both through `Sessions` in `Sessions.kt`). `createSession` creates one, as
+  `create_session` does; no page uses it yet.
 - The Episodes page lists what's in the works (the team's), then the released episodes by season, as a list
   (`EpisodeRow`, with its cover, square, or else its thumbnail: `listPicture`) or a grid of `EpisodeCard`s (`?view=grid`), by show and season; seasons older
   than the two latest show their first row until opened.
