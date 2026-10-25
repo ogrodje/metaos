@@ -90,7 +90,7 @@ yarn test       # the tests in src/**/__tests__, with vitest (./gradlew feTest, 
   bearer token says who is asking (`me`). What isn't public needs `metaos:read` and an approved user (realm role
   `metaos-user`, `Security.kt`): whole queries with `@PreAuthorize`, and fields that public episodes and sessions also
   have (history, comments, docs, addresses, ...) come back empty for anyone else. Changes (`Mutation`: comments of
-  Discussions, linking Accounts, an episode's pictures and links, creating and changing sessions) need `metaos:write` and an approved user
+  Discussions, linking Accounts, an episode's pictures, video and audio and links, creating and changing sessions) need `metaos:write` and an approved user
   (`@approval.writes`).
 - An episode's links (`Platform` in [`Episodes.kt`](src/main/kotlin/si/ogrodje/metaos/Episodes.kt)) are where it can
   be watched or listened to: YouTube, Spotify, Apple Podcasts, and four on Patreon, each set or cleared on its own
@@ -137,7 +137,7 @@ yarn test       # the tests in src/**/__tests__, with vitest (./gradlew feTest, 
   has scrolled away, the panel, which stays in view, says what it's about: its cover, code and title (`PanelTitle.vue`,
   `useScrolledPast`), also a way back to the top; a session's says its date and name. The main column has
   the episode's media (`MediaStrip.vue`: its titles with the thumbnails they're A/B tested with and the cover, its
-  artwork marked with what each file is used as, its photos), the summaries folded when long (`FoldedText.vue`), and
+  video and audio, its artwork marked with what each file is used as, its photos), the summaries folded when long (`FoldedText.vue`), and
   for the team its activity (`ActivityFeed.vue`, see Discussions): comments and history in one feed, from the audit
   trail as [`History.kt`](src/main/kotlin/si/ogrodje/metaos/History.kt) tells it. A released episode's page is
   anyone's, without what's the team's (its activity, alternative titles, files, ...), its thumbnail large; any other
@@ -361,9 +361,10 @@ gcloud comes from the devenv shell.
 
 - All are in Frankfurt (`europe-west3`). The private ones have public access prevention: MetaOS hands out signed URLs
   instead, which it signs with the key itself: `uploadUrl` starts a resumable upload, so big files, e.g. an episode's
-  artwork (Pictures), go from the browser straight to the bucket, without MetaOS in between. Their CORS allows that from
-  the front-end's origins. Uploads MetaOS didn't take (`uploads/`) are deleted after a day, a lifecycle rule
-  (`google/storage.sh setup`).
+  artwork (Pictures) and its video and audio, go from the browser straight to the bucket, without MetaOS in between,
+  whole or in chunks; `copy` moves one inside the bucket the same way. Their CORS allows that from the front-end's
+  origins, `Content-Range` and `Range` included. Uploads MetaOS didn't take (`uploads/`) are deleted after a day, a
+  lifecycle rule (`google/storage.sh setup`).
 - The public ones are for what everyone may see, e.g. episodes' thumbnails and people's avatars: anyone can read a file
   whose path they know (`allUsers` has `legacyObjectReader`, which is `storage.objects.get` only), but nobody can list
   them. Dev's is served by Google, at `https://storage.googleapis.com/ogrodje-metaos-public-dev/<path>`. Production's
@@ -425,6 +426,47 @@ on `*.graphassets.com`, the only hosts MetaOS fetches pictures from).
   its page (`MediaStrip.vue`) and avatars on the People, person and episode pages (`PersonAvatar.vue`, initials
   without one), with `srcset` from the copies (`fe/src/images.ts`), never the original, which may be 16 MB.
 - `ImagesTest` and `ArtworkTest` run against buckets in memory (`FakeStorage`), with fake Dropbox and Koofr.
+
+### Video and audio
+
+An episode's video and audio are the team's, in MetaOS's private bucket, not streamed: there to be handed on, e.g. to
+patreon-gateway, transcription or a backup ([`MediaFiles.kt`](src/main/kotlin/si/ogrodje/metaos/MediaFiles.kt),
+[`V30__episode_media.sql`](src/main/resources/db/migration/V30__episode_media.sql)). Each file is one of four kinds,
+as Patreon has them (`MediaKind`): the full video and the full audio, one each, and bonuses as video or audio, any
+number, each with a title.
+
+- The team uploads them from the episode's page as it does artwork: `mediaUpload` signs a resumable upload in the private
+  bucket (`uploads/<id>`; its `size` a `Float`, as GraphQL's `Int` stops at 2 GB), the browser sends the file there
+  itself in 16 MB chunks, going on from where Cloud Storage has it after the connection broke
+  ([`fe/src/resumable.ts`](fe/src/resumable.ts)), then `addEpisodeMedia` makes it the episode's. Video is MP4 or MOV,
+  audio MP3, M4A, WAV or FLAC (`MEDIA_TYPES`), up to 50 GB. A full one replaces the episode's only with `replace`, and
+  the same file (Cloud Storage's MD5) isn't added twice; the upload goes either way.
+- Once it's there, ffprobe reads what's in it from a signed URL, over HTTP range requests, megabytes rather than the
+  file ([`MediaProbe.kt`](src/main/kotlin/si/ogrodje/metaos/MediaProbe.kt)): a video has to have video, an audio audio
+  and no video, as a cover in an MP3 isn't video. Its whole answer is kept (`probe`, JSON), and what's shown in columns
+  (`MediaInfo`: duration, container, codecs, size, frame rate, bit depth, colour, sample rate, channels, tracks, when
+  and with what it was made). Then Cloud Storage copies it to `episode-media/<upload>/<name>` without it passing
+  through MetaOS, downloaded as a file by its name (`Content-Disposition`). ffprobe is a static build in MetaOS's image
+  (`docker/Dockerfile`) and in devenv; `FFPROBE` points at another, e.g. for an IDE that doesn't run devenv.
+- Removing one (`removeEpisodeMedia`, `remove_episode_media`) deletes its row and, once that's in, its file;
+  production's bucket keeps a deleted file 30 days, where only an administrator gets it back. The audit trail keeps the
+  row, and `History.kt` tells it, e.g. "Uploaded the full video: S05E08.mp4", "Made bonus.mov the full video".
+- GraphQL has them as `Episode.media` (none for anyone not on the team) and `mediaFile`, with `downloadUrl`, a link
+  for an hour, signed as it's asked for. MCP: `list_episode_media` (with those links, e.g. for
+  `set_patreon_post_media`), `update_episode_media` (title, or what it is, within video or audio) and
+  `remove_episode_media`; MCP can't send gigabytes, so it doesn't upload.
+- On the front-end, the episode's media has Video and audio (`MediaList.vue`): the full video and audio, a missing one
+  opening the upload for it, then the bonuses, each with what ffprobe read (`infoLine` in
+  [`fe/src/media.ts`](fe/src/media.ts)), Download and Remove (asked on its row). Upload video and audio
+  (`MediaUpload.vue`, styled with `ArtworkUpload.vue` by `_upload-dialog.scss`) reads each file in the browser with
+  mediainfo.js (MediaInfo in WebAssembly, loaded once a file is read), places it by what's in it and its name (the
+  longest video the full video, the longest audio the full audio, `-bonus` a bonus), refuses what MetaOS doesn't take,
+  warns about what looks wrong (a full video under 1080p, audio not at 44.1 or 48 kHz, a full audio not as long as the
+  video), asks once before replacing, and sends one at a time; leaving the page while it's sending asks first. The
+  episode's panel says when the full audio and video differ in length by more than 5 s (`mediaConcerns`).
+- `MediaFilesTest` runs against a bucket in memory with ffprobe's answers as its files (`FakeProbe`); `MediaProbeTest`
+  runs ffprobe itself where FFmpeg is installed; `GoogleCloudStorageTest` sends a file in chunks and copies it in the
+  dev bucket.
 
 ### Koofr
 

@@ -29,6 +29,7 @@ import {
 } from '@/episodes'
 import { errorMessage, graphql } from '@/graphql'
 import { IMAGE_FIELDS } from '@/images'
+import { MEDIA_FIELDS, mediaConcerns } from '@/media'
 import { personPath } from '@/people'
 import { useScrolledPast } from '@/scroll'
 import { episodeData, plainText, shorten, usePageMeta, useSiteUrl } from '@/seo'
@@ -58,7 +59,7 @@ async function fetchEpisode(ref: string) {
   return (await graphql<{ episode: EpisodeDetails | null }>(`query ($ref: String!) {
     episode(ref: $ref) {
       ${EPISODE_FIELDS} titleB titleC summary machineSummary addedDate recommendedBy { id name } ${KOOFR_FIELDS} ${DROPBOX_FIELDS} ${ARTWORK_FIELDS}
-      ${PICTURE_FIELDS} ${HISTORY_FIELDS} ${COMMENT_FIELDS} people { avatar { ${IMAGE_FIELDS} } }
+      ${PICTURE_FIELDS} ${HISTORY_FIELDS} ${COMMENT_FIELDS} ${MEDIA_FIELDS} people { avatar { ${IMAGE_FIELDS} } }
     }
   }`, { ref })).episode
 }
@@ -126,8 +127,11 @@ const artwork = computed<DropboxPicture[]>((previous) =>
 const photos = computed<KoofrPhoto[]>((previous) =>
   keepUnchanged(previous, episode.value ? photosOf(episode.value.koofrFolders) : []))
 
-// What needs the team's attention, by the home page's rules, e.g. recorded months ago and not out yet
-const concerns = computed(() => (auth.team && episode.value ? episodeConcerns(episode.value) : []))
+// What needs the team's attention, by the home page's rules, e.g. recorded months ago and not out yet, and in its video
+// and audio
+const concerns = computed(() => (auth.team && episode.value
+  ? [...episodeConcerns(episode.value), ...mediaConcerns(episode.value.media)]
+  : []))
 
 // Once its title has scrolled away, the panel says what the page is about
 const titleBlock = ref<HTMLElement>()

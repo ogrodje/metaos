@@ -195,6 +195,16 @@ export const TOOL_GROUPS: ToolGroup[] = [
     ],
   },
   {
+    id: 'media',
+    title: 'Video and audio',
+    about: "an episode's full video and audio and its bonuses, uploaded on its page, for the team only",
+    tools: [
+      { name: 'list_episode_media', description: "An episode's video and audio files, with what's in each (length, codecs, resolution) and a link that downloads it for an hour" },
+      { name: 'update_episode_media', description: "Change a file's title, or what it is, e.g. a bonus video that's the full video" },
+      { name: 'remove_episode_media', description: 'Take a video or audio file off its episode, and delete it' },
+    ],
+  },
+  {
     id: 'history',
     title: 'History',
     about: 'who changed what, and when, and bringing back what was deleted',
