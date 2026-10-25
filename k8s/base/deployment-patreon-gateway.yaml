@@ -26,14 +26,21 @@ spec:
     metadata: { labels: { app: patreon-gateway } }
     spec:
       terminationGracePeriodSeconds: 30
+      # Nothing in it talks to the Kubernetes API, so no token of the namespace's service account for whoever gets in
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 1001   # pwuser, in Playwright's image
         runAsGroup: 1001
         fsGroup: 1001
+        seccompProfile: { type: RuntimeDefault }
       containers:
         - name: patreon-gateway
           image: registry.folk-decibel.ts.net/metaos/patreon-gateway
+          # Chromium runs without its own sandbox (Playwright's --no-sandbox), so it needs no capabilities either
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ ALL ] }
           ports:
             - { containerPort: 8090, name: http }
           # Optional, so it starts before k8s/set_secrets.sh has made them; without them it reports what's missing
@@ -49,8 +56,12 @@ spec:
               valueFrom: { secretKeyRef: { name: patreon-gateway-secret, key: patreon_refresh_token, optional: true } }
             - name: PATREON_GATEWAY_TOKEN
               valueFrom: { secretKeyRef: { name: patreon-gateway-secret, key: gateway_token, optional: true } }
+            - name: PATREON_DOWNLOADS_DIR
+              value: /downloads
           volumeMounts:
             - { name: state, mountPath: /state }
+            # Episodes on their way to Patreon, gigabytes each; scratch space, gone with the pod, so nothing is left over
+            - { name: downloads, mountPath: /downloads }
             # Chromium's shared memory; the default 64M crashes it on big pages
             - { name: shm, mountPath: /dev/shm }
           readinessProbe:
@@ -69,6 +80,8 @@ spec:
           persistentVolumeClaim: { claimName: patreon-gateway-state }
         - name: shm
           emptyDir: { medium: Memory, sizeLimit: 256Mi }
+        - name: downloads
+          emptyDir: { sizeLimit: 20Gi }
 ---
 apiVersion: v1
 kind: Service
@@ -81,3 +94,23 @@ spec:
   selector: { app: patreon-gateway }
   ports:
     - { name: http, port: 80, targetPort: http }
+---
+# Its patreon_gateway_api_connected and patreon_gateway_signed_in, and the JVM's; the actuator is on its one port, which
+# needs no token for it but no Ingress routes
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: patreon-gateway
+  namespace: metaos-prod
+  labels: { release: prom }
+spec:
+  endpoints:
+    - interval: 30s
+      path: /actuator/prometheus
+      port: http
+  namespaceSelector:
+    matchNames:
+      - metaos-prod
+  selector:
+    matchLabels:
+      app: patreon-gateway

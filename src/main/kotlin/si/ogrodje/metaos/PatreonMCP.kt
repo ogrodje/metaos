@@ -161,8 +161,9 @@ class PatreonMCP(
         ),
         description = "Publish a Patreon draft, now or at a set time: who it's for see it, and are emailed when notify is " +
             "set. Refused for a post that's already published. With an episode, the post becomes that episode's Patreon " +
-            "link (link: PATREON, PATREON_AUDIO, PATREON_BONUS or PATREON_BONUS_AUDIO). Check the draft with " +
-            "get_patreon_post first; ask before publishing. $JOB"
+            "link (link: PATREON, PATREON_AUDIO, PATREON_BONUS or PATREON_BONUS_AUDIO) when the job is done in this " +
+            "call; when it comes back still to finish, set the link with set_episode_link to its result's url once " +
+            "get_patreon_job says SUCCEEDED. Check the draft with get_patreon_post first; ask before publishing. $JOB"
     )
     fun publish(
         @McpToolParam(description = POST_ID) id: String,

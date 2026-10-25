@@ -94,6 +94,18 @@ class PatreonTest {
     }
 
     @Test
+    fun `health says when the gateway turns MetaOS away`() {
+        val e = assertThrows<PatreonGatewayException> { Patreon("http://127.0.0.1:${server.address.port}", "wrong", JsonMapper.builder().build()).health() }
+        assertEquals("A bearer token is needed", e.message)
+    }
+
+    @Test
+    fun `a draft for some tiers needs them`() {
+        assertThrows<IllegalArgumentException> { patreon.createDraft("S05E08", null, PatreonAccess.TIERS, emptyList()) }
+        assertTrue(asked.isEmpty())
+    }
+
+    @Test
     fun `a post's ID is a number`() {
         assertThrows<IllegalArgumentException> { patreon.draft("../jobs") }
         assertTrue(asked.isEmpty())

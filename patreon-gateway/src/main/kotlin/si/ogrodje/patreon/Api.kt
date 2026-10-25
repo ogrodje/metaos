@@ -22,7 +22,8 @@ data class Page<T>(val items: List<T>, val total: Int)
 class Api(private val api: PatreonApi, private val browser: Browser, private val jobs: Jobs, private val health: Health) {
     @GetMapping("/health")
     fun health(@RequestParam(defaultValue = "false") check: Boolean): ResponseEntity<GatewayHealth> {
-        val current = if (check) health.check() else health.last
+        // Checked now also before the first scheduled check is done, so a caller right after a restart isn't told it's down
+        val current = if (check || health.last.checkedAt == null) health.check() else health.last
         return ResponseEntity.status(if (current.ok) HttpStatus.OK else HttpStatus.SERVICE_UNAVAILABLE).body(current)
     }
 

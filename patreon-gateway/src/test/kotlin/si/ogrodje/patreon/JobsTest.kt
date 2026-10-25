@@ -13,6 +13,21 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class JobsTest {
+    @Test
+    fun `the jobs after one Patreon turned away wait for it, so they keep their order`() {
+        jobs.retries = listOf(Duration.ofMillis(100))
+        val ran = java.util.concurrent.CopyOnWriteArrayList<String>()
+        val tries = AtomicInteger()
+        val update = jobs.submit("update", null) {
+            if (tries.incrementAndGet() == 1) throw PatreonBusyException("busy")
+            ran += "update"
+        }
+        val publish = jobs.submit("publish", null) { ran += "publish" }
+        finished(update.id)
+        finished(publish.id)
+        assertEquals(listOf("update", "publish"), ran)
+    }
+
     @TempDir
     lateinit var state: Path
 

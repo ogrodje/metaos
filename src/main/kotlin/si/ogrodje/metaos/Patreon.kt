@@ -155,16 +155,22 @@ class Patreon(
     fun health(): String {
         val health = call("GET", "/health", null, okOnly = false)
         if (health["ok"]?.asBoolean() != true) {
-            throw PatreonGatewayException(listOfNotNull(health["apiError"], health["browserError"]).filterNot { it.isNull }.joinToString("; ") { it.asString() })
+            // Its own errors, or why it answered as it did (e.g. another token than its own)
+            val why = listOfNotNull(health["apiError"], health["browserError"], health["error"]).filterNot { it.isNull }
+                .joinToString("; ") { it.asString() }
+            throw PatreonGatewayException(why.ifEmpty { "patreon-gateway didn't say it works" })
         }
         return health["signedInAs"].asString()
     }
 
-    private fun spec(title: String?, text: String?, access: PatreonAccess?, tiers: List<String>) = mapOf(
-        "title" to title,
-        "text" to text,
-        "access" to access?.let { mapOf("kind" to it.name, "tiers" to tiers) },
-    )
+    private fun spec(title: String?, text: String?, access: PatreonAccess?, tiers: List<String>): Map<String, Any?> {
+        require(access != PatreonAccess.TIERS || tiers.isNotEmpty()) { "TIERS needs the tiers' IDs (list_patreon_tiers)" }
+        return mapOf(
+            "title" to title,
+            "text" to text,
+            "access" to access?.let { mapOf("kind" to it.name, "tiers" to tiers) },
+        )
+    }
 
     private inline fun <reified T> read(path: String): T = mapper.treeToValue(call("GET", path, null), mapper.typeFactory.constructType(object : tools.jackson.core.type.TypeReference<T>() {}))
 

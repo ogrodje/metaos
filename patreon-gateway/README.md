@@ -36,9 +36,14 @@ Kotlin and Spring Boot like MetaOS, with Playwright for Java; a Gradle build of 
   - `DELETE /api/posts/{id}`.
   - Media: `POST /api/media` with the file's name and size, the post as its owner and `audio` or `video` as its
     relationship, which answers where to put the file: S3 with a signed form for audio, Mux with a `PUT` for video. The
-    gateway sends it from the JVM (`Media.kt`), not through the browser, as an episode is gigabytes; then
-    `GET /api/media/{id}` until it's `ready`, less and less often. Audio makes the post a `podcast` post, in the
-    campaign's show (its podcast feed), as the editor does; video a `video_external_file` one.
+    gateway sends it from the JVM (`Media.kt`), not through the browser, whose one thread would otherwise be held for
+    the hours an episode's video can take: the media is made in one visit to the campaign's page and the post saved in
+    another, after `GET /api/media/{id}` says it's `ready`, or a minute (a long video then publishes once it is). A
+    file whose upload failed is deleted from Patreon again, as it would keep another from the post. Audio makes the
+    post a `podcast` post, in the campaign's show (its podcast feed), as the editor does; video a
+    `video_external_file` one. A retried job doesn't upload a file again, nor make a second draft.
+  - Saving a post sends what changes (its title, text, access, type) and keeps its own settings, e.g. one made paid in
+    the editor; only a new draft gets the editor's defaults.
 
   These were found by recording what the editor sends (headless Chrome is stopped by Cloudflare on its page; Chrome
   you can see isn't) and reading its scripts. They aren't a public API: Patreon may change them. When it does, a job
@@ -48,15 +53,16 @@ Kotlin and Spring Boot like MetaOS, with Playwright for Java; a Gradle build of 
 
 Cloudflare answers 429 when Patreon is asked too often, after some 15–20 page loads and calls within a few minutes.
 A job Patreon turns away waits and tries again, 5, 10 and 20 minutes later, before it fails (`Jobs.kt`); the job says
-so (`error`, `retryAt`). Each job loads one page and makes a few calls.
+so (`error`, `retryAt`). The jobs after it wait with it, so they keep their order: an update sent before a publish is
+in the post before it's published. Each job loads one page (two for an upload) and makes a few calls.
 
 ## API
 
-Every call but `/health` and the actuator's needs `Authorization: Bearer $PATREON_GATEWAY_TOKEN`.
+Every call but the actuator's (probes, metrics) needs `Authorization: Bearer $PATREON_GATEWAY_TOKEN`.
 
 | Call                          | What                                                                                       |
 |-------------------------------|--------------------------------------------------------------------------------------------|
-| `GET /health[?check=true]`    | Patreon's API and the browser's session, as last checked (hourly), or now; 503 when not ok |
+| `GET /health[?check=true]`    | Patreon's API and the browser's session, as last checked (hourly, and at the first ask), or now; 503 when not ok |
 | `GET /campaign`, `GET /tiers` | the campaign; its tiers, cheapest first                                                    |
 | `GET /members?query&status&tier&limit&offset` | members, patrons first; `status` active_patron, declined_patron, former_patron or free; words in name or email |
 | `GET /token`, `POST /token/refresh` | when the creator token runs out and was refreshed (never the tokens); refresh it now |
@@ -76,7 +82,8 @@ and why. An `Idempotency-Key` header gives back the job it was first sent with. 
 restart is one its caller sees not finish.
 
 `text` is plain text: paragraphs between blank lines, and addresses made links. A file to upload comes from an https
-URL the gateway downloads, e.g. a Dropbox temporary link (MetaOS makes them) or a signed Cloud Storage URL.
+URL the gateway downloads, e.g. a Dropbox temporary link (MetaOS makes them) or a signed Cloud Storage URL: only from
+the internet, also after redirects, never from the cluster, the node or the tailnet.
 
 ## Running it
 
@@ -87,7 +94,9 @@ URL the gateway downloads, e.g. a Dropbox temporary link (MetaOS makes them) or 
 ```
 
 `PATREON_HEADED=true` runs the browser where you can see it. State (tokens, the session, what failed jobs saw) is in
-`state/`, which git ignores: it's secret. MetaOS finds a gateway at `PATREON_GATEWAY_URL` (`http://localhost:8090` by
+`state/`, which git ignores: it's secret. What failed jobs' pages showed (`state/failures`, a screenshot and the HTML
+each) is deleted after 14 days (`PATREON_FAILURES_KEPT`), as it may show who's signed in. Downloads go to
+`state/downloads` (`PATREON_DOWNLOADS_DIR`), and what a restart cut short is deleted when it starts. MetaOS finds a gateway at `PATREON_GATEWAY_URL` (`http://localhost:8090` by
 default) with `PATREON_GATEWAY_TOKEN`; it's off without the token.
 
 ## Signing the bot in
@@ -106,7 +115,9 @@ health check says when the session runs out; run it again then.
 ## Deployment
 
 `k8s/base/deployment-patreon-gateway.yaml`: one pod (`Recreate`), its state on a 1Gi volume (`microk8s-hostpath`,
-which deleting the claim deletes), no Ingress: only MetaOS calls it, at `http://patreon-gateway`. The image is
+which deleting the claim deletes), downloads on 20Gi of scratch space that goes with the pod, hardened as the others
+(seccomp, no capabilities or privilege escalation, no service-account token), and a ServiceMonitor for its
+`patreon_gateway_*` metrics. No Ingress: only MetaOS calls it, at `http://patreon-gateway`. The image is
 Playwright's, with Chromium, and Temurin's Java (`docker/patreon-gateway.Dockerfile`); Playwright's version there and
 in `build.gradle.kts` has to be the same. CI tests it, builds and deploys it with MetaOS.
 

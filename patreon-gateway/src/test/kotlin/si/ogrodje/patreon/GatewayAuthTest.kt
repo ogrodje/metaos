@@ -29,8 +29,9 @@ class GatewayAuthTest {
     }
 
     @Test
-    fun `health and the probes need none`() {
-        assertEquals(200, status("secret", "/health", null))
+    fun `the probes and metrics need none, the gateway's own health does`() {
         assertEquals(200, status("secret", "/actuator/health/liveness", null))
+        assertEquals(200, status("secret", "/actuator/prometheus", null))
+        assertEquals(401, status("secret", "/health", null))
     }
 }

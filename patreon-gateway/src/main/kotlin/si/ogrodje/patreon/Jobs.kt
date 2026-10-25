@@ -9,7 +9,6 @@ import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 
 enum class JobStatus { QUEUED, RUNNING, SUCCEEDED, FAILED }
 
@@ -37,12 +36,13 @@ data class Job(
  * The jobs, in memory: there's one gateway (one browser session), and a job lost to a restart is one its caller sees
  * not finish, and sends again. An idempotency key gives back the job it was first sent with, so a retried request
  * doesn't make a second post. Patreon turns the gateway away now and then (a rate limit): such a job waits and tries
- * again, 5, 10 and 20 minutes later, before it fails.
+ * again, 5, 10 and 20 minutes later, before it fails, and the jobs after it wait with it: Patreon would turn them away
+ * too, and one for the same post mustn't go first, e.g. publishing it before the change sent before it.
  */
 @Component
 class Jobs(private val browser: Browser, private val clock: Clock) : DisposableBean {
     private val log = LoggerFactory.getLogger(javaClass)
-    private val queue = Executors.newSingleThreadScheduledExecutor { Thread(it, "jobs").apply { isDaemon = true } }
+    private val queue = Executors.newSingleThreadExecutor { Thread(it, "jobs").apply { isDaemon = true } }
     private val jobs = ConcurrentHashMap<String, Job>()
     private val byKey = ConcurrentHashMap<String, String>()
 
@@ -65,24 +65,28 @@ class Jobs(private val browser: Browser, private val clock: Clock) : DisposableB
     /** The latest jobs first. */
     fun list(): List<Job> = jobs.values.sortedByDescending { it.createdAt }
 
+    // On the queue's one thread, which a job Patreon turned away holds while it waits, so the jobs keep their order
     private fun run(id: String, work: (String) -> Any?) {
-        val job = jobs.computeIfPresent(id) { _, it ->
-            it.copy(status = JobStatus.RUNNING, startedAt = it.startedAt ?: clock.instant(), attempts = it.attempts + 1, retryAt = null)
-        } ?: return
-        try {
-            val result = work(id)
-            update(id) { it.copy(status = JobStatus.SUCCEEDED, finishedAt = clock.instant(), result = result, error = null) }
-        } catch (e: PatreonBusyException) {
-            val wait = retries.getOrNull(job.attempts - 1)
-            if (wait == null) {
-                fail(id, e)
-            } else {
+        while (true) {
+            val job = jobs.computeIfPresent(id) { _, it ->
+                it.copy(status = JobStatus.RUNNING, startedAt = it.startedAt ?: clock.instant(), attempts = it.attempts + 1, retryAt = null)
+            } ?: return
+            try {
+                val result = work(id)
+                update(id) { it.copy(status = JobStatus.SUCCEEDED, finishedAt = clock.instant(), result = result, error = null) }
+                return
+            } catch (e: PatreonBusyException) {
+                val wait = retries.getOrNull(job.attempts - 1) ?: return fail(id, e)
                 log.info("Job {} ({}): Patreon is busy, trying again in {}", id, job.kind, wait)
                 update(id) { it.copy(status = JobStatus.QUEUED, error = e.message, retryAt = clock.instant().plus(wait)) }
-                queue.schedule({ run(id, work) }, wait.toSeconds(), TimeUnit.SECONDS)
+                try {
+                    Thread.sleep(wait.toMillis())
+                } catch (_: InterruptedException) {
+                    return fail(id, e)
+                }
+            } catch (e: Throwable) {
+                return fail(id, e)
             }
-        } catch (e: Throwable) {
-            fail(id, e)
         }
     }
 

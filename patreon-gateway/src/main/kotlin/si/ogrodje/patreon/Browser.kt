@@ -8,12 +8,14 @@ import com.microsoft.playwright.Page
 import com.microsoft.playwright.Playwright
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.DisposableBean
+import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import tools.jackson.databind.json.JsonMapper
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.attribute.PosixFilePermissions
+import java.time.Instant
 import java.util.concurrent.Callable
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
@@ -41,9 +43,12 @@ class Browser(private val properties: PatreonProperties, private val mapper: Jso
      * Runs [work] with a page signed in as the bot, on the browser's thread. When it fails, what the page showed is kept
      * as `failures/<name>.png` and `.html` ([failure]).
      */
-    fun <T> use(name: String, work: (Page) -> T): T {
+    fun <T> use(name: String, work: (Page) -> T): T = onThread { open(name, work) }
+
+    // On the browser's thread, with what failed there thrown here as it was
+    private fun <T> onThread(work: () -> T): T {
         try {
-            return thread.submit(Callable { open(name, work) }).get()
+            return thread.submit(Callable { work() }).get()
         } catch (e: ExecutionException) {
             throw e.cause ?: e
         }
@@ -57,14 +62,23 @@ class Browser(private val properties: PatreonProperties, private val mapper: Jso
         context.setDefaultTimeout(30_000.0)
         val page = context.newPage()
         try {
-            return work(page).also { keep(context) }
-        } catch (e: Throwable) {
-            runCatching {
-                Files.createDirectories(failures)
-                page.screenshot(Page.ScreenshotOptions().setPath(failures.resolve("$name.png")).setFullPage(true))
-                Files.writeString(failures.resolve("$name.html"), page.content())
-            }.onFailure { log.warn("Couldn't keep what the page showed for {}: {}", name, it.message) }
-            throw e
+            val result = try {
+                work(page)
+            } catch (e: Throwable) {
+                runCatching {
+                    Files.createDirectories(failures)
+                    page.screenshot(Page.ScreenshotOptions().setPath(failures.resolve("$name.png")).setFullPage(true))
+                    Files.writeString(failures.resolve("$name.html"), page.content())
+                    // The page may show who's signed in, and its HTML holds the session's CSRF signature
+                    listOf("png", "html").forEach { kind ->
+                        runCatching { Files.setPosixFilePermissions(failures.resolve("$name.$kind"), PosixFilePermissions.fromString("rw-------")) }
+                    }
+                }.onFailure { log.warn("Couldn't keep what the page showed for {}: {}", name, it.message) }
+                throw e
+            }
+            // What the work did in Patreon is done: a session not saved now is saved after the next use
+            runCatching { keep(context) }.onFailure { log.warn("Couldn't save the browser's session after {}: {}", name, it.message) }
+            return result
         } finally {
             context.close()
         }
@@ -73,6 +87,22 @@ class Browser(private val properties: PatreonProperties, private val mapper: Jso
     /** What the page showed when [name] failed, if kept. */
     fun failure(name: String, extension: String): Path? =
         failures.resolve("$name.$extension").takeIf { name.matches(SAFE_NAME) && Files.exists(it) }
+
+    /**
+     * Deletes what failed jobs' pages showed once it's older than [PatreonProperties.failuresKept], every hour: it's
+     * for finding out why a job failed, while that's asked, and it may show who's signed in. Returns how many it deleted.
+     */
+    @Scheduled(initialDelay = 60_000, fixedDelay = 60 * 60 * 1000)
+    fun forgetFailures(): Int {
+        if (!Files.isDirectory(failures)) return 0
+        val before = Instant.now().minus(properties.failuresKept)
+        val old = Files.list(failures).use { files ->
+            files.filter { Files.isRegularFile(it) && Files.getLastModifiedTime(it).toInstant().isBefore(before) }.toList()
+        }
+        old.forEach { runCatching { Files.deleteIfExists(it) }.onFailure { e -> log.warn("Couldn't delete {}: {}", it.fileName, e.message) } }
+        if (old.isNotEmpty()) log.info("Deleted {} files of failed jobs older than {}", old.size, properties.failuresKept)
+        return old.size
+    }
 
     /** Who the browser is signed in as (their email), or null when it isn't: its session ran out or there's none. */
     fun signedInAs(): String? = if (!hasSession) null else use("whoami") { signedInAs(it.context()) }
@@ -85,12 +115,14 @@ class Browser(private val properties: PatreonProperties, private val mapper: Jso
         val candidate = Files.createTempFile(properties.stateDir, "session", ".json")
         Files.writeString(candidate, storageState)
         try {
-            val email = thread.submit(Callable {
-                browser().newContext(NewContextOptions().setStorageStatePath(candidate)).use { signedInAs(it) }
-            }).get() ?: throw SignedOutException("That session isn't signed in to Patreon")
-            runCatching { Files.setPosixFilePermissions(candidate, PosixFilePermissions.fromString("rw-------")) }
-            Files.move(candidate, sessionFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
-            return email
+            // Checked and put in place on the browser's thread, so no use that starts in between saves the old one over it
+            return onThread {
+                val email = browser().newContext(NewContextOptions().setStorageStatePath(candidate)).use { signedInAs(it) }
+                    ?: throw SignedOutException("That session isn't signed in to Patreon")
+                runCatching { Files.setPosixFilePermissions(candidate, PosixFilePermissions.fromString("rw-------")) }
+                Files.move(candidate, sessionFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+                email
+            }
         } finally {
             Files.deleteIfExists(candidate)
         }

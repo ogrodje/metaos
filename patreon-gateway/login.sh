@@ -26,6 +26,7 @@ else
   URL=http://localhost:18090
 fi
 
-curl -sf -X PUT "$URL/session" -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+# --fail-with-body: when the gateway refuses the session, it says why
+curl -sS --fail-with-body -X PUT "$URL/session" -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
   --data-binary @"$SESSION"
 echo

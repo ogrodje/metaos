@@ -48,7 +48,8 @@ class Health(
 
     @Scheduled(initialDelay = 5_000, fixedDelay = 60 * 60 * 1000)
     fun check(): GatewayHealth {
-        val apiError = runCatching { api.campaignId() }.exceptionOrNull()?.let { it.message ?: it.javaClass.simpleName }
+        // The campaign itself, which asks Patreon each time: its ID is kept once known, so it would only ask once
+        val apiError = runCatching { api.campaign() }.exceptionOrNull()?.let { it.message ?: it.javaClass.simpleName }
         val (email, browserError) = runCatching { browser.signedInAs() }.fold(
             onSuccess = { email ->
                 when {
