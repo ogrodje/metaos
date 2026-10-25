@@ -15,7 +15,8 @@ SESSION="$DIR/state/session.json"
 
 if [[ "${1:-prod}" == "local" ]]; then
   URL=http://localhost:8090
-  : "${PATREON_GATEWAY_TOKEN:?the local gateway's token}"
+  # No apostrophe in the message: macOS's bash 3.2 takes it for a quote
+  : "${PATREON_GATEWAY_TOKEN:?set to the token of the local gateway}"
   TOKEN=$PATREON_GATEWAY_TOKEN
 else
   NS=metaos-prod
