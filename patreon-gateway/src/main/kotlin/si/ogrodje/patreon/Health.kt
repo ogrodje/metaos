@@ -16,6 +16,7 @@ data class GatewayHealth(
     val signedInAs: String?,
     val browserError: String?,
     val checkedAt: Instant?,
+    val tokenExpiresAt: Instant? = null,
 ) {
     val ok: Boolean get() = api && signedIn
 }
@@ -59,7 +60,7 @@ class Health(
             },
             onFailure = { null to (it.message ?: it.javaClass.simpleName) },
         )
-        latest = GatewayHealth(apiError == null, apiError, browserError == null, email, browserError, clock.instant())
+        latest = GatewayHealth(apiError == null, apiError, browserError == null, email, browserError, clock.instant(), api.tokenInfo().expiresAt)
         if (!latest.ok) log.warn("Patreon: API {}, browser {}", apiError ?: "ok", browserError ?: "ok")
         return latest
     }

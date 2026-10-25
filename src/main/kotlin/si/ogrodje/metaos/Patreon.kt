@@ -32,6 +32,29 @@ data class PatreonPost(
     val content: String?,
 )
 
+/**
+ * A member of Ogrodje's Patreon: [status] ACTIVE_PATRON, DECLINED_PATRON (their last charge failed), FORMER_PATRON,
+ * or null for a free member; the [tiers] they're entitled to; amounts in cents, in euros.
+ */
+data class PatreonMember(
+    val id: String,
+    val name: String?,
+    val email: String?,
+    val status: String?,
+    val tiers: List<String>,
+    val pledgeCents: Int,
+    val lifetimeSupportCents: Int,
+    val since: OffsetDateTime?,
+    val lastChargeDate: OffsetDateTime?,
+    val lastChargeStatus: String?,
+    val freeTrial: Boolean,
+    val gifted: Boolean,
+)
+
+enum class PatreonMemberStatus(val gateway: String) { ACTIVE_PATRON("active_patron"), DECLINED_PATRON("declined_patron"), FORMER_PATRON("former_patron"), FREE("free") }
+
+data class PatreonMembers(val members: List<PatreonMember>, val total: Int)
+
 /** A post as Patreon's web app has it, drafts too. */
 data class PatreonDraft(
     val id: String,
@@ -82,6 +105,14 @@ class Patreon(
     fun posts(query: String?, limit: Int): List<PatreonPost> =
         call("GET", "/posts?limit=$limit" + (query?.let { "&query=" + URLEncoder.encode(it, Charsets.UTF_8) } ?: ""), null)
             .let { mapper.treeToValue(it["items"], mapper.typeFactory.constructCollectionType(List::class.java, PatreonPost::class.java)) }
+
+    /** Members, patrons first; [query] finds words in their names and emails. */
+    fun members(query: String?, status: PatreonMemberStatus?, tier: String?, limit: Int, offset: Int): PatreonMembers {
+        fun param(name: String, value: String?) = value?.let { "&$name=" + URLEncoder.encode(it, Charsets.UTF_8) } ?: ""
+        val page = call("GET", "/members?limit=$limit&offset=$offset" + param("query", query) + param("status", status?.gateway) + param("tier", tier), null)
+        val members: List<PatreonMember> = mapper.treeToValue(page["items"], mapper.typeFactory.constructCollectionType(List::class.java, PatreonMember::class.java))
+        return PatreonMembers(members.map { it.copy(status = it.status?.uppercase()) }, page["total"].asInt())
+    }
 
     /** A published post through Patreon's API, or null. */
     fun post(id: String): PatreonPost? = try {

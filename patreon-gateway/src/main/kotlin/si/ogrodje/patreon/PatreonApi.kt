@@ -54,10 +54,39 @@ data class Post(
     val embedUrl: String?,
 )
 
+/**
+ * A member of the campaign: a patron, paying or not, or someone who was. [status] is Patreon's `active_patron`,
+ * `declined_patron` (their last charge failed) or `former_patron`, and null for a free member; [tiers] are the tiers
+ * they're entitled to now, by title. Amounts in cents, in the campaign's currency.
+ */
+data class Member(
+    val id: String,
+    val name: String?,
+    val email: String?,
+    val status: String?,
+    val tiers: List<String>,
+    val pledgeCents: Int,
+    val lifetimeSupportCents: Int,
+    val since: OffsetDateTime?,
+    val lastChargeDate: OffsetDateTime?,
+    val lastChargeStatus: String?,
+    val freeTrial: Boolean,
+    val gifted: Boolean,
+)
+
+/** When the creator token runs out, where known, and when it was last refreshed; never the tokens themselves. */
+data class TokenInfo(val configured: Boolean, val expiresAt: Instant?, val refreshedAt: Instant?)
+
 class PatreonException(message: String, val status: Int? = null) : RuntimeException(message)
 
 /** Patreon's OAuth tokens for the creator, with when the access token runs out, where known. */
-data class Tokens(val accessToken: String, val refreshToken: String, val expiresAt: Instant? = null, val seed: String? = null)
+data class Tokens(
+    val accessToken: String,
+    val refreshToken: String,
+    val expiresAt: Instant? = null,
+    val seed: String? = null,
+    val refreshedAt: Instant? = null,
+)
 
 /**
  * The creator's tokens, kept in `tokens.json` in the state directory: Patreon gives a new refresh token with each
@@ -163,6 +192,50 @@ class PatreonApi(
         return list
     }
 
+    // All the members, for five minutes: Patreon lists them a page at a time
+    @Volatile
+    private var members: Pair<Instant, List<Member>>? = null
+
+    /** The campaign's members, patrons first, then by name. */
+    fun members(): List<Member> {
+        members?.let { (at, list) -> if (Duration.between(at, clock.instant()) < Duration.ofMinutes(5)) return list }
+        val all = mutableListOf<Member>()
+        var cursor: String? = null
+        do {
+            val page = get(
+                "campaigns/${campaignId()}/members?page%5Bcount%5D=500&include=currently_entitled_tiers" +
+                    "&fields%5Bmember%5D=$MEMBER_FIELDS&fields%5Btier%5D=title" +
+                    (cursor?.let { "&page%5Bcursor%5D=" + URLEncoder.encode(it, Charsets.UTF_8) } ?: ""),
+            )
+            val tiers = page["included"].orEmpty().filter { it["type"].asString() == "tier" }
+                .associate { it["id"].asString() to (it["attributes"].text("title") ?: it["id"].asString()) }
+            page["data"].orEmpty().mapTo(all) { data ->
+                val attributes = data["attributes"]
+                Member(
+                    id = data["id"].asString(),
+                    name = attributes.text("full_name"),
+                    email = attributes.text("email"),
+                    status = attributes.text("patron_status"),
+                    tiers = data["relationships"]?.get("currently_entitled_tiers")?.get("data").orEmpty()
+                        .map { tiers[it["id"].asString()] ?: it["id"].asString() },
+                    pledgeCents = attributes.int("currently_entitled_amount_cents") ?: 0,
+                    lifetimeSupportCents = attributes.int("lifetime_support_cents") ?: 0,
+                    since = attributes.text("pledge_relationship_start")?.let(OffsetDateTime::parse),
+                    lastChargeDate = attributes.text("last_charge_date")?.let(OffsetDateTime::parse),
+                    lastChargeStatus = attributes.text("last_charge_status"),
+                    freeTrial = attributes["is_free_trial"]?.asBoolean() ?: false,
+                    gifted = attributes["is_gifted"]?.asBoolean() ?: false,
+                )
+            }
+            cursor = page["meta"]?.get("pagination")?.get("cursors")?.text("next")
+        } while (cursor != null)
+        val list = all.sortedWith(compareBy<Member>({ STATUS_ORDER.indexOf(it.status).let { i -> if (i < 0) STATUS_ORDER.size else i } }, { it.name?.lowercase() }))
+        members = clock.instant() to list
+        return list
+    }
+
+    fun tokenInfo(): TokenInfo = tokens.get().let { TokenInfo(it != null, it?.expiresAt, it?.refreshedAt) }
+
     /** A published post, or null when Patreon doesn't have one by that ID (or it's a draft). */
     fun post(id: String): Post? {
         require(id.all(Char::isDigit)) { "A post's ID is a number" }
@@ -209,9 +282,11 @@ class PatreonApi(
     }
 
     private fun get(path: String): JsonNode {
+        val used = tokens.get()?.accessToken
         val first = send(path)
         val response = if (first.statusCode() == 401) {
-            refresh()
+            // Unless another call refreshed it meanwhile: each refresh takes the refresh token the one before gave
+            synchronized(this) { if (tokens.get()?.accessToken == used) refresh() }
             send(path)
         } else first
         if (response.statusCode() !in 200..299) {
@@ -254,19 +329,21 @@ class PatreonApi(
                 accessToken = body.text("access_token") ?: throw PatreonException("Patreon's refresh gave no access token"),
                 refreshToken = body.text("refresh_token") ?: current.refreshToken,
                 expiresAt = body.int("expires_in")?.let { clock.instant().plusSeconds(it.toLong()) },
+                refreshedAt = clock.instant(),
             ),
         )
         log.info("Refreshed Patreon's creator token")
     }
 
     /**
-     * Refreshes the token a week before it runs out, so it never does. When that isn't known (the token from the
-     * developer portal), it's refreshed once Patreon refuses it: each refresh takes the refresh token the others have.
+     * Refreshes the token a week before it runs out, so it never does, and once when that isn't known (a token from
+     * the developer portal), to learn it. Each refresh gives a new refresh token and may end the old one, so only one
+     * gateway may use a creator token: one running elsewhere with the same one would leave the other with a dead one.
      */
     @Scheduled(initialDelay = 60_000, fixedDelay = 6 * 60 * 60 * 1000)
     fun refreshAhead() {
         val token = tokens.get() ?: return
-        if (token.expiresAt != null && token.expiresAt < clock.instant().plus(Duration.ofDays(7))) {
+        if (token.expiresAt == null || token.expiresAt < clock.instant().plus(Duration.ofDays(7))) {
             runCatching { refresh() }.onFailure { log.warn("Couldn't refresh Patreon's creator token: {}", it.message) }
         }
     }
@@ -275,6 +352,9 @@ class PatreonApi(
         const val API = "https://www.patreon.com/api/oauth2/v2/"
         const val USER_AGENT = "Ogrodje patreon-gateway (https://metaos.ogrodje.si)"
         const val POST_FIELDS = "title,url,published_at,is_public,is_paid,tiers,content,embed_url"
+        const val MEMBER_FIELDS = "full_name,email,patron_status,pledge_relationship_start,lifetime_support_cents," +
+            "currently_entitled_amount_cents,last_charge_date,last_charge_status,is_free_trial,is_gifted"
+        val STATUS_ORDER = listOf("active_patron", "declined_patron", null, "former_patron")
     }
 }
 

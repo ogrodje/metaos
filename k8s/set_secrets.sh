@@ -19,7 +19,8 @@
 #                                 Dropbox stays off without them
 #   PATREON_CLIENT_ID, PATREON_CLIENT_SECRET, PATREON_ACCESS_TOKEN, PATREON_REFRESH_TOKEN, PROD_PATREON_GATEWAY_TOKEN
 #                                 optional, patreon-gateway's: the Patreon app's client and creator tokens (the
-#                                 gateway refreshes them and keeps the new ones on its volume, so these only seed it),
+#                                 gateway refreshes them and keeps the new ones on its volume, so these only seed it;
+#                                 they have to be the latest: a local gateway's state/tokens.json, if one ran),
 #                                 and the token MetaOS calls it with (`openssl rand -hex 24`); Patreon stays off without
 #                                 the last (patreon-gateway/README.md)
 # The DB passwords go into SQL literals, so keep them alphanumeric: `openssl rand -hex 24`.

@@ -11,10 +11,14 @@ Kotlin and Spring Boot like MetaOS, with Playwright for Java; a Gradle build of 
 
 - **Reading** goes through Patreon's API (v2), as the campaign's creator, with the creator token of the Patreon app
   "MetaOS" (its client ID and secret, an access and a refresh token, from Patreon's developer portal): the campaign,
-  its tiers and its published posts (`PatreonApi.kt`). Patreon lists posts oldest first a page at a time, so the
-  gateway reads them all, keeps them for a minute and gives them newest first. A refused token is refreshed, and the
-  new tokens are kept in `state/tokens.json`: Patreon gives a new refresh token with each refresh. A different refresh
-  token in the environment (a new one from the portal) takes over from the kept ones.
+  its tiers, its published posts and its members (`PatreonApi.kt`). Patreon lists posts oldest first a page at a time,
+  so the gateway reads them all, keeps them for a minute and gives them newest first; the members, with their names and
+  emails, for five minutes.
+- **The creator token** is refreshed once when it's not known when it runs out (a token from the portal), to learn it,
+  then a week before it does, when Patreon refuses it, and on `POST /token/refresh`. A refresh gives a new access and
+  refresh token and ends the old ones, so the new ones are kept in `state/tokens.json`, and only one gateway may use a
+  creator token: another with the same one would be left with a dead one. A different refresh token in the environment
+  (a new one from the portal) takes over from the kept ones. Patreon's refreshed tokens last for years (2037).
 - **Writing** goes through Patreon's web app, signed in as the bot, `iva.ogrodje@gmail.com`, a member of the campaign's
   team (`PatreonWeb.kt`). Patreon's API can't make posts or upload media. The gateway doesn't click through the editor,
   though: Cloudflare checks headless browsers on the editor's page. It calls Patreon's own web API, as the editor does,
@@ -54,6 +58,8 @@ Every call but `/health` and the actuator's needs `Authorization: Bearer $PATREO
 |-------------------------------|--------------------------------------------------------------------------------------------|
 | `GET /health[?check=true]`    | Patreon's API and the browser's session, as last checked (hourly), or now; 503 when not ok |
 | `GET /campaign`, `GET /tiers` | the campaign; its tiers, cheapest first                                                    |
+| `GET /members?query&status&tier&limit&offset` | members, patrons first; `status` active_patron, declined_patron, former_patron or free; words in name or email |
+| `GET /token`, `POST /token/refresh` | when the creator token runs out and was refreshed (never the tokens); refresh it now |
 | `GET /posts?query&limit`      | published posts, newest first, words in their titles                                      |
 | `GET /posts/{id}`             | a published post (Patreon's API)                                                           |
 | `GET /posts/{id}/web`         | a post, drafts too (Patreon's web app)                                                     |
@@ -106,5 +112,6 @@ in `build.gradle.kts` has to be the same. CI tests it, builds and deploys it wit
 
 The first time, `k8s/set_secrets.sh` with `PATREON_CLIENT_ID`, `PATREON_CLIENT_SECRET`, `PATREON_ACCESS_TOKEN`,
 `PATREON_REFRESH_TOKEN` and `PROD_PATREON_GATEWAY_TOKEN` makes `patreon-gateway-secret` (MetaOS reads the gateway token
-from it too), then `login.sh`. The tokens there only seed the gateway: it keeps refreshed ones on its volume, so a
-creator token that ran somewhere else since (a local gateway refreshing it) has to be made anew in the portal.
+from it too), then `login.sh`. The tokens there only seed the gateway: it keeps refreshed ones on its volume. They have
+to be the latest: a gateway that ran here refreshed them, so take them from its `state/tokens.json`
+(`jq -r .accessToken`, `.refreshToken`), and stop that one; or make new ones in the portal.

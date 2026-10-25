@@ -168,6 +168,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
     about: "Ogrodje's Patreon: drafts, an episode's audio or video, and publishing",
     tools: [
       { name: 'list_patreon_tiers', description: 'The tiers, cheapest first, with their prices and patrons' },
+      { name: 'list_patreon_members', description: 'The members, patrons first: their status, tiers, pledge, what they gave in all and their last charge' },
       { name: 'list_patreon_posts', description: 'The published posts, newest first, or those with words in their titles' },
       { name: 'get_patreon_post', description: 'A post, published or a draft, with its text and who may see it' },
       { name: 'create_patreon_draft', description: 'Make a draft post, for everyone, every patron or some tiers; only the team sees it' },

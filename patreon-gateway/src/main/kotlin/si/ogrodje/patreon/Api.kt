@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestParam
@@ -45,6 +46,35 @@ class Api(private val api: PatreonApi, private val browser: Browser, private val
 
     @GetMapping("/posts/{id}")
     fun post(@PathVariable id: String) = api.post(id) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "No published post $id")
+
+    /** The campaign's members: [status] active_patron, declined_patron, former_patron or free; [query] in name or email. */
+    @GetMapping("/members")
+    fun members(
+        @RequestParam(required = false) query: String?,
+        @RequestParam(required = false) status: String?,
+        @RequestParam(required = false) tier: String?,
+        @RequestParam(defaultValue = "50") limit: Int,
+        @RequestParam(defaultValue = "0") offset: Int,
+    ): Page<Member> {
+        val words = query?.lowercase()?.split(Regex("\\s+"))?.filter { it.isNotBlank() }.orEmpty()
+        val found = api.members().filter { member ->
+            (status == null || (if (status == "free") member.status == null else member.status == status)) &&
+                (tier == null || member.tiers.any { it.equals(tier, ignoreCase = true) }) &&
+                words.all { "${member.name.orEmpty()} ${member.email.orEmpty()}".lowercase().contains(it) }
+        }
+        return Page(found.drop(offset.coerceAtLeast(0)).take(limit.coerceIn(1, 500)), found.size)
+    }
+
+    /** When the creator token runs out, and when it was last refreshed. */
+    @GetMapping("/token")
+    fun token() = api.tokenInfo()
+
+    /** Refreshes the creator token now, and keeps the new one. */
+    @PostMapping("/token/refresh")
+    fun refreshToken(): TokenInfo {
+        api.refresh()
+        return api.tokenInfo()
+    }
 
     @GetMapping("/jobs")
     fun jobs(@RequestParam(defaultValue = "20") limit: Int) = jobs.list().take(limit.coerceIn(1, 500))

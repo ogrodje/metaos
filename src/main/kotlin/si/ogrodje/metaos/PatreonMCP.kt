@@ -42,6 +42,29 @@ class PatreonMCP(
     fun tiers(): List<PatreonTier> = patreon.tiers()
 
     @McpTool(
+        name = "list_patreon_members",
+        annotations = McpTool.McpAnnotations(
+            title = "List Patreon members",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
+        description = "List the members of Ogrodje's Patreon, patrons first, with their status, tiers, monthly pledge, " +
+            "what they've given in all, since when, and their last charge; with their names and emails, which are " +
+            "theirs: don't pass them on. With the total that match"
+    )
+    fun members(
+        @McpToolParam(description = "Words in the name or email", required = false) query: String?,
+        @McpToolParam(
+            description = "Only ACTIVE_PATRON, DECLINED_PATRON (their last charge failed), FORMER_PATRON or FREE ones",
+            required = false
+        ) status: PatreonMemberStatus?,
+        @McpToolParam(description = "Only those in a tier, by its title, e.g. Engineer", required = false) tier: String?,
+        @McpToolParam(description = "How many, 50 when omitted, at most 500", required = false) limit: Int?,
+        @McpToolParam(description = "How many to skip, for the next page", required = false) offset: Int?,
+    ): PatreonMembers = patreon.members(
+        query?.trim()?.ifEmpty { null }, status, tier?.trim()?.ifEmpty { null }, (limit ?: 50).coerceIn(1, 500), (offset ?: 0).coerceAtLeast(0),
+    )
+
+    @McpTool(
         name = "list_patreon_posts",
         annotations = McpTool.McpAnnotations(
             title = "List Patreon posts",

@@ -26,6 +26,7 @@ class PatreonTest {
                 path == "/tiers" -> 200 to """[{"id":"9650087","title":"Developer","amountCents":300,"published":true,"patronCount":18}]"""
                 path.startsWith("/posts?") -> 200 to """{"items":[{"id":"171593625","title":"Domen Vreš","url":"https://www.patreon.com/ogrodje/posts/x-171593625","publishedAt":"2026-10-13T06:35:26Z","public":true,"paid":false,"tiers":[],"content":"<p>Hi</p>","embedUrl":null}],"total":1}"""
                 path == "/posts/404" -> 404 to """{"error":"No published post 404"}"""
+                path.startsWith("/members?") -> 200 to """{"items":[{"id":"m-1","name":"Ana","email":"ana@example.com","status":"active_patron","tiers":["Engineer"],"pledgeCents":1000,"lifetimeSupportCents":12000,"since":"2024-10-11T09:30:23.301Z","lastChargeDate":"2026-10-11T00:35:23Z","lastChargeStatus":"Paid","freeTrial":false,"gifted":false}],"total":30}"""
                 path == "/posts" -> 202 to job("QUEUED", null)
                 path.startsWith("/jobs/") -> 200 to if (jobPolls.incrementAndGet() < 2) job("RUNNING", null) else
                     job("SUCCEEDED", """{"id":"173396086","title":"S05E08","url":"https://www.patreon.com/ogrodje/posts/s05e08-173396086","editUrl":"https://www.patreon.com/posts/173396086/edit","publishedAt":null,"scheduledFor":null,"draft":true}""")
@@ -56,6 +57,15 @@ class PatreonTest {
         assertEquals("171593625", post.id)
         assertTrue(post.public)
         assertTrue(asked.any { it.startsWith("GET /posts?limit=5&query=GaMS+vre%C5%A1 Bearer secret") }, asked.toString())
+    }
+
+    @Test
+    fun `members come filtered as asked, their status as MetaOS names it`() {
+        val page = patreon.members("ana", PatreonMemberStatus.ACTIVE_PATRON, "Engineer", 10, 0)
+        assertEquals(30, page.total)
+        assertEquals("ACTIVE_PATRON", page.members.single().status)
+        assertEquals(listOf("Engineer"), page.members.single().tiers)
+        assertTrue(asked.any { it.startsWith("GET /members?limit=10&offset=0&query=ana&status=active_patron&tier=Engineer ") }, asked.toString())
     }
 
     @Test
