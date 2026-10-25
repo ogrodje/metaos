@@ -33,7 +33,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
       { name: 'set_episode_recommended_by', description: 'Set or clear who recommended an episode' },
       { name: 'update_episode', description: "Change an episode's code, title, alternative titles for A/B tests, summaries or dates" },
       { name: 'set_episode_status', description: 'Move an episode through its lifecycle, from idea to published, one step at a time' },
-      { name: 'set_episode_link', description: 'Set or clear its YouTube, Spotify, Apple Podcasts or Patreon link' },
+      { name: 'set_episode_link', description: 'Set or clear its YouTube, Spotify or Apple Podcasts link, or one of its four on Patreon: the full episode or its bonus, as video or audio only' },
       { name: 'delete_episode', description: 'Delete an episode; it can be restored' },
       { name: 'restore_episode', description: 'Bring back a deleted episode, with its people, links, session and show; under a new code if its own is taken' },
     ],

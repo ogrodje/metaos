@@ -70,7 +70,8 @@ private val EPISODE_COLUMNS = linkedMapOf(
     "show_id" to "Show", "session_id" to "Session", "recommended_by" to "Recommended by",
     "recording_date" to "Recording date", "aired_date" to "Aired", "added_date" to "Added",
     "youtube_url" to "YouTube", "spotify_url" to "Spotify", "apple_podcasts_url" to "Apple Podcasts",
-    "patreon_url" to "Patreon", "summary" to "Summary", "tiny_summary" to "Tiny summary", "machine_summary" to "AI summary",
+    "patreon_url" to "Patreon", "patreon_audio_url" to "Patreon (audio only)", "patreon_bonus_url" to "Patreon bonus",
+    "patreon_bonus_audio_url" to "Patreon bonus (audio only)", "summary" to "Summary", "tiny_summary" to "Tiny summary", "machine_summary" to "AI summary",
     "thumbnail_image_id" to "Thumbnail", "thumbnail_b_image_id" to "Thumbnail B", "thumbnail_c_image_id" to "Thumbnail C",
     "web_image_id" to "Web picture", "cover_image_id" to "Cover",
 )

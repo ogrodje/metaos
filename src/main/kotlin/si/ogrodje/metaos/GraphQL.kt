@@ -12,6 +12,7 @@ import org.springframework.data.domain.PageRequest
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.graphql.data.method.annotation.Argument
 import org.springframework.graphql.data.method.annotation.BatchMapping
+import org.springframework.graphql.data.method.annotation.MutationMapping
 import org.springframework.graphql.data.method.annotation.QueryMapping
 import org.springframework.graphql.data.method.annotation.SchemaMapping
 import org.springframework.graphql.execution.DataFetcherExceptionResolverAdapter
@@ -20,6 +21,7 @@ import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Component
 import org.springframework.stereotype.Controller
+import org.springframework.transaction.annotation.Transactional
 import java.net.URLEncoder
 import java.text.Collator
 import java.time.LocalDate
@@ -91,6 +93,13 @@ class EpisodesGraphQL(private val episodes: EpisodesRepository, private val epis
             .groupBy { it.episode }
         return episodes.associateWith { byEpisode[it].orEmpty().toEpisodePersonDtos() }
     }
+
+    // As set_episode_link does, each of the four Patreon links on its own
+    @MutationMapping
+    @PreAuthorize(WRITES)
+    @Transactional
+    fun setEpisodeLink(@Argument ref: String, @Argument platform: Platform, @Argument url: String?): Episode =
+        requireNotNull(episodes.findByRef(ref)) { "Episode $ref not found" }.apply { setLink(platform, url) }
 }
 
 /** A Google Doc linked to an episode or a session (Documents.kt); linking takes only Google Docs */

@@ -90,7 +90,13 @@ yarn test       # the tests in src/**/__tests__, with vitest (./gradlew feTest, 
   bearer token says who is asking (`me`). What isn't public needs `metaos:read` and an approved user (realm role
   `metaos-user`, `Security.kt`): whole queries with `@PreAuthorize`, and fields that public episodes and sessions also
   have (history, comments, docs, addresses, ...) come back empty for anyone else. Changes (`Mutation`: comments of
-  Discussions, linking Accounts) need `metaos:write` and an approved user (`@approval.writes`).
+  Discussions, linking Accounts, an episode's pictures and links) need `metaos:write` and an approved user
+  (`@approval.writes`).
+- An episode's links (`Platform` in [`Episodes.kt`](src/main/kotlin/si/ogrodje/metaos/Episodes.kt)) are where it can
+  be watched or listened to: YouTube, Spotify, Apple Podcasts, and four on Patreon, each set or cleared on its own
+  (`set_episode_link`, `setEpisodeLink`): the full episode as video (`PATREON`, `patreonUrl`, the only one there was
+  at first) or audio only (`PATREON_AUDIO`), and its bonus as video (`PATREON_BONUS`) or audio only
+  (`PATREON_BONUS_AUDIO`). All four are optional and public; `EARLY_ACCESS` needs any one of them. The front-end shows only `patreonUrl` yet.
 - The header ([`App.vue`](fe/src/App.vue)) is two rows: the logo, and at the right Search and you
   (`UserMenu.vue`: your initials, which open your name, your page, your sign-ins (see Accounts) and Sign out; or
   Sign in, which asks Discord or Google); under them the pages as tabs, in the order they're used (`pages`), which

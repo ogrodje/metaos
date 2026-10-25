@@ -69,7 +69,10 @@ type Query {
     accounts(unlinked: Boolean! = false): [Account!]!
 }
 
-"Changes, as the signed-in user: each needs an approved user's token with metaos:write (CommentsGraphQL.kt, Artwork.kt)"
+"""
+Changes, as the signed-in user: each needs an approved user's token with metaos:write (CommentsGraphQL.kt, Artwork.kt,
+GraphQL.kt)
+"""
 type Mutation {
     "Comment on an episode (ideas too) by its code or ID, in Markdown"
     commentOnEpisode(ref: String!, body: String!): Comment!
@@ -94,6 +97,29 @@ type Mutation {
     only replaced with replace. The upload is gone afterwards, also when it's refused.
     """
     setEpisodeImage(ref: String!, kind: EpisodeImage!, upload: ID!, name: String!, replace: Boolean! = false): EpisodeImageSet!
+    """
+    Set or clear one of an episode's links, by its code or ID: an https URL of the episode on that platform, or null
+    to clear it. Each of the four Patreon links is set or cleared on its own.
+    """
+    setEpisodeLink(ref: String!, platform: Platform!, url: String): Episode!
+}
+
+"Where an episode can be watched or listened to: one of its links"
+enum Platform {
+    "youtubeUrl"
+    YOUTUBE
+    "spotifyUrl"
+    SPOTIFY
+    "applePodcastsUrl"
+    APPLE_PODCASTS
+    "patreonUrl: the full episode, as video"
+    PATREON
+    "patreonAudioUrl: the full episode, as audio only"
+    PATREON_AUDIO
+    "patreonBonusUrl: its bonus, as video"
+    PATREON_BONUS
+    "patreonBonusAudioUrl: its bonus, as audio only"
+    PATREON_BONUS_AUDIO
 }
 
 "An episode's pictures, each PNG or JPEG of exactly its size"
@@ -173,7 +199,14 @@ type Episode {
     youtubeUrl: String
     spotifyUrl: String
     applePodcastsUrl: String
+    "The full episode on Patreon, as video (PATREON)"
     patreonUrl: String
+    "The full episode on Patreon, as audio only (PATREON_AUDIO)"
+    patreonAudioUrl: String
+    "Its bonus on Patreon, as video (PATREON_BONUS)"
+    patreonBonusUrl: String
+    "Its bonus on Patreon, as audio only (PATREON_BONUS_AUDIO)"
+    patreonBonusAudioUrl: String
     """
     The people on the episode, each once with all of their roles; hosts first, candidates last. Candidates only for a
     signed-in user.
