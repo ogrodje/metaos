@@ -156,7 +156,8 @@ yarn test       # the tests in src/**/__tests__, with vitest (./gradlew feTest, 
 - Episode ideas (`IDEA`) have a page of their own, `/ideas`, from the `ideas` query, which needs `metaos:read`, as
   does its link in the header; the `episodes` query, and so the Episodes page, leaves them out. It's a table
   (`IdeaRow.vue`), grouped by how far along each is (`readiness`: in a session, with a guest, with candidates, no
-  one yet), by who recommended it, or not at all, and filtered by show and recommender.
+  one yet), by who recommended it, by votes (Most wanted, see Votes), or not at all, and filtered by show and
+  recommender. Each row has its vote buttons at the left.
 - The People page, `/people`, lists everyone by name (Slovenian order, past a "dr."), from the `people` query: who
   they are, their roles and latest episodes, and links to their website and social profiles (`PersonCard.vue`). The
   team first, as cards with their pictures large and their bios (`kindOf` in `lists.ts`: anyone credited as host, co-host, producer, consultant or designer),
@@ -322,6 +323,28 @@ by whoever was signed in, on MetaOS's pages or over MCP. They're the team's: wri
   says so, deleting one isn't. The preview renders with `MarkdownText.vue`, as posted comments do; ⌘↵ sends. A
   comment's "commented <date>" links to it, its page's address with `#comment-<id>`: opened, the feed shows
   everything, scrolls to it once its comments are there, and outlines it.
+
+### Votes
+
+The team votes ideas up or down, to show which it wants recorded next ([`Votes.kt`](src/main/kotlin/si/ogrodje/metaos/Votes.kt),
+[`V30__idea_votes.sql`](src/main/resources/db/migration/V30__idea_votes.sql)). The same people who comment vote: an
+approved user, as themselves.
+
+- One vote per user and idea, up (1) or down (-1), kept by their Keycloak user ID (`sub`) and named through their
+  account when shown, as comments' authors are. Voting again replaces it, `NONE` takes it back (the row is deleted;
+  the audit trail keeps it). It's one upsert, so two votes at once by the same user can't both land.
+- Only an `IDEA` takes votes or changes to them, as its row says inside the vote's transaction (`FOR SHARE`, so it
+  can't be planned or deleted in between). Once it's planned (or on hold, cancelled, ...), its votes stay as they were,
+  and its page shows the score it had.
+- `Episode.votes` (score, up, down, `mine`, and the voters, ups first) is the team's: empty for anyone else, on
+  released episodes too. GraphQL: `voteOnIdea` (`@approval.writes` and `reads`, as its answer names the voters,
+  `VotesGraphQL`). MCP: `vote_on_idea` and
+  `list_idea_votes` (`VotesMCP`).
+- `idea_votes` has its own audit trigger, so votes are in the idea's history ("Voted up", "Changed a vote to down",
+  "Took back a vote up", `ChangeKind.VOTE`), in Home's recent activity, and in the live updates.
+- On the front-end ([`fe/src/votes.ts`](fe/src/votes.ts), `VoteControl.vue`): ▲ score ▼ on each row of the Ideas page,
+  whose Group by has Most wanted (`?group=votes`, `byVotes`); on an idea's page a Votes group at the top of its panel,
+  with Up and Down, the score and who voted. The score names the voters on hover.
 
 ### Google (Drive and Gmail)
 

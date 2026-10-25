@@ -22,6 +22,7 @@ import PanelTitle from '@/components/PanelTitle.vue'
 import PersonLine from '@/components/PersonLine.vue'
 import ShowBadge from '@/components/ShowBadge.vue'
 import StatusLabel from '@/components/StatusLabel.vue'
+import VoteControl from '@/components/VoteControl.vue'
 import {
   ARTWORK_FIELDS, artworkOf, DROPBOX_FIELDS, type DropboxPicture, EPISODE_FIELDS, type EpisodeDetails, episodePath,
   formatDate, HISTORY_FIELDS, KOOFR_FIELDS, type KoofrPhoto, links, listPicture, photosOf, PICTURE_FIELDS, relativeDate,
@@ -35,6 +36,7 @@ import { episodeData, plainText, shorten, usePageMeta, useSiteUrl } from '@/seo'
 import { useFirstLoad } from '@/ssr'
 import { useAuthStore } from '@/stores/auth'
 import { usePageTitle } from '@/title'
+import { scoreText, VOTE_FIELDS, type Votes, votersText } from '@/votes'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -58,7 +60,7 @@ async function fetchEpisode(ref: string) {
   return (await graphql<{ episode: EpisodeDetails | null }>(`query ($ref: String!) {
     episode(ref: $ref) {
       ${EPISODE_FIELDS} titleB titleC summary machineSummary addedDate recommendedBy { id name } ${KOOFR_FIELDS} ${DROPBOX_FIELDS} ${ARTWORK_FIELDS}
-      ${PICTURE_FIELDS} ${HISTORY_FIELDS} ${COMMENT_FIELDS} people { avatar { ${IMAGE_FIELDS} } }
+      ${PICTURE_FIELDS} ${HISTORY_FIELDS} ${COMMENT_FIELDS} ${VOTE_FIELDS} people { avatar { ${IMAGE_FIELDS} } }
     }
   }`, { ref })).episode
 }
@@ -133,6 +135,15 @@ const concerns = computed(() => (auth.team && episode.value ? episodeConcerns(ep
 const titleBlock = ref<HTMLElement>()
 const pastTitle = useScrolledPast(titleBlock)
 
+// The team votes on an idea; once it's moved on, its votes stay, closed, where it had any
+const votable = computed(() => auth.team && episode.value?.status === 'IDEA')
+const votedOn = computed(() => auth.team && !!episode.value && episode.value.votes.voters.length > 0)
+
+// Your vote, as it came back: the live updates would bring it too, a moment later
+function voted(votes: Votes) {
+  if (episode.value) episode.value = { ...episode.value, votes }
+}
+
 const hasFiles = computed(() => !!episode.value
   && (episode.value.documents.length > 0 || episode.value.koofrFolders.length > 0 || episode.value.dropboxFolders.length > 0))
 </script>
@@ -168,6 +179,21 @@ const hasFiles = computed(() => !!episode.value
       <div class="workspace">
         <FactPanel label="About the episode">
           <PanelTitle :title="episode.title" :code="episode.code" :picture="listPicture(episode)" :shown="pastTitle"/>
+          <FactGroup v-if="votable || votedOn" title="Votes">
+            <VoteControl v-if="votable" :episode-id="episode.id" :title="episode.title" :votes="episode.votes" layout="row"
+                         @voted="voted"/>
+            <p v-else class="closed">
+              <span>Voted on as an idea</span><strong :title="votersText(episode.votes)">{{ scoreText(episode.votes.score) }}</strong>
+            </p>
+            <ul v-if="episode.votes.voters.length" class="voters">
+              <li v-for="voter in episode.votes.voters" :key="voter.username ?? voter.name">
+                <span class="way" :class="voter.vote.toLowerCase()" :aria-label="voter.vote === 'UP' ? 'Up' : 'Down'">{{ voter.vote === 'UP' ? '▲' : '▼' }}</span>
+                <RouterLink v-if="voter.person" :to="personPath(voter.person)">{{ voter.name }}</RouterLink>
+                <template v-else>{{ voter.name }}</template>
+              </li>
+            </ul>
+            <p v-else-if="votable" class="aside">No votes yet.</p>
+          </FactGroup>
           <FactGroup>
             <dl>
               <Fact v-if="episode.airedDate" label="Aired">
@@ -258,6 +284,52 @@ const hasFiles = computed(() => !!episode.value
 
 .aside {
   color: var(--muted);
+}
+
+// Who voted, ups first, as the API lists them
+.voters {
+  display: grid;
+  gap: 4px;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  line-height: 20px;
+
+  li {
+    display: flex;
+    gap: 8px;
+  }
+
+  a {
+    @include page.link;
+  }
+}
+
+.way {
+  width: 12px;
+  font-size: 10px;
+  color: var(--muted);
+
+  &.up {
+    color: var(--accent-text);
+  }
+}
+
+// The score an episode had as an idea, once voting has closed
+.closed {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 13px;
+  color: var(--muted);
+
+  strong {
+    font-size: 20px;
+    line-height: 28px;
+    font-weight: 600;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
 }
 
 dd a {

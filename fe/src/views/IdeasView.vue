@@ -15,6 +15,7 @@ import { IMAGE_FIELDS } from '@/images'
 import { episodeText, matches, READINESS, readiness } from '@/lists'
 import { useQueryState } from '@/query'
 import { useAuthStore } from '@/stores/auth'
+import { byVotes, VOTE_FIELDS, type Votes } from '@/votes'
 
 const auth = useAuthStore()
 
@@ -35,7 +36,7 @@ async function loadIdeas(quietly = false) {
   }
   if (!auth.authenticated) return
   try {
-    const data = await graphql<{ ideas: Idea[] }>(`{ ideas { ${EPISODE_FIELDS} addedDate recommendedBy { id name avatar { ${IMAGE_FIELDS} } } } }`)
+    const data = await graphql<{ ideas: Idea[] }>(`{ ideas { ${EPISODE_FIELDS} addedDate recommendedBy { id name avatar { ${IMAGE_FIELDS} } } ${VOTE_FIELDS} } }`)
     if (load !== loads) return
     ideas.value = keepUnchanged(ideas.value, data.ideas)
     error.value = undefined
@@ -50,10 +51,15 @@ async function loadIdeas(quietly = false) {
 watch(() => auth.authenticated, () => void loadIdeas(), { immediate: true })
 useLiveRefresh(() => loadIdeas(true))
 
+// Your vote, as it came back: the live updates would bring it too, a moment later
+function voted(id: string, votes: Votes) {
+  ideas.value = ideas.value?.map((idea) => (idea.id === id ? { ...idea, votes } : idea))
+}
+
 // Which, and how they're grouped, as the address says, e.g. ?show=Borderless&by=Andraž Sraka&group=recommender
 const show = useQueryState('show', 'all')
 const by = useQueryState('by', 'all')
-const group = useQueryState<'readiness' | 'recommender' | 'none'>('group', 'readiness', ['readiness', 'recommender', 'none'])
+const group = useQueryState<'readiness' | 'recommender' | 'votes' | 'none'>('group', 'readiness', ['readiness', 'recommender', 'votes', 'none'])
 const find = useQueryState('q', '')
 
 const all = computed(() => ideas.value ?? [])
@@ -78,7 +84,7 @@ const shown = computed(() => all.value.filter((idea) =>
   && (by.value === 'all' || (by.value === 'none' ? !idea.recommendedBy : idea.recommendedBy?.name === by.value))
   && matches(`${episodeText(idea)} ${idea.recommendedBy?.name ?? ''}`, find.value)))
 
-// By how far along they are, or who recommended them, or not at all; groups without any left out
+// By how far along they are, or who recommended them, or the most wanted first, or not at all; groups without any left out
 const groups = computed(() => {
   if (group.value === 'readiness') {
     return READINESS.map(({ id, title }) => ({ key: id, title, ideas: shown.value.filter((idea) => readiness(idea) === id) }))
@@ -91,12 +97,14 @@ const groups = computed(() => {
       ideas: shown.value.filter((idea) => (idea.recommendedBy?.name ?? null) === name),
     })).sort((a, b) => b.ideas.length - a.ideas.length)
   }
+  if (group.value === 'votes') return [{ key: 'all', title: null, ideas: byVotes(shown.value) }]
   return [{ key: 'all', title: null, ideas: shown.value }]
 })
 
 const GROUPINGS = [
   { value: 'readiness' as const, title: 'How far along' },
   { value: 'recommender' as const, title: 'Who recommended' },
+  { value: 'votes' as const, title: 'Most wanted' },
   { value: 'none' as const, title: 'Newest first' },
 ]
 </script>
@@ -133,6 +141,7 @@ const GROUPINGS = [
       <table v-else class="ideas">
         <thead>
           <tr>
+            <th class="votes">Votes</th>
             <th>Idea</th>
             <th class="by">Recommended by</th>
             <th class="date">Recording</th>
@@ -142,9 +151,9 @@ const GROUPINGS = [
         </thead>
         <tbody v-for="g in groups" :key="g.key">
           <tr v-if="g.title" class="group">
-            <th colspan="5" scope="colgroup">{{ g.title }} <span class="count">{{ g.ideas.length }}</span></th>
+            <th colspan="6" scope="colgroup">{{ g.title }} <span class="count">{{ g.ideas.length }}</span></th>
           </tr>
-          <IdeaRow v-for="idea in g.ideas" :key="idea.id" :idea="idea"/>
+          <IdeaRow v-for="idea in g.ideas" :key="idea.id" :idea="idea" @voted="voted(idea.id, $event)"/>
         </tbody>
       </table>
     </template>
@@ -167,6 +176,12 @@ const GROUPINGS = [
     color: var(--muted);
     text-align: left;
     white-space: nowrap;
+  }
+
+  .votes {
+    width: 60px;
+    padding-right: 12px;
+    text-align: center;
   }
 
   .by {

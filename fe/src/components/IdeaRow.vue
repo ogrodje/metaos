@@ -5,11 +5,14 @@ import FileLinks from '@/components/FileLinks.vue'
 import MarkdownText from '@/components/MarkdownText.vue'
 import PersonLine from '@/components/PersonLine.vue'
 import ShowBadge from '@/components/ShowBadge.vue'
+import VoteControl from '@/components/VoteControl.vue'
 import { candidates, episodePath, formatDate, guests, type Idea, sessionPath } from '@/episodes'
+import type { Votes } from '@/votes'
 
-// An idea in the Ideas table: its title, show, and who it's with, its guests, or who might be (its candidates), and its
+// An idea in the Ideas table: the team's votes on it, its title, show, and who it's with, its guests, or who might be (its candidates), and its
 // tiny summary; who recommended it; when it's to be recorded; when it was added; its files. On phones, a block of lines.
 const props = defineProps<{ idea: Idea }>()
+const emit = defineEmits<{ voted: [votes: Votes] }>()
 
 const guestNames = computed(() => guests(props.idea).join(', '))
 const candidateNames = computed(() => candidates(props.idea).join(', '))
@@ -20,6 +23,9 @@ const recording = computed(() => props.idea.recordingDate ?? props.idea.session?
 
 <template>
   <tr class="idea">
+    <td class="vote">
+      <VoteControl :episode-id="idea.id" :title="idea.title" :votes="idea.votes" layout="stacked" @voted="emit('voted', $event)"/>
+    </td>
     <td class="what">
       <p class="title">
         <RouterLink :to="episodePath(idea)" lang="sl">{{ idea.title }}</RouterLink>
@@ -50,6 +56,10 @@ td {
   padding: 10px 16px 10px 0;
   vertical-align: top;
   border-top: 1px solid var(--rule);
+}
+
+.vote {
+  padding: 4px 12px 4px 0;
 }
 
 .title {
@@ -147,9 +157,15 @@ td {
     display: inline;
   }
 
+  // At the right, its votes, then its files
+  .vote {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
   .files {
     grid-column: 2;
-    grid-row: 1;
+    grid-row: 3 / span 2;
   }
 }
 </style>
