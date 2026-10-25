@@ -67,6 +67,10 @@ export default defineNuxtConfig({
   // The data a page was rendered with stays in it, rather than in a _payload.json of its own, which Nitro and Cloudflare
   // would keep apart from it: the browser could get a page and data rendered at different times, which don't hydrate
   experimental: { payloadExtraction: false },
+  // Nitro keeps the pages it renders in memory, by their whole URL, query included, and with swr never lets one go: any
+  // made-up ?x= would be one more page held for good, until the pod runs out of memory. At most this many, the least
+  // used going first (unstorage's lru-cache driver, whose lru-cache comes with unstorage)
+  nitro: DEV ? {} : { storage: { cache: { driver: 'lru-cache', max: 300 } } },
   telemetry: false,
   devtools: { enabled: true },
 })
