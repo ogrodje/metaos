@@ -75,7 +75,7 @@ private val EPISODE_COLUMNS = linkedMapOf(
     "thumbnail_image_id" to "Thumbnail", "thumbnail_b_image_id" to "Thumbnail B", "thumbnail_c_image_id" to "Thumbnail C",
     "web_image_id" to "Web picture", "cover_image_id" to "Cover",
 )
-private val SESSION_COLUMNS = linkedMapOf("date" to "Date", "location" to "Location", "address" to "Address")
+private val SESSION_COLUMNS = linkedMapOf("name" to "Name", "date" to "Date", "location" to "Location", "address" to "Address")
 // A person's, but for their email, which their page doesn't show either
 private val PERSON_COLUMNS = linkedMapOf(
     "name" to "Name", "bio" to "Bio", "homepage_url" to "Website", "linkedin_url" to "LinkedIn", "twitter_url" to "X",
@@ -140,8 +140,9 @@ class History(private val auditLog: AuditLog, private val jdbcTemplate: JdbcTemp
         actors = accounts.people(rows.mapNotNull { it.actorId }).mapValues { it.value.name },
         people = names("select id, name from people", rows.ids("person_id") + rows.ids("recommended_by") + people),
         shows = names("select id, name from shows", rows.ids("show_id")),
-        sessions = names("select id, date, location from sessions", rows.ids("session_id") + sessions) { rs ->
-            listOfNotNull(DATE.format(rs.getObject("date", LocalDate::class.java)), rs.getString("location")).joinToString(" · ")
+        // A session by its date and what it goes by, as the front-end's sessionTitle has it
+        sessions = names("select id, date, coalesce(name, location) from sessions", rows.ids("session_id") + sessions) { rs ->
+            listOfNotNull(DATE.format(rs.getObject("date", LocalDate::class.java)), rs.getString(3)).joinToString(" · ")
         },
         images = names("select id, name from images", IMAGE_COLUMNS.flatMap { rows.ids(it) }.toSet()),
     )

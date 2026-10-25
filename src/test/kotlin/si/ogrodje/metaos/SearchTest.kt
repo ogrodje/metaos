@@ -1,6 +1,7 @@
 package si.ogrodje.metaos
 
 import org.hamcrest.Matchers.contains
+import org.hamcrest.Matchers.containsInAnyOrder
 import org.hamcrest.Matchers.containsString
 import org.hamcrest.Matchers.empty
 import org.hamcrest.Matchers.hasItem
@@ -55,7 +56,7 @@ class SearchTest @Autowired constructor(
             episode { code } season episodeCount personCount sessionCount
             episodes { episode { code title } matchedIn snippet }
             people { person { name } matchedIn }
-            sessions { session { location } matchedIn }
+            sessions { session { name location } matchedIn }
         } }"""
     ).andExpect(jsonPath("$.errors").doesNotExist())
 
@@ -141,6 +142,23 @@ class SearchTest @Autowired constructor(
         search("searchtown oktober")
             .andExpect(jsonPath("$.data.search.sessions[0].session.location").value("Searchtown Hall"))
             .andExpect(jsonPath("$.data.search.sessions[0].matchedIn", contains("LOCATION", "DATE")))
+    }
+
+    @Test
+    fun `finds a session by its name, and the episodes in it`() {
+        val session = sessions.save(
+            Session(date = LocalDate.of(2031, 11, 12), location = "Kongresni center", address = null, name = "Ribosomska konferenca")
+        )
+        episode("S81E01", "Pogovor na odru") { this.session = session }
+
+        search("ribosomsk")
+            .andExpect(jsonPath("$.data.search.sessions[0].session.name").value("Ribosomska konferenca"))
+            .andExpect(jsonPath("$.data.search.sessions[0].matchedIn", contains("NAME")))
+            .andExpect(jsonPath("$.data.search.episodes[0].episode.code").value("S81E01"))
+            .andExpect(jsonPath("$.data.search.episodes[0].matchedIn", contains("SESSION")))
+        // Its location still finds it too
+        search("kongresni ribosomsk")
+            .andExpect(jsonPath("$.data.search.sessions[0].matchedIn", containsInAnyOrder("NAME", "LOCATION")))
     }
 
     @Test

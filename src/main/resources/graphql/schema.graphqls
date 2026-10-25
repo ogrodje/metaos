@@ -71,7 +71,7 @@ type Query {
 
 """
 Changes, as the signed-in user: each needs an approved user's token with metaos:write (CommentsGraphQL.kt, Artwork.kt,
-GraphQL.kt)
+GraphQL.kt, SessionsGraphQL.kt)
 """
 type Mutation {
     "Comment on an episode (ideas too) by its code or ID, in Markdown"
@@ -86,6 +86,11 @@ type Mutation {
     linkAccount(id: ID!, person: ID!): Account!
     "Unlink an account from its person. Only for canLinkAccounts."
     unlinkAccount(id: ID!): Account!
+    """
+    Change a recording session, as update_session does over MCP: what's left out stays as it is, and an empty name,
+    location or address clears it. The date is a day, e.g. 2026-10-22.
+    """
+    updateSession(id: ID!, date: String, name: String, location: String, address: String): Session!
     """
     Start uploading a picture for an episode, PNG or JPEG of size bytes, up to 50 MB: the browser sends it straight to
     MetaOS's bucket, then setEpisodeImage makes it one of the episode's pictures
@@ -343,7 +348,7 @@ type Change {
 type ChangeSubject {
     kind: ChangeKind!
     id: ID!
-    "An episode's title, a session's date and place, a person's name"
+    "An episode's title, a session's date and name (or else place), a person's name"
     name: String!
     "An episode's code, once it has one"
     code: String
@@ -367,6 +372,9 @@ type Session {
     id: ID!
     "e.g. 2026-10-22"
     date: String!
+    "What it's called, e.g. AWS Community Day Adria 2026. Without one it goes by its location, else by its date."
+    name: String
+    "Where it is, e.g. the venue"
     location: String
     "Google Docs about the session, e.g. its recording day plan, the first linked first. None without a signed-in user."
     documents: [Document!]!
@@ -573,7 +581,7 @@ type SessionHit {
     matchedIn: [SearchField!]!
 }
 
-"Where a search matched: an episode's code, titles, people, show, summaries or session; a person's name or bio; a session's place, address or date"
+"Where a search matched: an episode's code, titles, people, show, summaries or session; a person's name or bio; a session's name, place, address or date"
 enum SearchField {
     CODE
     TITLE

@@ -70,6 +70,27 @@ class SessionsTest @Autowired constructor(
     }
 
     @Test
+    fun `names a session, renames it and clears its name`() {
+        val session = sessionsMCP.create(
+            LocalDate.of(2026, 4, 9), name = "  AWS Community Day Adria ", location = "Kino Šiška", address = null
+        )
+        assertEquals("AWS Community Day Adria", session.name)
+        assertEquals("AWS Community Day Adria", jdbcTemplate.queryForObject<String>("select name from sessions where id = ?", session.id))
+
+        // Left out, it stays; given, it's the new name; empty, it's gone, and the session goes by its location again
+        assertEquals(session, sessionsMCP.update(session.id!!, date = null, location = null, address = null))
+        assertEquals(
+            session.copy(name = "AWS Community Day Adria 2026"),
+            sessionsMCP.update(session.id, date = null, name = "AWS Community Day Adria 2026", location = null, address = null),
+        )
+        assertEquals(
+            session.copy(name = null),
+            sessionsMCP.update(session.id, date = null, name = " ", location = null, address = null),
+        )
+        assertNull(sessionsMCP.create(LocalDate.of(2026, 4, 10), location = "Studio", address = null).name)
+    }
+
+    @Test
     fun `deletes a session but keeps its episodes`() {
         val session = sessionsMCP.create(LocalDate.of(2026, 5, 1), location = null, address = null)
         episodesRepository.saveAndFlush(Episode(title = "Kept", code = "ep-1101"))
