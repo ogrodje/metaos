@@ -35,6 +35,9 @@ export interface GoogleDoc {
 export interface Session {
   id: string
   date: string
+  // What it's called, e.g. AWS Community Day Adria 2026; without one it goes by its location (sessionName)
+  name: string | null
+  // Where it is, e.g. the venue
   location: string | null
   documents: GoogleDoc[]
   koofrFolders: KoofrFolderLink[]
@@ -238,7 +241,7 @@ export function sessionPath(session: Pick<Session, 'id'>) {
 export const EPISODE_FIELDS = `
   id code title show showColor status recordingDate airedDate youtubeUrl spotifyUrl applePodcastsUrl patreonUrl
   tinySummary
-  session { id date location documents { fileId url } koofrFolders { path url } dropboxFolders { path url } }
+  session { id date name location documents { fileId url } koofrFolders { path url } dropboxFolders { path url } }
   people { personId name roles }
   documents { fileId url }
   koofrFolders { path url }
@@ -315,10 +318,23 @@ export function relativeDate(date: string, today = new Date()) {
   return relative.format(Math.trunc(days / 30), 'month')
 }
 
-/** A session as people know it: when and where, e.g. 22 Oct 2026 · AWS Community Day Adria */
-export function sessionTitle(session: Pick<Session, 'date' | 'location'>) {
-  return [formatDate(session.date), session.location].filter(Boolean).join(' · ')
+/** What a session goes by: its name, else its location; null when it has neither, and goes by its date */
+export function sessionName(session: Pick<Session, 'name' | 'location'>) {
+  return session.name ?? session.location ?? null
 }
+
+/** Where a session is, when its name doesn't say it already: its location, unless that's what it goes by */
+export function sessionPlace(session: Pick<Session, 'name' | 'location'>) {
+  return session.location && session.location !== sessionName(session) ? session.location : null
+}
+
+/** A session as people know it: when, and what it's called, e.g. 22 Oct 2026 · AWS Community Day Adria */
+export function sessionTitle(session: Pick<Session, 'date' | 'name' | 'location'>) {
+  return [formatDate(session.date), sessionName(session)].filter(Boolean).join(' · ')
+}
+
+/** Renames a session (or clears its name, with ''), answering with what it's called now */
+export const RENAME_SESSION = 'mutation ($id: ID!, $name: String!) { session: updateSession(id: $id, name: $name) { id name location } }'
 
 export interface SessionGroup {
   key: string

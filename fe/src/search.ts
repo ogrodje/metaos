@@ -37,6 +37,7 @@ export interface PersonHit {
 export interface FoundSession {
   id: string
   date: string
+  name: string | null
   location: string | null
   address: string | null
   episodes: Pick<Episode, 'id' | 'code' | 'title'>[]
@@ -65,7 +66,7 @@ export const SEARCH_QUERY = `query ($text: String!, $limit: Int!) {
     season
     episodes { episode { ${EPISODE_FIELDS} } matchedIn snippet }
     people { person { ${PERSON_FIELDS} } matchedIn }
-    sessions { session { id date location address episodes { id code title } } matchedIn }
+    sessions { session { id date name location address episodes { id code title } } matchedIn }
     episodeCount personCount sessionCount
   }
 }`

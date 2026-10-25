@@ -90,7 +90,7 @@ yarn test       # the tests in src/**/__tests__, with vitest (./gradlew feTest, 
   bearer token says who is asking (`me`). What isn't public needs `metaos:read` and an approved user (realm role
   `metaos-user`, `Security.kt`): whole queries with `@PreAuthorize`, and fields that public episodes and sessions also
   have (history, comments, docs, addresses, ...) come back empty for anyone else. Changes (`Mutation`: comments of
-  Discussions, linking Accounts, an episode's pictures and links) need `metaos:write` and an approved user
+  Discussions, linking Accounts, an episode's pictures and links, renaming a session) need `metaos:write` and an approved user
   (`@approval.writes`).
 - An episode's links (`Platform` in [`Episodes.kt`](src/main/kotlin/si/ogrodje/metaos/Episodes.kt)) are where it can
   be watched or listened to: YouTube, Spotify, Apple Podcasts, and four on Patreon, each set or cleared on its own
@@ -135,13 +135,20 @@ yarn test       # the tests in src/**/__tests__, with vitest (./gradlew feTest, 
   `Fact.vue`: dates, session, people with their pictures (`PersonLine.vue`), where to listen, files, and what needs
   attention by Home's rules, `episodeConcerns`), first in the page, so above the rest on phones. Once the page's title
   has scrolled away, the panel, which stays in view, says what it's about: its cover, code and title (`PanelTitle.vue`,
-  `useScrolledPast`), also a way back to the top; a session's says its date and place. The main column has
+  `useScrolledPast`), also a way back to the top; a session's says its date and name. The main column has
   the episode's media (`MediaStrip.vue`: its titles with the thumbnails they're A/B tested with and the cover, its
   artwork marked with what each file is used as, its photos), the summaries folded when long (`FoldedText.vue`), and
   for the team its activity (`ActivityFeed.vue`, see Discussions): comments and history in one feed, from the audit
   trail as [`History.kt`](src/main/kotlin/si/ogrodje/metaos/History.kt) tells it. A released episode's page is
   anyone's, without what's the team's (its activity, alternative titles, files, ...), its thumbnail large; any other
   episode is the team's, and not found for anyone else, as one that isn't there.
+- A recording session has a name (e.g. AWS Community Day Adria 2026), apart from its location (the venue) and address;
+  [`V29__session_names.sql`](src/main/resources/db/migration/V29__session_names.sql) named each one after its
+  location to begin with. Without a name it goes by its location, else by its date, wherever it's labelled
+  (`sessionName` and `sessionTitle` in `fe/src/episodes.ts`, the names `History.kt` gives sessions). Its page's
+  heading is its name, with its date and, where the name doesn't say it, its location under it; the team renames it
+  there (`RenameSession.vue`), through the `updateSession` mutation (`SessionsGraphQL.kt`, with `metaos:write`, as
+  `update_session` does over MCP; both through `Sessions` in `Sessions.kt`).
 - The Episodes page lists what's in the works (the team's), then the released episodes by season, as a list
   (`EpisodeRow`, with its cover, square, or else its thumbnail: `listPicture`) or a grid of `EpisodeCard`s (`?view=grid`), by show and season; seasons older
   than the two latest show their first row until opened.
@@ -165,7 +172,7 @@ yarn test       # the tests in src/**/__tests__, with vitest (./gradlew feTest, 
   [`Search.kt`](src/main/kotlin/si/ogrodje/metaos/Search.kt) finds episodes, ideas too, people and recording sessions.
   An episode code, however it's typed (`s5e8`, `S5 E8`, `5x08`), or an ID is that episode alone, which ↵ opens; a
   season (`S04`) lists it. Otherwise every word has to start a word, or be in one, in an episode's titles, people,
-  show, summaries (not the AI one) or session, a person's name or bio, or a session's place, address or date; case
+  show, summaries (not the AI one) or session, a person's name or bio, or a session's name, place, address or date; case
   and diacritics don't matter (`fold`, also in `fe/src/search.ts`, which marks the words found). Each word counts the
   weight of the field it's best in (`SearchField`), and a row says why it was found when it doesn't show it.
 - Users sign in with keycloak-js (`fe/src/stores/auth.ts`), straight to Discord or Google (`idpHint`). Once the page

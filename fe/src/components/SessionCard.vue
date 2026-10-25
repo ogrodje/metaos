@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import EpisodeRow from '@/components/EpisodeRow.vue'
 import FileLinks from '@/components/FileLinks.vue'
-import { formatDate, relativeDate, sessionPath, type SessionGroup, TIME_ZONE } from '@/episodes'
+import { formatDate, relativeDate, sessionName, sessionPath, type SessionGroup, TIME_ZONE } from '@/episodes'
 
 // A recording session on the home page and its episodes: the day as on a calendar, where, how far away, its files, and
 // its episodes a line each. Episodes without a session are a card of their own, without the head.
@@ -27,7 +27,7 @@ const day = computed(() => {
     <h3 v-if="group.session" class="head">
       <span class="calendar" aria-hidden="true"><span class="month">{{ day?.month }}</span><span class="day">{{ day?.day }}</span></span>
       <span class="where">
-        <RouterLink :to="sessionPath(group.session)">{{ group.session.location ?? formatDate(group.session.date) }}</RouterLink>
+        <RouterLink :to="sessionPath(group.session)">{{ sessionName(group.session) ?? formatDate(group.session.date) }}</RouterLink>
         <time class="date" :datetime="group.session.date">{{ formatDate(group.session.date) }}</time>
       </span>
       <span class="when" :class="{ overdue }">{{ relativeDate(group.session.date) }}</span>
