@@ -20,6 +20,14 @@ concurrency:
   group: deploy-production
   cancel-in-progress: false
 
+# The jobs only read the repo; registry and cluster go through their own credentials
+permissions:
+  contents: read
+
+# Actions are pinned to commits (their tags can be moved to other code), with the version beside each. Values from
+# outside the script - secrets, a step's output - come in through env, as text: written into the script with ${{ }},
+# they would be its code, and a tag named e.g. v1$(...) would run.
+
 env:
   REGISTRY: registry.folk-decibel.ts.net
   APP_IMAGE: registry.folk-decibel.ts.net/metaos/metaos
@@ -32,21 +40,23 @@ jobs:
     outputs:
       tag: ${{ steps.get-tag.outputs.tag }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # `git describe` needs the tags, which a shallow clone omits
           fetch-depth: 0
+          # The build runs the repo's own code (gradle, devenv), which doesn't need the job's token
+          persist-credentials: false
 
       # The JDK, Node and Yarn come from devenv.nix, as in development
-      - uses: cachix/install-nix-action@v31
+      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # 31.11.3
       # devenv's binary cache, so devenv itself doesn't get built
-      - uses: cachix/cachix-action@v17
+      - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
         with:
           name: devenv
       - name: Install devenv
         run: nix profile add nixpkgs#devenv
 
-      - uses: gradle/actions/setup-gradle@v5
+      - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
 
       # Testcontainers runs its Postgres on the runner's Docker; feTest and feBuild test, type-check and build fe/ with
       # devenv's Node and Yarn, into fe/.output for its image
@@ -54,7 +64,7 @@ jobs:
         run: devenv shell -- ./gradlew test feTest bootJar feBuild
 
       - name: Connect to Tailscale
-        uses: tailscale/github-action@v4
+        uses: tailscale/github-action@99a8333667fff04fdd6cffb46dfd409f8329a7bf # v4.3.0
         with:
           ping: registry.folk-decibel.ts.net
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
@@ -62,25 +72,32 @@ jobs:
           tags: tag:ci
 
       - name: Login to Docker Registry
-        run: |
-          echo "${{ secrets.DOCKER_REGISTRY_PASSWORD }}" \
-            | docker login "$REGISTRY" -u "${{ secrets.DOCKER_REGISTRY_USERNAME }}" --password-stdin
+        env:
+          REGISTRY_USERNAME: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+        run: echo "$REGISTRY_PASSWORD" | docker login "$REGISTRY" -u "$REGISTRY_USERNAME" --password-stdin
 
       - name: Get version tag
         id: get-tag
         run: |
           TAG=$(git describe --tags --always)
+          # What a Docker tag may be; anyone who can push a git tag chooses this text
+          if ! [[ "$TAG" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
+            echo "::error::git describe gave a tag Docker can't use: $TAG"
+            exit 1
+          fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "Building images with tag: $TAG"
 
       # Host networking puts buildkit on the tailnet, so it can push to the registry
-      - uses: docker/setup-buildx-action@v4
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
         with:
           driver-opts: network=host
 
       - name: Build and push images
+        env:
+          TAG: ${{ steps.get-tag.outputs.tag }}
         run: |
-          TAG=${{ steps.get-tag.outputs.tag }}
           docker buildx build --platform linux/amd64 -f docker/Dockerfile \
             -t "$APP_IMAGE:latest" -t "$APP_IMAGE:$TAG" --push .
           docker buildx build --platform linux/amd64 -f docker/web.Dockerfile \
@@ -95,41 +112,46 @@ jobs:
       name: production
       url: https://metaos.ogrodje.si
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Connect to Tailscale
-        uses: tailscale/github-action@v4
+        uses: tailscale/github-action@99a8333667fff04fdd6cffb46dfd409f8329a7bf # v4.3.0
         with:
           ping: tailscale-operator.folk-decibel.ts.net
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
           tags: tag:ci
 
-      - uses: azure/setup-kubectl@v5
+      - uses: azure/setup-kubectl@bda439f5f36b99b262ebdcd3613869bddb064c8e # v5.2.0
 
       - name: Setup kustomize
         run: |
-          # Pinned release binary
+          # Pinned release binary, checked against the release's checksums.txt
           KVER=5.8.3
-          curl -sSL -o /tmp/kustomize.tar.gz \
+          KSHA=cb9e31198d3f63b44848bd0afc4c8efc56e6cfef9c93a4a39a211940e6decd61
+          curl -sSfL -o /tmp/kustomize.tar.gz \
             "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KVER}/kustomize_v${KVER}_linux_amd64.tar.gz"
+          echo "$KSHA  /tmp/kustomize.tar.gz" | sha256sum -c -
           tar -xzf /tmp/kustomize.tar.gz -C /tmp
           sudo mv /tmp/kustomize /usr/local/bin/
           kustomize version
 
       - name: Configure kubectl
+        env:
+          KUBECONFIG_BASE64: ${{ secrets.KUBECONFIG }}
         run: |
           mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+          echo "$KUBECONFIG_BASE64" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
       - name: Update kustomization with the new tag
+        env:
+          TAG: ${{ needs.build.outputs.tag }}
         run: |
           cd k8s/base
-          kustomize edit set image \
-            "$APP_IMAGE:${{ needs.build.outputs.tag }}" \
-            "$WEB_IMAGE:${{ needs.build.outputs.tag }}" \
-            "$KEYCLOAK_IMAGE:${{ needs.build.outputs.tag }}"
+          kustomize edit set image "$APP_IMAGE:$TAG" "$WEB_IMAGE:$TAG" "$KEYCLOAK_IMAGE:$TAG"
 
       - name: Deploy
         run: |
