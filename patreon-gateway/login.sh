@@ -8,9 +8,10 @@
 # patreon-gateway/state/ (git ignores it) and on the gateway's volume, nowhere else.
 set -euo pipefail
 
-cd "$(dirname "$0")"
-SESSION=state/session.json
-../gradlew -q login -Psession="$SESSION"
+# No cd: KUBECONFIG may be relative to where this runs, as .envrc's is (as k8s/set_secrets.sh)
+DIR=$(cd "$(dirname "$0")" && pwd)
+SESSION="$DIR/state/session.json"
+"$DIR/../gradlew" -q -p "$DIR" login -Psession="$SESSION"
 
 if [[ "${1:-prod}" == "local" ]]; then
   URL=http://localhost:8090
