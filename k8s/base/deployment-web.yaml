@@ -16,13 +16,19 @@ spec:
     spec:
       # preStop sleep + Nitro's graceful shutdown
       terminationGracePeriodSeconds: 30
+      # Nothing in it talks to the Kubernetes API, so no token of the namespace's service account for whoever gets in
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 65532   # distroless "nonroot"
         runAsGroup: 65532
+        seccompProfile: { type: RuntimeDefault }
       containers:
         - name: metaos-web
           image: registry.folk-decibel.ts.net/metaos/metaos-web
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ ALL ] }
           ports:
             - { containerPort: 3000, name: http }
 

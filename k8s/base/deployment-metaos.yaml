@@ -40,13 +40,19 @@ spec:
     spec:
       # preStop sleep + Spring's graceful shutdown (30 s per phase)
       terminationGracePeriodSeconds: 45
+      # Nothing in it talks to the Kubernetes API, so no token of the namespace's service account for whoever gets in
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 65532   # distroless "nonroot"
         runAsGroup: 65532
+        seccompProfile: { type: RuntimeDefault }
       containers:
         - name: metaos
           image: registry.folk-decibel.ts.net/metaos/metaos
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ ALL ] }
           ports:
             - { containerPort: 8080, name: http }
             - { containerPort: 9090, name: management }

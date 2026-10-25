@@ -10,10 +10,17 @@ spec:
   template:
     metadata: { labels: { app: keycloak } }
     spec:
+      # Nothing in it talks to the Kubernetes API, so no token of the namespace's service account for whoever gets in
+      automountServiceAccountToken: false
+      securityContext:
+        seccompProfile: { type: RuntimeDefault }
       containers:
         - name: keycloak
           # Runs `start --optimized --import-realm` (docker/keycloak.Dockerfile)
           image: registry.folk-decibel.ts.net/metaos/keycloak
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ ALL ] }
           ports:
             - { containerPort: 8080, name: http }
             - { containerPort: 9000, name: management }
