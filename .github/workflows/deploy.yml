@@ -25,6 +25,7 @@ env:
   APP_IMAGE: registry.folk-decibel.ts.net/metaos/metaos
   WEB_IMAGE: registry.folk-decibel.ts.net/metaos/metaos-web
   KEYCLOAK_IMAGE: registry.folk-decibel.ts.net/metaos/keycloak
+  GATEWAY_IMAGE: registry.folk-decibel.ts.net/metaos/patreon-gateway
 
 jobs:
   build:
@@ -52,6 +53,10 @@ jobs:
       # devenv's Node and Yarn, into fe/.output for its image
       - name: Test and build the boot jar and the front-end
         run: devenv shell -- ./gradlew test feTest bootJar feBuild
+
+      # patreon-gateway is a build of its own (patreon-gateway/); its tests need no browser
+      - name: Test and build patreon-gateway
+        run: devenv shell -- ./gradlew -p patreon-gateway test bootJar
 
       - name: Connect to Tailscale
         uses: tailscale/github-action@v4
@@ -87,6 +92,8 @@ jobs:
             -t "$WEB_IMAGE:latest" -t "$WEB_IMAGE:$TAG" --push .
           docker buildx build --platform linux/amd64 -f docker/keycloak.Dockerfile \
             -t "$KEYCLOAK_IMAGE:latest" -t "$KEYCLOAK_IMAGE:$TAG" --push .
+          docker buildx build --platform linux/amd64 -f docker/patreon-gateway.Dockerfile \
+            -t "$GATEWAY_IMAGE:latest" -t "$GATEWAY_IMAGE:$TAG" --push .
 
   deploy:
     needs: [ build ]
@@ -129,14 +136,15 @@ jobs:
           kustomize edit set image \
             "$APP_IMAGE:${{ needs.build.outputs.tag }}" \
             "$WEB_IMAGE:${{ needs.build.outputs.tag }}" \
-            "$KEYCLOAK_IMAGE:${{ needs.build.outputs.tag }}"
+            "$KEYCLOAK_IMAGE:${{ needs.build.outputs.tag }}" \
+            "$GATEWAY_IMAGE:${{ needs.build.outputs.tag }}"
 
       - name: Deploy
         run: |
           kubectl apply -k k8s/base/
 
           # Own keys: deployment.kubernetes.io/revision belongs to the Deployment controller
-          kubectl annotate deployment metaos metaos-web -n metaos-prod \
+          kubectl annotate deployment metaos metaos-web patreon-gateway -n metaos-prod \
             ogrodje.si/git-sha="${GITHUB_SHA}" \
             ogrodje.si/deployed-by="${GITHUB_ACTOR}" \
             ogrodje.si/deployed-at="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
@@ -145,6 +153,7 @@ jobs:
           kubectl rollout status deployment/keycloak -n metaos-prod --timeout=5m
           kubectl rollout status deployment/metaos -n metaos-prod --timeout=5m
           kubectl rollout status deployment/metaos-web -n metaos-prod --timeout=5m
+          kubectl rollout status deployment/patreon-gateway -n metaos-prod --timeout=5m
 
       - name: Smoke the deployed app
         run: |

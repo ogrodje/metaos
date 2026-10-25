@@ -163,6 +163,22 @@ export const TOOL_GROUPS: ToolGroup[] = [
     ],
   },
   {
+    id: 'patreon',
+    title: 'Patreon',
+    about: "Ogrodje's Patreon: drafts, an episode's audio or video, and publishing",
+    tools: [
+      { name: 'list_patreon_tiers', description: 'The tiers, cheapest first, with their prices and patrons' },
+      { name: 'list_patreon_posts', description: 'The published posts, newest first, or those with words in their titles' },
+      { name: 'get_patreon_post', description: 'A post, published or a draft, with its text and who may see it' },
+      { name: 'create_patreon_draft', description: 'Make a draft post, for everyone, every patron or some tiers; only the team sees it' },
+      { name: 'update_patreon_post', description: "Change a post's title, text or who may see it" },
+      { name: 'set_patreon_post_media', description: "Upload an episode's audio or video from Dropbox or a URL to a draft, as a podcast or video post" },
+      { name: 'publish_patreon_post', description: "Publish a draft, now or later, emailing patrons only if asked; it can become the episode's Patreon link" },
+      { name: 'delete_patreon_post', description: "Delete a post, e.g. a draft that isn't needed" },
+      { name: 'get_patreon_job', description: 'How a change in Patreon is going, e.g. an upload: done, failed and why, or waiting to try again' },
+    ],
+  },
+  {
     id: 'pictures',
     title: 'Pictures',
     about: 'thumbnails, covers and avatars for everyone to see, at media.ogrodje.si',

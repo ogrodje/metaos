@@ -486,6 +486,27 @@ folders and moves or renames, but never deletes or replaces anything unasked.
 - The `dropbox` health check uses it every hour and reports a rejected token there, in `metaos_dropbox_connected` and in
   the log. `DropboxTest` runs against the real account (read-only) when the refresh token is in the environment.
 
+### Patreon
+
+MetaOS reaches Ogrodje's Patreon through [patreon-gateway](patreon-gateway/README.md), a service of its own in
+[`patreon-gateway/`](patreon-gateway) (Kotlin, Spring Boot and Playwright; a Gradle build of its own,
+`./gradlew -p patreon-gateway test`), which MetaOS alone calls, with its token. It reads through Patreon's API, as the
+campaign's creator, and makes, changes, publishes and deletes posts and uploads an episode's audio or video in Patreon's
+web app, signed in as the bot, `iva.ogrodje@gmail.com`, acting as the creator, by calling Patreon's own web API from a
+page of the campaign, as its editor does (not a public API: the README says how it was found). Changes are jobs, one at
+a time; one Patreon turns away (a rate limit) tries again by itself.
+
+- [`Patreon.kt`](src/main/kotlin/si/ogrodje/metaos/Patreon.kt) is MetaOS's client: `PATREON_GATEWAY_URL` and
+  `PATREON_GATEWAY_TOKEN` turn it on (`metaos.patreon.*`); it's off without the token. `PatreonMCP` has the tools:
+  tiers and posts, drafts (`create_patreon_draft`), their audio or video from Dropbox, as a temporary link the gateway
+  downloads, or any https URL (`set_patreon_post_media`), publishing, which can set the episode's Patreon link
+  (`publish_patreon_post`, the only one patrons see, so the only open-world one), deleting, and the jobs. Quick changes
+  are waited for; an upload comes back as a job (`get_patreon_job`).
+- The bot signs in once by hand (`patreon-gateway/login.sh`), and the gateway keeps the session and the refreshed
+  creator tokens on its volume. The `patreon` health check asks the gateway every hour, which says whether Patreon's
+  API answers and the browser is still signed in, in `metaos_patreon_connected` and in the log.
+- `PatreonTest` runs the client against a stand-in gateway; the gateway's own tests need no browser.
+
 ### Deployment
 
 Production runs on the ogrodje-one Kubernetes cluster, namespace `metaos-prod`: the app at `https://metaos.ogrodje.si`
@@ -503,6 +524,9 @@ decisions behind it and what is left to do.
   that another needs: MCP is stateless (`spring.ai.mcp.server.protocol=STATELESS`, no `Mcp-Session-Id`), as no tool
   needs a session and the bearer token says who's calling; every pod listens for changes (Live updates) and checks its
   connections; caches like `DropboxFolderIndex` are each pod's own. Flyway takes a lock, so both may start at once.
+- patreon-gateway is one pod (`deployment-patreon-gateway.yaml`), with its state on a volume, and no Ingress: MetaOS
+  calls it at `http://patreon-gateway`, with the token from `patreon-gateway-secret` (`k8s/set_secrets.sh`). CI tests,
+  builds and rolls it out with the rest.
 
 [Ogrodje]: https://ogrodje.si
 [Nix]: https://nixos.org/

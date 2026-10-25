@@ -16,8 +16,10 @@ works with Google Drive, Koofr and Dropbox as Ogrodje's bot account. Postgres al
 passes on to the open pages, so they show it without being reloaded. Pictures everyone may see, like episodes'
 thumbnails from Dropbox and people's avatars from Hygraph, MetaOS copies to its public bucket in Google Cloud Storage,
 from which browsers load them at media.ogrodje.si, cached by Cloudflare; the team uploads an episode's artwork from
-its page straight to MetaOS's private bucket, and MetaOS publishes it from there. Everything runs on Ogrodje's
-Kubernetes cluster, behind Cloudflare.
+its page straight to MetaOS's private bucket, and MetaOS publishes it from there. Ogrodje's Patreon MetaOS reaches
+through patreon-gateway, a service of its own beside it, which reads through Patreon's API and makes, changes and
+publishes posts, with an episode's audio or video, in Patreon's web app, signed in as the bot. Everything runs on
+Ogrodje's Kubernetes cluster, behind Cloudflare.
 
 The diagram is drawn in [`architecture.svg`](architecture.svg); `just architecture` renders `architecture.png` from it.
 

@@ -1,0 +1,83 @@
+# patreon-gateway (patreon-gateway/): Ogrodje's Patreon behind a small API, for MetaOS only - no Ingress, and every call
+# but /health needs its token. One pod, as it holds the one browser session and runs one job at a time; its tokens,
+# that session and what failed jobs saw are on a volume of its own, so they outlive a restart.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: patreon-gateway-state
+  namespace: metaos-prod
+spec:
+  accessModes: [ ReadWriteOnce ]
+  resources:
+    requests: { storage: 1Gi }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: patreon-gateway
+  namespace: metaos-prod
+  labels: { app: patreon-gateway }
+spec:
+  replicas: 1
+  # The volume is one pod's at a time
+  strategy: { type: Recreate }
+  selector: { matchLabels: { app: patreon-gateway } }
+  template:
+    metadata: { labels: { app: patreon-gateway } }
+    spec:
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001   # pwuser, in Playwright's image
+        runAsGroup: 1001
+        fsGroup: 1001
+      containers:
+        - name: patreon-gateway
+          image: registry.folk-decibel.ts.net/metaos/patreon-gateway
+          ports:
+            - { containerPort: 8090, name: http }
+          # Optional, so it starts before k8s/set_secrets.sh has made them; without them it reports what's missing
+          env:
+            - name: PATREON_CLIENT_ID
+              valueFrom: { secretKeyRef: { name: patreon-gateway-secret, key: patreon_client_id, optional: true } }
+            - name: PATREON_CLIENT_SECRET
+              valueFrom: { secretKeyRef: { name: patreon-gateway-secret, key: patreon_client_secret, optional: true } }
+            # Only the first: the gateway refreshes them and keeps the new ones on its volume (PatreonApi.kt)
+            - name: PATREON_ACCESS_TOKEN
+              valueFrom: { secretKeyRef: { name: patreon-gateway-secret, key: patreon_access_token, optional: true } }
+            - name: PATREON_REFRESH_TOKEN
+              valueFrom: { secretKeyRef: { name: patreon-gateway-secret, key: patreon_refresh_token, optional: true } }
+            - name: PATREON_GATEWAY_TOKEN
+              valueFrom: { secretKeyRef: { name: patreon-gateway-secret, key: gateway_token, optional: true } }
+          volumeMounts:
+            - { name: state, mountPath: /state }
+            # Chromium's shared memory; the default 64M crashes it on big pages
+            - { name: shm, mountPath: /dev/shm }
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: http }
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          # The JVM, Chromium, and an episode's video on its way through
+          resources:
+            requests: { cpu: 100m, memory: 512Mi }
+            limits: { memory: 2Gi }
+      volumes:
+        - name: state
+          persistentVolumeClaim: { claimName: patreon-gateway-state }
+        - name: shm
+          emptyDir: { medium: Memory, sizeLimit: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: patreon-gateway
+  namespace: metaos-prod
+  labels: { app: patreon-gateway }
+spec:
+  type: ClusterIP
+  selector: { app: patreon-gateway }
+  ports:
+    - { name: http, port: 80, targetPort: http }

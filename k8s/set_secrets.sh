@@ -17,6 +17,11 @@
 #   DROPBOX_APP_KEY, DROPBOX_APP_SECRET, DROPBOX_REFRESH_TOKEN
 #                                 optional, MetaOS's Dropbox app and the bot's refresh token (dropbox/refresh_token.sh);
 #                                 Dropbox stays off without them
+#   PATREON_CLIENT_ID, PATREON_CLIENT_SECRET, PATREON_ACCESS_TOKEN, PATREON_REFRESH_TOKEN, PROD_PATREON_GATEWAY_TOKEN
+#                                 optional, patreon-gateway's: the Patreon app's client and creator tokens (the
+#                                 gateway refreshes them and keeps the new ones on its volume, so these only seed it),
+#                                 and the token MetaOS calls it with (`openssl rand -hex 24`); Patreon stays off without
+#                                 the last (patreon-gateway/README.md)
 # The DB passwords go into SQL literals, so keep them alphanumeric: `openssl rand -hex 24`.
 set -euo pipefail
 
@@ -63,6 +68,16 @@ kubectl create secret generic keycloak-secret -n "$NS" \
   --from-literal=keycloak_admin_password="$PROD_KEYCLOAK_ADMIN_PASSWORD" \
   --from-literal=keycloak_dev_password="$PROD_KEYCLOAK_DEV_PASSWORD" \
   --dry-run=client -o yaml | kubectl apply -f -
+
+if [[ -n "${PROD_PATREON_GATEWAY_TOKEN:-}" ]]; then
+  kubectl create secret generic patreon-gateway-secret -n "$NS" \
+    --from-literal=patreon_client_id="${PATREON_CLIENT_ID:?}" \
+    --from-literal=patreon_client_secret="${PATREON_CLIENT_SECRET:?}" \
+    --from-literal=patreon_access_token="${PATREON_ACCESS_TOKEN:?}" \
+    --from-literal=patreon_refresh_token="${PATREON_REFRESH_TOKEN:?}" \
+    --from-literal=gateway_token="$PROD_PATREON_GATEWAY_TOKEN" \
+    --dry-run=client -o yaml | kubectl apply -f -
+fi
 
 # On the namespace's default ServiceAccount, as in boo-prod, so no Deployment has to name it
 kubectl create secret docker-registry regcred -n "$NS" \

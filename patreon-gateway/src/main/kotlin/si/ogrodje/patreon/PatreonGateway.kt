@@ -1,0 +1,38 @@
+package si.ogrodje.patreon
+
+import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan
+import org.springframework.boot.runApplication
+import org.springframework.context.annotation.Bean
+import org.springframework.scheduling.annotation.EnableScheduling
+import java.nio.file.Path
+import java.time.Clock
+
+/**
+ * Ogrodje's Patreon behind a small HTTP API, for MetaOS: Patreon's own API where it can, and its web app, signed in as
+ * the bot, where it can't (creating, changing and publishing posts, uploading media). Callers see posts, tiers and
+ * jobs, not how each is done.
+ */
+@SpringBootApplication
+@ConfigurationPropertiesScan
+@EnableScheduling
+class PatreonGateway {
+    @Bean
+    fun clock(): Clock = Clock.systemUTC()
+}
+
+fun main(args: Array<String>) {
+    runApplication<PatreonGateway>(*args)
+}
+
+@ConfigurationProperties("patreon")
+data class PatreonProperties(
+    val clientId: String = "",
+    val clientSecret: String = "",
+    val accessToken: String = "",
+    val refreshToken: String = "",
+    val account: String = "",
+    val stateDir: Path = Path.of("state"),
+    val headed: Boolean = false,
+)

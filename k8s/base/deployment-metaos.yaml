@@ -90,6 +90,11 @@ spec:
               valueFrom: { secretKeyRef: { name: metaos-secret, key: dropbox_app_secret, optional: true } }
             - name: DROPBOX_REFRESH_TOKEN
               valueFrom: { secretKeyRef: { name: metaos-secret, key: dropbox_refresh_token, optional: true } }
+            # Patreon, through patreon-gateway (deployment-patreon-gateway.yaml); off without its token
+            - name: PATREON_GATEWAY_URL
+              value: http://patreon-gateway
+            - name: PATREON_GATEWAY_TOKEN
+              valueFrom: { secretKeyRef: { name: patreon-gateway-secret, key: gateway_token, optional: true } }
 
           # On the port that serves traffic: actuator's 9090 is a second Tomcat, which says UP even when 8080 hangs.
           # Flyway migrates before the app is up; liveness only starts counting once the startup probe has passed, and

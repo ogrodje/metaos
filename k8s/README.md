@@ -10,12 +10,14 @@ k8s/base/
   deployment-metaos.yaml     ConfigMap, Deployment, Service, Ingress (MetaOS's own paths), ServiceMonitor
   deployment-web.yaml        the front-end (metaos-web): Deployment, Service, Ingress (everything else)
   deployment-keycloak.yaml   Deployment, Service, Ingress
+  deployment-patreon-gateway.yaml  patreon-gateway: its volume, Deployment, Service (no Ingress: MetaOS's only)
   kustomization.yaml         the resources, the public URLs and the image tags
 k8s/set_secrets.sh           Postgres roles + databases, secrets, registry pull secret
 k8s/ci/deployer.yaml         what CI may do in the cluster
 docker/Dockerfile            the app: boot jar on distroless java25, non-root
 docker/web.Dockerfile        the front-end: Nuxt's build (fe/.output) on distroless Node 26, non-root
 docker/keycloak.Dockerfile   Keycloak, optimized build, realm "metaos" baked in
+docker/patreon-gateway.Dockerfile  patreon-gateway's boot jar on Playwright's image (Chromium) with Temurin's Java
 ```
 
 | Host                     | What                                                                       |
@@ -39,6 +41,7 @@ just deploy      # kubectl apply -k, wait for the rollouts
 just manifests   # what would be applied
 just logs        # follow the app
 just web-logs    # follow the front-end
+just gateway-logs  # follow patreon-gateway
 ```
 
 ## One-time setup
@@ -58,7 +61,9 @@ just web-logs    # follow the front-end
    ./k8s/set_secrets.sh
    ```
 
-   It creates roles `metaos` and `metaos_keycloak`, each owning a database of the same name on `main-cluster`.
+   It creates roles `metaos` and `metaos_keycloak`, each owning a database of the same name on `main-cluster`. With
+   the Patreon app's credentials and `PROD_PATREON_GATEWAY_TOKEN` it also makes `patreon-gateway-secret`; then sign
+   the bot in to Patreon with `patreon-gateway/login.sh` ([its README](../patreon-gateway/README.md)).
 
 3. **Cloudflare caches the pages** anyone may see, as their `Cache-Control` says (`s-maxage=60,
    stale-while-revalidate=600`), but only with a Cache Rule, as it doesn't cache HTML by default: for host

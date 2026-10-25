@@ -8,8 +8,9 @@ metadata:
   name: metaos-deployer
   namespace: metaos-prod
 rules:
+  # persistentvolumeclaims: patreon-gateway's state
   - apiGroups: [""]
-    resources: [configmaps, services]
+    resources: [configmaps, services, persistentvolumeclaims]
     verbs: [create, get, list, watch, update, patch, delete]
   - apiGroups: [apps]
     resources: [deployments]

@@ -4,3 +4,4 @@
 !build/libs/metaos.jar
 !keycloak/metaos-realm.json
 !fe/.output
+!patreon-gateway/build/libs/patreon-gateway.jar
