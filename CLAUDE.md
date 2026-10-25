@@ -446,8 +446,10 @@ number, each with a title.
   and no video, as a cover in an MP3 isn't video. Its whole answer is kept (`probe`, JSON), and what's shown in columns
   (`MediaInfo`: duration, container, codecs, size, frame rate, bit depth, colour, sample rate, channels, tracks, when
   and with what it was made). Then Cloud Storage copies it to `episode-media/<upload>/<name>` without it passing
-  through MetaOS, downloaded as a file by its name (`Content-Disposition`). ffprobe is a static build in MetaOS's image
-  (`docker/Dockerfile`) and in devenv; `FFPROBE` points at another, e.g. for an IDE that doesn't run devenv.
+  through MetaOS, downloaded as a file by its name (`Content-Disposition`). ffprobe reads only the formats MetaOS takes
+  and only over https (or from disk, in tests), so a playlist uploaded as an MP4 doesn't make it fetch what it names.
+  It's a static build in MetaOS's image (`docker/Dockerfile`) and in devenv; `FFPROBE` points at another, e.g. for an
+  IDE that doesn't run devenv.
 - Removing one (`removeEpisodeMedia`, `remove_episode_media`) deletes its row and, once that's in, its file;
   production's bucket keeps a deleted file 30 days, where only an administrator gets it back. The audit trail keeps the
   row, and `History.kt` tells it, e.g. "Uploaded the full video: S05E08.mp4", "Made bonus.mov the full video".
@@ -465,8 +467,8 @@ number, each with a title.
   video), asks once before replacing, and sends one at a time; leaving the page while it's sending asks first. The
   episode's panel says when the full audio and video differ in length by more than 5 s (`mediaConcerns`).
 - `MediaFilesTest` runs against a bucket in memory with ffprobe's answers as its files (`FakeProbe`); `MediaProbeTest`
-  runs ffprobe itself where FFmpeg is installed; `GoogleCloudStorageTest` sends a file in chunks and copies it in the
-  dev bucket.
+  runs ffprobe itself where FFmpeg is installed, also on a file in the dev bucket with its key;
+  `GoogleCloudStorageTest` sends a file in chunks and copies it in the dev bucket.
 
 ### Koofr
 

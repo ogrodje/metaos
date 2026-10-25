@@ -62,6 +62,11 @@ interface MediaProbe {
 private val PROBE_TIMEOUT = Duration.ofMinutes(2)
 private val READ_TIMEOUT = Duration.ofSeconds(30)
 
+// Only what MetaOS takes, MP4s and MOVs, M4As, MP3s, WAVs and FLACs, so a file that's something else, e.g. a playlist
+// naming other URLs, isn't read as that; and from the bucket (https), or a file on disk in tests
+private const val FORMATS = "mov,mp3,wav,flac"
+private const val PROTOCOLS = "file,https,tls,tcp"
+
 /**
  * ffprobe, from FFmpeg: in MetaOS's image (docker/Dockerfile), and on a development machine from devenv (devenv.nix) or
  * wherever metaos.media.ffprobe says. It reads a file's headers over HTTP range requests, megabytes rather than the file.
@@ -76,6 +81,7 @@ class FFprobe(
         val process = try {
             ProcessBuilder(
                 command, "-v", "error", "-rw_timeout", READ_TIMEOUT.toNanos().div(1000).toString(),
+                "-format_whitelist", FORMATS, "-protocol_whitelist", PROTOCOLS,
                 "-print_format", "json", "-show_format", "-show_streams", url,
             ).start()
         } catch (e: IOException) {

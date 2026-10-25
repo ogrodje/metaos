@@ -2,11 +2,14 @@ package si.ogrodje.metaos
 
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.junit.jupiter.api.io.TempDir
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.module.kotlin.KotlinModule
 import java.io.File
+import java.time.Duration
 import java.time.OffsetDateTime
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -140,8 +143,30 @@ class MediaProbeTest {
         assertTrue(refused.message!!.startsWith("S05E08.mp4 isn't video or audio that MetaOS can read: "), refused.message)
         assertFalse(dir.path in refused.message!!, refused.message)
 
+        // Nor what names other files or URLs for ffprobe to read, as a playlist does, whatever it's called
+        val playlist = File(dir, "playlist.mp4").apply { writeText("ffconcat version 1.0\nfile '${video.name}'\n") }
+        assertFailsWith<IllegalArgumentException> { ffprobe.probe(playlist.absolutePath, "playlist.mp4") }
+
         val missing = assertFailsWith<IllegalStateException> { FFprobe("ffprobe-that-isnt-there", jsonMapper).probe(video.absolutePath, "video.mp4") }
         assertEquals("MetaOS can't run ffprobe (ffprobe-that-isnt-there), which reads what's in video and audio", missing.message)
+    }
+
+    // As MetaOS reads an upload: from the dev bucket, with a signed URL, over HTTP range requests
+    @Test
+    @EnabledIfEnvironmentVariable(named = "GOOGLE_STORAGE_KEY", matches = ".+")
+    fun `ffprobe reads a file in the bucket from a signed URL`(@TempDir dir: File) {
+        assumeTrue(runs("ffmpeg") && runs("ffprobe"), "FFmpeg isn't installed")
+        val video = File(dir, "video.mp4")
+        ffmpeg("-f", "lavfi", "-i", "testsrc=size=640x360:rate=30", "-t", "2", "-c:v", "mpeg4", video.path)
+        val storage = GoogleCloudStorage(System.getenv("GOOGLE_STORAGE_KEY"), System.getenv("METAOS_STORAGE_BUCKET"))
+        val path = "test/${UUID.randomUUID()}/video.mp4"
+        try {
+            storage.upload(path, "video/mp4", video.inputStream(), overwrite = false)
+            val info = FFprobe("ffprobe", jsonMapper).probe(storage.downloadUrl(path, Duration.ofMinutes(5)).toString(), "video.mp4").info
+            assertEquals(listOf("MP4", "mpeg4", 640, 360, 30.0), listOf(info.container, info.videoCodec, info.width, info.height, info.frameRate))
+        } finally {
+            storage.delete(path)
+        }
     }
 
     private fun runs(command: String) = runCatching {
