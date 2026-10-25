@@ -87,6 +87,8 @@ export const TOOL_GROUPS: ToolGroup[] = [
       { name: 'comment_on_session', description: 'Comment on a recording session as you, in Markdown' },
       { name: 'edit_comment', description: 'Change the text of one of your comments; it shows as edited' },
       { name: 'delete_comment', description: 'Delete one of your comments; the history keeps that it was there' },
+      { name: 'list_idea_votes', description: "An idea's score and who voted it up or down" },
+      { name: 'vote_on_idea', description: 'Vote an idea up or down as you, or take your vote back' },
     ],
   },
   {

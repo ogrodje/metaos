@@ -82,6 +82,8 @@ type Mutation {
     editComment(id: ID!, body: String!): Comment!
     "Delete one of your comments; the history keeps that it was there. Its ID."
     deleteComment(id: ID!): ID!
+    "Vote on an episode idea by its code or ID: UP or DOWN, which replaces your earlier vote, or NONE, which takes it back"
+    voteOnIdea(ref: String!, vote: Vote!): Votes!
     "Link an account to the person it is. One linked to someone else has to be unlinked first. Only for canLinkAccounts."
     linkAccount(id: ID!, person: ID!): Account!
     "Unlink an account from its person. Only for canLinkAccounts."
@@ -236,6 +238,8 @@ type Episode {
     history: [Change!]!
     "Its discussion, oldest first. None without a signed-in user."
     comments: [Comment!]!
+    "The team's votes on it as an idea, kept once it's planned. None without a signed-in user."
+    votes: Votes!
     "Its thumbnail, 1920 × 1080"
     thumbnail: Image
     "The thumbnail that goes with titleB, as they're A/B tested together. Null without a signed-in user."
@@ -413,6 +417,35 @@ type Comment {
     mine: Boolean!
 }
 
+"The team's votes on an idea"
+type Votes {
+    "Ups minus downs"
+    score: Int!
+    up: Int!
+    down: Int!
+    "The signed-in user's own vote; NONE if they haven't voted"
+    mine: Vote!
+    "Who voted which way, ups first"
+    voters: [Voter!]!
+}
+
+enum Vote {
+    UP
+    DOWN
+    "No vote, or one taken back"
+    NONE
+}
+
+"Who voted on an idea, and which way"
+type Voter {
+    "Their person's name, or else their username"
+    name: String!
+    username: String
+    "The person their account is linked to; null if it isn't linked"
+    person: Person
+    vote: Vote!
+}
+
 "Who wrote a comment"
 type CommentAuthor {
     "Their person's name, or else their username"
@@ -503,6 +536,8 @@ enum ChangeKind {
     DROPBOX_FOLDER
     "A comment written, edited or deleted"
     COMMENT
+    "A vote on an idea cast, changed or taken back"
+    VOTE
     "A sign-in linked to a person or unlinked"
     ACCOUNT
     OTHER
