@@ -226,6 +226,9 @@ docker compose up -d keycloak   # http://localhost:8180 (admin console: admin / 
   docker compose exec postgres sh -c 'dropdb -U "$POSTGRES_USER" keycloak'
   docker compose up -d keycloak
   ```
+- The realm is also code, in OpenTofu ([`infra/keycloak`](infra/keycloak/README.md)): `just keycloak plan|apply
+  dev|prod`. A change to the realm goes there and into the JSON alike, so that a realm imported from the JSON plans no
+  changes; the `keycloak/*.sh` scripts did by hand what it does.
 
 ### Accounts
 

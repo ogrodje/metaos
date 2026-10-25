@@ -74,3 +74,15 @@ architecture:
     "$chrome" --headless --disable-gpu --hide-scrollbars --user-data-dir="$profile" \
       --force-device-scale-factor=2 --window-size="$size" --virtual-time-budget=5000 \
       --screenshot="$PWD/architecture.png" "file://$PWD/architecture.svg"
+
+# Keycloak's realm metaos through OpenTofu (infra/keycloak/README.md): `just keycloak plan prod`, `just keycloak apply
+# dev`. Signs in as KEYCLOAK_ADMIN_USERNAME (admin by default) with KEYCLOAK_ADMIN_PASSWORD.
+keycloak command env *ARGS:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd infra/keycloak
+    export TF_VAR_keycloak_admin_username="${KEYCLOAK_ADMIN_USERNAME:-admin}"
+    export TF_VAR_keycloak_admin_password="${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD}"
+    tofu init -input=false >/dev/null
+    tofu workspace select -or-create "{{env}}" >/dev/null
+    tofu "{{command}}" -var-file="{{env}}.tfvars" {{ARGS}}

@@ -28,3 +28,10 @@ verification-*
 # Claude Code
 .claude/worktrees/
 .claude/settings.local.json
+
+# OpenTofu: providers, and state, which has the realm's secrets in it (infra/keycloak/README.md)
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfstate.d/
+crash.log

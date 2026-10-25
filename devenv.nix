@@ -48,6 +48,8 @@ in {
     pkgs.just
     # gcloud, for google/storage.sh
     pkgs.google-cloud-sdk
+    # tofu, for infra/ (Keycloak's realm)
+    unstable.opentofu
   ];
 
   env = {
