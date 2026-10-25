@@ -218,13 +218,14 @@ class Search(
         show?.let { add(Text(SearchField.SHOW, it.name)) }
         tinySummary?.let { add(Text(SearchField.TINY_SUMMARY, plainText(it))) }
         summary?.let { add(Text(SearchField.SUMMARY, plainText(it))) }
-        session?.location?.let { add(Text(SearchField.SESSION, it)) }
+        listOfNotNull(session?.name, session?.location).distinct().forEach { add(Text(SearchField.SESSION, it)) }
     }
 
     private fun Person.texts() = listOfNotNull(Text(SearchField.NAME, name), bio?.let { Text(SearchField.BIO, it) })
 
-    // Its date also by the month's name, in Slovenian and English: oktober, October
+    // Its name first, as it goes by it; its date also by the month's name, in Slovenian and English: oktober, October
     private fun Session.texts() = listOfNotNull(
+        name?.let { Text(SearchField.NAME, it) },
         location?.let { Text(SearchField.LOCATION, it) },
         address?.let { Text(SearchField.ADDRESS, it) },
         Text(SearchField.DATE, "$date ${date.month.getDisplayName(TextStyle.FULL, SLOVENIAN)} ${date.month.getDisplayName(TextStyle.FULL, Locale.UK)}"),

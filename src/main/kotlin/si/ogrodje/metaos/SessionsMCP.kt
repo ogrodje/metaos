@@ -8,13 +8,14 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
 import java.util.UUID
 
-data class SessionDto(val id: UUID?, val date: LocalDate, val location: String?, val address: String?)
+data class SessionDto(val id: UUID?, val date: LocalDate, val name: String?, val location: String?, val address: String?)
 
-fun Session.toDto() = SessionDto(id, date, location, address)
+fun Session.toDto() = SessionDto(id, date, name, location, address)
 
 @Component
 class SessionsMCP(
     private val sessions: SessionsRepository,
+    private val changes: Sessions,
     private val episodes: EpisodesRepository,
 ) {
 
@@ -35,13 +36,15 @@ class SessionsMCP(
             title = "Create session",
             readOnlyHint = false, destructiveHint = false, idempotentHint = false, openWorldHint = false
         ),
-        description = "Create a new session"
+        description = "Create a new recording session: its date, what it's called, where it is and the address. " +
+            "Without a name it goes by its location"
     )
     fun create(
         @McpToolParam(description = "Date of the session, e.g. 2026-10-19") date: LocalDate,
+        @McpToolParam(description = "What the session is called, e.g. AWS Community Day Adria 2026", required = false) name: String? = null,
         @McpToolParam(description = "Location, e.g. the name of the venue", required = false) location: String?,
         @McpToolParam(description = "Street address of the location", required = false) address: String?,
-    ): SessionDto = sessions.save(Session(date = date, location = location, address = address)).toDto()
+    ): SessionDto = changes.create(date, name, location, address).toDto()
 
     @Transactional
     @McpTool(
@@ -50,20 +53,17 @@ class SessionsMCP(
             title = "Update session",
             readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
         ),
-        description = "Change a session's date, location or address. Omitted fields are left as they are"
+        description = "Change a session's date, name, location or address. Omitted fields are left as they are"
     )
     fun update(
         @McpToolParam(description = "Session ID") sessionId: UUID,
         @McpToolParam(description = "Date of the session, e.g. 2026-10-19", required = false) date: LocalDate?,
+        @McpToolParam(
+            description = "What the session is called; empty to clear, after which it goes by its location", required = false
+        ) name: String? = null,
         @McpToolParam(description = "Location, e.g. the name of the venue; empty to clear", required = false) location: String?,
         @McpToolParam(description = "Street address of the location; empty to clear", required = false) address: String?,
-    ): SessionDto {
-        val session = requireNotNull(sessions.findByIdOrNull(sessionId)) { "Session $sessionId not found" }
-        date?.let { session.date = it }
-        location?.let { session.location = it.ifBlank { null } }
-        address?.let { session.address = it.ifBlank { null } }
-        return session.toDto()
-    }
+    ): SessionDto = changes.update(sessionId, date, name, location, address).toDto()
 
     @Transactional
     @McpTool(

@@ -68,8 +68,8 @@ export const TOOL_GROUPS: ToolGroup[] = [
     about: 'days on which episodes are recorded',
     tools: [
       { name: 'list_sessions', description: 'List all sessions, newest first' },
-      { name: 'create_session', description: 'Add a session: its date, location and address' },
-      { name: 'update_session', description: "Change a session's date, location or address" },
+      { name: 'create_session', description: 'Add a session: its date, name, location and address' },
+      { name: 'update_session', description: "Change a session's date, name, location or address" },
       { name: 'delete_session', description: 'Delete a session; its episodes are kept' },
       { name: 'restore_session', description: 'Bring back a deleted session, with its episodes' },
       { name: 'list_session_episodes', description: 'The episodes of a session' },

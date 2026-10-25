@@ -6,7 +6,7 @@ const today = new Date(2026, 9, 23)
 
 function session(date: string, documents = 0): Session {
   return {
-    id: `s-${date}`, date, location: null, koofrFolders: [], dropboxFolders: [],
+    id: `s-${date}`, date, name: null, location: null, koofrFolders: [], dropboxFolders: [],
     documents: Array.from({ length: documents }, (_, i) => ({ fileId: `d${i}`, url: '' })),
   }
 }

@@ -10,7 +10,7 @@ import LoadError from '@/components/LoadError.vue'
 import MarkedText from '@/components/MarkedText.vue'
 import PersonItem from '@/components/PersonItem.vue'
 import SignInPrompt from '@/components/SignInPrompt.vue'
-import { sessionPath, sessionTitle } from '@/episodes'
+import { sessionPath, sessionPlace, sessionTitle } from '@/episodes'
 import { errorMessage, graphql } from '@/graphql'
 import { type EpisodeHit, episodeMatch, resultCount, SEARCH_QUERY, type SearchResults, searchWords } from '@/search'
 import { useAuthStore } from '@/stores/auth'
@@ -191,6 +191,7 @@ useLiveRefresh(() => search(true))
           <ul class="rows">
             <li v-for="hit in results.sessions" :key="hit.session.id">
               <RouterLink :to="sessionPath(hit.session)"><MarkedText :text="sessionTitle(hit.session)" :words="words"/></RouterLink>
+              <span v-if="sessionPlace(hit.session)" class="aside"><MarkedText :text="sessionPlace(hit.session)!" :words="words"/></span>
               <span v-if="hit.session.address" class="aside"><MarkedText :text="hit.session.address" :words="words"/></span>
               <span v-if="hit.session.episodes.length" class="aside">{{ hit.session.episodes.map((episode) => episode.code ?? episode.title).join(', ') }}</span>
             </li>

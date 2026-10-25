@@ -12,7 +12,7 @@ import java.util.UUID
 
 enum class DeletedKind { EPISODE, PERSON, SESSION, SHOW }
 
-/** Something soft-deleted: an episode by its title (and code), a person, a session by its date and location, a show */
+/** Something soft-deleted: an episode by its title (and code), a person, a session by its date and name (else location), a show */
 data class DeletedDto(
     val kind: DeletedKind,
     val id: UUID,
@@ -84,7 +84,7 @@ class RecoveryMCP(private val jdbcTemplate: JdbcTemplate, private val auditLog: 
               union all
               select 'PERSON', 'people', id, name, null, deleted_at from people where deleted_at is not null
               union all
-              select 'SESSION', 'sessions', id, concat_ws(' · ', to_char(date, 'YYYY-MM-DD'), location), null, deleted_at
+              select 'SESSION', 'sessions', id, concat_ws(' · ', to_char(date, 'YYYY-MM-DD'), coalesce(name, location)), null, deleted_at
               from sessions where deleted_at is not null
               union all
               select 'SHOW', 'shows', id, cast(name as text), null, deleted_at from shows where deleted_at is not null) d

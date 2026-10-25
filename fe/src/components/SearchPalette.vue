@@ -7,7 +7,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import MarkedText from '@/components/MarkedText.vue'
 import ShowBadge from '@/components/ShowBadge.vue'
 import StatusLabel from '@/components/StatusLabel.vue'
-import { DATE_LOCALE, episodePath, formatDate, guests, sessionPath, TIME_ZONE } from '@/episodes'
+import { DATE_LOCALE, episodePath, formatDate, guests, sessionName, sessionPath, sessionPlace, TIME_ZONE } from '@/episodes'
 import { errorMessage, graphql } from '@/graphql'
 import { personPath, rolesOf } from '@/people'
 import {
@@ -280,9 +280,9 @@ defineExpose({ open })
               <template v-else>
                 <span class="lead"><time :datetime="item.hit.session.date">{{ shortDate(item.hit.session.date) }}</time></span>
                 <span class="main">
-                  <span class="title"><MarkedText :text="item.hit.session.location ?? formatDate(item.hit.session.date)" :words="words"/></span>
+                  <span class="title"><MarkedText :text="sessionName(item.hit.session) ?? formatDate(item.hit.session.date)" :words="words"/></span>
                   <span class="line">
-                    {{ formatDate(item.hit.session.date) }}<template v-if="item.hit.session.episodes.length"> · {{ item.hit.session.episodes.map((episode) => episode.code ?? episode.title).join(', ') }}</template>
+                    {{ formatDate(item.hit.session.date) }}<template v-if="sessionPlace(item.hit.session)"> · <MarkedText :text="sessionPlace(item.hit.session)!" :words="words"/></template><template v-if="item.hit.session.episodes.length"> · {{ item.hit.session.episodes.map((episode) => episode.code ?? episode.title).join(', ') }}</template>
                   </span>
                 </span>
                 <span class="side"/>

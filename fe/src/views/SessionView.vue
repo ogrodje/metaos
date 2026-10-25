@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { keepUnchanged, useLiveRefresh } from '@/changes'
 import { COMMENT_FIELDS } from '@/comments'
@@ -17,10 +17,11 @@ import LoadingRows from '@/components/LoadingRows.vue'
 import NotFound from '@/components/NotFound.vue'
 import PanelTitle from '@/components/PanelTitle.vue'
 import PhotoStrip from '@/components/PhotoStrip.vue'
+import RenameSession from '@/components/RenameSession.vue'
 import SignInPrompt from '@/components/SignInPrompt.vue'
 import {
   DROPBOX_FIELDS, EPISODE_FIELDS, formatDate, HISTORY_FIELDS, KOOFR_FIELDS, type KoofrPhoto, photosOf, relativeDate,
-  type SessionDetails, sessionTitle,
+  type Session, type SessionDetails, sessionName, sessionPlace, sessionTitle,
 } from '@/episodes'
 import { errorMessage, graphql } from '@/graphql'
 import { useScrolledPast } from '@/scroll'
@@ -48,7 +49,7 @@ async function loadSession(id: string, quietly = false) {
   try {
     const data = await graphql<{ session: SessionDetails | null }>(`query ($id: ID!) {
       session(id: $id) {
-        id date location address documents { fileId url } ${KOOFR_FIELDS} ${DROPBOX_FIELDS} ${HISTORY_FIELDS}
+        id date name location address documents { fileId url } ${KOOFR_FIELDS} ${DROPBOX_FIELDS} ${HISTORY_FIELDS}
         ${COMMENT_FIELDS} episodes { ${EPISODE_FIELDS} }
       }
     }`, { id })
@@ -72,6 +73,24 @@ usePageTitle(() => (session.value ? sessionTitle(session.value) : undefined))
 function reloadQuietly(id: string) {
   loadSession(id, true).catch((error) => console.error('The session did not load again', error))
 }
+
+// Renaming it in place of its heading; back to the Rename button once that's done or called off
+const renaming = ref(false)
+const renameButton = ref<HTMLButtonElement>()
+
+async function stopRenaming() {
+  renaming.value = false
+  await nextTick()
+  renameButton.value?.focus()
+}
+
+// Shown right away, and its history with the live updates a moment later
+function renamed(changed: Pick<Session, 'id' | 'name' | 'location'>) {
+  if (session.value?.id === changed.id) session.value = { ...session.value, name: changed.name, location: changed.location }
+}
+
+// Another session, e.g. one linked from this one's activity, isn't renamed
+watch(() => route.params.id, () => { renaming.value = false })
 
 // The same list while it's the same, as the photos page through them from the first again when they change
 const photos = computed<KoofrPhoto[]>((previous) =>
@@ -101,8 +120,19 @@ const hasFiles = computed(() => !!session.value
     <template v-else>
       <header ref="titleBlock" class="title">
         <p class="kicker">Recording session</p>
-        <h1><time :datetime="session.date">{{ formatDate(session.date) }}</time></h1>
-        <p v-if="session.location" class="subtitle">{{ session.location }}</p>
+        <!-- What it's called, else its date; the team renames it in place -->
+        <RenameSession v-if="renaming" :session="session" @renamed="renamed" @close="stopRenaming"/>
+        <div v-else class="named">
+          <h1 v-if="sessionName(session)" lang="sl">{{ sessionName(session) }}</h1>
+          <h1 v-else><time :datetime="session.date">{{ formatDate(session.date) }}</time></h1>
+          <button v-if="auth.team" ref="renameButton" type="button" class="rename" @click="renaming = true">
+            {{ session.name ? 'Rename' : 'Name it' }}
+          </button>
+        </div>
+        <p v-if="sessionName(session)" class="subtitle">
+          <time :datetime="session.date">{{ formatDate(session.date) }}</time>
+          <template v-if="sessionPlace(session)"> · {{ sessionPlace(session) }}</template>
+        </p>
       </header>
 
       <!-- Where and when at the right, its episodes and activity in the main column; on phones the facts come first -->
@@ -115,6 +145,7 @@ const hasFiles = computed(() => !!session.value
                 <time :datetime="session.date">{{ formatDate(session.date) }}</time>
                 <span class="aside"> · {{ relativeDate(session.date) }}</span>
               </Fact>
+              <Fact v-if="session.location" label="Location">{{ session.location }}</Fact>
               <Fact v-if="session.address" label="Address">{{ session.address }}</Fact>
             </dl>
           </FactGroup>
@@ -155,6 +186,35 @@ const hasFiles = computed(() => !!session.value
 
 <style scoped lang="scss">
 @use '../assets/page';
+
+// Its name, and the team's Rename after it, quiet as a section's links at a heading's end
+.named {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 12px;
+}
+
+.rename {
+  padding: 0;
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 500;
+  color: var(--accent-text);
+  background: none;
+  border: 0;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
 
 .aside {
   color: var(--muted);
