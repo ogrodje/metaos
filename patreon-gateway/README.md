@@ -54,7 +54,10 @@ Kotlin and Spring Boot like MetaOS, with Playwright for Java; a Gradle build of 
 Cloudflare answers 429 when Patreon is asked too often, after some 15–20 page loads and calls within a few minutes.
 A job Patreon turns away waits and tries again, 5, 10 and 20 minutes later, before it fails (`Jobs.kt`); the job says
 so (`error`, `retryAt`). The jobs after it wait with it, so they keep their order: an update sent before a publish is
-in the post before it's published. Each job loads one page (two for an upload) and makes a few calls.
+in the post before it's published. Each job loads one page (two for an upload) and makes a few calls. A page's own
+calls (its feed, every post's comments, chat, tracking), some twenty a page, are blocked, as are its pictures and
+fonts: they'd count against the limit too, and the gateway needs only the page's HTML (`Browser.quiet`). Its own calls
+carry `x-patreon-gateway`, which lets them through.
 
 ## API
 

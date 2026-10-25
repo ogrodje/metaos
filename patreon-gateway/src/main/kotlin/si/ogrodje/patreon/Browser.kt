@@ -60,6 +60,7 @@ class Browser(private val properties: PatreonProperties, private val mapper: Jso
             NewContextOptions().setStorageStatePath(sessionFile).setLocale("en-US").setViewportSize(1440, 1000),
         )
         context.setDefaultTimeout(30_000.0)
+        quiet(context)
         val page = context.newPage()
         try {
             val result = try {
@@ -81,6 +82,22 @@ class Browser(private val properties: PatreonProperties, private val mapper: Jso
             return result
         } finally {
             context.close()
+        }
+    }
+
+    /**
+     * What Patreon's pages load of their own accord - their feed, every post's comments, chat, tracking, pictures - counts
+     * against Patreon's rate limit as the gateway's own calls do, some twenty a page, and the gateway needs none of it:
+     * only a page's HTML (its CSRF signature, who's signed in) and the calls it makes itself, which say so ([OWN_CALL]).
+     */
+    private fun quiet(context: BrowserContext) {
+        context.route("**/*") { route ->
+            val request = route.request()
+            when {
+                request.url().contains("patreon.com/api/") && request.headers()[OWN_CALL] == null -> route.abort()
+                request.resourceType() in setOf("image", "media", "font") -> route.abort()
+                else -> route.resume()
+            }
         }
     }
 
@@ -156,6 +173,9 @@ class Browser(private val properties: PatreonProperties, private val mapper: Jso
         val SAFE_NAME = Regex("[A-Za-z0-9-]+")
     }
 }
+
+/** The header the gateway's own calls from a page carry ([PatreonWeb]), which its browser lets through to Patreon's API. */
+const val OWN_CALL = "x-patreon-gateway"
 
 /** The email of who is signed in to Patreon's web app in [context], or null when no one is ([whoIsSignedIn]). */
 fun signedInAs(context: BrowserContext): String? = whoIsSignedIn(context)?.email

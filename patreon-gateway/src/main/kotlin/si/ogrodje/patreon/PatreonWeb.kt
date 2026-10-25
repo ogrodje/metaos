@@ -378,7 +378,7 @@ class PatreonWeb(private val browser: Browser, private val api: PatreonApi, priv
         const val FETCH = """async ([method, path, body, csrf]) => {
             const response = await fetch(path + (path.includes('?') ? '&' : '?') + 'json-api-version=1.0', {
                 method, credentials: 'include', body: body ?? undefined,
-                headers: { 'content-type': 'application/vnd.api+json', 'x-csrf-signature': csrf },
+                headers: { 'content-type': 'application/vnd.api+json', 'x-csrf-signature': csrf, '$OWN_CALL': '1' },
                 signal: AbortSignal.timeout(120000),
             });
             return [response.status, await response.text()];
