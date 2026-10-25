@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
 import org.springframework.dao.DataIntegrityViolationException
+import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken
@@ -26,6 +27,7 @@ class PeopleTest @Autowired constructor(
 
     @Test
     fun `rejects duplicate email regardless of case`() {
+        signInAs(ACCOUNT_LINKER)
         peopleMCP.create(name = "Ana", email = "ana@ogrodje.si")
 
         assertFailsWith<IllegalArgumentException> {
@@ -76,7 +78,7 @@ class PeopleTest @Autowired constructor(
     @Test
     fun `gives a person several roles on an episode, each once`() {
         episodesRepository.saveAndFlush(Episode(title = "Roles", code = "ep-401"))
-        val person = peopleMCP.create(name = "Host Person", email = "host@ogrodje.si")
+        val person = peopleMCP.create(name = "Host Person", email = null)
         val guest = peopleMCP.create(name = "A Guest", email = null)
 
         episodesMCP.assignPerson(code = "ep-401", personId = guest.id!!, role = Role.GUEST)
@@ -156,6 +158,7 @@ class PeopleTest @Autowired constructor(
     @Test
     fun `links the signed-in user to a person by verified email`() {
         val person = peopleMCP.create(name = "Linked Person", email = null)
+        signInAs(ACCOUNT_LINKER)
         peopleMCP.setEmail(person.id!!, "linked@ogrodje.si")
 
         signInAs("LINKED@ogrodje.si")
@@ -164,6 +167,7 @@ class PeopleTest @Autowired constructor(
         signInAs("linked@ogrodje.si", verified = false)
         assertNull(peopleMCP.whoami().person)
 
+        signInAs(ACCOUNT_LINKER)
         peopleMCP.setEmail(person.id, null)
         signInAs("linked@ogrodje.si")
         assertNull(peopleMCP.whoami().person)
@@ -173,6 +177,7 @@ class PeopleTest @Autowired constructor(
     fun `lists the signed-in user's episodes`() {
         episodesRepository.saveAndFlush(Episode(title = "Mine", code = "ep-701"))
         episodesRepository.saveAndFlush(Episode(title = "Not mine", code = "ep-702"))
+        signInAs(ACCOUNT_LINKER)
         val me = peopleMCP.create(name = "Me", email = "me@ogrodje.si")
         val other = peopleMCP.create(name = "Someone Else", email = null)
         episodesMCP.assignPerson(code = "ep-701", personId = me.id!!, role = Role.CO_HOST)
@@ -188,17 +193,36 @@ class PeopleTest @Autowired constructor(
         signInAs("nobody@ogrodje.si")
         assertFailsWith<IllegalStateException> { peopleMCP.myEpisodes() }
 
-        signInAs("me-too@ogrodje.si", verified = false)
+        signInAs(ACCOUNT_LINKER)
         peopleMCP.create(name = "Unverified", email = "me-too@ogrodje.si")
+        signInAs("me-too@ogrodje.si", verified = false)
         assertFailsWith<IllegalStateException> { peopleMCP.myEpisodes() }
     }
 
     @Test
     fun `rejects an email another person already has`() {
+        signInAs(ACCOUNT_LINKER)
         peopleMCP.create(name = "Owner", email = "taken@ogrodje.si")
         val other = peopleMCP.create(name = "Other", email = null)
 
         assertFailsWith<IllegalArgumentException> { peopleMCP.setEmail(other.id!!, "TAKEN@ogrodje.si") }
+    }
+
+    @Test
+    fun `only ACCOUNT_LINKER gives a person an email, as it decides whose account is theirs`() {
+        val person = peopleMCP.create(name = "Someone", email = null)
+        signInAs("not-mine@ogrodje.si")
+        assertFailsWith<AccessDeniedException> { peopleMCP.setEmail(person.id!!, "not-mine@ogrodje.si") }
+        assertFailsWith<AccessDeniedException> { peopleMCP.create(name = "Not Me", email = "not-mine@ogrodje.si") }
+        // Not with that email unverified either
+        signInAs(ACCOUNT_LINKER, verified = false)
+        assertFailsWith<AccessDeniedException> { peopleMCP.setEmail(person.id!!, "not-mine@ogrodje.si") }
+        assertNull(peopleRepository.findByEmail("not-mine@ogrodje.si"))
+        // Nor by restoring someone under it
+        signInAs(ACCOUNT_LINKER)
+        peopleMCP.delete(person.id!!)
+        signInAs("not-mine@ogrodje.si")
+        assertFailsWith<AccessDeniedException> { peopleMCP.restore(person.id!!, "not-mine@ogrodje.si") }
     }
 
     @Test
@@ -213,6 +237,7 @@ class PeopleTest @Autowired constructor(
 
     @Test
     fun `deletes and restores a person with their roles`() {
+        signInAs(ACCOUNT_LINKER)
         episodesRepository.saveAndFlush(Episode(title = "Restored roles", code = "ep-1601"))
         val person = peopleMCP.create(name = "Comeback Guest", email = "comeback@ogrodje.si")
         episodesMCP.assignPerson(code = "ep-1601", personId = person.id!!, role = Role.GUEST)
@@ -230,6 +255,7 @@ class PeopleTest @Autowired constructor(
 
     @Test
     fun `does not restore a person whose email is taken again`() {
+        signInAs(ACCOUNT_LINKER)
         val gone = peopleMCP.create(name = "Gone", email = "taken-again@ogrodje.si")
         peopleMCP.delete(gone.id!!)
         peopleMCP.create(name = "New Owner", email = "taken-again@ogrodje.si")
@@ -239,6 +265,7 @@ class PeopleTest @Autowired constructor(
 
     @Test
     fun `restores a person with another email, or none, when theirs has been taken since`() {
+        signInAs(ACCOUNT_LINKER)
         val first = peopleMCP.create(name = "First", email = "reclaimed@ogrodje.si")
         val second = peopleMCP.create(name = "Second", email = "reclaimed-too@ogrodje.si")
         peopleMCP.delete(first.id!!)

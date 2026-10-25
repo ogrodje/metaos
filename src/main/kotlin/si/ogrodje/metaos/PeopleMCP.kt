@@ -76,12 +76,13 @@ class PeopleMCP(
             title = "Create person",
             readOnlyHint = false, destructiveHint = false, idempotentHint = false, openWorldHint = false
         ),
-        description = "Create a new person"
+        description = "Create a new person. Only $ACCOUNT_LINKER gives them an email, as it links accounts to them"
     )
     fun create(
         @McpToolParam(description = "Full name") name: String,
         @McpToolParam(description = "Unique email address (case-insensitive)", required = false) email: String?,
     ): PersonDto {
+        if (email != null) requireLinker()
         require(email == null || people.findByEmail(email) == null) { "Person with email $email already exists" }
         return people.save(Person(name = name, email = email)).also(accounts::linkByEmail).toDto()
     }
@@ -93,13 +94,15 @@ class PeopleMCP(
             title = "Set person email",
             readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
         ),
-        description = "Set or clear a person's email. Accounts with the same verified email that aren't linked to anyone " +
-            "are linked to this person (unless someone unlinked them)"
+        description = "Set or clear a person's email, as $ACCOUNT_LINKER only. Accounts with the same verified email that " +
+            "aren't linked to anyone are linked to this person (unless someone unlinked them)"
     )
     fun setEmail(
         @McpToolParam(description = "Person ID") personId: UUID,
         @McpToolParam(description = "Unique email address (case-insensitive); omit to clear", required = false) email: String?,
     ): PersonDto {
+        // A person's email decides whose account becomes theirs, here and at sign-in, so it's the linker's to set
+        requireLinker()
         val person = requireNotNull(people.findByIdOrNull(personId)) { "Person $personId not found" }
         require(email == null || people.findByEmail(email).let { it == null || it == person }) {
             "Person with email $email already exists"
@@ -191,6 +194,7 @@ class PeopleMCP(
             }
         } else {
             val email = newEmail.trim().ifEmpty { null }
+            if (email != null) requireLinker()
             require(email == null || people.findByEmail(email) == null) { "Person with email $email already exists" }
             people.setDeletedEmail(personId, email)
         }

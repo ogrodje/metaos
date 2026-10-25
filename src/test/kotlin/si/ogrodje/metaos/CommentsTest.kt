@@ -42,6 +42,7 @@ class CommentsTest @Autowired constructor(
 
     @Test
     fun `comments as the signed-in user and their person, oldest first, with the tool they used`() {
+        signInAs("oto", email = ACCOUNT_LINKER)
         peopleMCP.create(name = "Maja Kovač", email = "maja.comments@example.com")
         signInAs("maja", email = "maja.comments@example.com")
         episodesMCP.create(code = "cm-101", title = "Lokalni LLM-ji")

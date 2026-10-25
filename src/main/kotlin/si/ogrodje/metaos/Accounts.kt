@@ -29,7 +29,7 @@ const val ACCOUNT_LINKER = "otobrglez@gmail.com"
 /** Whether the signed-in user may link accounts to people and unlink them ([ACCOUNT_LINKER]) */
 fun mayLinkAccounts(): Boolean = currentJwt()?.verifiedEmail.equals(ACCOUNT_LINKER, ignoreCase = true)
 
-private fun requireLinker() {
+fun requireLinker() {
     if (!mayLinkAccounts()) throw AccessDeniedException("Only $ACCOUNT_LINKER links accounts to people")
 }
 

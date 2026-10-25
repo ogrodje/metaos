@@ -199,7 +199,7 @@ class EpisodesTest @Autowired constructor(
 
     @Test
     fun `credits whoever adds an episode with recommending it, unless they name someone else`() {
-        val adder = peopleMCP.create(name = "Adding Recommender", email = "adding.recommender@example.com")
+        val adder = signedInAs(ACCOUNT_LINKER) { peopleMCP.create(name = "Adding Recommender", email = "adding.recommender@example.com") }
         val other = peopleMCP.create(name = "Named Recommender", email = null)
 
         val mine = signedInAs("adding.recommender@example.com") { episodesMCP.create(code = "ep-2101", title = "Mine") }
