@@ -56,7 +56,12 @@ class Episode(
     @Column(columnDefinition = "text") var youtubeUrl: String? = null
     @Column(columnDefinition = "text") var spotifyUrl: String? = null
     @Column(columnDefinition = "text") var applePodcastsUrl: String? = null
+    // Patreon has four of each episode (Platform): the full episode and its bonus, each as video and audio only
     @Column(columnDefinition = "text") var patreonUrl: String? = null
+    @Column(columnDefinition = "text") var patreonAudioUrl: String? = null
+    @Column(columnDefinition = "text") var patreonBonusUrl: String? = null
+    @Column(columnDefinition = "text") var patreonBonusAudioUrl: String? = null
+    val patreonLinks get() = listOf(patreonUrl, patreonAudioUrl, patreonBonusUrl, patreonBonusAudioUrl)
 
     // Markdown; the tiny summary is a very short one, e.g. a sentence
     @Column(columnDefinition = "text") var summary: String? = null
@@ -95,6 +100,9 @@ class Episode(
             Platform.SPOTIFY -> spotifyUrl = url
             Platform.APPLE_PODCASTS -> applePodcastsUrl = url
             Platform.PATREON -> patreonUrl = url
+            Platform.PATREON_AUDIO -> patreonAudioUrl = url
+            Platform.PATREON_BONUS -> patreonBonusUrl = url
+            Platform.PATREON_BONUS_AUDIO -> patreonBonusAudioUrl = url
         }
     }
 
@@ -105,12 +113,19 @@ class Episode(
 
 }
 
-/** Where episodes are published; a link has to be an https URL on one of the platform's hosts. */
+/**
+ * Where episodes are published; a link has to be an https URL on one of the platform's hosts. Patreon has four of each
+ * episode: PATREON is the full episode as video (the only Patreon link there was at first), PATREON_AUDIO the full
+ * episode as audio only, PATREON_BONUS the bonus as video and PATREON_BONUS_AUDIO the bonus as audio only.
+ */
 enum class Platform(private vararg val hosts: String) {
     YOUTUBE("youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"),
     SPOTIFY("open.spotify.com"),
     APPLE_PODCASTS("podcasts.apple.com"),
-    PATREON("patreon.com", "www.patreon.com");
+    PATREON("patreon.com", "www.patreon.com"),
+    PATREON_AUDIO("patreon.com", "www.patreon.com"),
+    PATREON_BONUS("patreon.com", "www.patreon.com"),
+    PATREON_BONUS_AUDIO("patreon.com", "www.patreon.com");
 
     fun accepts(url: String): Boolean =
         runCatching { URI(url) }.getOrNull()?.let { it.scheme == "https" && it.host in hosts } ?: false

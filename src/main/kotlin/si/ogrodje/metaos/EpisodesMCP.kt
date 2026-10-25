@@ -25,6 +25,9 @@ data class EpisodeDto(
     val spotifyUrl: String?,
     val applePodcastsUrl: String?,
     val patreonUrl: String?,
+    val patreonAudioUrl: String?,
+    val patreonBonusUrl: String?,
+    val patreonBonusAudioUrl: String?,
     val tinySummary: String?,
 )
 
@@ -47,6 +50,9 @@ data class EpisodeDetailsDto(
     val spotifyUrl: String?,
     val applePodcastsUrl: String?,
     val patreonUrl: String?,
+    val patreonAudioUrl: String?,
+    val patreonBonusUrl: String?,
+    val patreonBonusAudioUrl: String?,
     val summary: String?,
     val tinySummary: String?,
     val machineSummary: String?,
@@ -58,6 +64,7 @@ fun Episode.toDto() = EpisodeDto(
     recommendedById = recommendedBy?.id, recommendedBy = recommendedBy?.name,
     recordingDate = recordingDate, airedDate = airedDate, addedDate = addedDate,
     youtubeUrl = youtubeUrl, spotifyUrl = spotifyUrl, applePodcastsUrl = applePodcastsUrl, patreonUrl = patreonUrl,
+    patreonAudioUrl = patreonAudioUrl, patreonBonusUrl = patreonBonusUrl, patreonBonusAudioUrl = patreonBonusAudioUrl,
     tinySummary = tinySummary,
 )
 
@@ -66,6 +73,7 @@ private fun Episode.toDetailsDto() = EpisodeDetailsDto(
     show = show?.name, recommendedById = recommendedBy?.id, recommendedBy = recommendedBy?.name,
     recordingDate = recordingDate, airedDate = airedDate, addedDate = addedDate,
     youtubeUrl = youtubeUrl, spotifyUrl = spotifyUrl, applePodcastsUrl = applePodcastsUrl, patreonUrl = patreonUrl,
+    patreonAudioUrl = patreonAudioUrl, patreonBonusUrl = patreonBonusUrl, patreonBonusAudioUrl = patreonBonusAudioUrl,
     summary = summary, tinySummary = tinySummary, machineSummary = machineSummary,
 )
 
@@ -225,7 +233,7 @@ class EpisodesMCP(
             "READY → EARLY_ACCESS (optional) → PUBLISHED, one step forward or back to any earlier step; ON_HOLD or " +
             "CANCELLED any time before it is published. Each step needs what the ones before it did, plus: PLANNED a " +
             "code and a host, SCHEDULED a recording date, RECORDED one that is not in the future, IN_PRODUCTION a " +
-            "producer, READY a summary, EARLY_ACCESS a Patreon link, PUBLISHED a YouTube, Spotify or Apple Podcasts " +
+            "producer, READY a summary, EARLY_ACCESS any of its Patreon links, PUBLISHED a YouTube, Spotify or Apple Podcasts " +
             "link. Publishing sets the aired date to today if there is none"
     )
     fun setStatus(
@@ -257,7 +265,7 @@ class EpisodesMCP(
             }
             if (from(EpisodeStatus.IN_PRODUCTION) && Role.PRODUCER !in roles) add("a producer")
             if (from(EpisodeStatus.READY) && episode.summary == null) add("a summary")
-            if (target == EpisodeStatus.EARLY_ACCESS && episode.patreonUrl == null) add("a Patreon link")
+            if (target == EpisodeStatus.EARLY_ACCESS && episode.patreonLinks.all { it == null }) add("a Patreon link")
             if (target == EpisodeStatus.PUBLISHED && publicLinks.all { it == null }) {
                 add("a YouTube, Spotify or Apple Podcasts link")
             }
@@ -271,11 +279,17 @@ class EpisodesMCP(
             title = "Set episode link",
             readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
         ),
-        description = "Set or clear where an episode can be watched or listened to: YouTube, Spotify, Apple Podcasts or Patreon"
+        description = "Set or clear where an episode can be watched or listened to: YouTube, Spotify, Apple Podcasts or " +
+            "Patreon. Patreon has four links, each set or cleared on its own: the full episode as video (PATREON) or " +
+            "audio only (PATREON_AUDIO), and its bonus as video (PATREON_BONUS) or audio only (PATREON_BONUS_AUDIO)"
     )
     fun setLink(
         @McpToolParam(description = EPISODE_REF) code: String,
-        @McpToolParam(description = "Platform the link points to") platform: Platform,
+        @McpToolParam(
+            description = "Platform the link points to; for Patreon, which of its four: PATREON is the full episode as " +
+                "video, PATREON_AUDIO the full episode as audio only, PATREON_BONUS the bonus as video, " +
+                "PATREON_BONUS_AUDIO the bonus as audio only"
+        ) platform: Platform,
         @McpToolParam(description = "https URL of the episode on that platform; omit to clear", required = false) url: String?,
     ): EpisodeDto {
         val episode = findEpisode(code)
