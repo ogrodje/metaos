@@ -92,3 +92,20 @@ architecture:
     "$chrome" --headless --disable-gpu --hide-scrollbars --user-data-dir="$profile" \
       --force-device-scale-factor=2 --window-size="$size" --virtual-time-budget=5000 \
       --screenshot="$PWD/architecture.png" "file://$PWD/architecture.svg"
+
+# docs/episode-workflow.png from the chart in docs/episode-workflow.md (its mermaid block), at twice the size, by
+# Mermaid's CLI in headless Chrome, on a page wide enough that the landscape chart isn't shrunk to fit and which loads
+# Inter, the font of architecture.png. CHROME points at another Chrome than macOS's.
+episode-workflow:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    chrome="${CHROME:-/Applications/Google Chrome.app/Contents/MacOS/Google Chrome}"
+    work=$(mktemp -d)
+    trap 'rm -rf "$work"' EXIT
+    awk '/^```mermaid$/ { on = 1; next } on && /^```$/ { exit } on' docs/episode-workflow.md > "$work/chart.mmd"
+    test -s "$work/chart.mmd" || { echo "No mermaid block in docs/episode-workflow.md" >&2; exit 1; }
+    # Puppeteer uses that Chrome rather than downloading its own
+    printf '{"executablePath": "%s"}\n' "$chrome" > "$work/puppeteer.json"
+    echo "@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');" > "$work/page.css"
+    PUPPETEER_SKIP_DOWNLOAD=1 npx -y @mermaid-js/mermaid-cli@11.17.0 --quiet -p "$work/puppeteer.json" \
+      -C "$work/page.css" -i "$work/chart.mmd" -o "$PWD/docs/episode-workflow.png" -w 2000 -s 2 -b white
