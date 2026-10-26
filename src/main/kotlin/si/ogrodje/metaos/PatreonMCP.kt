@@ -100,6 +100,20 @@ class PatreonMCP(
     fun post(@McpToolParam(description = POST_ID) id: String): Any = patreon.post(id) ?: patreon.draft(id)
 
     @McpTool(
+        name = "get_patreon_post_media",
+        annotations = McpTool.McpAnnotations(
+            title = "Get Patreon post media",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
+        description = "Download links for a Patreon post's audio and video, a draft's too: AUDIO is the MP3 as it was " +
+            "uploaded, VIDEO the best MP4 Patreon keeps of the video (not the file uploaded). The links are signed and " +
+            "give the file to anyone who has them until expiresAt (a day for video, a few for audio), so give them only to " +
+            "the team. A video's link needs its referer sent as the Referer header, else it's refused (403), e.g. " +
+            "curl -L -H 'Referer: https://www.patreon.com/' -o '<fileName>' '<url>'"
+    )
+    fun media(@McpToolParam(description = POST_ID) id: String): List<PatreonMediaDownload> = patreon.downloads(id)
+
+    @McpTool(
         name = "create_patreon_draft",
         annotations = McpTool.McpAnnotations(
             title = "Create Patreon draft",

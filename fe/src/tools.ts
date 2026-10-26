@@ -172,6 +172,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
       { name: 'list_patreon_posts', description: 'The published posts, newest first, or those with words in their titles' },
       { name: 'list_patreon_drafts', description: 'The drafts, scheduled ones too, last edited first, with where to edit them' },
       { name: 'get_patreon_post', description: 'A post, published or a draft, with its text and who may see it' },
+      { name: 'get_patreon_post_media', description: "Download links for a post's audio (the MP3 as uploaded) or video (its best MP4), for a day or so" },
       { name: 'create_patreon_draft', description: 'Make a draft post, for everyone, every patron or some tiers; only the team sees it' },
       { name: 'update_patreon_post', description: "Change a post's title, text or who may see it" },
       { name: 'set_patreon_post_media', description: "Upload an episode's audio or video from Dropbox or a URL to a draft, as a podcast or video post" },

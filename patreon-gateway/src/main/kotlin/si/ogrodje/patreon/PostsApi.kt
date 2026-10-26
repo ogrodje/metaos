@@ -50,6 +50,10 @@ class PostsApi(private val web: PatreonWeb, private val jobs: Jobs) {
     fun delete(@PathVariable id: String, @RequestHeader("Idempotency-Key", required = false) key: String?) =
         accepted(jobs.submit("delete-post", key) { web.delete(it, id) })
 
+    /** Where to download a post's audio or video, with signed links; a draft's too. */
+    @GetMapping("/posts/{id}/media")
+    fun downloads(@PathVariable id: String) = web.downloads("media-${id.filter(Char::isLetterOrDigit)}", id)
+
     /** The campaign's drafts, last edited first, which Patreon's API doesn't list. */
     @GetMapping("/drafts")
     fun drafts() = web.drafts("drafts")

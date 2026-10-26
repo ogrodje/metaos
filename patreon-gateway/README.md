@@ -42,6 +42,10 @@ Kotlin and Spring Boot like MetaOS, with Playwright for Java; a Gradle build of 
     file whose upload failed is deleted from Patreon again, as it would keep another from the post. Audio makes the
     post a `podcast` post, in the campaign's show (its podcast feed), as the editor does; video a
     `video_external_file` one. A retried job doesn't upload a file again, nor make a second draft.
+  - Downloading: `GET /api/posts/{id}?include=media` gives the creator each media's `download_url`, signed: for audio
+    the MP3 as it was uploaded (`token-time`, some days), for video Mux's `highest.mp4` (a JWT, a day), which isn't the
+    file uploaded. Mux gives it only to Patreon's pages (the token's `playback_restriction_id`), so a download sends
+    `Referer: https://www.patreon.com/`, as its player does; it asks for its first byte to learn its size.
   - Saving a post sends what changes (its title, text, access, type) and keeps its own settings, e.g. one made paid in
     the editor; only a new draft gets the editor's defaults.
 
@@ -72,6 +76,7 @@ Every call but the actuator's (probes, metrics) needs `Authorization: Bearer $PA
 | `GET /posts?query&limit`      | published posts, newest first, words in their titles                                      |
 | `GET /posts/{id}`             | a published post (Patreon's API)                                                           |
 | `GET /drafts`                 | drafts, scheduled ones too, last edited first (Patreon's web app; its API lists none) |
+| `GET /posts/{id}/media`       | where to download a post's audio (the MP3 as uploaded) or video (the best MP4 Mux keeps), drafts' too: signed links, until `expiresAt`; a video's needs `referer` as its Referer |
 | `GET /posts/{id}/web`         | a post, drafts too (Patreon's web app)                                                     |
 | `POST /posts`                 | a draft: `{title, text, access: {kind: PUBLIC, PATRONS or TIERS, tiers}}`                  |
 | `PATCH /posts/{id}`           | changes a post; what's left out stays                                                      |
