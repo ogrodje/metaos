@@ -1,0 +1,38 @@
+name: Test
+
+# The tests deploy.yml runs before it builds the images, on every pull request: master's ruleset requires them (the
+# check `test`), so a pull request with auto-merge on (`gh pr merge --auto --squash`) is merged once they pass.
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+# A newer push to the pull request replaces the run in progress
+concurrency:
+  group: test-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # The JDK, Node and Yarn come from devenv.nix, as in development
+      - uses: cachix/install-nix-action@v31
+      # devenv's binary cache, so devenv itself doesn't get built
+      - uses: cachix/cachix-action@v17
+        with:
+          name: devenv
+      - name: Install devenv
+        run: nix profile add nixpkgs#devenv
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      # Testcontainers runs its Postgres on the runner's Docker; feTest and feBuild test, type-check and build fe/
+      - name: Test the app and the front-end
+        run: devenv shell -- ./gradlew test feTest feBuild
+
+      # patreon-gateway is a build of its own (patreon-gateway/); its tests need no browser
+      - name: Test patreon-gateway
+        run: devenv shell -- ./gradlew -p patreon-gateway test
