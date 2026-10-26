@@ -120,9 +120,16 @@ health check says when the session runs out; run it again then.
 `k8s/base/deployment-patreon-gateway.yaml`: one pod (`Recreate`), its state on a 1Gi volume (`microk8s-hostpath`,
 which deleting the claim deletes), downloads on 20Gi of scratch space that goes with the pod, hardened as the others
 (seccomp, no capabilities or privilege escalation, no service-account token), and a ServiceMonitor for its
-`patreon_gateway_*` metrics. No Ingress: only MetaOS calls it, at `http://patreon-gateway`. The image is
-Playwright's, with Chromium, and Temurin's Java (`docker/patreon-gateway.Dockerfile`); Playwright's version there and
-in `build.gradle.kts` has to be the same. CI tests it, builds and deploys it with MetaOS.
+`patreon_gateway_*` metrics. No Ingress: only MetaOS calls it, at `http://patreon-gateway`. CI tests it, builds and
+deploys it with MetaOS.
+
+The pod has two containers. The gateway's image is Temurin's Java and the boot jar, no browser
+(`docker/patreon-gateway.Dockerfile`). Chromium is in the `browser` container beside it: Microsoft's Playwright image
+running Playwright's browser server (`run-server`) on the pod's loopback, which the gateway connects to
+(`PATREON_BROWSER_URL=ws://127.0.0.1:3000/`) and which starts a Chromium for each connection. The node pulls that image
+from Microsoft's registry, so its gigabyte of browsers never goes through ours over the tailnet. Client and server only
+talk at the same Playwright version: the image's tag and `playwright@` there have to be `build.gradle.kts`'s
+(`BrowserVersionTest`). Locally, without `PATREON_BROWSER_URL`, the gateway starts Chromium itself.
 
 The first time, `k8s/set_secrets.sh` with `PATREON_CLIENT_ID`, `PATREON_CLIENT_SECRET`, `PATREON_ACCESS_TOKEN`,
 `PATREON_REFRESH_TOKEN` and `PROD_PATREON_GATEWAY_TOKEN` makes `patreon-gateway-secret` (MetaOS reads the gateway token

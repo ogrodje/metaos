@@ -15,7 +15,10 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.atomic.AtomicReference
 
-/** Patreon turned the gateway away for now (rate limit, bot check): a job to send again in a few minutes. */
+/**
+ * Patreon turned the gateway away for now (rate limit, bot check), or its browser isn't there yet: a job to send again
+ * in a few minutes.
+ */
 class PatreonBusyException(message: String) : RuntimeException(message)
 
 /** Who may see a post: anyone, every patron (free ones too), or patrons of some tiers (by their IDs, [PatreonApi.tiers]). */
