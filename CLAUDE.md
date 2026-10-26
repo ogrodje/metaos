@@ -563,6 +563,11 @@ and its Keycloak at `https://metaos-auth.ogrodje.si`. Pushes to `master` deploy 
 the one-time setup and the `just` recipes for deploying by hand. [`DEPLOY.md`](DEPLOY.md) explains the setup, the
 decisions behind it and what is left to do.
 
+- Pull requests run the same tests, [`.github/workflows/test.yml`](.github/workflows/test.yml) (the check `test`),
+  which master's ruleset requires; repository admins bypass it, so they can still push to `master`. With auto-merge on
+  (`gh pr merge --auto --squash`, or Enable auto-merge on GitHub), a pull request is merged once they pass, and so
+  deployed.
+
 - The pages are the front-end's own Deployment, `metaos-web`, also two pods: the Ingress sends MetaOS's paths
   (`/graphql`, `/events`, `/mcp`, `/.well-known`, `/koofr`, `/dropbox`, the probes) to MetaOS and everything else to
   it; its server asks MetaOS's GraphQL inside the cluster (`http://metaos`). Cloudflare caches the pages anyone may
