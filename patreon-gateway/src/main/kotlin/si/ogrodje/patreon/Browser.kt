@@ -7,6 +7,7 @@ import com.microsoft.playwright.BrowserType
 import com.microsoft.playwright.Page
 import com.microsoft.playwright.Playwright
 import com.microsoft.playwright.PlaywrightException
+import com.microsoft.playwright.options.Proxy
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.DisposableBean
 import org.springframework.scheduling.annotation.Scheduled
@@ -162,12 +163,15 @@ class Browser(private val properties: PatreonProperties, private val mapper: Jso
         browser?.takeIf { it.isConnected }?.let { return it }
         val playwright = playwright ?: Playwright.create().also { playwright = it }
         val url = properties.browserUrl.trim()
+        // Patreon's bot check turns away pages from a datacenter's address: in k8s Chromium goes through a proxy
+        val proxy = properties.browserProxy.trim().ifEmpty { null }
         if (url.isEmpty()) {
-            return playwright.chromium().launch(BrowserType.LaunchOptions().setHeadless(!properties.headed).setArgs(CHROMIUM_ARGS))
-                .also { browser = it }
+            val options = BrowserType.LaunchOptions().setHeadless(!properties.headed).setArgs(CHROMIUM_ARGS)
+            proxy?.let { options.setProxy(Proxy(it)) }
+            return playwright.chromium().launch(options).also { browser = it }
         }
         // The server starts a Chromium for each connection, with the options the gateway would start its own with
-        val options = mapOf("headless" to true, "args" to CHROMIUM_ARGS)
+        val options = mapOf("headless" to true, "args" to CHROMIUM_ARGS) + (proxy?.let { mapOf("proxy" to mapOf("server" to it)) } ?: emptyMap())
         return try {
             playwright.chromium().connect(
                 url,
