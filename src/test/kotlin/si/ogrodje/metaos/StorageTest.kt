@@ -12,8 +12,10 @@ import java.net.http.HttpRequest
 import java.net.http.HttpRequest.BodyPublishers
 import java.net.http.HttpResponse.BodyHandlers
 import java.security.KeyPairGenerator
+import java.security.MessageDigest
 import java.time.Duration
 import java.util.Base64
+import java.util.HexFormat
 import java.util.UUID
 import kotlin.test.AfterTest
 import kotlin.test.assertContentEquals
@@ -66,7 +68,7 @@ class GoogleCloudStorageTest {
         val text = "# Zapiski\n\nČ, š in ž"
 
         val stored = storage.upload(path, "text/markdown", text.byteInputStream(), overwrite = false)
-        assertEquals(StoredFile(path, text.toByteArray().size.toLong(), "text/markdown", stored.updated), stored)
+        assertEquals(StoredFile(path, text.toByteArray().size.toLong(), "text/markdown", stored.updated, md5(text.toByteArray()), stored.crc32c), stored)
         assertEquals(stored, storage.file("/$path"))
         assertEquals(listOf(path), storage.list(folder, 10).map { it.path })
         assertEquals(text, storage.read(path, 1000).decodeToString())
@@ -107,7 +109,7 @@ class GoogleCloudStorageTest {
         val session = started.headers().firstValue("Location").orElseThrow()
         val put = http.send(HttpRequest.newBuilder(URI(session)).PUT(BodyPublishers.ofByteArray(png)).build(), BodyHandlers.ofString())
         assertEquals(200, put.statusCode(), put.body())
-        assertEquals(StoredFile(path, png.size.toLong(), "image/png", storage.file(path)?.updated), storage.file(path))
+        assertEquals(StoredFile(path, png.size.toLong(), "image/png", storage.file(path)?.updated, md5(png), storage.file(path)?.crc32c), storage.file(path))
 
         // Not again, now that it's there: another upload starts, but the bucket refuses its file
         val again = start()
@@ -123,6 +125,46 @@ class GoogleCloudStorageTest {
 
         assertFailsWith<IllegalArgumentException> { storage.downloadUrl(path, Duration.ofDays(8)) }
     }
+
+    @Test
+    fun `takes a big file in chunks, also after a break, as the browser sends a video, and copies it inside the bucket`() {
+        val path = "$folder/uploads/S05E08.mp4"
+        val video = ByteArray(256 * 1024 + 1000) { (it % 251).toByte() }
+        val upload = storage.uploadUrl(path, "video/mp4", Duration.ofMinutes(5))
+        val started = http.send(
+            HttpRequest.newBuilder(upload.url.toURI()).apply { upload.headers.forEach(::header) }.POST(BodyPublishers.noBody()).build(),
+            BodyHandlers.ofString(),
+        )
+        val session = URI(started.headers().firstValue("Location").orElseThrow())
+
+        fun put(range: String, bytes: ByteArray = byteArrayOf()) = http.send(
+            HttpRequest.newBuilder(session).header("Content-Range", range).header("Origin", "http://localhost:5173")
+                .PUT(BodyPublishers.ofByteArray(bytes)).build(),
+            BodyHandlers.ofString(),
+        )
+
+        // The first chunk, a multiple of 256 KiB: the bucket says how much it has, which the front-end may read (CORS)
+        val first = put("bytes 0-262143/${video.size}", video.copyOfRange(0, 262144))
+        assertEquals(308, first.statusCode(), first.body())
+        assertEquals("bytes=0-262143", first.headers().firstValue("Range").orElse(null))
+        assertTrue("range" in first.headers().firstValue("Access-Control-Expose-Headers").orElse("").lowercase())
+        // After a break, asked how much it has, and the rest from there
+        assertEquals("bytes=0-262143", put("bytes */${video.size}").headers().firstValue("Range").orElse(null))
+        val rest = put("bytes 262144-${video.size - 1}/${video.size}", video.copyOfRange(262144, video.size))
+        assertEquals(200, rest.statusCode(), rest.body())
+        assertEquals(md5(video), storage.file(path)?.md5)
+
+        // Copied to where it's kept, downloaded as a file by its name, without passing through MetaOS
+        val kept = storage.copy(path, "$folder/episode-media/S05E08 – končni.mp4", "attachment; filename=\"S05E08.mp4\"")
+        assertEquals(StoredFile("$folder/episode-media/S05E08 – končni.mp4", video.size.toLong(), "video/mp4", kept.updated, md5(video), storage.file(path)?.crc32c), kept)
+        val download = http.send(HttpRequest.newBuilder(storage.downloadUrl(kept.path, Duration.ofMinutes(5)).toURI()).build(), BodyHandlers.ofByteArray())
+        assertContentEquals(video, download.body())
+        assertEquals("attachment; filename=\"S05E08.mp4\"", download.headers().firstValue("Content-Disposition").orElse(null))
+        assertFailsWith<IllegalArgumentException> { storage.copy(path, kept.path) }
+        assertFailsWith<IllegalArgumentException> { storage.copy("$folder/nothing.mp4", "$folder/elsewhere.mp4") }
+    }
+
+    private fun md5(bytes: ByteArray) = HexFormat.of().formatHex(MessageDigest.getInstance("MD5").digest(bytes))
 
     @Test
     @EnabledIfEnvironmentVariable(named = "METAOS_MEDIA_BUCKET", matches = ".+")

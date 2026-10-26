@@ -27,14 +27,18 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.net.URI
+import java.net.URL
 import java.nio.ByteBuffer
+import java.security.MessageDigest
 import java.security.KeyPairGenerator
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.Base64
+import java.util.HexFormat
 import java.util.zip.CRC32
+import java.util.zip.CRC32C
 import javax.imageio.ImageIO
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -44,9 +48,9 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/** A bucket in memory, which remembers what its files are served with */
+/** A bucket in memory, which remembers what its files are served with, and downloaded as */
 class FakeStorage(override val bucket: String = "fake") : Storage {
-    class Stored(val file: StoredFile, val bytes: ByteArray, val cacheControl: String?)
+    class Stored(val file: StoredFile, val bytes: ByteArray, val cacheControl: String?, val contentDisposition: String? = null)
 
     val files = mutableMapOf<String, Stored>()
     var uploads = 0
@@ -59,17 +63,33 @@ class FakeStorage(override val bucket: String = "fake") : Storage {
         require(overwrite || storagePath(path) !in files) { "$path is already there" }
         val bytes = content.readAllBytes()
         uploads++
-        return StoredFile(storagePath(path), bytes.size.toLong(), contentType, OffsetDateTime.now())
+        val md5 = HexFormat.of().formatHex(MessageDigest.getInstance("MD5").digest(bytes))
+        val crc32c = HexFormat.of().formatHex(ByteBuffer.allocate(4).putInt(CRC32C().apply { update(bytes) }.value.toInt()).array())
+        return StoredFile(storagePath(path), bytes.size.toLong(), contentType, OffsetDateTime.now(), md5, crc32c)
             .also { files[it.path] = Stored(it, bytes, cacheControl) }
     }
 
     override fun read(path: String, maxBytes: Int) = requireNotNull(files[storagePath(path)]).bytes.let { it.copyOf(minOf(it.size, maxBytes)) }
+
+    override fun copy(from: String, to: String, contentDisposition: String?): StoredFile {
+        val source = requireNotNull(files[storagePath(from)]) { "There's no file at ${storagePath(from)}" }
+        require(storagePath(to) !in files) { "${storagePath(to)} is already there" }
+        return source.file.copy(path = storagePath(to))
+            .also { files[it.path] = Stored(it, source.bytes, source.cacheControl, contentDisposition) }
+    }
+
     override fun uploadUrl(path: String, contentType: String, validFor: Duration) = SignedUpload(
         URI("https://storage.example.com/$bucket/${storagePath(path)}?X-Goog-Signature=fake").toURL(),
         mapOf("Content-Type" to contentType, "x-goog-resumable" to "start"), Instant.now() + validFor,
     )
-    override fun downloadUrl(path: String, validFor: Duration) = throw UnsupportedOperationException()
+
+    override fun downloadUrl(path: String, validFor: Duration): URL =
+        URI("https", "storage.example.com", "/$bucket/${storagePath(path)}", "X-Goog-Signature=download", null).toURL()
+
     override fun delete(path: String) = files.remove(storagePath(path)) != null
+
+    /** The file a URL from [downloadUrl] downloads */
+    fun downloaded(url: String) = files[URI(url).path.removePrefix("/$bucket/")]
 }
 
 /** A service account's key as Google makes them, with a private key Google never issued: enough to start, not to call */

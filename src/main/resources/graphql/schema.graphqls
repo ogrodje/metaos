@@ -67,11 +67,14 @@ type Query {
     signed-in user.
     """
     accounts(unlinked: Boolean! = false): [Account!]!
+
+    "One of an episode's video or audio files by its ID, e.g. for a link to download it; null if there's none. Needs a signed-in user."
+    mediaFile(id: ID!): MediaFile
 }
 
 """
 Changes, as the signed-in user: each needs an approved user's token with metaos:write (CommentsGraphQL.kt, Artwork.kt,
-GraphQL.kt, SessionsGraphQL.kt)
+MediaFiles.kt, GraphQL.kt, SessionsGraphQL.kt)
 """
 type Mutation {
     "Comment on an episode (ideas too) by its code or ID, in Markdown"
@@ -107,6 +110,26 @@ type Mutation {
     only replaced with replace. The upload is gone afterwards, also when it's refused.
     """
     setEpisodeImage(ref: String!, kind: EpisodeImage!, upload: ID!, name: String!, replace: Boolean! = false): EpisodeImageSet!
+    """
+    Start uploading a video or audio file for an episode, of size bytes, up to 50 GB: video (MP4 or MOV) for a video,
+    audio (MP3, M4A, WAV or FLAC) for an audio. The browser sends it straight to MetaOS's bucket, then addEpisodeMedia
+    makes it the episode's.
+    """
+    mediaUpload(ref: String!, kind: MediaKind!, contentType: String!, size: Float!): MediaUpload!
+    """
+    Make an upload, of a file called name, one of an episode's video or audio files, once ffprobe has read what's in it:
+    a video has to have video, an audio audio and no video. A full video or full audio the episode has already is only
+    replaced with replace; a file it has already isn't added again. A title says what a bonus is. The upload is gone
+    afterwards, also when it's refused.
+    """
+    addEpisodeMedia(ref: String!, kind: MediaKind!, upload: ID!, name: String!, title: String, replace: Boolean! = false): MediaFile!
+    """
+    Change a video or audio file's title (an empty one clears it), or what it is: video stays video and audio audio,
+    and it becomes the full video or full audio only while the episode has none. What's left out stays as it is.
+    """
+    updateEpisodeMedia(id: ID!, title: String, kind: MediaKind): MediaFile!
+    "Take a video or audio file off its episode, and delete it from MetaOS's bucket; the history keeps it. Its ID."
+    removeEpisodeMedia(id: ID!): ID!
     """
     Set or clear one of an episode's links, by its code or ID: an https URL of the episode on that platform, or null
     to clear it. Each of the four Patreon links is set or cleared on its own.
@@ -161,6 +184,75 @@ type ArtworkUpload {
 type Header {
     name: String!
     value: String!
+}
+
+"What an episode's video and audio files are, as Patreon has them: one full video and one full audio, any number of bonuses"
+enum MediaKind {
+    FULL_VIDEO
+    FULL_AUDIO
+    BONUS_VIDEO
+    BONUS_AUDIO
+}
+
+"Where the browser sends a video or audio file: a resumable upload, as ArtworkUpload says"
+type MediaUpload {
+    "What addEpisodeMedia takes"
+    id: ID!
+    url: String!
+    headers: [Header!]!
+    expires: String!
+}
+
+"One of an episode's video or audio files, in MetaOS's private bucket"
+type MediaFile {
+    id: ID!
+    kind: MediaKind!
+    "What a bonus is about"
+    title: String
+    "The file's name, as it was uploaded"
+    name: String!
+    contentType: String!
+    "Bytes"
+    size: Float!
+    "The file's MD5, in hex: the same file has the same one"
+    md5: String
+    crc32c: String
+    "Their person's name, or else their username"
+    uploadedBy: String!
+    uploadedAt: String!
+    "What's in it, as ffprobe read it"
+    info: MediaInfo!
+    "A link that downloads it for an hour, signed as it's asked for; null when MetaOS has no bucket"
+    downloadUrl: String
+}
+
+"What's in a video or audio file, as ffprobe read it; null for what the file doesn't say"
+type MediaInfo {
+    "Seconds"
+    duration: Float
+    "Bits a second, of the whole file"
+    bitrate: Float
+    "e.g. MP4, MOV, MP3, WAV"
+    container: String
+    "ffprobe's names, e.g. h264, hevc, prores; null without video"
+    videoCodec: String
+    videoProfile: String
+    width: Int
+    height: Int
+    frameRate: Float
+    bitDepth: Int
+    "e.g. bt709, or HDR (PQ)"
+    color: String
+    "e.g. aac, mp3, pcm_s24le, of the first audio track; null without audio"
+    audioCodec: String
+    sampleRate: Int
+    channels: Int
+    audioBitrate: Float
+    audioTracks: Int!
+    "When the file says it was made"
+    madeAt: String
+    "What made it, as the file says"
+    encoder: String
 }
 
 "One of an episode's pictures, as an upload made it"
@@ -246,6 +338,8 @@ type Episode {
     web: Image
     "Its cover, e.g. for podcast apps, 3000 × 3000"
     cover: Image
+    "Its video and audio: the full episode and its bonuses, the first uploaded first. None without a signed-in user."
+    media: [MediaFile!]!
 }
 
 """
@@ -505,6 +599,8 @@ enum ChangeKind {
     COMMENT
     "A sign-in linked to a person or unlinked"
     ACCOUNT
+    "A video or audio file uploaded, changed or removed"
+    MEDIA
     OTHER
 }
 

@@ -9,6 +9,9 @@ COPY build/libs/metaos.jar application.jar
 RUN java -Djarmode=tools -jar application.jar extract --layers --destination extracted
 
 FROM gcr.io/distroless/java25-debian13:nonroot
+# ffprobe, which reads what's in an episode's video and audio (MediaProbe.kt): a static build, as distroless has no
+# libraries to link to
+COPY --from=mwader/static-ffmpeg:9.0.2 /ffprobe /usr/local/bin/ffprobe
 WORKDIR /app
 # Least to most often changing, so a code-only change pushes just the last layer over the tailnet
 COPY --from=layers /layers/extracted/dependencies/ ./

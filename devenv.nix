@@ -48,6 +48,9 @@ in {
     pkgs.just
     # gcloud, for google/storage.sh
     pkgs.google-cloud-sdk
+    # ffprobe, which reads what's in an episode's video and audio (MediaProbe.kt), as MetaOS's image has it; and ffmpeg,
+    # with which MediaProbeTest makes files for it
+    pkgs.ffmpeg-headless
   ];
 
   env = {

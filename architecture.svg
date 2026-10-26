@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1090" viewBox="0 0 1240 1090" role="img" aria-label="MetaOS's architecture: the browser and MCP clients reach MetaOS and Keycloak through Cloudflare and ingress-nginx. The browser gets its pages from the front-end, metaos-web, which renders those anyone may see from MetaOS's GraphQL API, and Cloudflare caches them; then it asks MetaOS itself. MetaOS checks tokens with Keycloak's keys, keeps its data in the shared Postgres, which tells it what changed for the browser's pages to show right away, and calls Cloud Storage, Google Drive, Gmail, Koofr and Dropbox, and fetches pictures from Hygraph. It reaches Ogrodje's Patreon through patreon-gateway, a pod of its own in the cluster with three containers: the gateway, which reads the campaign, its tiers, posts and members through Patreon's API with the creator token it keeps and refreshes, and uploads episodes' audio and video, from Dropbox links MetaOS gives it, straight to Patreon; a headless Chromium, in Playwright's own image, in which the gateway makes, changes and publishes posts in Patreon's web app, signed in as the bot, Iva; and Tailscale, through which only the browser goes out, by nuc8, a machine at home that is the tailnet's exit node, as Patreon's bot check turns away the cluster's address. Prometheus scrapes MetaOS and patreon-gateway. It copies pictures to its public bucket in Cloud Storage, from which the browser loads them at media.ogrodje.si, cached by Cloudflare. The team's artwork goes from the browser straight to MetaOS's private bucket, with a URL MetaOS signs, and MetaOS takes it from there.">
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1090" viewBox="0 0 1240 1090" role="img" aria-label="MetaOS's architecture: the browser and MCP clients reach MetaOS and Keycloak through Cloudflare and ingress-nginx. The browser gets its pages from the front-end, metaos-web, which renders those anyone may see from MetaOS's GraphQL API, and Cloudflare caches them; then it asks MetaOS itself. MetaOS checks tokens with Keycloak's keys, keeps its data in the shared Postgres, which tells it what changed for the browser's pages to show right away, and calls Cloud Storage, Google Drive, Gmail, Koofr and Dropbox, and fetches pictures from Hygraph. It reaches Ogrodje's Patreon through patreon-gateway, a pod of its own in the cluster with three containers: the gateway, which reads the campaign, its tiers, posts and members through Patreon's API with the creator token it keeps and refreshes, and uploads episodes' audio and video, from Dropbox links MetaOS gives it, straight to Patreon; a headless Chromium, in Playwright's own image, in which the gateway makes, changes and publishes posts in Patreon's web app, signed in as the bot, Iva; and Tailscale, through which only the browser goes out, by nuc8, a machine at home that is the tailnet's exit node, as Patreon's bot check turns away the cluster's address. Prometheus scrapes MetaOS and patreon-gateway. It copies pictures to its public bucket in Cloud Storage, from which the browser loads them at media.ogrodje.si, cached by Cloudflare. The team's artwork, and an episode's video and audio, go from the browser straight to MetaOS's private bucket, with a URL MetaOS signs, and MetaOS takes them from there.">
   <!--
     MetaOS's architecture, the source of architecture.png (`just architecture` renders it). Keep it in step with the
     system: CLAUDE.md says when.
@@ -170,7 +170,7 @@
   <!-- Outside services; dashed: connected and checked, but no feature uses it yet -->
   <rect class="box" x="1060" y="132" width="160" height="56" rx="8"/>
   <text class="t" x="1076" y="156">Cloud Storage</text>
-  <text class="m" x="1076" y="174">pictures, uploads · key</text>
+  <text class="m" x="1076" y="174">pictures, video, audio · key</text>
   <rect class="box" x="1060" y="204" width="160" height="56" rx="8"/>
   <text class="t" x="1076" y="228">Google Drive</text>
   <text class="m" x="1076" y="246">docs · refresh token</text>
@@ -241,8 +241,8 @@
   <path class="edge" d="M140 140 V-8 H1204 V130" marker-end="url(#arrow)"/>
   <text class="m" x="620" y="-14" text-anchor="middle">pictures for everyone: media.ogrodje.si, cached by Cloudflare</text>
 
-  <!-- The team's artwork goes from the browser straight to the private bucket, with a URL MetaOS signs -->
+  <!-- The team's artwork, video and audio go from the browser straight to the private bucket, with a URL MetaOS signs -->
   <path class="edge" d="M176 140 V14 H1182 V130" marker-end="url(#arrow)"/>
-  <text class="m" x="620" y="8" text-anchor="middle">the team's artwork, straight to the private bucket with a signed URL; MetaOS takes it from there</text>
+  <text class="m" x="620" y="8" text-anchor="middle">the team's artwork, video and audio, straight to the private bucket with a signed URL; MetaOS takes it from there</text>
   </g>
 </svg>

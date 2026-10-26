@@ -4,14 +4,18 @@ import { faArrowUpFromBracket } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { ArtworkKind } from '@/artwork'
 import ArtworkUpload from '@/components/ArtworkUpload.vue'
+import MediaList from '@/components/MediaList.vue'
+import MediaUpload from '@/components/MediaUpload.vue'
 import PhotoStrip from '@/components/PhotoStrip.vue'
 import type { DropboxPicture, EpisodeDetails, EpisodeStatus, KoofrPhoto } from '@/episodes'
 import { type Image, src, srcset } from '@/images'
+import type { MediaKind } from '@/media'
 
 // An episode's pictures in one section. The team gets tabs: its titles with the thumbnails they're A/B tested with, its
-// web picture and its cover, then its artwork (its Dropbox folders' pictures, each marked with what it's used as) and
-// its photos (its Koofr folders'); and uploads them (ArtworkUpload), from the heading, or a missing one from its place.
-// Everyone else gets its thumbnail, large, as everyone may see it.
+// web picture and its cover, its video and audio (MediaList), then its artwork (its Dropbox folders' pictures, each
+// marked with what it's used as) and its photos (its Koofr folders'); and uploads them (ArtworkUpload, MediaUpload, by
+// the tab), from the heading, or a missing one from its place. Everyone else gets its thumbnail, large, as everyone may
+// see it.
 const props = defineProps<{
   episode: EpisodeDetails
   artwork: DropboxPicture[]
@@ -25,16 +29,22 @@ const emit = defineEmits<{
 }>()
 
 const upload = ref<InstanceType<typeof ArtworkUpload>>()
+const mediaUpload = ref<InstanceType<typeof MediaUpload>>()
 
 function open(kind?: ArtworkKind) {
   upload.value?.open(kind)
 }
 
-type Tab = 'titles' | 'artwork' | 'photos'
+function openMedia(kind?: MediaKind) {
+  mediaUpload.value?.open(kind)
+}
+
+type Tab = 'titles' | 'media' | 'artwork' | 'photos'
 const tab = ref<Tab>('titles')
 
 const tabs = computed(() => [
   { id: 'titles' as Tab, title: 'Titles and thumbnails', count: all.value.filter((v) => v.title).length },
+  ...(recorded.value || props.episode.media.length ? [{ id: 'media' as Tab, title: 'Video and audio', count: props.episode.media.length }] : []),
   ...(props.artwork.length ? [{ id: 'artwork' as Tab, title: 'Artwork', count: props.artwork.length }] : []),
   ...(props.photos.length ? [{ id: 'photos' as Tab, title: 'Photos', count: props.photos.length }] : []),
 ])
@@ -57,10 +67,10 @@ const all = computed<Variant[]>(() => {
   ]
 })
 
-// Pictures come once it's recorded: before, a missing one isn't missing yet
+// Pictures, video and audio come once it's recorded: before, a missing one isn't missing yet
 const RECORDED: EpisodeStatus[] = ['RECORDED', 'IN_PRODUCTION', 'READY', 'EARLY_ACCESS', 'PUBLISHED']
-const pictured = computed(() => RECORDED.includes(props.episode.status) || all.value.some((v) => v.image)
-  || !!props.episode.cover || !!props.episode.web)
+const recorded = computed(() => RECORDED.includes(props.episode.status))
+const pictured = computed(() => recorded.value || all.value.some((v) => v.image) || !!props.episode.cover || !!props.episode.web)
 
 // Once it's recorded, all three, so what's missing shows; before, A, and B and C once they have a title
 const variants = computed(() => (pictured.value ? all.value : all.value.filter((v) => v.letter === 'A' || v.title)))
@@ -99,7 +109,10 @@ const folder = computed(() => props.artwork[0]?.url)
           {{ t.title }}<span class="count">{{ t.count }}</span>
         </button>
       </div>
-      <button type="button" class="button upload" aria-haspopup="dialog" @click="open()">
+      <button v-if="shown === 'media'" type="button" class="button upload" aria-haspopup="dialog" @click="openMedia()">
+        <FontAwesomeIcon :icon="faArrowUpFromBracket"/>Upload video and audio
+      </button>
+      <button v-else type="button" class="button upload" aria-haspopup="dialog" @click="open()">
         <FontAwesomeIcon :icon="faArrowUpFromBracket"/>Upload artwork
       </button>
     </div>
@@ -151,11 +164,13 @@ const folder = computed(() => props.artwork[0]?.url)
       </ul>
     </template>
 
+    <MediaList v-else-if="shown === 'media'" :media="episode.media" @upload="openMedia" @changed="emit('changed')"/>
     <PhotoStrip v-else-if="shown === 'artwork'" title="Artwork" :photos="artwork" :folder="folder" service="Dropbox"
                 artwork :uses="uses" bare/>
     <PhotoStrip v-else title="Photos" :photos="photos" :folder="episode.koofrFolders[0]?.url" service="Koofr" bare/>
 
     <ArtworkUpload ref="upload" :episode="episode" @changed="emit('changed')"/>
+    <MediaUpload ref="mediaUpload" :episode="episode" @changed="emit('changed')"/>
   </section>
 </template>
 

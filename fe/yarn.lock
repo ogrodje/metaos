@@ -3474,6 +3474,7 @@ __metadata:
     "@vue/devtools-api": "npm:^8.2.1"
     keycloak-js: "npm:^26.2.4"
     markdown-it: "npm:15.0.3"
+    mediainfo.js: "npm:0.3.8"
     npm-run-all2: "npm:^9.0.4"
     nuxt: "npm:^4.6.2"
     pinia: "npm:^4.1.0"
@@ -4406,6 +4407,17 @@ __metadata:
   version: 2.1.0
   resolution: "mdurl@npm:2.1.0"
   checksum: 10c0/aed11a75b791d596c7104fa6a3d84680e87cd2bfdb32ecfe512e795481d40a64b21d627b325ffd58aadcd15faf7498ac06130b8f198ebec437aceeead24bd1b1
+  languageName: node
+  linkType: hard
+
+"mediainfo.js@npm:0.3.8":
+  version: 0.3.8
+  resolution: "mediainfo.js@npm:0.3.8"
+  dependencies:
+    yargs: "npm:^18.1.0"
+  bin:
+    mediainfo.js: ./dist/esm/cli.js
+  checksum: 10c0/b839e813f121391e7882d0fa7995a1c9e8c04a398d453a73092696102fc6407c59308ceda218b97c53468efe2ab000f78746f6f519cd26a1ea5e087be11b4fa8
   languageName: node
   linkType: hard
 

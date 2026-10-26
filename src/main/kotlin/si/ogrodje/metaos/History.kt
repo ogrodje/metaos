@@ -12,7 +12,7 @@ import java.util.UUID
 data class FieldChangeDto(val field: String, val from: String?, val to: String?)
 
 /** What a change is to, so the front-end can tell changes apart without reading their words, e.g. to group them */
-enum class ChangeKind { EPISODE, SESSION, PERSON, DOCUMENT, KOOFR_FOLDER, DROPBOX_FOLDER, COMMENT, ACCOUNT, OTHER }
+enum class ChangeKind { EPISODE, SESSION, PERSON, DOCUMENT, KOOFR_FOLDER, DROPBOX_FOLDER, COMMENT, ACCOUNT, MEDIA, OTHER }
 
 /** A change to an episode or session, or to what's linked to it, as the front-end shows it */
 data class HistoryEntryDto(
@@ -42,6 +42,7 @@ private fun kindOf(table: String) = when (table) {
     "episode_dropbox_folders", "session_dropbox_folders" -> ChangeKind.DROPBOX_FOLDER
     "comments" -> ChangeKind.COMMENT
     "accounts" -> ChangeKind.ACCOUNT
+    "episode_media" -> ChangeKind.MEDIA
     "people" -> ChangeKind.PERSON
     else -> ChangeKind.OTHER
 }
@@ -53,7 +54,7 @@ private fun AuditRow.subject(): Pair<ChangeKind, String>? {
         "episodes" -> ChangeKind.EPISODE to rowId.toString()
         "sessions" -> ChangeKind.SESSION to rowId.toString()
         "people" -> ChangeKind.PERSON to rowId.toString()
-        "episode_people", "episode_documents", "episode_koofr_folders", "episode_dropbox_folders" ->
+        "episode_people", "episode_documents", "episode_koofr_folders", "episode_dropbox_folders", "episode_media" ->
             id("episode_id")?.let { ChangeKind.EPISODE to it }
         "session_documents", "session_koofr_folders", "session_dropbox_folders" -> id("session_id")?.let { ChangeKind.SESSION to it }
         "comments" -> id("episode_id")?.let { ChangeKind.EPISODE to it } ?: id("session_id")?.let { ChangeKind.SESSION to it }
@@ -192,6 +193,7 @@ private class Names(
         "episode_dropbox_folders", "session_dropbox_folders" -> folder(row, "Dropbox")
         "comments" -> comment(row)
         "accounts" -> account(row)
+        "episode_media" -> media(row)
         "people" -> change(row, "person", PERSON_COLUMNS)
         else -> Described("Changed ${row.table}")
     }
@@ -205,6 +207,39 @@ private class Names(
             to != null -> Described("Linked $account to $to" + if (row.new["linked_how"] == "EMAIL") " (by email)" else "")
             from != null -> Described("Unlinked $account from $from")
             else -> Described("Changed the account $account")
+        }
+    }
+
+    // A video or audio file, by its name: the full ones are the episode's only one of their kind, bonuses one of several
+    private fun media(row: AuditRow): Described {
+        fun kind(values: Map<String, Any?>) = values["kind"]?.toString()?.let { runCatching { MediaKind.valueOf(it) }.getOrNull() }
+        fun what(kind: MediaKind?) = when {
+            kind == null -> "a file"
+            kind.full -> "the ${kind.label}"
+            else -> "a ${kind.label}"
+        }
+        val name = (row.new["name"] ?: row.old["name"])?.toString()
+        return when (row.operation) {
+            "INSERT" -> Described((if (kind(row.new)?.full == true) "Uploaded " else "Added ") + "${what(kind(row.new))}: $name")
+            "DELETE" -> Described("Removed ${what(kind(row.old))}: $name")
+            // In words that say it all, as the front-end's activity shows fields only for the episode's own changes
+            else -> {
+                val diff = row.diff()
+                val kindChange = diff["kind"]
+                val titleChange = diff["title"]
+                val fields = listOfNotNull(
+                    kindChange?.let { FieldChangeDto("Kind", kind(row.old)?.label, kind(row.new)?.label) },
+                    titleChange?.let { FieldChangeDto("Title", it.from?.toString(), it.to?.toString()) },
+                )
+                val summary = when {
+                    kindChange != null && titleChange == null -> "Made $name ${what(kind(row.new))}"
+                    titleChange != null && kindChange == null && titleChange.to != null ->
+                        "Titled ${what(kind(row.new))} $name: ${titleChange.to}"
+                    titleChange != null && kindChange == null -> "Took the title off ${what(kind(row.new))} $name"
+                    else -> "Changed ${what(kind(row.old))}: $name"
+                }
+                Described(summary, fields)
+            }
         }
     }
 
