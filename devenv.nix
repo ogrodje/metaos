@@ -55,6 +55,8 @@ in {
 
   env = {
     METAOS_ENV = "development";
+    # The tests' Postgres stays up between runs, with the migrations' template in it (TestcontainersConfig.kt)
+    TESTCONTAINERS_REUSE_ENABLE = "true";
   };
 
   enterShell = ''

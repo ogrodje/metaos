@@ -20,8 +20,10 @@ inputs:
 runs:
   using: composite
   steps:
-    # In the background, so the image is there by the time the tests start, as TestcontainersConfig names it; and no
-    # Ryuk, which cleans up after a test JVM that died, as the runner is thrown away anyway
+    # In the background, so the image is there by the time the tests start, as TestcontainersConfig names it (pulling
+    # it takes seconds, less than restoring it from a cache would); no Ryuk, which cleans up after a test JVM that died,
+    # as the runner is thrown away anyway; and reuse, so the test JVMs share one Postgres, which the migrations run on
+    # once (TestPostgres)
     - if: inputs.testcontainers == 'true'
       shell: bash
       run: |
@@ -29,6 +31,7 @@ runs:
           | cut -d'"' -f2 || true)
         if [ -n "$image" ]; then nohup docker pull "$image" > /dev/null 2>&1 & fi
         echo "TESTCONTAINERS_RYUK_DISABLED=true" >> "$GITHUB_ENV"
+        echo "TESTCONTAINERS_REUSE_ENABLE=true" >> "$GITHUB_ENV"
 
     - if: inputs.java == 'true'
       uses: actions/setup-java@v6

@@ -179,7 +179,8 @@ class ChangesTest @Autowired constructor(
         val stream = stream()
 
         jdbcTemplate.queryForList(
-            "select pg_terminate_backend(pid) from pg_stat_activity where application_name = ?",
+            // This context's listener only: the tests' Postgres has other contexts' databases (TestcontainersConfig)
+            "select pg_terminate_backend(pid) from pg_stat_activity where application_name = ? and datname = current_database()",
             CHANGES_APPLICATION_NAME,
         )
 
