@@ -21,8 +21,8 @@ way, and stay there, the team's only, with what ffprobe read of them. Ogrodje's 
 patreon-gateway, a pod of its own beside it, which reads through Patreon's API and makes, changes and publishes posts,
 with an episode's audio or video, in Patreon's web app, signed in as the bot, in a headless Chromium in a container of
 its own. Patreon's bot check turns away the cluster's address, so that browser goes out through the pod's Tailscale
-container and nuc8, a machine at home; the API and the uploads go straight to Patreon. Everything runs on Ogrodje's
-Kubernetes cluster, behind Cloudflare.
+container and low, a VM whose address it lets through; the API and the uploads go straight to Patreon. Everything
+runs on Ogrodje's Kubernetes cluster, behind Cloudflare.
 
 The diagram is drawn in [`architecture.svg`](architecture.svg); `just architecture` renders `architecture.png` from it.
 

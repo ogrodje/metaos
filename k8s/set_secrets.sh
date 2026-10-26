@@ -24,7 +24,7 @@
 #                                 and the token MetaOS calls it with (`openssl rand -hex 24`); Patreon stays off without
 #                                 the last (patreon-gateway/README.md)
 #   PROD_PATREON_TAILSCALE_AUTHKEY
-#                                 the Tailscale auth key its browser's exit node (nuc8) is reached with: reusable,
+#                                 the Tailscale auth key its browser's exit node (low) is reached with: reusable,
 #                                 ephemeral, pre-approved, tagged tag:patreon-gateway
 # The DB passwords go into SQL literals, so keep them alphanumeric: `openssl rand -hex 24`.
 set -euo pipefail

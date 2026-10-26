@@ -61,7 +61,7 @@ spec:
             # Playwright's browser server in the container beside it, in the pod only
             - name: PATREON_BROWSER_URL
               value: ws://127.0.0.1:3000/
-            # Its Chromium goes out through nuc8, Tailscale's container's proxy: Patreon's bot check turns away pages
+            # Its Chromium goes out through low, Tailscale's container's proxy: Patreon's bot check turns away pages
             # from the cluster's datacenter address. Patreon's API and the uploads go out directly
             - name: PATREON_BROWSER_PROXY
               value: socks5://127.0.0.1:1055
@@ -96,10 +96,10 @@ spec:
           resources:
             requests: { cpu: 100m, memory: 256Mi }
             limits: { memory: 1536Mi }
-        # Tailscale, an ephemeral machine of the tailnet with nuc8 (at home, a residential address) as its exit node,
-        # with a SOCKS proxy on the pod's loopback for the browser: Patreon's bot check lets pages through from there.
-        # Userspace networking, so it needs no capabilities. When nuc8 is down, the browser can't reach Patreon and
-        # jobs wait and try again.
+        # Tailscale, an ephemeral machine of the tailnet with low (oto.srv4all.net, a VM whose address Patreon's bot
+        # check lets through, unlike Hetzner's) as its exit node, with a SOCKS proxy on the pod's loopback for the
+        # browser. Userspace networking, so it needs no capabilities. When low is down, the browser can't reach Patreon
+        # and jobs wait and try again.
         - name: tailscale
           image: tailscale/tailscale:v1.104.2
           securityContext:
@@ -111,9 +111,9 @@ spec:
               valueFrom: { secretKeyRef: { name: patreon-gateway-secret, key: tailscale_auth_key, optional: true } }
             - name: TS_HOSTNAME
               value: patreon-gateway
-            # nuc8's tailnet address
+            # low's tailnet address
             - name: TS_EXTRA_ARGS
-              value: --exit-node=100.69.237.37
+              value: --exit-node=100.122.26.110
             - name: TS_USERSPACE
               value: "true"
             - name: TS_SOCKS5_SERVER
