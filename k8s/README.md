@@ -17,7 +17,7 @@ k8s/ci/deployer.yaml         what CI may do in the cluster
 docker/Dockerfile            the app: boot jar on distroless java25, non-root
 docker/web.Dockerfile        the front-end: Nuxt's build (fe/.output) on distroless Node 26, non-root
 docker/keycloak.Dockerfile   Keycloak, optimized build, realm "metaos" baked in
-docker/patreon-gateway.Dockerfile  patreon-gateway's boot jar on Temurin's Java; its Chromium is Microsoft's image, beside it
+docker/patreon-gateway.Dockerfile  patreon-gateway's boot jar on distroless java25, as the app's; its Chromium is Microsoft's image, beside it
 ```
 
 | Host                     | What                                                                       |
@@ -31,9 +31,18 @@ serves traffic; those two are public, but only answer UP or DOWN.
 
 ## Day to day
 
-Pushing to `master` runs `.github/workflows/deploy.yml`: tests, builds and pushes the images, applies `k8s/base` and
-smoke-tests the public URLs. One run at a time: a push while one runs waits for it, and only the newest of those waiting
-runs. By hand (needs Tailscale up and `KUBECONFIG` pointing at `ogrodje-one-config`):
+Pushing to `master` runs `.github/workflows/deploy.yml`: tests, builds and pushes the images, each in a job of its own,
+at once, applies `k8s/base` and smoke-tests the public URLs. One run at a time: a push while one runs waits for it, and
+only the newest of those waiting runs. Started by hand on another branch (Actions → Build and Deploy → Run workflow), it
+builds and pushes that branch's images, tagged but not as `latest`, and deploys nothing.
+
+The images are reproducible (`SOURCE_DATE_EPOCH=0`, `rewrite-timestamp`), so a push sends only the layers that changed,
+usually the application's, under a megabyte, and the deploy sets them by digest (`metaos@sha256:...`, not the tag): a
+Deployment whose image didn't change isn't rolled. They have no provenance attestation, so each is one plain manifest
+rather than an index, which `registry garbage-collect --delete-untagged` would sweep the layers of; images pushed before
+are still indexes. A cleanup of the registry keeps what the cluster runs by its digests.
+
+By hand (needs Tailscale up and `KUBECONFIG` pointing at `ogrodje-one-config`):
 
 ```bash
 just push        # boot jar, front-end, the images (linux/amd64), push, point kustomization.yaml at the tag

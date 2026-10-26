@@ -129,9 +129,10 @@ which deleting the claim deletes), downloads on 20Gi of scratch space that goes 
 `patreon_gateway_*` metrics. No Ingress: only MetaOS calls it, at `http://patreon-gateway`. CI tests it, builds and
 deploys it with MetaOS.
 
-The pod has two containers. The gateway's image is Temurin's Java and the boot jar, no browser
-(`docker/patreon-gateway.Dockerfile`). Chromium is in the `browser` container beside it: Microsoft's Playwright image
-running Playwright's browser server (`run-server`) on the pod's loopback, which the gateway connects to
+The pod has two containers. The gateway's image is distroless Java, as MetaOS's, and the boot jar, no browser
+(`docker/patreon-gateway.Dockerfile`); of Playwright's driver it has only the Node.js for Linux, which the driver runs
+itself (`linuxDriverBundle` in `build.gradle.kts`). Chromium is in the `browser` container beside it: Microsoft's
+Playwright image running Playwright's browser server (`run-server`) on the pod's loopback, which the gateway connects to
 (`PATREON_BROWSER_URL=ws://127.0.0.1:3000/`) and which starts a Chromium for each connection. The node pulls that image
 from Microsoft's registry, so its gigabyte of browsers never goes through ours over the tailnet. Client and server only
 talk at the same Playwright version: the image's tag and `playwright@` there have to be `build.gradle.kts`'s

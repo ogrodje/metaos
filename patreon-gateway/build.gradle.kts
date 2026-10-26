@@ -16,8 +16,27 @@ repositories {
     mavenCentral()
 }
 
-// Playwright's version is also the browsers' in its image (docker/patreon-gateway.Dockerfile): keep them the same
+// Playwright's version is also the browsers' in its image (k8s/base/deployment-patreon-gateway.yaml): keep them alike
 val playwrightVersion = "1.64.0"
+
+// Playwright's driver-bundle is Node.js for five platforms, 200 MB of the boot jar's 240; the image runs on linux/amd64
+// only, so the boot jar gets a copy with Linux's alone (driver/linux, which DriverJar picks on x86_64). Runs from
+// Gradle (tests, login) keep the whole bundle, for the Mac they run on.
+val driverBundle = configurations.create("driverBundle") { isTransitive = false }
+
+dependencies {
+    driverBundle("com.microsoft.playwright:driver-bundle:$playwrightVersion")
+}
+
+val linuxDriverBundle = tasks.register<Jar>("linuxDriverBundle") {
+    description = "Playwright's driver-bundle with only the Node.js for linux/amd64, for the boot jar."
+    destinationDirectory = layout.buildDirectory.dir("driver-bundle")
+    archiveFileName = "driver-bundle-$playwrightVersion-linux.jar"
+    from({ zipTree(driverBundle.singleFile) }) {
+        exclude("META-INF/MANIFEST.MF")
+        exclude("driver/mac/**", "driver/mac-arm64/**", "driver/linux-arm64/**", "driver/win32_x64/**")
+    }
+}
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
@@ -55,6 +74,14 @@ springBoot {
 // Fixed name, so docker/patreon-gateway.Dockerfile doesn't depend on the version
 tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
     archiveFileName = "patreon-gateway.jar"
+    setClasspath(classpath!!.filter { it.name != "driver-bundle-$playwrightVersion.jar" } + files(linuxDriverBundle))
+}
+
+// The same jar from the same sources, so the image of an unchanged gateway is the same image, which a deploy leaves be
+// (.github/workflows/deploy.yml): no restart, no job cut short
+tasks.withType<AbstractArchiveTask>().configureEach {
+    isPreserveFileTimestamps = false
+    isReproducibleFileOrder = true
 }
 
 // Signs the bot in to Patreon in a browser you can see, and saves its session (Login.kt, README.md)

@@ -17,7 +17,7 @@ Status (2026-10-19): everything is written and verified locally. Nothing is depl
 | Front-end                   | `https://metaos.ogrodje.si`, all other paths  | `metaos-web`: Nuxt on Node, renders the pages anyone may see; Cloudflare caches them    |
 | Keycloak                    | `https://metaos-auth.ogrodje.si`              | Own instance, realm `metaos` baked into the image and imported on first start           |
 | Postgres                    | `main-cluster` in namespace `pg`              | Databases `metaos` and `metaos_keycloak`, each owned by a role of the same name         |
-| Images                      | `registry.folk-decibel.ts.net/metaos/...`     | `metaos`, `metaos-web` and `keycloak`, tagged with `git describe`                       |
+| Images                      | `registry.folk-decibel.ts.net/metaos/...`     | `metaos`, `metaos-web`, `keycloak`, `patreon-gateway`; deployed by digest               |
 | Actuator and metrics        | Port 9090                                     | Never routed by the Ingress; Prometheus scrapes it through a ServiceMonitor             |
 | Probes                      | `/livez`, `/readyz` on port 8080              | Public through the Ingress, but they only answer UP or DOWN                             |
 

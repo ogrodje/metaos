@@ -585,6 +585,17 @@ decisions behind it and what is left to do.
   cluster's address, so the browser goes out through low (oto.srv4all.net, a VM whose address it lets through), the
   tailnet's exit node, by the pod's `tailscale` container (an ephemeral machine, `PROD_PATREON_TAILSCALE_AUTHKEY`);
   while low is down, jobs wait and try again.
+- CI builds each image (`metaos`, `metaos-web`, `patreon-gateway`, `keycloak`) in a job of its own, at once, each
+  testing and building what goes in it first, and the deploy waits for all four. The images are reproducible: their
+  files have `SOURCE_DATE_EPOCH`'s time (`rewrite-timestamp`), not the build's, and the boot jars are too (no file
+  timestamps, `AbstractArchiveTask`), so a layer that didn't change, e.g. the dependencies, is the blob the registry
+  has, which isn't pushed again over the tailnet (a slow link, ~0.5 MB/s). An image that didn't change is the same
+  image, and the deploy points the Deployments at the images by digest, so it rolls only what changed: Keycloak (whose
+  `kc.sh build` layer comes from GitHub's cache) and patreon-gateway (whose restart cuts its job short) mostly stay
+  up. Anything that puts the build's time into a jar or an image, e.g. Spring Boot's `buildInfo()`, undoes that.
+- patreon-gateway's image is on distroless Java, as the app's, with whose layers it shares: Playwright's driver runs
+  its Node.js itself, no shell needed, and the boot jar has only Linux's (`linuxDriverBundle`; the bundle has five
+  platforms', 200 MB).
 
 [Ogrodje]: https://ogrodje.si
 [Nix]: https://nixos.org/
