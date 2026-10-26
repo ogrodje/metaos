@@ -20,6 +20,9 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
     JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=60.0"
 
 WORKDIR /app
+# New Relic's Java agent, as the app's (docker/Dockerfile): off without NEW_RELIC_LICENSE_KEY
+COPY patreon-gateway/build/newrelic/ ./newrelic/
+ENV NEW_RELIC_APP_NAME=patreon-gateway
 # Least to most often changing, so a code-only change pushes just the last layer over the tailnet
 COPY --from=layers /layers/extracted/dependencies/ ./
 COPY --from=layers /layers/extracted/spring-boot-loader/ ./
@@ -30,4 +33,4 @@ COPY --from=layers /layers/extracted/application/ ./
 # is theirs alike
 USER 1001:1001
 EXPOSE 8090/tcp
-ENTRYPOINT ["java", "-jar", "application.jar"]
+ENTRYPOINT ["java", "-javaagent:/app/newrelic/newrelic.jar", "-jar", "application.jar"]

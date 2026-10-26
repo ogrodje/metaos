@@ -1,0 +1,40 @@
+# New Relic's Java agent, for MetaOS and patreon-gateway: beside newrelic.jar in their images (docker/Dockerfile,
+# docker/patreon-gateway.Dockerfile), and in build/newrelic for running MetaOS in development (`./gradlew newRelic`).
+# The environment overrides it: NEW_RELIC_LICENSE_KEY, NEW_RELIC_APP_NAME and NEW_RELIC_LABELS say where to report and
+# as what (k8s/base, .envrc). Settings: https://docs.newrelic.com/docs/apm/agents/java-agent/configuration/java-agent-configuration-config-file/
+common: &default_settings
+  app_name: MetaOS
+
+  # Its own log goes with the app's: beside the jar, where it would go by default, distroless's nonroot can't write
+  log_file_name: STDOUT
+  log_level: info
+
+  # A request's spans, from the browser through metaos-web and MetaOS to patreon-gateway, as one trace
+  distributed_tracing:
+    enabled: true
+
+  # The app's logs, each with the request it was written in; at most this many a minute, as they count towards the
+  # free plan's 100 GB a month
+  application_logging:
+    enabled: true
+    forwarding:
+      enabled: true
+      max_samples_stored: 5000
+    local_decorating:
+      enabled: false
+
+  # SQL with its values taken out, and the plans of slow queries
+  transaction_tracer:
+    record_sql: obfuscated
+
+  # MetaOS serves no pages: the front-end's browser agent is its own (fe/src/plugins/newrelic.client.ts)
+  browser_monitoring:
+    auto_instrument: false
+
+  # Java Flight Recorder's profiles: much data for little use here
+  jfr:
+    enabled: false
+
+# What the agent reads, as nothing sets -Dnewrelic.environment; the environment variables say the rest
+production:
+  <<: *default_settings

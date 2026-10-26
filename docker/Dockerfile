@@ -13,6 +13,9 @@ FROM gcr.io/distroless/java25-debian13:nonroot
 # libraries to link to
 COPY --from=mwader/static-ffmpeg:9.0.2 /ffprobe /usr/local/bin/ffprobe
 WORKDIR /app
+# New Relic's Java agent and newrelic.yml, from `./gradlew bootJar` (build/newrelic): it reports the app's requests,
+# errors and logs once NEW_RELIC_LICENSE_KEY is set, and doesn't start without it
+COPY build/newrelic/ ./newrelic/
 # Least to most often changing, so a code-only change pushes just the last layer over the tailnet
 COPY --from=layers /layers/extracted/dependencies/ ./
 COPY --from=layers /layers/extracted/spring-boot-loader/ ./
@@ -23,4 +26,4 @@ COPY --from=layers /layers/extracted/application/ ./
 EXPOSE 8080/tcp 9090/tcp
 ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0"
 # Conscrypt (Cloud Storage's TLS) loads its native library, which a future Java blocks without native access
-ENTRYPOINT ["java", "--enable-native-access=ALL-UNNAMED", "-jar", "application.jar"]
+ENTRYPOINT ["java", "--enable-native-access=ALL-UNNAMED", "-javaagent:/app/newrelic/newrelic.jar", "-jar", "application.jar"]

@@ -24,6 +24,8 @@ data:
   # Its public bucket, for pictures everyone may see (Images.kt), as the same service account; Cloudflare serves it
   METAOS_MEDIA_BUCKET: "media.ogrodje.si"
   METAOS_MEDIA_URL: "https://media.ogrodje.si"
+  # New Relic's Java agent (newrelic/newrelic.yml) reports as MetaOS, with this; its license key is in metaos-secret
+  NEW_RELIC_LABELS: "environment:production"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -99,6 +101,9 @@ spec:
               value: http://patreon-gateway
             - name: PATREON_GATEWAY_TOKEN
               valueFrom: { secretKeyRef: { name: patreon-gateway-secret, key: gateway_token, optional: true } }
+            # New Relic's Java agent doesn't start without it (docker/Dockerfile)
+            - name: NEW_RELIC_LICENSE_KEY
+              valueFrom: { secretKeyRef: { name: metaos-secret, key: new_relic_license_key, optional: true } }
 
           # On the port that serves traffic: actuator's 9090 is a second Tomcat, which says UP even when 8080 hangs.
           # Flyway migrates before the app is up; liveness only starts counting once the startup probe has passed, and

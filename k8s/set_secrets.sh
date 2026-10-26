@@ -26,6 +26,8 @@
 #   PROD_PATREON_TAILSCALE_AUTHKEY
 #                                 the Tailscale auth key its browser's exit node (low) is reached with: reusable,
 #                                 ephemeral, pre-approved, tagged tag:patreon-gateway
+#   PROD_NEW_RELIC_LICENSE_KEY    optional, an ingest license key of New Relic's account 8666724 (EU), which MetaOS's
+#                                 and patreon-gateway's Java agents report with; they don't start without it
 # The DB passwords go into SQL literals, so keep them alphanumeric: `openssl rand -hex 24`.
 set -euo pipefail
 
@@ -65,6 +67,7 @@ kubectl create secret generic metaos-secret -n "$NS" \
   --from-literal=dropbox_app_key="${DROPBOX_APP_KEY:-}" \
   --from-literal=dropbox_app_secret="${DROPBOX_APP_SECRET:-}" \
   --from-literal=dropbox_refresh_token="${DROPBOX_REFRESH_TOKEN:-}" \
+  --from-literal=new_relic_license_key="${PROD_NEW_RELIC_LICENSE_KEY:-}" \
   --dry-run=client -o yaml | kubectl apply -f -
 
 kubectl create secret generic keycloak-secret -n "$NS" \

@@ -24,8 +24,20 @@ val playwrightVersion = "1.64.0"
 // Gradle (tests, login) keep the whole bundle, for the Mac they run on.
 val driverBundle = configurations.create("driverBundle") { isTransitive = false }
 
+// New Relic's Java agent, which the image runs the gateway with, as MetaOS's (../newrelic/newrelic.yml)
+val newRelicAgent = configurations.create("newRelicAgent") { isTransitive = false }
+
 dependencies {
     driverBundle("com.microsoft.playwright:driver-bundle:$playwrightVersion")
+    newRelicAgent("com.newrelic.agent.java:newrelic-agent:9.5.0")
+}
+
+val newRelic = tasks.register<Sync>("newRelic") {
+    group = "build"
+    description = "Puts New Relic's Java agent and ../newrelic/newrelic.yml in build/newrelic, for the image."
+    from(newRelicAgent) { rename { "newrelic.jar" } }
+    from("../newrelic/newrelic.yml")
+    into(layout.buildDirectory.dir("newrelic"))
 }
 
 val linuxDriverBundle = tasks.register<Jar>("linuxDriverBundle") {
@@ -71,9 +83,11 @@ springBoot {
     mainClass = "si.ogrodje.patreon.PatreonGatewayKt"
 }
 
-// Fixed name, so docker/patreon-gateway.Dockerfile doesn't depend on the version
+// Fixed name, so docker/patreon-gateway.Dockerfile doesn't depend on the version; with the agent, which the image takes
+// too
 tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
     archiveFileName = "patreon-gateway.jar"
+    finalizedBy(newRelic)
     setClasspath(classpath!!.filter { it.name != "driver-bundle-$playwrightVersion.jar" } + files(linuxDriverBundle))
 }
 

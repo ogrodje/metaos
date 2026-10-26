@@ -562,6 +562,35 @@ a time; one Patreon turns away (a rate limit) tries again by itself.
   API answers and the browser is still signed in, in `metaos_patreon_connected` and in the log.
 - `PatreonTest` runs the client against a stand-in gateway; the gateway's own tests need no browser.
 
+### New Relic
+
+MetaOS is watched with New Relic, account 8666724 in its EU region, on its free plan: 100 GB a month, after which it
+takes nothing until the next, and one full user ([`NewRelic.kt`](src/main/kotlin/si/ogrodje/metaos/NewRelic.kt),
+[`newrelic/newrelic.yml`](newrelic/newrelic.yml)).
+
+- Its Java agent runs with MetaOS and patreon-gateway (`-javaagent` in their images, from `build/newrelic`, which
+  `./gradlew bootJar` and `-p patreon-gateway bootJar` fill): requests, the database, calls out, errors, the JVM, and
+  the app's logs, each with its request. It doesn't start without `NEW_RELIC_LICENSE_KEY` (`metaos-secret`, from
+  `PROD_NEW_RELIC_LICENSE_KEY`, `k8s/set_secrets.sh`), so the tests never have it. They report as `MetaOS` and
+  `patreon-gateway`, `environment:production` (`NEW_RELIC_LABELS`). The agent is 41 MB, a layer of its own, pushed
+  again only when its version changes; 8.25 is the first for Java 25.
+- GraphQL and MCP answer 200 with their errors in the body, so the agent wouldn't count those:
+  `GraphQLErrorReports` (the first exception resolver) and an advisor on `@McpTool` methods report them with
+  `NewRelic.noticeError`, but not the caller's mistakes (`callersMistake`: `IllegalArgumentException`, which
+  `require` throws, and being denied). Without the agent, its API does nothing.
+- The front-end's browser agent ([`fe/src/newrelic.ts`](fe/src/newrelic.ts), `plugins/newrelic.client.ts`) reports
+  the pages' errors, Vue's too (which Vue only logs), their load times and their requests to MetaOS, as the start of
+  their traces there. It keeps nothing in the browser (`cookies_enabled: false`), so there's nothing to ask visitors,
+  and it's off without `NUXT_PUBLIC_NEW_RELIC_*`: the browser app "MetaOS web" (`deployment-web.yaml`), whose
+  settings every page sends anyway.
+- In development: `./gradlew newRelic`, `-javaagent:build/newrelic/newrelic.jar` in IntelliJ's run configuration (VM
+  options), and in `.envrc` the license key, `NEW_RELIC_APP_NAME="MetaOS (dev)"`,
+  `NEW_RELIC_LABELS=environment:development`, `NEW_RELIC_APPLICATION_LOGGING_FORWARDING_ENABLED=false` and the browser
+  app "MetaOS web (dev)" (`NUXT_PUBLIC_NEW_RELIC_APPLICATION_ID` and `_AGENT_ID` 538920244, the rest as production's).
+- Ping monitors, which the free plan doesn't count, check every 5 minutes from Frankfurt, London and Milan that the
+  pages (`/healthz`), MetaOS (`/readyz`) and Keycloak (its realm's OpenID configuration) answer. The alert policy
+  "MetaOS" has conditions on them, on the back end's errors and on the browser's.
+
 ### Deployment
 
 Production runs on the ogrodje-one Kubernetes cluster, namespace `metaos-prod`: the app at `https://metaos.ogrodje.si`
