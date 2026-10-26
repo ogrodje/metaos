@@ -82,18 +82,18 @@ class RecoveryTest @Autowired constructor(
         val episode = episodesMCP.create(code = "rc-2", title = "Recovery Links")
         val host = peopleMCP.create(name = "Recovery Host", email = null)
         episodesMCP.assignPerson("rc-2", host.id!!, Role.HOST)
-        episodesMCP.removePerson("rc-2", host.id!!, null)
+        episodesMCP.removePerson("rc-2", host.id, null)
 
         val restored = recoveryMCP.restoreLink(removal(episode.id!!, "episode_people"))
         assertEquals("episode_people" to "HOST", restored.table to restored.link["role"])
         assertEquals(listOf("Recovery Host" to listOf(Role.HOST)), episodesMCP.listPeople("rc-2").map { it.name to it.roles })
-        assertFailsWith<IllegalArgumentException> { recoveryMCP.restoreLink(removal(episode.id!!, "episode_people")) }
+        assertFailsWith<IllegalArgumentException> { recoveryMCP.restoreLink(removal(episode.id, "episode_people")) }
 
         // A folder, as unlink_episode_koofr_folder removes one
         val folder = episodeFolders.save(EpisodeKoofrFolder(checkNotNull(episodesRepository.findByCode("rc-2")), "place-rc", "/Recovered"))
         episodeFolders.delete(folder)
-        recoveryMCP.restoreLink(removal(episode.id!!, "episode_koofr_folders"))
-        assertEquals(listOf("/Recovered"), episodeFolders.findByEpisodeIds(listOf(episode.id!!)).map { it.path })
+        recoveryMCP.restoreLink(removal(episode.id, "episode_koofr_folders"))
+        assertEquals(listOf("/Recovered"), episodeFolders.findByEpisodeIds(listOf(episode.id)).map { it.path })
     }
 
     @Test
@@ -101,13 +101,13 @@ class RecoveryTest @Autowired constructor(
         val session = sessionsMCP.create(date = LocalDate.of(2031, 3, 4), location = "Recovery Studio", address = null)
         val folder = sessionFolders.save(SessionKoofrFolder(checkNotNull(sessions.findByIdOrNull(session.id!!)), "place-rc", "/Session"))
         sessionFolders.delete(folder)
-        val removal = auditMCP.history(session.id!!).last { it.table == "session_koofr_folders" && it.operation == "DELETE" }.id
-        sessionsMCP.delete(session.id!!)
+        val removal = auditMCP.history(session.id).last { it.table == "session_koofr_folders" && it.operation == "DELETE" }.id
+        sessionsMCP.delete(session.id)
 
         assertFailsWith<IllegalArgumentException> { recoveryMCP.restoreLink(removal) }
-        sessionsMCP.restore(session.id!!)
+        sessionsMCP.restore(session.id)
         assertEquals("session_koofr_folders", recoveryMCP.restoreLink(removal).table)
-        assertEquals(listOf("/Session"), sessionFolders.findBySessionIds(listOf(session.id!!)).map { it.path })
+        assertEquals(listOf("/Session"), sessionFolders.findBySessionIds(listOf(session.id)).map { it.path })
     }
 
     @Test
@@ -117,21 +117,21 @@ class RecoveryTest @Autowired constructor(
         val gone = peopleMCP.create(name = "Gone Guest", email = null)
         episodesMCP.assignPerson("rc-3", guest.id!!, Role.GUEST)
         episodesMCP.assignPerson("rc-3", gone.id!!, Role.GUEST)
-        episodesMCP.removePerson("rc-3", guest.id!!, null)
+        episodesMCP.removePerson("rc-3", guest.id, null)
         val guestRemoval = removal(episode.id!!, "episode_people")
-        episodesMCP.removePerson("rc-3", gone.id!!, null)
-        val goneRemoval = removal(episode.id!!, "episode_people")
-        episodesMCP.assignPerson("rc-3", guest.id!!, Role.GUEST)
-        peopleMCP.delete(gone.id!!)
+        episodesMCP.removePerson("rc-3", gone.id, null)
+        val goneRemoval = removal(episode.id, "episode_people")
+        episodesMCP.assignPerson("rc-3", guest.id, Role.GUEST)
+        peopleMCP.delete(gone.id)
 
         assertEquals("It has been linked again since", assertFailsWith<IllegalArgumentException> { recoveryMCP.restoreLink(guestRemoval) }.message)
         assertFailsWith<IllegalArgumentException> { recoveryMCP.restoreLink(goneRemoval) }
-        peopleMCP.restore(gone.id!!)
+        peopleMCP.restore(gone.id)
         recoveryMCP.restoreLink(goneRemoval)
         assertEquals(setOf("Relinked Guest", "Gone Guest"), episodesMCP.listPeople("rc-3").map { it.name }.toSet())
 
         // Only removed links come back: not the episode, nor a change that's not there
-        assertFailsWith<IllegalArgumentException> { recoveryMCP.restoreLink(auditMCP.history(episode.id!!).first().id) }
+        assertFailsWith<IllegalArgumentException> { recoveryMCP.restoreLink(auditMCP.history(episode.id).first().id) }
         assertFailsWith<IllegalArgumentException> { recoveryMCP.restoreLink(Long.MAX_VALUE) }
     }
 }

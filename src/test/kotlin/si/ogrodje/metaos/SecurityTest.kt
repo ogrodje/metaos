@@ -160,7 +160,7 @@ class SecurityTest @Autowired constructor(private val mvc: MockMvc, private val 
         }
         val (actor, tool) = jdbc.queryForObject(
             "select actor, tool from audit_log where table_name = 'people' and new_row ->> 'name' = 'Stateless Stanko'",
-        ) { rs, _ -> rs.getString(1) to rs.getString(2) }!!
+        ) { rs, _ -> rs.getString(1) to rs.getString(2) }
         assertEquals("stanko" to "create_person", actor to tool)
     }
 

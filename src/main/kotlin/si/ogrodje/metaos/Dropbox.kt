@@ -159,6 +159,14 @@ private fun Metadata.toDropboxFile(place: String, path: String) = when (this) {
     else -> DropboxFile(place, path, name, false, null, null, null)
 }
 
+// The shared folder it's in: Metadata's own parentSharedFolderId is deprecated for its sharing info's
+private val Metadata.parentSharedFolder: String?
+    get() = when (this) {
+        is FileMetadata -> sharingInfo?.parentSharedFolderId
+        is FolderMetadata -> sharingInfo?.parentSharedFolderId
+        else -> null
+    }
+
 private fun LookupError.notFound() = isNotFound || isNotFolder || isNotFile
 
 // Links that open only for those with access to what they're to
@@ -240,7 +248,7 @@ class DropboxStorage(
     override fun fileById(place: String, id: String): DropboxFile? = call {
         try {
             val metadata = client.withPathRoot(PathRoot.namespaceId(place)).files().getMetadata(id)
-            metadata.pathDisplay?.takeIf { metadata.parentSharedFolderId == place }?.let { metadata.toDropboxFile(place, it) }
+            metadata.pathDisplay?.takeIf { metadata.parentSharedFolder == place }?.let { metadata.toDropboxFile(place, it) }
         } catch (e: GetMetadataErrorException) {
             if (e.errorValue.isPath && e.errorValue.pathValue.notFound()) null else throw e
         } catch (_: PathRootErrorException) {

@@ -304,7 +304,7 @@ class PatreonWeb(private val browser: Browser, private val api: PatreonApi, priv
                 included.addObject().put("type", "access-rule").put("id", rule).putObject("attributes")
             }
         }
-        (body as ObjectNode).putObject("meta").put("auto_save", !publish).put("send_notifications", publish && notify)
+        body.putObject("meta").put("auto_save", !publish).put("send_notifications", publish && notify)
         val saved = session.call("PATCH", "/api/posts/$id?fields%5Bpost%5D=$WEB_POST_FIELDS", body)
         if (publish) api.forgetPosts()
         return webPost(saved["data"])

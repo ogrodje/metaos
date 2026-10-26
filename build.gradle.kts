@@ -96,11 +96,17 @@ dependencies {
     implementation("com.dropbox.core:dropbox-core-sdk:8.0.2")
 }
 
+// Without Mockito, which no test uses and the test starters bring: Spring's MockitoResetTestExecutionListener would
+// load it before every test, and its inline mock maker attach byte-buddy's agent to the JVM, which Java warns will soon
+// be disallowed
+configurations.matching { it.name.startsWith("test") }.configureEach {
+    exclude(group = "org.mockito")
+}
+
 kotlin {
     jvmToolchain(25)
     compilerOptions {
         freeCompilerArgs.addAll("-Xjsr305=strict")
-        javaParameters = true
         javaParameters = true   // tool JSON schemas need real parameter names
     }
 }
@@ -116,6 +122,8 @@ tasks.withType<Test> {
     // JVMs at once, each with its own Spring contexts and their Postgres: two by default, -PtestForks=<n> for more
     // (CI, .github/workflows)
     maxParallelForks = providers.gradleProperty("testForks").map(String::toInt).getOrElse(2)
+    // Conscrypt (Cloud Storage's TLS) loads its native library, which Java warns will soon need this
+    jvmArgs("--enable-native-access=ALL-UNNAMED")
     testLogging {
         showStandardStreams = true
         events("passed", "skipped", "failed")
@@ -131,7 +139,7 @@ val fe = layout.projectDirectory.dir("fe")
 val yarn = providers.environmentVariable("PATH").getOrElse("").split(File.pathSeparator)
     .map { File(it, "yarn") }.firstOrNull { it.canExecute() }?.path ?: "yarn"
 
-val feInstall by tasks.registering(Exec::class) {
+val feInstall = tasks.register<Exec>("feInstall") {
     group = "build"
     description = "Installs fe/'s packages, as yarn.lock has them."
     workingDir(fe)
@@ -141,7 +149,7 @@ val feInstall by tasks.registering(Exec::class) {
     outputs.file(fe.file("node_modules/.yarn-state.yml"))
 }
 
-val feTest by tasks.registering(Exec::class) {
+tasks.register<Exec>("feTest") {
     group = "verification"
     description = "Runs fe/'s tests (src/**/__tests__) with vitest."
     dependsOn(feInstall)
@@ -149,7 +157,7 @@ val feTest by tasks.registering(Exec::class) {
     commandLine(yarn, "test")
 }
 
-val feBuild by tasks.registering(Exec::class) {
+tasks.register<Exec>("feBuild") {
     group = "build"
     description = "Type-checks fe/ and builds it into fe/.output, for its image."
     dependsOn(feInstall)
@@ -172,6 +180,6 @@ tasks.withType<AbstractArchiveTask>().configureEach {
 }
 
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
-    jvmArgs = listOf("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005")
+    jvmArgs = listOf("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005", "--enable-native-access=ALL-UNNAMED")
     systemProperties = System.getProperties().toMap() as Map<String, Any>
 }

@@ -41,6 +41,12 @@
 
     <logger name="si.ogrodje.metaos" level="INFO"/>
 
+    <!-- Spring AI makes every kind of MCP provider and each warns when it has nothing to provide, its only warning:
+    MetaOS has no prompts or completions, and its one resource is a template (episode://{code}) -->
+    <logger name="org.springframework.ai.mcp.annotation.provider.resource.SyncStatelessMcpResourceProvider" level="ERROR"/>
+    <logger name="org.springframework.ai.mcp.annotation.provider.prompt.SyncStatelessMcpPromptProvider" level="ERROR"/>
+    <logger name="org.springframework.ai.mcp.annotation.provider.complete.SyncStatelessMcpCompleteProvider" level="ERROR"/>
+
     <root level="${APP_LOG_LEVEL:-INFO}">
         <appender-ref ref="STDOUT"/>
         <!-- <appender-ref ref="Sentry"/> -->
