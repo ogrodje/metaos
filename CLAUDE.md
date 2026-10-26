@@ -577,8 +577,9 @@ decisions behind it and what is left to do.
   builds and rolls it out with the rest. Its Chromium is a container of its own in the pod, Microsoft's Playwright
   image, which the node pulls from Microsoft, so the browsers never go through our registry over the tailnet; its
   version has to be the gateway's Playwright's (`BrowserVersionTest`). Cloudflare turns away Patreon's pages from the
-  cluster's address, so the browser goes out through nuc8 at home, the tailnet's exit node, by the pod's `tailscale`
-  container (an ephemeral machine, `PROD_PATREON_TAILSCALE_AUTHKEY`); while nuc8 is down, jobs wait and try again.
+  cluster's address, so the browser goes out through low (oto.srv4all.net, a VM whose address it lets through), the
+  tailnet's exit node, by the pod's `tailscale` container (an ephemeral machine, `PROD_PATREON_TAILSCALE_AUTHKEY`);
+  while low is down, jobs wait and try again.
 
 [Ogrodje]: https://ogrodje.si
 [Nix]: https://nixos.org/

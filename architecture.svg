@@ -150,16 +150,16 @@
   <!-- The gateway reads through Patreon's API and uploads files to it straight from the cluster -->
   <path class="edge" d="M976 704 H1058" marker-end="url(#arrow)"/>
   <text class="m" x="1017" y="698" text-anchor="middle">API, uploads</text>
-  <!-- The browser's pages go out through nuc8 at home: Patreon's bot check turns away the cluster's address -->
+  <!-- The browser's pages go out through low, a VM: Patreon's bot check turns away the cluster's address, not low's -->
   <path class="edge" d="M976 854 H1058" marker-end="url(#arrow)"/>
   <text class="m" x="1017" y="848" text-anchor="middle">tailnet</text>
   <rect class="box" x="1060" y="816" width="160" height="76" rx="8"/>
-  <text class="t" x="1076" y="840">nuc8</text>
-  <text class="m" x="1076" y="858">at home, the tailnet's</text>
-  <text class="m" x="1076" y="874">exit node</text>
+  <text class="t" x="1076" y="840">low</text>
+  <text class="m" x="1076" y="858">oto.srv4all.net, the</text>
+  <text class="m" x="1076" y="874">tailnet's exit node</text>
   <path class="edge" d="M1092 816 V738" marker-end="url(#arrow)"/>
   <text class="m" x="1100" y="772">web app, from</text>
-  <text class="m" x="1100" y="788">a home address</text>
+  <text class="m" x="1100" y="788">low's address</text>
 
   <!-- Prometheus -->
   <rect class="box" x="410" y="924" width="180" height="76" rx="8"/>
