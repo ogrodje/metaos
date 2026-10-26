@@ -17,7 +17,7 @@ k8s/ci/deployer.yaml         what CI may do in the cluster
 docker/Dockerfile            the app: boot jar on distroless java25, non-root
 docker/web.Dockerfile        the front-end: Nuxt's build (fe/.output) on distroless Node 26, non-root
 docker/keycloak.Dockerfile   Keycloak, optimized build, realm "metaos" baked in
-docker/patreon-gateway.Dockerfile  patreon-gateway's boot jar on Playwright's image (Chromium) with Temurin's Java
+docker/patreon-gateway.Dockerfile  patreon-gateway's boot jar on Temurin's Java; its Chromium is Microsoft's image, beside it
 ```
 
 | Host                     | What                                                                       |

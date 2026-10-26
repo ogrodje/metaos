@@ -526,7 +526,9 @@ decisions behind it and what is left to do.
   connections; caches like `DropboxFolderIndex` are each pod's own. Flyway takes a lock, so both may start at once.
 - patreon-gateway is one pod (`deployment-patreon-gateway.yaml`), with its state on a volume, and no Ingress: MetaOS
   calls it at `http://patreon-gateway`, with the token from `patreon-gateway-secret` (`k8s/set_secrets.sh`). CI tests,
-  builds and rolls it out with the rest.
+  builds and rolls it out with the rest. Its Chromium is a container of its own in the pod, Microsoft's Playwright
+  image, which the node pulls from Microsoft, so the browsers never go through our registry over the tailnet; its
+  version has to be the gateway's Playwright's (`BrowserVersionTest`).
 
 [Ogrodje]: https://ogrodje.si
 [Nix]: https://nixos.org/

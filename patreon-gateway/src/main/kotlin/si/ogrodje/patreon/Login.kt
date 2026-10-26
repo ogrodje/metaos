@@ -28,7 +28,8 @@ fun main(args: Array<String>) {
         var warned: String? = null
         while (email == null && System.currentTimeMillis() < deadline) {
             page.waitForTimeout(3000.0)
-            val user = runCatching { whoIsSignedIn(context) }
+            // Quickly, without a page, until someone is signed in; then who it is, in a page of its own
+            val user = runCatching { currentUser(context.request())?.let { whoIsSignedIn(context) } }
                 .onFailure { System.err.println("Couldn't ask Patreon who's signed in: ${it.message}") }.getOrNull()
             val signedIn = user?.email
             // Anyone else's session isn't kept: sign out in that browser and in again as the bot

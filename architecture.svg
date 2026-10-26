@@ -129,7 +129,7 @@
   <text x="824" y="680">Ogrodje's Patreon</text>
   <text class="m" x="824" y="698">keeps the creator token,</text>
   <text class="m" x="824" y="714">refreshed; Iva's session</text>
-  <text class="m" x="824" y="730">jobs, one at a time · 1 pod</text>
+  <text class="m" x="824" y="730">Chromium: own container</text>
   <path class="edge" d="M898 594 V634" marker-end="url(#arrow)"/>
   <text class="m" x="890" y="620" text-anchor="end">posts, members, jobs</text>
   <!-- Reads through Patreon's API; writes in its web app, in headless Chromium, as Iva acting as the creator -->

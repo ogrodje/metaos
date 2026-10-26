@@ -6,6 +6,7 @@ import com.microsoft.playwright.BrowserContext
 import com.microsoft.playwright.BrowserType
 import com.microsoft.playwright.Page
 import com.microsoft.playwright.Playwright
+import com.microsoft.playwright.PlaywrightException
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.DisposableBean
 import org.springframework.scheduling.annotation.Scheduled
@@ -134,8 +135,9 @@ class Browser(private val properties: PatreonProperties, private val mapper: Jso
         try {
             // Checked and put in place on the browser's thread, so no use that starts in between saves the old one over it
             return onThread {
-                val email = browser().newContext(NewContextOptions().setStorageStatePath(candidate)).use { signedInAs(it) }
-                    ?: throw SignedOutException("That session isn't signed in to Patreon")
+                val email = browser().newContext(NewContextOptions().setStorageStatePath(candidate).setLocale("en-US"))
+                    .use { quiet(it); signedInAs(it) }
+                    ?: throw SignedOutException("That session isn't signed in to Patreon: Patreon says no one is, with its cookies")
                 runCatching { Files.setPosixFilePermissions(candidate, PosixFilePermissions.fromString("rw-------")) }
                 Files.move(candidate, sessionFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
                 email
@@ -152,13 +154,30 @@ class Browser(private val properties: PatreonProperties, private val mapper: Jso
         Files.move(temporary, sessionFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
     }
 
+    /**
+     * Chromium: Playwright's browser server's at [PatreonProperties.browserUrl] (in k8s a container of its own beside
+     * the gateway, from Microsoft's image, so the gateway's has no browser), or else one the gateway starts itself.
+     */
     private fun browser(): com.microsoft.playwright.Browser {
         browser?.takeIf { it.isConnected }?.let { return it }
         val playwright = playwright ?: Playwright.create().also { playwright = it }
-        return playwright.chromium().launch(
-            BrowserType.LaunchOptions().setHeadless(!properties.headed)
-                .setArgs(listOf("--disable-blink-features=AutomationControlled", "--disable-dev-shm-usage")),
-        ).also { browser = it }
+        val url = properties.browserUrl.trim()
+        if (url.isEmpty()) {
+            return playwright.chromium().launch(BrowserType.LaunchOptions().setHeadless(!properties.headed).setArgs(CHROMIUM_ARGS))
+                .also { browser = it }
+        }
+        // The server starts a Chromium for each connection, with the options the gateway would start its own with
+        val options = mapOf("headless" to true, "args" to CHROMIUM_ARGS)
+        return try {
+            playwright.chromium().connect(
+                url,
+                BrowserType.ConnectOptions().setTimeout(30_000.0)
+                    .setHeaders(mapOf("x-playwright-launch-options" to mapper.writeValueAsString(options))),
+            ).also { browser = it }
+        } catch (e: PlaywrightException) {
+            // Its container may be (re)starting: the job tries again later, as when Patreon turns it away
+            throw PatreonBusyException("The browser at $url isn't there: ${e.message?.lineSequence()?.firstOrNull()}")
+        }
     }
 
     override fun destroy() {
@@ -171,6 +190,7 @@ class Browser(private val properties: PatreonProperties, private val mapper: Jso
 
     private companion object {
         val SAFE_NAME = Regex("[A-Za-z0-9-]+")
+        val CHROMIUM_ARGS = listOf("--disable-blink-features=AutomationControlled", "--disable-dev-shm-usage")
     }
 }
 
@@ -190,34 +210,62 @@ private val ACTOR = Regex("\"actor\"\\s*:\\s*(\\{[^{}]*\\})")
  * page's own data, which Patreon has only while someone acts as another; else `/api/current_user` says.
  */
 fun whoIsSignedIn(context: BrowserContext): CurrentUser? {
-    val user = currentUser(context.request()) ?: return null
+    // From a page of Patreon's, as Chromium, as the jobs do: Cloudflare turns away Patreon's API asked from elsewhere,
+    // e.g. by Playwright's own requests from a server's address
     val page = context.newPage()
     try {
-        page.navigate("https://www.patreon.com/home")
-        val actor = ACTOR.find(page.content())?.groupValues?.get(1)?.let { JsonMapper.builder().build().readTree(it) }
-            ?: return user
-        return CurrentUser(
-            id = actor["id"]?.asString() ?: return user,
-            email = actor["email"]?.takeUnless { it.isNull }?.asString(),
-            name = actor["full_name"]?.takeUnless { it.isNull }?.asString(),
-        )
+        val response = page.navigate("https://www.patreon.com/home")
+        val status = response?.status() ?: 0
+        if (status == 403 || status == 429 || page.title().contains("Just a moment")) {
+            throw PatreonBusyException("Patreon's bot check turned the browser away ($status): try again in a few minutes")
+        }
+        val mapper = JsonMapper.builder().build()
+        ACTOR.find(page.content())?.groupValues?.get(1)?.let { mapper.readTree(it) }?.let { actor ->
+            actor["id"]?.asString()?.let { id ->
+                return CurrentUser(
+                    id = id,
+                    email = actor["email"]?.takeUnless { it.isNull }?.asString(),
+                    name = actor["full_name"]?.takeUnless { it.isNull }?.asString(),
+                )
+            }
+        }
+        @Suppress("UNCHECKED_CAST")
+        val answer = page.evaluate(CURRENT_USER) as List<Any?>
+        val code = (answer[0] as Number).toInt()
+        if (code == 403 || code == 429) {
+            throw PatreonBusyException("Patreon's bot check turned the browser away ($code): try again in a few minutes")
+        }
+        return if (code == 200) user(mapper.readTree(answer[1] as String)) else null
     } finally {
         page.close()
     }
 }
 
-/**
- * Whom Patreon's web app answers as: the user in `data` of its own `/api/current_user`, not anyone in `included`; the
- * creator, while a team member acts as them.
- */
-fun currentUser(request: APIRequestContext): CurrentUser? {
-    val response = request.get("https://www.patreon.com/api/current_user?fields%5Buser%5D=email,full_name")
-    if (response.status() != 200) return null
-    val data = JsonMapper.builder().build().readTree(response.text())["data"] ?: return null
+// Patreon's own /api/current_user, from the page, with its cookies; the header lets it through Browser.quiet
+private const val CURRENT_USER = """async () => {
+    const response = await fetch('/api/current_user?fields%5Buser%5D=email,full_name&json-api-version=1.0',
+        { credentials: 'include', headers: { '$OWN_CALL': '1' } });
+    return [response.status, await response.text()];
+}"""
+
+private fun user(body: tools.jackson.databind.JsonNode): CurrentUser? {
+    val data = body["data"] ?: return null
     val attributes = data["attributes"]
     return CurrentUser(
         id = data["id"]?.asString() ?: return null,
         email = attributes?.get("email")?.takeUnless { it.isNull }?.asString(),
         name = attributes?.get("full_name")?.takeUnless { it.isNull }?.asString(),
     )
+}
+
+/**
+ * Whom Patreon's web app answers as, asked by Playwright itself, without a page: the user in `data` of its own
+ * `/api/current_user`, not anyone in `included`; the creator, while a team member acts as them. Quick, and so for
+ * [Login] while it waits on a desktop; from a server's address Cloudflare may turn it away, so the gateway asks from a
+ * page ([whoIsSignedIn]).
+ */
+fun currentUser(request: APIRequestContext): CurrentUser? {
+    val response = request.get("https://www.patreon.com/api/current_user?fields%5Buser%5D=email,full_name")
+    if (response.status() != 200) return null
+    return user(JsonMapper.builder().build().readTree(response.text()))
 }

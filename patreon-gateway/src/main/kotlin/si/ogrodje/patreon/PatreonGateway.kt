@@ -36,6 +36,8 @@ data class PatreonProperties(
     val account: String = "",
     val stateDir: Path = Path.of("state"),
     val headed: Boolean = false,
+    // Playwright's browser server to use (ws://...), e.g. its container beside the gateway; blank: start Chromium itself
+    val browserUrl: String = "",
     // Where files are downloaded on their way to Patreon; the state directory's downloads when blank
     val downloadsDir: String = "",
     // How long what failed jobs' pages showed is kept (Browser.forgetFailures)
