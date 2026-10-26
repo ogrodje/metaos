@@ -234,7 +234,7 @@ class EpisodesTest @Autowired constructor(
         val other = peopleMCP.create(name = "Credited Since", email = null)
         episodesMCP.setRecommendedBy("ep-2202", other.id)
 
-        peopleMCP.restore(person.id!!)
+        peopleMCP.restore(person.id)
         assertEquals(person.id, assertNotNull(episodesMCP.get("ep-2201")).recommendedById)
         assertEquals(other.id, assertNotNull(episodesMCP.get("ep-2202")).recommendedById)
     }
@@ -247,19 +247,19 @@ class EpisodesTest @Autowired constructor(
         val another = peopleMCP.create(name = "Another Candidate", email = null)
         episodesMCP.assignPerson("ep-2001", maybe.id!!, Role.CANDIDATE)
         episodesMCP.assignPerson("ep-2001", another.id!!, Role.CANDIDATE)
-        episodesMCP.assignPerson("ep-2001", another.id!!, Role.GUEST)
+        episodesMCP.assignPerson("ep-2001", another.id, Role.GUEST)
         episodesMCP.assignPerson("ep-2001", host.id!!, Role.HOST)
 
-        assertEquals(listOf(Role.GUEST), episodesMCP.confirmGuest("ep-2001", maybe.id!!).roles)
+        assertEquals(listOf(Role.GUEST), episodesMCP.confirmGuest("ep-2001", maybe.id).roles)
         assertEquals(
             Triple("Changed Maybe Guest's role", "candidate", "guest"),
             history.of(episode.id!!).last().let { Triple(it.summary, it.fields.single().from, it.fields.single().to) },
         )
         // Already a guest, they're just no longer a candidate
-        assertEquals(listOf(Role.GUEST), episodesMCP.confirmGuest("ep-2001", another.id!!).roles)
-        assertFailsWith<IllegalArgumentException> { episodesMCP.confirmGuest("ep-2001", maybe.id!!) }
+        assertEquals(listOf(Role.GUEST), episodesMCP.confirmGuest("ep-2001", another.id).roles)
+        assertFailsWith<IllegalArgumentException> { episodesMCP.confirmGuest("ep-2001", maybe.id) }
 
-        episodesMCP.assignPerson("ep-2001", host.id!!, Role.CANDIDATE)
+        episodesMCP.assignPerson("ep-2001", host.id, Role.CANDIDATE)
         assertEquals(
             listOf("Pitch Host" to listOf(Role.HOST, Role.CANDIDATE), "Another Candidate" to listOf(Role.GUEST), "Maybe Guest" to listOf(Role.GUEST)),
             episodesMCP.listPeople("ep-2001").map { it.name to it.roles },

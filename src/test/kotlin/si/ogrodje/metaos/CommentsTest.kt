@@ -90,7 +90,7 @@ class CommentsTest @Autowired constructor(
         assertEquals("First", edited.body)
         assertNotNull(edited.editedAt)
         // The same text again changes nothing, so it isn't edited again
-        assertTrue(edited.editedAt!!.isEqual(commentsMCP.editComment(id, "First  ").editedAt))
+        assertTrue(edited.editedAt.isEqual(commentsMCP.editComment(id, "First  ").editedAt))
 
         commentsMCP.deleteComment(id)
         assertEquals(emptyList(), commentsMCP.listEpisodeComments("cm-103"))

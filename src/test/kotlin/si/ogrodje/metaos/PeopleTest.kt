@@ -224,7 +224,7 @@ class PeopleTest @Autowired constructor(
         signInAs(ACCOUNT_LINKER)
         peopleMCP.delete(person.id!!)
         signInAs("not-mine@ogrodje.si")
-        assertFailsWith<AccessDeniedException> { peopleMCP.restore(person.id!!, "not-mine@ogrodje.si") }
+        assertFailsWith<AccessDeniedException> { peopleMCP.restore(person.id, "not-mine@ogrodje.si") }
     }
 
     @Test
@@ -277,6 +277,6 @@ class PeopleTest @Autowired constructor(
 
         assertFailsWith<IllegalArgumentException> { peopleMCP.restore(first.id, newEmail = "RECLAIMED@ogrodje.si") }
         assertEquals("first@ogrodje.si", peopleMCP.restore(first.id, newEmail = " first@ogrodje.si ").email)
-        assertNull(peopleMCP.restore(second.id!!, newEmail = "").email)
+        assertNull(peopleMCP.restore(second.id, newEmail = "").email)
     }
 }
