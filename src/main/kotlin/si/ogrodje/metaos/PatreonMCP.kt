@@ -78,6 +78,17 @@ class PatreonMCP(
     ): List<PatreonPost> = patreon.posts(query?.trim()?.ifEmpty { null }, (limit ?: 20).coerceIn(1, 200))
 
     @McpTool(
+        name = "list_patreon_drafts",
+        annotations = McpTool.McpAnnotations(
+            title = "List Patreon drafts",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
+        description = "List the drafts on Ogrodje's Patreon, scheduled ones too, last edited first: what they are (text, " +
+            "audio or video post) and where to edit them. Only the team sees them until they're published"
+    )
+    fun drafts(): List<PatreonDraft> = patreon.drafts()
+
+    @McpTool(
         name = "get_patreon_post",
         annotations = McpTool.McpAnnotations(
             title = "Get Patreon post",

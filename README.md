@@ -17,9 +17,11 @@ passes on to the open pages, so they show it without being reloaded. Pictures ev
 thumbnails from Dropbox and people's avatars from Hygraph, MetaOS copies to its public bucket in Google Cloud Storage,
 from which browsers load them at media.ogrodje.si, cached by Cloudflare; the team uploads an episode's artwork from
 its page straight to MetaOS's private bucket, and MetaOS publishes it from there. Ogrodje's Patreon MetaOS reaches
-through patreon-gateway, a service of its own beside it, which reads through Patreon's API and makes, changes and
-publishes posts, with an episode's audio or video, in Patreon's web app, signed in as the bot. Everything runs on
-Ogrodje's Kubernetes cluster, behind Cloudflare.
+through patreon-gateway, a pod of its own beside it, which reads through Patreon's API and makes, changes and
+publishes posts, with an episode's audio or video, in Patreon's web app, signed in as the bot, in a headless Chromium
+in a container of its own. Patreon's bot check turns away the cluster's address, so that browser goes out through the
+pod's Tailscale container and nuc8, a machine at home; the API and the uploads go straight to Patreon. Everything runs
+on Ogrodje's Kubernetes cluster, behind Cloudflare.
 
 The diagram is drawn in [`architecture.svg`](architecture.svg); `just architecture` renders `architecture.png` from it.
 
