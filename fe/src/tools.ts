@@ -170,6 +170,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
       { name: 'list_patreon_tiers', description: 'The tiers, cheapest first, with their prices and patrons' },
       { name: 'list_patreon_members', description: 'The members, patrons first: their status, tiers, pledge, what they gave in all and their last charge' },
       { name: 'list_patreon_posts', description: 'The published posts, newest first, or those with words in their titles' },
+      { name: 'list_patreon_drafts', description: 'The drafts, scheduled ones too, last edited first, with where to edit them' },
       { name: 'get_patreon_post', description: 'A post, published or a draft, with its text and who may see it' },
       { name: 'create_patreon_draft', description: 'Make a draft post, for everyone, every patron or some tiers; only the team sees it' },
       { name: 'update_patreon_post', description: "Change a post's title, text or who may see it" },

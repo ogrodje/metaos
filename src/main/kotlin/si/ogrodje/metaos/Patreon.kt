@@ -55,7 +55,7 @@ enum class PatreonMemberStatus(val gateway: String) { ACTIVE_PATRON("active_patr
 
 data class PatreonMembers(val members: List<PatreonMember>, val total: Int)
 
-/** A post as Patreon's web app has it, drafts too. */
+/** A post as Patreon's web app has it, drafts too; [type] text_only, podcast (audio), video_external_file (video), ... */
 data class PatreonDraft(
     val id: String,
     val title: String?,
@@ -64,6 +64,8 @@ data class PatreonDraft(
     val publishedAt: OffsetDateTime?,
     val scheduledFor: OffsetDateTime?,
     val draft: Boolean,
+    val type: String? = null,
+    val editedAt: OffsetDateTime? = null,
 )
 
 /** Something the gateway does in Patreon's web app; [result] is what it made once it [status] SUCCEEDED. */
@@ -120,6 +122,9 @@ class Patreon(
     } catch (e: PatreonGatewayException) {
         if (e.message?.startsWith("404") == true) null else throw e
     }
+
+    /** The drafts, scheduled ones too, last edited first, through Patreon's web app: its API lists only what's published. */
+    fun drafts(): List<PatreonDraft> = read("/drafts")
 
     /** A post, drafts too, through Patreon's web app. */
     fun draft(id: String): PatreonDraft = read("/posts/${postId(id)}/web")

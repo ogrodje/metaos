@@ -36,7 +36,10 @@ data class PostSpec(
     val access: Access? = null,
 )
 
-/** A post as Patreon's web app has it, drafts too. */
+/**
+ * A post as Patreon's web app has it, drafts too. [type] is Patreon's: text_only, podcast (audio), video_external_file
+ * (video), ...
+ */
 data class WebPost(
     val id: String,
     val title: String?,
@@ -45,6 +48,8 @@ data class WebPost(
     val publishedAt: OffsetDateTime?,
     val scheduledFor: OffsetDateTime?,
     val draft: Boolean,
+    val type: String? = null,
+    val editedAt: OffsetDateTime? = null,
 )
 
 /**
@@ -95,6 +100,19 @@ class PatreonWeb(private val browser: Browser, private val api: PatreonApi, priv
     }
 
     fun get(job: String, id: String): WebPost = session(job) { webPost(current(it, postId(id))) }
+
+    /**
+     * The campaign's drafts, those scheduled too, last edited first, as its Library lists them: Patreon's API has only
+     * the published ones.
+     */
+    fun drafts(job: String): List<WebPost> = session(job) { session ->
+        session.call(
+            "GET",
+            "/api/posts?filter%5Bcampaign_id%5D=${api.campaignId()}&filter%5Bis_draft%5D=true" +
+                "&fields%5Bpost%5D=$WEB_POST_FIELDS&sort=-edited_at&page%5Bcount%5D=100",
+            null,
+        )["data"]?.toList().orEmpty().map(::webPost).filter { it.draft }
+    }
 
     /**
      * Puts a file on a draft as its audio or video, as the editor does: the post becomes a podcast post (and, as in the
@@ -272,6 +290,8 @@ class PatreonWeb(private val browser: Browser, private val api: PatreonApi, priv
             publishedAt = published,
             scheduledFor = attributes.text("scheduled_for")?.let(::patreonTime),
             draft = published == null,
+            type = attributes.text("post_type"),
+            editedAt = attributes.text("edited_at")?.let(::patreonTime),
         )
     }
 
@@ -374,7 +394,7 @@ class PatreonWeb(private val browser: Browser, private val api: PatreonApi, priv
         val CSRF = Regex("\"csrf_signature\"\\s*:\\s*\"([^\"]+)\"")
         val URL = Regex("https?://[^\\s<>\"]+[^\\s<>\".,;:!?)]")
         val PATREON_TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
-        const val WEB_POST_FIELDS = "title,url,published_at,scheduled_for,edit_url"
+        const val WEB_POST_FIELDS = "title,url,published_at,scheduled_for,edit_url,post_type,edited_at"
 
         // Patreon's web API, from the page, with its cookies and CSRF signature, as its editor calls it; given up after
         // two minutes, as nothing else times out a page's fetch, and one that hangs would hold the browser's one thread

@@ -71,6 +71,7 @@ Every call but the actuator's (probes, metrics) needs `Authorization: Bearer $PA
 | `GET /token`, `POST /token/refresh` | when the creator token runs out and was refreshed (never the tokens); refresh it now |
 | `GET /posts?query&limit`      | published posts, newest first, words in their titles                                      |
 | `GET /posts/{id}`             | a published post (Patreon's API)                                                           |
+| `GET /drafts`                 | drafts, scheduled ones too, last edited first (Patreon's web app; its API lists none) |
 | `GET /posts/{id}/web`         | a post, drafts too (Patreon's web app)                                                     |
 | `POST /posts`                 | a draft: `{title, text, access: {kind: PUBLIC, PATRONS or TIERS, tiers}}`                  |
 | `PATCH /posts/{id}`           | changes a post; what's left out stays                                                      |
