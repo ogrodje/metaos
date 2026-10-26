@@ -38,11 +38,12 @@ jobs:
         with:
           java: true
           ffmpeg: true
+          testcontainers: true
       - uses: gradle/actions/setup-gradle@v5
       # With Gradle's build cache, which setup-gradle keeps between runs, what didn't change since isn't tested again,
-      # e.g. after a change to fe/ only
+      # e.g. after a change to fe/ only. Three test JVMs on the runner's four CPUs
       - name: Test the app
-        run: ./gradlew --build-cache test
+        run: ./gradlew --build-cache test -PtestForks=3
 
   image:
     name: ${{ matrix.image }}

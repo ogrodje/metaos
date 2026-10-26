@@ -24,6 +24,7 @@ jobs:
           java: true
           node: true
           ffmpeg: true
+          testcontainers: true
       - uses: gradle/actions/setup-gradle@v5
 
       # The front-end's tests, type-check and build beside the app's tests, which take the longest; Testcontainers runs
@@ -32,7 +33,7 @@ jobs:
         run: |
           (cd fe && yarn test && yarn build) > "$RUNNER_TEMP/fe.log" 2>&1 &
           fe=$!
-          ./gradlew --build-cache test
+          ./gradlew --build-cache test -PtestForks=3
           fe_ok=0
           wait "$fe" || fe_ok=$?
           echo "::group::The front-end's tests and build"

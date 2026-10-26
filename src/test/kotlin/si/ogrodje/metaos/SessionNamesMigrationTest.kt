@@ -5,6 +5,7 @@ import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.context.annotation.Import
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.core.queryForObject
@@ -16,6 +17,7 @@ import kotlin.test.assertEquals
 
 // V29 on a database of its own, as it was before: sessions are named after their location, without that being a change
 @SpringBootTest
+@AutoConfigureMockMvc // the context the GraphQL tests have, so one fewer to start (TestcontainersConfig)
 @Import(TestcontainersConfig::class)
 class SessionNamesMigrationTest @Autowired constructor(
     private val dataSource: DataSource,

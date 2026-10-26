@@ -13,10 +13,23 @@ inputs:
   ffmpeg:
     description: ffmpeg and ffprobe, for MediaProbeTest
     default: "false"
+  testcontainers:
+    description: The app's tests' Postgres, pulled while Gradle starts and compiles
+    default: "false"
 
 runs:
   using: composite
   steps:
+    # In the background, so the image is there by the time the tests start, as TestcontainersConfig names it; and no
+    # Ryuk, which cleans up after a test JVM that died, as the runner is thrown away anyway
+    - if: inputs.testcontainers == 'true'
+      shell: bash
+      run: |
+        image=$(grep -o -E 'PostgreSQLContainer\("[^"]+"' src/test/kotlin/si/ogrodje/metaos/TestcontainersConfig.kt \
+          | cut -d'"' -f2 || true)
+        if [ -n "$image" ]; then nohup docker pull "$image" > /dev/null 2>&1 & fi
+        echo "TESTCONTAINERS_RYUK_DISABLED=true" >> "$GITHUB_ENV"
+
     - if: inputs.java == 'true'
       uses: actions/setup-java@v6
       with:

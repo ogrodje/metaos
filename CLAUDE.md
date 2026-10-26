@@ -590,7 +590,9 @@ decisions behind it and what is left to do.
   beside them), and the deploy waits for all five. They get devenv.nix's JDK, Node and Yarn, the same versions, from
   GitHub's setup actions rather than Nix ([`.github/actions/toolchain`](.github/actions/toolchain/action.yml), which
   has to follow devenv.nix), as entering devenv's shell took a minute a job, and production's ffprobe for
-  `MediaProbeTest`. A rollout starts both new pods of the app and of the front-end at once, while the old ones keep
+  `MediaProbeTest`. The app's tests run in three JVMs (`-PtestForks=3`), with their Postgres pulled while Gradle
+  starts; each Spring context starts its own Postgres and migrates it, so tests share one where they can
+  (`TestcontainersConfig`). A rollout starts both new pods of the app and of the front-end at once, while the old ones keep
   serving (`maxSurge: 100%`); one at a time took a minute or two more. The images are reproducible: their
   files have `SOURCE_DATE_EPOCH`'s time (`rewrite-timestamp`), not the build's, and the boot jars are too (no file
   timestamps, `AbstractArchiveTask`), so a layer that didn't change, e.g. the dependencies, is the blob the registry

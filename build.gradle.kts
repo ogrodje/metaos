@@ -113,9 +113,9 @@ allOpen {
 
 tasks.withType<Test> {
     useJUnitPlatform()
-    // Two JVMs at once, each with its own Spring contexts and their Postgres: a third less time, as CI's runners have
-    // four CPUs
-    maxParallelForks = 2
+    // JVMs at once, each with its own Spring contexts and their Postgres: two by default, -PtestForks=<n> for more
+    // (CI, .github/workflows)
+    maxParallelForks = providers.gradleProperty("testForks").map(String::toInt).getOrElse(2)
     testLogging {
         showStandardStreams = true
         events("passed", "skipped", "failed")
