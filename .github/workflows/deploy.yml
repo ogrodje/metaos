@@ -1,7 +1,8 @@
 name: Build and Deploy
 
-# Tests, builds the images and rolls them out to metaos-prod. Each image is a job of its own, so the four test, build
-# and push at once, and the deploy waits for them all. The private registry and the API server are reached over
+# Tests, builds the images and rolls them out to metaos-prod. The app's tests are a job of their own, beside the images
+# rather than before them, and each image is a job of its own, so the five run at once; the deploy waits for them all,
+# so an image whose tests failed is pushed but not deployed. The private registry and the API server are reached over
 # Tailscale as tag:ci. Started by hand on another branch, it builds and pushes that branch's images (not as latest) and
 # deploys nothing.
 #
@@ -27,6 +28,22 @@ env:
   IMAGES: registry.folk-decibel.ts.net/metaos
 
 jobs:
+  # The app's tests: Testcontainers runs its Postgres on the runner's Docker, and MediaProbeTest production's ffprobe
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/toolchain
+        with:
+          java: true
+          ffmpeg: true
+      - uses: gradle/actions/setup-gradle@v5
+      # With Gradle's build cache, which setup-gradle keeps between runs, what didn't change since isn't tested again,
+      # e.g. after a change to fe/ only
+      - name: Test the app
+        run: ./gradlew --build-cache test
+
   image:
     name: ${{ matrix.image }}
     runs-on: ubuntu-latest
@@ -36,18 +53,21 @@ jobs:
     strategy:
       matrix:
         include:
-          # Testcontainers runs its Postgres on the runner's Docker
+          # The boot jar only: its tests are the test job's
           - image: metaos
             dockerfile: docker/Dockerfile
-            gradle: test bootJar
-          # feTest and feBuild test, type-check and build fe/ with devenv's Node and Yarn, into fe/.output
+            java: true
+            build: ./gradlew --build-cache bootJar
+          # Tested, type-checked and built into fe/.output with Yarn itself (what feTest and feBuild run)
           - image: metaos-web
             dockerfile: docker/web.Dockerfile
-            gradle: feTest feBuild
-          # patreon-gateway is a build of its own (patreon-gateway/); its tests need no browser
+            node: true
+            build: cd fe && yarn test && yarn build
+          # patreon-gateway is a build of its own (patreon-gateway/); its tests need no browser, and take seconds
           - image: patreon-gateway
             dockerfile: docker/patreon-gateway.Dockerfile
-            gradle: -p patreon-gateway test bootJar
+            java: true
+            build: ./gradlew --build-cache -p patreon-gateway test bootJar
           # Nothing to build first. `kc.sh build` makes different files each time, so its layer comes from the cache
           # (GitHub's), which keeps the image the same until Keycloak or the realm changes, and Keycloak running
           - image: keycloak
@@ -59,26 +79,16 @@ jobs:
           # `git describe` needs the tags, which a shallow clone omits
           fetch-depth: 0
 
-      # The JDK, Node and Yarn come from devenv.nix, as in development
-      - if: matrix.gradle
-        uses: cachix/install-nix-action@v31
-      # devenv's binary cache, so devenv itself doesn't get built
-      - if: matrix.gradle
-        uses: cachix/cachix-action@v17
+      - if: matrix.build
+        uses: ./.github/actions/toolchain
         with:
-          name: devenv
-      - if: matrix.gradle
-        name: Install devenv
-        run: nix profile add nixpkgs#devenv
-
-      - if: matrix.gradle
+          java: ${{ matrix.java || false }}
+          node: ${{ matrix.node || false }}
+      - if: matrix.java
         uses: gradle/actions/setup-gradle@v5
-
-      # With Gradle's build cache, which setup-gradle keeps between runs, what didn't change since isn't compiled or
-      # tested again, e.g. the app's tests after a change to fe/ only
-      - if: matrix.gradle
-        name: Test and build
-        run: devenv shell -- ./gradlew --build-cache ${{ matrix.gradle }}
+      - if: matrix.build
+        name: Build
+        run: ${{ matrix.build }}
 
       - name: Connect to Tailscale
         uses: tailscale/github-action@v4
@@ -128,7 +138,7 @@ jobs:
           cache-to: ${{ matrix.cache && format('type=gha,scope={0},mode=max', matrix.image) || '' }}
 
   deploy:
-    needs: [ image ]
+    needs: [ test, image ]
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     timeout-minutes: 20

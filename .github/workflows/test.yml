@@ -1,7 +1,7 @@
 name: Test
 
-# The tests deploy.yml runs before it builds the images, on every pull request: master's ruleset requires them (the
-# check `test`), so a pull request with auto-merge on (`gh pr merge --auto --squash`) is merged once they pass.
+# The tests deploy.yml runs before it deploys, on every pull request: master's ruleset requires them (the check `test`),
+# so a pull request with auto-merge on (`gh pr merge --auto --squash`) is merged once they pass.
 
 on:
   pull_request:
@@ -15,24 +15,31 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
-      # The JDK, Node and Yarn come from devenv.nix, as in development
-      - uses: cachix/install-nix-action@v31
-      # devenv's binary cache, so devenv itself doesn't get built
-      - uses: cachix/cachix-action@v17
+      - uses: ./.github/actions/toolchain
         with:
-          name: devenv
-      - name: Install devenv
-        run: nix profile add nixpkgs#devenv
-
+          java: true
+          node: true
+          ffmpeg: true
       - uses: gradle/actions/setup-gradle@v5
 
-      # Testcontainers runs its Postgres on the runner's Docker; feTest and feBuild test, type-check and build fe/
-      - name: Test the app and the front-end
-        run: devenv shell -- ./gradlew test feTest feBuild
-
-      # patreon-gateway is a build of its own (patreon-gateway/); its tests need no browser
-      - name: Test patreon-gateway
-        run: devenv shell -- ./gradlew -p patreon-gateway test
+      # The front-end's tests, type-check and build beside the app's tests, which take the longest; Testcontainers runs
+      # their Postgres on the runner's Docker. Then patreon-gateway's, a build of its own, which need no browser
+      - name: Test the app, the front-end and patreon-gateway
+        run: |
+          (cd fe && yarn test && yarn build) > "$RUNNER_TEMP/fe.log" 2>&1 &
+          fe=$!
+          ./gradlew --build-cache test
+          fe_ok=0
+          wait "$fe" || fe_ok=$?
+          echo "::group::The front-end's tests and build"
+          cat "$RUNNER_TEMP/fe.log"
+          echo "::endgroup::"
+          if [ "$fe_ok" != 0 ]; then
+            echo "::error::The front-end's tests or build failed (above)"
+            exit 1
+          fi
+          ./gradlew --build-cache -p patreon-gateway test

@@ -32,7 +32,7 @@ serves traffic; those two are public, but only answer UP or DOWN.
 ## Day to day
 
 Pushing to `master` runs `.github/workflows/deploy.yml`: tests, builds and pushes the images, each in a job of its own,
-at once, applies `k8s/base` and smoke-tests the public URLs. One run at a time: a push while one runs waits for it, and
+at once (the app's tests a job of their own too), applies `k8s/base` and smoke-tests the public URLs. One run at a time: a push while one runs waits for it, and
 only the newest of those waiting runs. Started by hand on another branch (Actions → Build and Deploy → Run workflow), it
 builds and pushes that branch's images, tagged but not as `latest`, and deploys nothing.
 

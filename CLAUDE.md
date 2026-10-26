@@ -43,7 +43,7 @@ yarn            # install, and nuxt prepare (its types, in .nuxt)
 yarn dev        # Nuxt's dev server, rendering on the server too, with hot reload, http://localhost:5173
 yarn build      # type-check (nuxt typecheck) and build into fe/.output
 yarn preview    # run the build, http://localhost:3000
-yarn test       # the tests in src/**/__tests__, with vitest (./gradlew feTest, which CI runs)
+yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feTest), which CI runs
 ```
 
 - The devenv shell runs `yarn install` in `fe/` when `yarn.lock` has changed, and `devenv up` runs `yarn dev`.
@@ -52,7 +52,7 @@ yarn test       # the tests in src/**/__tests__, with vitest (./gradlew feTest, 
   cluster the Ingress sends them to MetaOS before they get there.
 - The front-end is a service of its own, `metaos-web` ([`docker/web.Dockerfile`](docker/web.Dockerfile),
   [`k8s/base/deployment-web.yaml`](k8s/base/deployment-web.yaml)): `./gradlew feBuild` (with `feInstall`, the
-  devenv's Node and Yarn) builds it into `fe/.output`, which Node runs. MetaOS itself serves no pages, only its API.
+  devenv's Node and Yarn; CI runs `yarn build` itself) builds it into `fe/.output`, which Node runs. MetaOS itself serves no pages, only its API.
 - Its runtime config (`nuxt.config.ts`) says where users sign in (`NUXT_PUBLIC_ISSUER`, the Keycloak issuer) and as
   which client, where MCP clients connect (`NUXT_PUBLIC_MCP_URL`), the site's public address (`NUXT_PUBLIC_SITE_URL`)
   and where its server finds MetaOS (`NUXT_METAOS_URL`), so one build works in every environment.
@@ -586,7 +586,12 @@ decisions behind it and what is left to do.
   tailnet's exit node, by the pod's `tailscale` container (an ephemeral machine, `PROD_PATREON_TAILSCALE_AUTHKEY`);
   while low is down, jobs wait and try again.
 - CI builds each image (`metaos`, `metaos-web`, `patreon-gateway`, `keycloak`) in a job of its own, at once, each
-  testing and building what goes in it first, and the deploy waits for all four. The images are reproducible: their
+  building what goes in it first (and testing it, but for the app's, whose tests, the longest, are a job of their own
+  beside them), and the deploy waits for all five. They get devenv.nix's JDK, Node and Yarn, the same versions, from
+  GitHub's setup actions rather than Nix ([`.github/actions/toolchain`](.github/actions/toolchain/action.yml), which
+  has to follow devenv.nix), as entering devenv's shell took a minute a job, and production's ffprobe for
+  `MediaProbeTest`. A rollout starts both new pods of the app and of the front-end at once, while the old ones keep
+  serving (`maxSurge: 100%`); one at a time took a minute or two more. The images are reproducible: their
   files have `SOURCE_DATE_EPOCH`'s time (`rewrite-timestamp`), not the build's, and the boot jars are too (no file
   timestamps, `AbstractArchiveTask`), so a layer that didn't change, e.g. the dependencies, is the blob the registry
   has, which isn't pushed again over the tailnet (a slow link, ~0.5 MB/s). An image that didn't change is the same
