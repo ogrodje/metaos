@@ -1,6 +1,6 @@
-# Sourced by the identity provider scripts (discord_idp.sh, google_idp.sh) and frontend_client.sh: an admin token for
-# realm metaos, `api` for its admin API, `approval_gate` for the post-login flow that keeps a provider's logins out until
-# they're approved, and `upsert_idp`.
+# Sourced by the identity provider scripts (discord_idp.sh, google_idp.sh), frontend_client.sh and sessions.sh: an admin
+# token for realm metaos, `api` for its admin API, `approval_gate` for the post-login flow that keeps a provider's logins
+# out until they're approved, `remember_logins` for its step that keeps them signed in, and `upsert_idp`.
 #
 # Anyone with a Discord or Google account can sign in, and every user of the realm may use every MCP tool - so each
 # provider's post-login flow denies its logins until an admin grants the user the realm role "metaos-user".
@@ -69,6 +69,27 @@ approval_gate() {
       '{alias: $a, config: {denyErrorMessage: "Your account is waiting for approval by a MetaOS admin."}}')"
     echo "Created flow $flow"
   fi
+
+  remember_logins "$flow"
+}
+
+# remember_logins FLOW - the post-login flow FLOW remembers its sign-ins, as Remember me on Keycloak's login form does,
+# unless it does already: its last step is MetaOS's provider (keycloak/remember-me), which Keycloak has to have
+remember_logins() {
+  local flow=$1 step=metaos-remember-me execution
+  if api GET "/authentication/flows/$flow/executions" | jq -e --arg s "$step" 'any(.[]; .providerId == $s)' >/dev/null; then
+    return
+  fi
+  if ! api GET /authentication/authenticator-providers | jq -e --arg s "$step" 'any(.[]; .id == $s)' >/dev/null; then
+    echo "Keycloak at $KC has no $step yet: deploy docker/keycloak.Dockerfile's image first" >&2
+    return 1
+  fi
+
+  # Created DISABLED, and last, after Allow access
+  api POST "/authentication/flows/$flow/executions/execution" "$(jq -n --arg s "$step" '{provider: $s}')"
+  execution=$(api GET "/authentication/flows/$flow/executions" | jq -c --arg s "$step" '.[] | select(.providerId == $s)')
+  api PUT "/authentication/flows/$flow/executions" "$(jq -c '.requirement = "REQUIRED"' <<<"$execution")"
+  echo "$flow remembers sign-ins"
 }
 
 # upsert_idp ALIAS JSON - creates or updates the identity provider ALIAS

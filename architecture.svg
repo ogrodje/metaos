@@ -80,8 +80,8 @@
   <text class="mono m" x="426" y="394">metaos-auth.ogrodje.si</text>
   <text x="426" y="416">realm metaos</text>
   <text class="m" x="426" y="436">sign-in: Discord, Google</text>
-  <text class="m" x="426" y="454">sessions: 7 days idle,</text>
-  <text class="m" x="426" y="470">30 days at most</text>
+  <text class="m" x="426" y="454">remembered 30 days idle,</text>
+  <text class="m" x="426" y="470">90 days at most</text>
 
   <!-- MetaOS -->
   <rect class="box main" x="664" y="144" width="324" height="450" rx="10"/>

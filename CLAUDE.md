@@ -214,6 +214,13 @@ docker compose up -d keycloak   # http://localhost:8180 (admin console: admin / 
   realms imported before, [`keycloak/sessions.sh`](keycloak/sessions.sh)), and refresh tokens as long. Access tokens
   last 5 minutes; keycloak-js keeps them in memory and refreshes them before each request (`fe/src/stores/auth.ts`),
   and only signs the page out when Keycloak refuses the refresh token, not when it can't be reached.
+- Sign-ins through Discord and Google are remembered, as with Remember me on Keycloak's login form, which they never
+  see: 30 days without use and 90 at most (`ssoSessionIdleTimeoutRememberMe`, `ssoSessionMaxLifespanRememberMe`).
+  Otherwise Keycloak's sign-in cookie, `KEYCLOAK_IDENTITY`, went when the browser quit, and with it the front-end's
+  only way back to the session, so users signed in again. MetaOS's own Keycloak provider does it
+  ([`keycloak/remember-me`](keycloak/remember-me), Java, which `docker/keycloak.Dockerfile` compiles against the
+  Keycloak it goes in; compose runs its `dev` stage), the last step of each identity provider's post-login flow
+  (`remember_logins` in `approval_gate.sh`; `sessions.sh` adds it to a realm from before, once the image has it).
 - `METAOS_MCP_URL` (default `http://localhost:8080/mcp`) and `METAOS_API_URL` (default
   `http://localhost:8080/graphql`) must be the public URLs of `/mcp` and `/graphql`; they are used by both Keycloak
   (token audience) and the app (audience check). `METAOS_UI_URL` (default `http://localhost:5173`) is where the
