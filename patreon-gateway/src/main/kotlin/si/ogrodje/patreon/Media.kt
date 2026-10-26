@@ -14,6 +14,7 @@ import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
+import java.time.OffsetDateTime
 import java.util.UUID
 
 /** What a post's media is: its audio (a podcast post) or its video. */
@@ -31,6 +32,20 @@ data class MediaRequest(val url: String, val kind: MediaKind, val fileName: Stri
 data class UploadedMedia(val id: String, val kind: MediaKind, val fileName: String, val sizeBytes: Long, val state: String)
 
 /**
+ * A post's audio or video to download, from [url], which Patreon signs until [expiresAt]: anyone who has it gets the
+ * file. A video's host gives it only to Patreon's pages, so it needs [referer] as the request's Referer.
+ */
+data class MediaDownload(
+    val kind: MediaKind,
+    val fileName: String,
+    val sizeBytes: Long?,
+    val durationSeconds: Long?,
+    val url: String,
+    val expiresAt: OffsetDateTime?,
+    val referer: String?,
+)
+
+/**
  * Moving files to Patreon as its editor does: Patreon is told about the file (`/api/media`, as the creator, in the
  * browser), and answers where to put it - S3 with a signed form for audio, Mux with a PUT for video - which the gateway
  * sends from here, not through the browser, as an episode is gigabytes. Then Patreon processes it until it's ready.
@@ -39,6 +54,9 @@ data class UploadedMedia(val id: String, val kind: MediaKind, val fileName: Stri
 class Media(private val properties: PatreonProperties) {
     private val log = LoggerFactory.getLogger(javaClass)
     private val http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(20)).build()
+
+    // Asks a file's host how big it is; only for the links Patreon gives
+    private val sizer = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).connectTimeout(Duration.ofSeconds(20)).build()
 
     // Downloads follow redirects themselves, each checked as the first address is ([fetch])
     private val downloader = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).connectTimeout(Duration.ofSeconds(20)).build()
@@ -111,6 +129,14 @@ class Media(private val properties: PatreonProperties) {
     }
 
     /** Sends [file], named [name], where Patreon's answer to creating the media ([created], its `data`) says. */
+    /** How big the file at [url] is, as its host answers for its first byte; null when it doesn't say. */
+    fun size(url: String, referer: String?): Long? = runCatching {
+        val request = HttpRequest.newBuilder(URI.create(url)).header("Range", "bytes=0-0").timeout(Duration.ofSeconds(30))
+            .apply { referer?.let { header("Referer", it) } }.GET().build()
+        sizer.send(request, HttpResponse.BodyHandlers.discarding()).headers().firstValue("Content-Range").orElse(null)
+            ?.substringAfterLast('/')?.toLongOrNull()
+    }.onFailure { log.warn("Couldn't ask how big a file is: {}", it.message) }.getOrNull()
+
     fun upload(created: JsonNode, file: Path, name: String, contentType: String) {
         val attributes = created["attributes"]
         val url = attributes["upload_url"]?.takeUnless { it.isNull }?.asString()

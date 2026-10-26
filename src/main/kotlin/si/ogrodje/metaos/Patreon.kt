@@ -68,6 +68,20 @@ data class PatreonDraft(
     val editedAt: OffsetDateTime? = null,
 )
 
+/**
+ * A Patreon post's audio (AUDIO, the MP3 as uploaded) or video (VIDEO, the best MP4 Patreon keeps of it) to download
+ * from [url], which Patreon signs until [expiresAt]; a video's needs [referer] as the request's Referer.
+ */
+data class PatreonMediaDownload(
+    val kind: String,
+    val fileName: String,
+    val sizeBytes: Long?,
+    val durationSeconds: Long?,
+    val url: String,
+    val expiresAt: OffsetDateTime?,
+    val referer: String?,
+)
+
 /** Something the gateway does in Patreon's web app; [result] is what it made once it [status] SUCCEEDED. */
 data class PatreonJob(
     val id: String,
@@ -125,6 +139,9 @@ class Patreon(
 
     /** The drafts, scheduled ones too, last edited first, through Patreon's web app: its API lists only what's published. */
     fun drafts(): List<PatreonDraft> = read("/drafts")
+
+    /** Where to download a post's audio or video, a draft's too, through Patreon's web app. */
+    fun downloads(id: String): List<PatreonMediaDownload> = read("/posts/${postId(id)}/media")
 
     /** A post, drafts too, through Patreon's web app. */
     fun draft(id: String): PatreonDraft = read("/posts/${postId(id)}/web")

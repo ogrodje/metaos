@@ -499,10 +499,13 @@ a time; one Patreon turns away (a rate limit) tries again by itself.
 - [`Patreon.kt`](src/main/kotlin/si/ogrodje/metaos/Patreon.kt) is MetaOS's client: `PATREON_GATEWAY_URL` and
   `PATREON_GATEWAY_TOKEN` turn it on (`metaos.patreon.*`); it's off without the token. `PatreonMCP` has the tools:
   tiers, members (`list_patreon_members`: status, tiers, pledges and charges, with names and emails), posts and drafts
-  (`list_patreon_drafts`, through Patreon's web app, as its API lists only what's published), new drafts (`create_patreon_draft`), their audio or video from Dropbox, as a temporary link the gateway
-  downloads, or any https URL (`set_patreon_post_media`), publishing, which can set the episode's Patreon link
-  (`publish_patreon_post`, the only one patrons see, so the only open-world one), deleting, and the jobs. Quick changes
-  are waited for; an upload comes back as a job (`get_patreon_job`).
+  (`list_patreon_drafts`, through Patreon's web app, as its API lists only what's published), new drafts
+  (`create_patreon_draft`), their audio or video from Dropbox, as a temporary link the gateway downloads, or any https
+  URL (`set_patreon_post_media`), download links for a post's audio or video (`get_patreon_post_media`: the MP3 as
+  uploaded, or the best MP4 Patreon's video host, Mux, keeps, which needs Patreon as its referrer; signed for a day or
+  more), publishing, which can set the episode's Patreon link (`publish_patreon_post`, the only one patrons see, so the
+  only open-world one), deleting, and the jobs. Quick changes are waited for; an upload comes back as a job
+  (`get_patreon_job`).
 - The bot signs in once by hand (`patreon-gateway/login.sh`), and the gateway keeps the session and the refreshed
   creator tokens on its volume. A refresh ends the old tokens, so only one gateway may use a creator token. The `patreon` health check asks the gateway every hour, which says whether Patreon's
   API answers and the browser is still signed in, in `metaos_patreon_connected` and in the log.

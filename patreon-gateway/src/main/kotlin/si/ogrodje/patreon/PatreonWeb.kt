@@ -12,8 +12,11 @@ import java.time.Duration
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
+import java.time.Instant
 import java.time.format.DateTimeFormatter
+import java.util.Base64
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.math.roundToLong
 
 /**
  * Patreon turned the gateway away for now (rate limit, bot check), or its browser isn't there yet: a job to send again
@@ -112,6 +115,57 @@ class PatreonWeb(private val browser: Browser, private val api: PatreonApi, priv
                 "&fields%5Bpost%5D=$WEB_POST_FIELDS&sort=-edited_at&page%5Bcount%5D=100",
             null,
         )["data"]?.toList().orEmpty().map(::webPost).filter { it.draft }
+    }
+
+    /**
+     * Where to download a post's audio or video, a draft's too: the MP3 as it was uploaded, or the best MP4 Patreon's
+     * video host (Mux) keeps of the video, which isn't the file that was uploaded. A video's size is asked of its host,
+     * as Patreon doesn't say it.
+     */
+    fun downloads(job: String, id: String): List<MediaDownload> {
+        val post = session(job) {
+            it.call("GET", "/api/posts/${postId(id)}?fields%5Bpost%5D=title,post_file&include=media&fields%5Bmedia%5D=$MEDIA_FIELDS", null)
+        }
+        return downloads(post).map { if (it.sizeBytes == null) it.copy(sizeBytes = media.size(it.url, it.referer)) else it }
+    }
+
+    /** A post's audio and video to download, from Patreon's answer for it and its media; not their previews. */
+    internal fun downloads(post: JsonNode): List<MediaDownload> {
+        val attributes = post["data"]["attributes"]
+        val duration = attributes["post_file"]?.get("duration")?.takeIf { it.isNumber }?.asDouble()?.roundToLong()
+        return post["included"]?.toList().orEmpty().filter { it["type"].asString() == "media" }.mapNotNull { item ->
+            val media = item["attributes"]
+            val url = media.text("download_url") ?: return@mapNotNull null
+            val kind = when {
+                media.text("owner_relationship") == "audio" -> MediaKind.AUDIO
+                // The editor's videos are its "main", the gateway's its "video"
+                media.text("owner_relationship") in setOf("main", "video") && media.text("media_type") == "video" -> MediaKind.VIDEO
+                else -> return@mapNotNull null
+            }
+            val name = media.text("file_name")?.substringAfterLast('/')
+                ?: attributes.text("title")?.replace(Regex("[/\\\\:*?\"<>|]+"), "-")?.trim()?.ifEmpty { null }
+                ?: "post-${post["data"]["id"].asString()}"
+            val referer = if (java.net.URI.create(url).host.orEmpty().endsWith("mux.com")) PATREON_REFERER else null
+            MediaDownload(
+                kind = kind,
+                // Mux's file is an MP4, whatever was uploaded
+                fileName = if (kind == MediaKind.VIDEO) name.substringBeforeLast('.').ifEmpty { name } + ".mp4" else name,
+                sizeBytes = media["size_bytes"]?.takeIf { it.isNumber }?.asLong(),
+                durationSeconds = duration,
+                url = url,
+                expiresAt = expiry(url),
+                referer = referer,
+            )
+        }
+    }
+
+    // When a signed link runs out: Patreon's own say so in token-time, Mux's in their token's exp
+    private fun expiry(url: String): OffsetDateTime? {
+        val query = java.net.URI.create(url).rawQuery.orEmpty().split('&').associate { it.substringBefore('=') to it.substringAfter('=', "") }
+        val seconds = query["token-time"]?.toLongOrNull() ?: query["token"]?.let { token ->
+            runCatching { mapper.readTree(Base64.getUrlDecoder().decode(token.split('.')[1]))["exp"].asLong() }.getOrNull()
+        }
+        return seconds?.let { Instant.ofEpochSecond(it).atOffset(ZoneOffset.UTC) }
     }
 
     /**
@@ -395,6 +449,10 @@ class PatreonWeb(private val browser: Browser, private val api: PatreonApi, priv
         val URL = Regex("https?://[^\\s<>\"]+[^\\s<>\".,;:!?)]")
         val PATREON_TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
         const val WEB_POST_FIELDS = "title,url,published_at,scheduled_for,edit_url,post_type,edited_at"
+        const val MEDIA_FIELDS = "file_name,size_bytes,media_type,owner_relationship,download_url,state"
+
+        // Patreon's video host gives its files only to Patreon's pages, which a download says it's from
+        const val PATREON_REFERER = "https://www.patreon.com/"
 
         // Patreon's web API, from the page, with its cookies and CSRF signature, as its editor calls it; given up after
         // two minutes, as nothing else times out a page's fetch, and one that hangs would hold the browser's one thread
