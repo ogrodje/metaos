@@ -41,14 +41,18 @@ push: jar web gateway
     set -euo pipefail
     TAG=$(git describe --tags --always --dirty)
     echo "Building and pushing $TAG"
-    docker buildx build --platform linux/amd64 -f docker/Dockerfile \
-      -t "{{app_image}}:latest" -t "{{app_image}}:$TAG" --push .
-    docker buildx build --platform linux/amd64 -f docker/web.Dockerfile \
-      -t "{{web_image}}:latest" -t "{{web_image}}:$TAG" --push .
-    docker buildx build --platform linux/amd64 -f docker/keycloak.Dockerfile \
-      -t "{{keycloak_image}}:latest" -t "{{keycloak_image}}:$TAG" --push .
-    docker buildx build --platform linux/amd64 -f docker/patreon-gateway.Dockerfile \
-      -t "{{gateway_image}}:latest" -t "{{gateway_image}}:$TAG" --push .
+    # As CI pushes them (.github/workflows/deploy.yml): on the bases as they are now, and with the files at
+    # SOURCE_DATE_EPOCH's time, so the layers that didn't change are those the registry has, which aren't pushed again
+    export SOURCE_DATE_EPOCH=0
+    push=(--platform linux/amd64 --pull --provenance=false --output "type=registry,rewrite-timestamp=true")
+    docker buildx build "${push[@]}" -f docker/Dockerfile \
+      -t "{{app_image}}:latest" -t "{{app_image}}:$TAG" .
+    docker buildx build "${push[@]}" -f docker/web.Dockerfile \
+      -t "{{web_image}}:latest" -t "{{web_image}}:$TAG" .
+    docker buildx build "${push[@]}" -f docker/keycloak.Dockerfile \
+      -t "{{keycloak_image}}:latest" -t "{{keycloak_image}}:$TAG" .
+    docker buildx build "${push[@]}" -f docker/patreon-gateway.Dockerfile \
+      -t "{{gateway_image}}:latest" -t "{{gateway_image}}:$TAG" .
     cd k8s/base && kustomize edit set image "{{app_image}}:$TAG" "{{web_image}}:$TAG" "{{keycloak_image}}:$TAG" "{{gateway_image}}:$TAG"
 
 # Apply the manifests and wait for the rollout.

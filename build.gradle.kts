@@ -113,6 +113,9 @@ allOpen {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    // Two JVMs at once, each with its own Spring contexts and their Postgres: a third less time, as CI's runners have
+    // four CPUs
+    maxParallelForks = 2
     testLogging {
         showStandardStreams = true
         events("passed", "skipped", "failed")
@@ -159,6 +162,13 @@ val feBuild by tasks.registering(Exec::class) {
 // Fixed name, so docker/Dockerfile doesn't depend on the version
 tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
     archiveFileName = "metaos.jar"
+}
+
+// The same jar from the same sources, so the image of an unchanged app is the same image, which a deploy leaves be
+// (.github/workflows/deploy.yml)
+tasks.withType<AbstractArchiveTask>().configureEach {
+    isPreserveFileTimestamps = false
+    isReproducibleFileOrder = true
 }
 
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
