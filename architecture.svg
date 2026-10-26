@@ -137,6 +137,7 @@
   <text class="m" x="1023" y="656" text-anchor="middle">API</text>
   <path class="edge" d="M988 712 H1058" marker-end="url(#arrow)"/>
   <text class="m" x="1023" y="706" text-anchor="middle">web app</text>
+  <text class="m" x="1023" y="728" text-anchor="middle">via nuc8</text>
 
   <!-- Prometheus -->
   <rect class="box" x="410" y="762" width="180" height="60" rx="8"/>

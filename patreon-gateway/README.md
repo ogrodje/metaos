@@ -131,6 +131,20 @@ from Microsoft's registry, so its gigabyte of browsers never goes through ours o
 talk at the same Playwright version: the image's tag and `playwright@` there have to be `build.gradle.kts`'s
 (`BrowserVersionTest`). Locally, without `PATREON_BROWSER_URL`, the gateway starts Chromium itself.
 
+Patreon's bot check (Cloudflare) turns away its pages asked from the cluster's datacenter address (403), though not
+from a home connection. So the browser goes out through nuc8, at home, a machine of the tailnet that offers itself as an
+exit node: the pod's third container, `tailscale`, joins the tailnet as an ephemeral machine (userspace networking, so
+no capabilities), with nuc8 as its exit node, and offers a SOCKS proxy on the pod's loopback, which Chromium uses
+(`PATREON_BROWSER_PROXY=socks5://127.0.0.1:1055`). Only the browser: Patreon's API and the uploads to S3 and Mux go
+out directly. It needs:
+
+- a Tailscale auth key, reusable, ephemeral and pre-approved, tagged `tag:patreon-gateway`, in `patreon-gateway-secret`
+  (`PROD_PATREON_TAILSCALE_AUTHKEY`, `k8s/set_secrets.sh`); the tailnet's policy has to own the tag (`tagOwners`) and
+  let it use exit nodes (`autogroup:internet`);
+- nuc8 up, signed in to the tailnet (with key expiry off, or it drops off after 180 days) and offering itself as an
+  exit node (`tailscale set --advertise-exit-node`, allowed in the admin console). While it isn't, the browser can't
+  reach Patreon: jobs wait and try again, and the health check says so.
+
 The first time, `k8s/set_secrets.sh` with `PATREON_CLIENT_ID`, `PATREON_CLIENT_SECRET`, `PATREON_ACCESS_TOKEN`,
 `PATREON_REFRESH_TOKEN` and `PROD_PATREON_GATEWAY_TOKEN` makes `patreon-gateway-secret` (MetaOS reads the gateway token
 from it too), then `login.sh`. The tokens there only seed the gateway: it keeps refreshed ones on its volume. They have

@@ -23,6 +23,9 @@
 #                                 they have to be the latest: a local gateway's state/tokens.json, if one ran),
 #                                 and the token MetaOS calls it with (`openssl rand -hex 24`); Patreon stays off without
 #                                 the last (patreon-gateway/README.md)
+#   PROD_PATREON_TAILSCALE_AUTHKEY
+#                                 the Tailscale auth key its browser's exit node (nuc8) is reached with: reusable,
+#                                 ephemeral, pre-approved, tagged tag:patreon-gateway
 # The DB passwords go into SQL literals, so keep them alphanumeric: `openssl rand -hex 24`.
 set -euo pipefail
 
@@ -77,6 +80,7 @@ if [[ -n "${PROD_PATREON_GATEWAY_TOKEN:-}" ]]; then
     --from-literal=patreon_access_token="${PATREON_ACCESS_TOKEN:?}" \
     --from-literal=patreon_refresh_token="${PATREON_REFRESH_TOKEN:?}" \
     --from-literal=gateway_token="$PROD_PATREON_GATEWAY_TOKEN" \
+    --from-literal=tailscale_auth_key="${PROD_PATREON_TAILSCALE_AUTHKEY:-}" \
     --dry-run=client -o yaml | kubectl apply -f -
 fi
 
