@@ -65,7 +65,7 @@ function overdue(section: Section, group: SessionGroup) {
 
 async function fetchReleased() {
   return (await graphql<{ releasedEpisodes: Episode[] }>(`{
-    releasedEpisodes(limit: 6) { ${EPISODE_FIELDS} ${LIST_PICTURE_FIELDS} }
+    releasedEpisodes(limit: 8) { ${EPISODE_FIELDS} ${LIST_PICTURE_FIELDS} }
   }`)).releasedEpisodes
 }
 
@@ -151,19 +151,10 @@ usePageMeta(() => ({
   <main class="content">
     <h1 class="visually-hidden">Home</h1>
 
-    <!-- For visitors who aren't signed in: how to get at the rest -->
-    <SignInPrompt v-if="auth.ready && !auth.authenticated" title="Sign in to use MetaOS">
-      Sign in with Discord or Google to see the episodes in production and the upcoming recordings. Or use MetaOS from
-      your AI assistant over MCP:
-      <RouterLink class="usage" to="/usage">API and MCP usage</RouterLink> shows how to connect it.
-    </SignInPrompt>
-
-    <!-- Signed in, what's being made, and of it first what needs attention; the releases and what the team did lately
-         at the side. Its place is kept while one who was signed in last time is checked. -->
+    <!-- Signed in, what's being made, and of it first what needs attention; at the side how many are at each stage, the
+         releases and what the team did lately. Its place is kept while one who was signed in last time is checked. -->
     <div v-if="auth.likelyMember" class="home">
       <div class="main">
-        <StageBar v-if="stages" :counts="stages"/>
-
         <LoadError v-if="makingError" what="The upcoming recordings and what's in production" :error="makingError"
                    @retry="loadLists()"/>
         <section v-else-if="!making" aria-labelledby="needs-attention">
@@ -198,10 +189,16 @@ usePageMeta(() => ({
       </div>
 
       <aside class="rail" aria-label="Lately">
+        <section v-if="!makingError" aria-labelledby="by-stage">
+          <div class="heading"><h2 id="by-stage">By stage</h2></div>
+          <StageBar v-if="stages" :counts="stages"/>
+          <LoadingRows v-else :rows="4" label="Loading how many episodes are at each stage"/>
+        </section>
+
         <section aria-labelledby="latest-releases">
           <div class="heading">
             <h2 id="latest-releases">Latest releases</h2>
-            <RouterLink class="more" to="/episodes">All</RouterLink>
+            <RouterLink class="more" to="/episodes">All episodes</RouterLink>
           </div>
           <LoadError v-if="releasedError" what="The latest releases" :error="releasedError" @retry="loadLists()"/>
           <LoadingRows v-else-if="!released" :rows="3" label="Loading the latest releases"/>
@@ -226,33 +223,30 @@ usePageMeta(() => ({
       </aside>
     </div>
 
-    <!-- Everyone else: the releases, as the server renders them -->
-    <section v-else aria-labelledby="latest-releases">
-      <div class="heading">
-        <h2 id="latest-releases">Latest releases</h2>
-        <RouterLink class="more" to="/episodes">All episodes</RouterLink>
-      </div>
-      <LoadError v-if="releasedError" what="The latest releases" :error="releasedError" @retry="loadLists()"/>
-      <LoadingRows v-else-if="!released" :rows="3" tall label="Loading the latest releases"/>
-      <ul v-else class="episode-cards">
-        <EpisodeCard v-for="episode in released" :key="episode.id" :episode="episode"/>
-      </ul>
-    </section>
+    <!-- Everyone else: the releases, as the server renders them, then for the team how to get at the rest -->
+    <template v-else>
+      <section aria-labelledby="latest-releases">
+        <div class="heading">
+          <h2 id="latest-releases">Latest releases</h2>
+          <RouterLink class="more" to="/episodes">All episodes</RouterLink>
+        </div>
+        <LoadError v-if="releasedError" what="The latest releases" :error="releasedError" @retry="loadLists()"/>
+        <LoadingRows v-else-if="!released" :rows="3" tall label="Loading the latest releases"/>
+        <ul v-else class="episode-cards">
+          <EpisodeCard v-for="episode in released" :key="episode.id" :episode="episode"/>
+        </ul>
+      </section>
+
+      <SignInPrompt v-if="auth.ready && !auth.authenticated" compact title="On Ogrodje's team?">
+        Sign in to see what's being recorded and produced, and what needs attention.
+      </SignInPrompt>
+    </template>
   </main>
 </template>
 
 <style scoped lang="scss">
 @use '../assets/page';
 @use '../assets/pictures';
-
-// API and MCP usage, which is in the footer, from the sign-in prompt's words
-.usage {
-  color: var(--accent-text);
-
-  &:hover {
-    text-decoration: underline;
-  }
-}
 
 // What's being made, and at the side the releases and what the team did lately
 .home {

@@ -100,6 +100,11 @@ router.afterEach((to, from, failure) => {
 function current(path: string) {
   return path === '/' ? route.path === '/' : route.path === path || route.path.startsWith(`${path}/`)
 }
+
+// The sign-in check didn't get an answer: loading the page again asks again
+function reload() {
+  location.reload()
+}
 </script>
 
 <template>
@@ -125,8 +130,17 @@ function current(path: string) {
   </header>
 
   <!-- Signed in, but not approved yet: why they see what everyone does -->
-  <div v-if="auth.ready && auth.authenticated && !auth.team" class="approval" role="status">
+  <div v-if="auth.ready && auth.authenticated && !auth.team" class="notice" role="status">
     <p>You're signed in, but an admin hasn't approved your account yet. Until they do, you see what everyone sees.</p>
+  </div>
+
+  <!-- On the team last time, while Keycloak is slow to say so: that it's being asked, then that it didn't answer -->
+  <div v-else-if="auth.checkingSlowly || auth.unconfirmed" class="notice" role="status">
+    <p v-if="auth.checkingSlowly">Checking your sign-in…</p>
+    <p v-else>
+      Couldn't confirm your sign-in, as the sign-in service didn't answer, so you see what everyone sees.
+      <button type="button" @click="reload">Try again</button>
+    </p>
   </div>
 
   <!-- Takes the height the header and footer leave, so the footer stays at the bottom of short pages -->
@@ -293,7 +307,7 @@ header {
 }
 
 // Under the header, in the page's column, as quiet as a note
-.approval {
+.notice {
   border-bottom: 1px solid var(--hairline);
   background: var(--hover);
 
@@ -304,6 +318,21 @@ header {
     font-size: 13px;
     line-height: 20px;
     color: var(--secondary);
+  }
+
+  button {
+    margin-left: 4px;
+    padding: 0;
+    font-weight: 500;
+    color: var(--accent-text);
+    background: none;
+    border: 0;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
   }
 
   @media (max-width: 640px) {

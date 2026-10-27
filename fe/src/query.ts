@@ -19,3 +19,16 @@ export function useQueryState<T extends string>(key: string, fallback: T, allowe
     },
   })
 }
+
+/**
+ * Turns a list page's filters off at once, e.g. its Clear filters: [keys] go from the address, the rest, e.g. its view,
+ * stays. One by one through useQueryState, each would replace the address the one before it hadn't changed yet.
+ */
+export function useClearQuery() {
+  const route = useRoute()
+  const router = useRouter()
+  return (keys: string[]) => {
+    const query = Object.fromEntries(Object.entries(route.query).filter(([key]) => !keys.includes(key)))
+    void router.replace({ query, hash: route.hash })
+  }
+}

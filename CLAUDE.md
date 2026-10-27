@@ -133,17 +133,20 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
 - A list loads behind rows like its own (`LoadingRows.vue`), so the page doesn't jump, and what didn't load says why
   with Try again (`LoadError.vue`); `graphql.ts` words errors so they say what to do, e.g. an account not approved
   yet. Dates are in English (`DATE_LOCALE`), whatever the browser's language.
-- Home is what's being made for the team, and the latest releases for everyone (as a grid of `EpisodeCard`s). Signed
-  in, two columns: how many episodes are at each stage (`StageBar.vue`), what needs attention
+- Home is what's being made for the team, and the latest releases for everyone (as a grid of `EpisodeCard`s, two rows
+  of four, with a line under them for the team to sign in). Signed in, two columns: first what needs attention
   ([`fe/src/attention.ts`](fe/src/attention.ts): recording dates that passed, recordings in the next two weeks with no
   confirmed guest or doc, and episodes recorded 60 days ago that aren't out), then the upcoming recordings and what's
-  in production, a card a session with how far away it is (`SessionCard.vue`); at the side the latest releases and
-  what the team did lately (`RecentActivity.vue`), from `recentChanges`: the audit trail's latest changes, as
-  `History.kt` tells them, each with what it's a change to, one person's close together as one entry
+  in production, a card a session with how far away it is (`SessionCard.vue`); at the side how many episodes are at
+  each stage (`StageBar.vue`, a line each, which leads to Ideas or to Episodes with only that stage, `?status=`), the
+  latest releases and what the team did lately (`RecentActivity.vue`), from `recentChanges`: the audit trail's latest
+  changes, as `History.kt` tells them, each with what it's a change to, one person's close together as one entry
   (`recentActivity` in `activity.ts`), e.g. Created 28 episodes.
 - The list pages (Episodes, Ideas, People) have a `PageHeader` and a `FilterBar` (a box that finds as you type, with
-  `fold`, and `ChipGroup`s), and keep their filters and view in the address (`useQueryState`, `fe/src/query.ts`), so
-  a link keeps them and the server renders them. What they filter and group by is in
+  `fold`, and `ChipGroup`s, or a `SelectFilter` where there'd be too many chips), and keep their filters and view in
+  the address (`useQueryState`, `fe/src/query.ts`), so a link keeps them and the server renders them. While filtered,
+  the header says how many are shown, e.g. 12 of 74, which screen readers hear; when nothing's left, `NoMatch.vue`
+  says what was looked for, with Clear filters (`useClearQuery`). What they filter and group by is in
   [`fe/src/lists.ts`](fe/src/lists.ts), with tests, and happens in the browser on what's loaded.
 - Pictures follow one set of rules ([`_pictures.scss`](fe/src/assets/_pictures.scss)): people round (`PersonAvatar`),
   things (episodes' pictures, artwork, photos) rounded, 6 px up to 56 px across and 8 px above, with a hairline edge
@@ -172,17 +175,22 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   there (`RenameSession.vue`), through the `updateSession` mutation (`SessionsGraphQL.kt`, with `metaos:write`, as
   `update_session` does over MCP; both through `Sessions` in `Sessions.kt`). `createSession` creates one, as
   `create_session` does; no page uses it yet.
-- The Episodes page lists what's in the works (the team's), then the released episodes by season, as a list
-  (`EpisodeRow`, with its cover, square, or else its thumbnail: `listPicture`) or a grid of `EpisodeCard`s (`?view=grid`), by show and season; seasons older
-  than the two latest show their first row until opened.
+- The Episodes page lists what's in the works (the team's) by stage, in the order episodes go through them (`byStage`
+  in `lists.ts`), with those on hold or cancelled folded at the end, then the released episodes by season, as a list
+  (`EpisodeRow`, with its cover, square, or else its thumbnail: `listPicture`) or a grid of `EpisodeCard`s
+  (`?view=grid`), by show and season; seasons older than the two latest show their first row until opened. `?status=`
+  shows one stage, as Home's stages do, as a chip that turns it off (`FilterChip.vue`).
 - Episode ideas (`IDEA`) have a page of their own, `/ideas`, from the `ideas` query, which needs `metaos:read`, as
   does its link in the header; the `episodes` query, and so the Episodes page, leaves them out. It's a table
   (`IdeaRow.vue`), grouped by how far along each is (`readiness`: in a session, with a guest, with candidates, no
-  one yet), by who recommended it, or not at all, and filtered by show and recommender.
+  one yet), by who recommended it, or not at all, and filtered by show and recommender (by their whole names, in a
+  select, as two may share a first name). It loads for an approved user only; one who isn't yet gets a note.
 - The People page, `/people`, lists everyone by name (Slovenian order, past a "dr."), from the `people` query: who
-  they are, their roles and latest episodes, and links to their website and social profiles (`PersonCard.vue`). The
-  team first, as cards with their pictures large and their bios (`kindOf` in `lists.ts`: anyone credited as host, co-host, producer, consultant or designer),
-  then the guests in three columns under their letters, with an A–Z index, then, folded, the candidates. Anyone not
+  they are, and links to their website and social profiles (`PersonCard.vue`). The team first, as cards with their
+  pictures large, their bios, and how many episodes they're on as what (`teamSummary`, e.g. 37 episodes as co-host,
+  host and consultant; `kindOf` in `lists.ts`: anyone credited as host, co-host, producer, consultant or designer),
+  then the guests in three columns under their letters, each with their latest episode's title and how many they're
+  on, with an A–Z index (on phones a row of letters that stays at the top), then, folded, the candidates. Anyone not
   signed in gets only those on the released episodes, with only those episodes; candidates are the team's.
 - People's names (on the People page and an episode's page, and who recommended an idea) lead to their pages,
   `/people/<ID>`, from the `person` query: a workspace like an episode's, with how many episodes they're on as what
@@ -203,7 +211,8 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   MetaOS's pages may be framed by MetaOS itself (`X-Frame-Options: SAMEORIGIN`, in `routeRules`). Whether the user was
   on the team last time is kept in `localStorage`, as a hint only, read once the page is hydrated: while Keycloak is
   asked, the header keeps the team's tabs and pages their places, and the check waits longer before taking them for a
-  guest.
+  guest. After 3 s a note under the header says it's checking (`checkingSlowly`), and when it gives up, that it
+  couldn't confirm the sign-in, with Try again (`unconfirmed`), so the guest's page doesn't look like a sign-out.
 
 ### Authentication (Keycloak)
 
@@ -323,6 +332,9 @@ Server-Sent Events at `/events`.
   and leaves it be when it fails. It loads once for a burst of changes, and after the stream connected again; a hidden
   page loads when it's shown again, if anything changed or it was hidden for a minute (Koofr, Dropbox and Drive don't
   tell MetaOS what changed).
+- Each tab's stream holds one of the browser's six connections to a host over HTTP/1.1, which `yarn dev` serves: with
+  six or so MetaOS tabs open in development, the next tab's requests, its sign-in check too, wait for one to close.
+  Production's HTTP/2 doesn't run out.
 - A new table with an audit trigger is in it by itself. A new page that shows MetaOS's data should use
   `useLiveRefresh`, and, when anyone may see it, load what it shows first with `useFirstLoad` (Front-end).
 

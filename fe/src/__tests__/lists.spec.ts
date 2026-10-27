@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Episode, EpisodePerson } from '@/episodes'
-import { episodeText, kindOf, letterOf, matches, readiness, roleCounts, seasonOf } from '@/lists'
+import { byStage, episodeText, kindOf, letterOf, matches, readiness, roleCounts, seasonOf, teamSummary } from '@/lists'
 
 function episode(fields: Partial<Episode> = {}): Episode {
   return {
@@ -28,6 +28,18 @@ describe('seasonOf', () => {
     expect(seasonOf({ code: 'S05E08' })).toBe(5)
     expect(seasonOf({ code: 'S99E02' })).toBe(99)
     expect(seasonOf({ code: null })).toBe(null)
+  })
+})
+
+describe('byStage', () => {
+  it('groups what is in the works in the order it goes, and what is put aside last', () => {
+    const list = [
+      episode({ id: 'a', status: 'CANCELLED' }), episode({ id: 'b', status: 'RECORDED' }), episode({ id: 'c', status: 'PLANNED' }),
+      episode({ id: 'd', status: 'RECORDED' }), episode({ id: 'e', status: 'PUBLISHED' }), episode({ id: 'f', status: 'ON_HOLD' }),
+    ]
+    expect(byStage(list).map(({ status, episodes }) => [status, episodes.map((e) => e.id)])).toEqual([
+      ['PLANNED', ['c']], ['RECORDED', ['b', 'd']], ['ON_HOLD', ['f']], ['CANCELLED', ['a']],
+    ])
   })
 })
 
@@ -59,5 +71,12 @@ describe('people', () => {
   it('lists people by the letter of their name, past a title', () => {
     expect(letterOf('dr. Borka Jerman Blažič')).toBe('B')
     expect(letterOf('Črt Kristl')).toBe('Č')
+  })
+
+  it('says what someone on the team does, without what they were as a guest, and on how many episodes', () => {
+    expect(teamSummary(on(['CO_HOST'], ['CO_HOST'], ['HOST'], ['CONSULTANT', 'HOST'], ['GUEST'], ['CANDIDATE'])))
+      .toBe('5 episodes as co-host, host and consultant')
+    expect(teamSummary(on(['PRODUCER']))).toBe('1 episode as producer')
+    expect(teamSummary(on(['HOST'], ['PRODUCER']))).toBe('2 episodes as host and producer')
   })
 })

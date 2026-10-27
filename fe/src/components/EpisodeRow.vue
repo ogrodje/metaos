@@ -18,6 +18,8 @@ const props = defineProps<{
   episode: Episode
   // Listed under its session's heading, which says when it's recorded unless the episode has a date of its own
   underSession?: boolean
+  // Listed under its stage's heading, which says its status
+  underStage?: boolean
   // Found by a search: the words to mark, and why it was found when the row doesn't show it
   match?: EpisodeMatch
   // With its picture, its cover or else its thumbnail, e.g. in the list of released episodes
@@ -61,7 +63,7 @@ const guestNames = computed(() => (released.value ? guests(props.episode).join('
     </div>
     <span class="meta">
       <span v-if="role" class="role">{{ role }}</span>
-      <StatusLabel v-else-if="!released" :status="episode.status"/>
+      <StatusLabel v-else-if="!released && !underStage" :status="episode.status"/>
       <span v-else class="none"/>
       <time v-if="date" class="date" :datetime="date">{{ formatDate(date) }}</time>
     </span>
@@ -88,6 +90,7 @@ const guestNames = computed(() => (released.value ? guests(props.episode).join('
   font-size: 14px;
   line-height: 22px;
   font-weight: 500;
+  text-wrap: pretty;
 
   .show {
     margin-left: 10px;

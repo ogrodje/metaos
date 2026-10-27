@@ -25,6 +25,8 @@ const TEAM_ROLE = 'metaos-user'
 // last time, who's most likely still signed in and would otherwise see a guest's page while Keycloak is slow
 const SIGN_IN_CHECK_TIMEOUT = 5000
 const MEMBER_CHECK_TIMEOUT = 20000
+// How long that may take before the page says it's checking
+const SLOW_CHECK = 3000
 
 // Whether the user was on the team on this browser last time: only a hint for what to show while it's checked, never
 // access, which takes a token. Storage can be unavailable, e.g. in a private window.
@@ -111,6 +113,10 @@ export const useAuthStore = defineStore('auth', () => {
   // On the team, or most likely so while it's checked: the header keeps the team's tabs, rather than dropping them and
   // bringing them back once Keycloak answers
   const likelyMember = computed(() => team.value || (!ready.value && remembered.value))
+  // For one who was: that the check is taking long, and then that it gave up, so the page they get, a guest's, doesn't
+  // look as if they'd been signed out
+  const checkingSlowly = ref(false)
+  const unconfirmed = ref(false)
 
   // What the token says, after signing in and each refresh, which may come with an approval given or taken back
   function update(client: Keycloak) {
@@ -130,11 +136,19 @@ export const useAuthStore = defineStore('auth', () => {
       if (!url || !realm) throw new Error(`Unexpected issuer ${config.issuer}`)
       issuer.value = config.issuer
 
-      const checked = start({ url, realm, clientId: config.clientId }, recallLinking())
+      let answered = false
+      const checked = start({ url, realm, clientId: config.clientId }, recallLinking()).finally(() => {
+        answered = true
+        unconfirmed.value = false
+      })
+      const slowly = remembered.value ? setTimeout(() => (checkingSlowly.value = true), SLOW_CHECK) : undefined
       // keycloak-js waits for the iframe for ever when Keycloak doesn't answer, e.g. when it's down. Until it does,
       // the user is a guest, who can still try to sign in; should it answer later, they're signed in then.
       const timeout = remembered.value ? MEMBER_CHECK_TIMEOUT : SIGN_IN_CHECK_TIMEOUT
       await Promise.race([checked, new Promise((resolve) => setTimeout(resolve, timeout))])
+      clearTimeout(slowly)
+      checkingSlowly.value = false
+      unconfirmed.value = remembered.value && !answered
     } catch (error) {
       console.error('Signing in is unavailable', error)
     } finally {
@@ -240,7 +254,8 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   return {
-    ready, authenticated, team, likelyMember, username, identityProvider, accountConsole, linked,
+    ready, authenticated, team, likelyMember, checkingSlowly, unconfirmed, username, identityProvider, accountConsole,
+    linked,
     init, login, logout, linkProvider, signInProviders, dismissLinked, token,
   }
 })
