@@ -132,6 +132,8 @@ tasks.withType<Test> {
     maxParallelForks = providers.gradleProperty("testForks").map(String::toInt).getOrElse(2)
     // Conscrypt (Cloud Storage's TLS) loads its native library, which Java warns will soon need this
     jvmArgs("--enable-native-access=ALL-UNNAMED")
+    // -PmcpTools=update (or breaking) has McpToolsTest write the MCP tools' snapshot and version: `just mcp-tools`
+    systemProperty("metaos.mcpTools", providers.gradleProperty("mcpTools").getOrElse(""))
     testLogging {
         showStandardStreams = true
         events("passed", "skipped", "failed")

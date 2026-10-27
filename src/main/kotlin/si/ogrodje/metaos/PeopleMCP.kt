@@ -2,6 +2,7 @@ package si.ogrodje.metaos
 
 import org.springframework.ai.mcp.annotation.McpTool
 import org.springframework.ai.mcp.annotation.McpToolParam
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.stereotype.Component
@@ -29,6 +30,8 @@ data class CurrentUserDto(
     val account: AccountDto?,
     // Whether they may link accounts to people (ACCOUNT_LINKER)
     val canLinkAccounts: Boolean,
+    // The MCP tools' version, for whoami: the assistant's copy of them may be older (McpVersion.kt)
+    val toolsVersion: String? = null,
 )
 
 fun Person.toDto() =
@@ -57,6 +60,7 @@ class PeopleMCP(
     private val episodePeople: EpisodePeopleRepository,
     private val episodes: EpisodesRepository,
     private val accounts: Accounts,
+    @Value("\${spring.ai.mcp.server.version}") private val toolsVersion: String,
 ) {
 
     @McpTool(
@@ -211,9 +215,10 @@ class PeopleMCP(
             readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
         ),
         description = "Show the signed-in user, their account and the person they are: their account's, or else the " +
-            "one with their verified email"
+            "one with their verified email; and the version of MetaOS's tools, which the assistant's may be older than"
     )
-    fun whoami(): CurrentUserDto = checkNotNull(currentJwt()) { "Not signed in" }.toCurrentUserDto(accounts)
+    fun whoami(): CurrentUserDto =
+        checkNotNull(currentJwt()) { "Not signed in" }.toCurrentUserDto(accounts).copy(toolsVersion = toolsVersion)
 
     @Transactional(readOnly = true)
     @McpTool(

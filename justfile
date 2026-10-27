@@ -79,6 +79,18 @@ web-logs *ARGS:
 gateway-logs *ARGS:
     kubectl logs -n {{ns}} deployment/patreon-gateway --follow --tail=100 {{ARGS}}
 
+# After a change to the MCP tools: their snapshot (src/test/resources/mcp-tools.json) and version, by what the change is
+# for assistants that still have the old ones (McpToolsTest, CLAUDE.md). --breaking for one that breaks them.
+mcp-tools *BREAKING:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mode=update
+    if [ "{{BREAKING}}" = --breaking ]; then mode=breaking; elif [ -n "{{BREAKING}}" ]; then
+      echo "Only --breaking, for a change that breaks assistants with the old tools" >&2
+      exit 1
+    fi
+    ./gradlew test --tests si.ogrodje.metaos.McpToolsTest -PmcpTools=$mode
+
 # architecture.png from architecture.svg, at twice the size so it stays sharp, by headless Chrome, which also loads the
 # diagram's font. CHROME points at another Chrome than macOS's.
 architecture:

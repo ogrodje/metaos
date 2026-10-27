@@ -11,7 +11,7 @@ import { errorMessage } from '@/graphql'
 import { searchWords } from '@/search'
 import { usePageMeta } from '@/seo'
 import { useAuthStore } from '@/stores/auth'
-import { TOOL_GROUPS } from '@/tools'
+import { TOOL_GROUPS, TOOLS_VERSION } from '@/tools'
 import { type Client, CLIENTS, clientFrom, curlCommand, filterTools, tabAfter, toolCount, withTimeout } from '@/usage'
 
 // API and MCP usage: the two ways into MetaOS, MCP for AI assistants and GraphQL for scripts and apps, and the tools
@@ -197,8 +197,8 @@ const matches = computed(() => {
                 <div>
                   <p class="step-title">Add MetaOS to Claude</p>
                   <p class="step-details">
-                    On claude.ai or in Claude's desktop app, in <strong>Settings → Connectors</strong>, choose <strong>Add
-                    custom connector</strong>. Name it <strong>Ogrodje</strong>, with <code>{{ mcpUrl }}</code> as its URL,
+                    On claude.ai or in Claude's desktop app, in <strong>Customize → Connectors</strong>, choose <strong>Add →
+                    Add custom connector</strong>. Name it <strong>Ogrodje</strong>, with <code>{{ mcpUrl }}</code> as its URL,
                     and leave the advanced settings empty. In a Team or Enterprise organization, an owner adds it for
                     everyone in the organization's settings, and you connect it in yours.
                   </p>
@@ -286,6 +286,34 @@ const matches = computed(() => {
                 <p class="step-details">
                   For example: “Which episodes are in production?” or “Who's on the next recording day?” The assistant picks
                   the tools it needs from the ones below and, unless you've allowed them, asks you before it uses one.
+                </p>
+              </div>
+            </li>
+            <!-- The address MetaOS gives an assistant whose tools are older than its own (McpVersion.kt) -->
+            <li id="refresh" class="step">
+              <span class="marker" aria-hidden="true">5</span>
+              <div>
+                <p class="step-title">Keep its tools up to date</p>
+                <p class="step-details">
+                  MetaOS's tools are at version <code>{{ TOOLS_VERSION }}</code>, and change as MetaOS does. An assistant
+                  keeps those it was given, so when it can't find one listed below, or MetaOS turns down how it calls one,
+                  it has older ones.
+                  <template v-if="client === 'claude-code'">
+                    Claude Code gets them again in a new session, or in <code>/mcp</code>: pick <strong>ogrodje</strong>
+                    and choose Reconnect.
+                  </template>
+                  <template v-else-if="client === 'claude'">
+                    Claude keeps them until you refresh them: in <strong>Customize → Connectors</strong>, open
+                    <strong>Ogrodje</strong>, choose <strong>… → Refresh tools list</strong>, and start a new chat.
+                  </template>
+                  <template v-else-if="client === 'codex'">
+                    Codex gets them as a session starts, so start a new one.
+                  </template>
+                  <template v-else>
+                    ChatGPT keeps them as they were when MetaOS was added, or in a workspace approved: there, an admin
+                    refreshes them in the workspace's settings, under <strong>Apps</strong>. One you added yourself, add
+                    again.
+                  </template>
                 </p>
               </div>
             </li>
@@ -390,8 +418,8 @@ const matches = computed(() => {
         <span class="count">{{ total }}</span>
       </div>
       <p class="intro">
-        What an assistant can do over MCP, as you. It picks the ones it needs, and asks you first unless you've allowed
-        them.
+        What an assistant can do over MCP, as you, at version <code>{{ TOOLS_VERSION }}</code>. It picks the ones it
+        needs, and asks you first unless you've allowed them.
       </p>
 
       <div class="filter">
@@ -458,8 +486,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
   outline-offset: 2px;
 }
 
-// A section's link lands it a little below the top
-section {
+// A section's link lands it a little below the top, as does a step's
+section, .step {
   scroll-margin-top: 24px;
 }
 

@@ -1,6 +1,9 @@
 // MetaOS's MCP tools, for the Usage page, by what they work on. A tool that's added, renamed, removed or does
 // something else changes here too (CLAUDE.md); UsageToolsTest checks the names, but not the descriptions.
 
+/** The tools' version, as MetaOS gives it to assistants, which `just mcp-tools` writes (McpToolsTest) */
+export const TOOLS_VERSION = '0.1.0'
+
 export interface Tool {
   name: string
   description: string
@@ -55,7 +58,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
       { name: 'remove_person_from_episode', description: 'Take a person off an episode: one of their roles, or all of them' },
       { name: 'confirm_guest', description: "Make a candidate an episode's guest, once they've said yes" },
       { name: 'list_person_episodes', description: 'The episodes a person is on, and their roles' },
-      { name: 'whoami', description: "Who you're signed in as: your account and the person it's linked to" },
+      { name: 'whoami', description: "Who you're signed in as: your account and the person it's linked to; and the version of MetaOS's tools" },
       { name: 'my_episodes', description: "The episodes you're on, and your roles" },
       { name: 'list_accounts', description: 'The accounts MetaOS has seen and the people they are, or only those not linked to anyone' },
       { name: 'link_account', description: 'Link an account to the person it is, so its comments and changes go by their name, past ones too; only Oto may' },
