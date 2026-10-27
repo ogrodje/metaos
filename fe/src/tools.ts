@@ -2,7 +2,7 @@
 // something else changes here too (CLAUDE.md); UsageToolsTest checks the names, but not the descriptions.
 
 /** The tools' version, as MetaOS gives it to assistants, which `just mcp-tools` writes (McpToolsTest) */
-export const TOOLS_VERSION = '0.1.0'
+export const TOOLS_VERSION = '0.2.0'
 
 export interface Tool {
   name: string
@@ -99,8 +99,8 @@ export const TOOL_GROUPS: ToolGroup[] = [
     tools: [
       { name: 'list_shows', description: 'List all shows' },
       { name: 'get_show', description: 'A show by its name' },
-      { name: 'create_show', description: 'Add a show' },
-      { name: 'update_show', description: 'Rename a show or change its color' },
+      { name: 'create_show', description: 'Add a show, its episodes in Slovenian unless you give another language' },
+      { name: 'update_show', description: 'Rename a show, or change its color or the language its episodes are spoken in' },
       { name: 'delete_show', description: 'Delete a show; its episodes are kept' },
       { name: 'restore_show', description: 'Bring back a deleted show, with its episodes; under a new name if its own is taken' },
       { name: 'list_show_episodes', description: 'The episodes of a show' },
@@ -205,6 +205,15 @@ export const TOOL_GROUPS: ToolGroup[] = [
       { name: 'list_episode_media', description: "An episode's video and audio files, with what's in each (length, codecs, resolution) and a link that downloads it for an hour" },
       { name: 'update_episode_media', description: "Change a file's title, or what it is, e.g. a bonus video that's the full video" },
       { name: 'remove_episode_media', description: 'Take a video or audio file off its episode, and delete it' },
+    ],
+  },
+  {
+    id: 'transcripts',
+    title: 'Transcripts',
+    about: "what's said in an episode's video and audio, by Google's Speech-to-Text, in a durable workflow",
+    tools: [
+      { name: 'transcribe_episode', description: "Transcribe an episode's full audio or video, or another of its files; then, if asked, an agent posts its chapters and summary as a comment" },
+      { name: 'get_episode_transcript', description: "An episode's transcripts, with timestamps, and how its transcriptions that are on are going" },
     ],
   },
   {

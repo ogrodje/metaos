@@ -85,7 +85,8 @@ class AuditLog(
             """
             select * from audit_log
             where row_id = ?
-               or (table_name in ('episode_people', 'episode_documents', 'episode_koofr_folders', 'episode_dropbox_folders', 'episode_media')
+               or (table_name in ('episode_people', 'episode_documents', 'episode_koofr_folders', 'episode_dropbox_folders', 'episode_media',
+                                  'transcripts')
                    and ? in (old_row ->> 'episode_id', new_row ->> 'episode_id', old_row ->> 'person_id', new_row ->> 'person_id'))
                or (table_name in ('session_documents', 'session_koofr_folders', 'session_dropbox_folders')
                    and ? in (old_row ->> 'session_id', new_row ->> 'session_id'))
@@ -119,7 +120,7 @@ class AuditLog(
             select * from audit_log
             where table_name in ('episodes', 'sessions', 'people', 'episode_people', 'episode_documents', 'session_documents',
                                  'episode_koofr_folders', 'session_koofr_folders', 'episode_dropbox_folders',
-                                 'session_dropbox_folders', 'comments', 'episode_media')
+                                 'session_dropbox_folders', 'comments', 'episode_media', 'transcripts')
                or (table_name = 'accounts' and old_row ->> 'person_id' is distinct from new_row ->> 'person_id')
             order by id desc
             limit ?

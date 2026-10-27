@@ -37,6 +37,8 @@ dependencyManagement {
 val newRelicVersion = "9.5.0"
 val newRelicAgent = configurations.create("newRelicAgent") { isTransitive = false }
 
+val temporalVersion = "1.40.0"
+
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
@@ -102,6 +104,23 @@ dependencies {
     implementation("com.github.koofr:java-koofr:3.8.10")
     // Dropbox, as Ogrodje's bot account (Dropbox.kt)
     implementation("com.dropbox.core:dropbox-core-sdk:8.0.2")
+
+    // Durable workflows on Temporal (Workflows.kt): MetaOS is a worker, its activities its own beans
+    implementation("io.temporal:temporal-spring-boot-starter:$temporalVersion")
+    implementation("io.temporal:temporal-sdk:$temporalVersion")
+    implementation("io.temporal:temporal-kotlin:$temporalVersion")
+    // Temporal's payloads are Jackson 2's, whose Kotlin module makes Kotlin data classes of them (Workflows.kt)
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    testImplementation("io.temporal:temporal-testing:$temporalVersion")
+    // Agents in workflows (Agents.kt): Spring AI's ChatClient, whose model calls and MCP tool calls Temporal's plugin
+    // makes activities; the model through OpenRouter, which speaks OpenAI's API, and the tools MetaOS's own MCP tools,
+    // as the agents' service account (client credentials)
+    implementation("io.temporal:spring-ai:0.1.1")
+    implementation("org.springframework.ai:spring-ai-starter-model-openai")
+    implementation("org.springframework.ai:spring-ai-starter-mcp-client")
+    implementation("org.springframework.boot:spring-boot-starter-security-oauth2-client")
+    // Speech-to-Text, which transcribes episodes' audio from the bucket (Transcription.kt)
+    implementation("com.google.cloud:google-cloud-speech:4.94.0")
 }
 
 // Without Mockito, which no test uses and the test starters bring: Spring's MockitoResetTestExecutionListener would

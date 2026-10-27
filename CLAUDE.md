@@ -519,6 +519,81 @@ number, each with a title.
   runs ffprobe itself where FFmpeg is installed, also on a file in the dev bucket with its key;
   `GoogleCloudStorageTest` sends a file in chunks and copies it in the dev bucket.
 
+### Workflows (Temporal)
+
+What takes long, waits on others or has to happen in order, MetaOS does as durable workflows on [Temporal]
+([`Workflows.kt`](src/main/kotlin/si/ogrodje/metaos/Workflows.kt)), through its Spring Boot integration
+(`io.temporal:temporal-spring-boot-starter`, `temporal-kotlin`): Temporal keeps each workflow's every step and runs it
+to the end through restarts and deploys, retrying what failed. Branch `temporal/spike`, tested locally only so far.
+
+- MetaOS is the worker, on task queue `metaos` (`WORKFLOWS_QUEUE`): its workflows are classes in this package
+  (`@WorkflowImpl`, which Temporal makes, not Spring), its activities its own beans (`@ActivityImpl`), so an activity
+  uses what MetaOS has (its bucket, its repositories) and a workflow's code stays deterministic. Workflows' arguments
+  are Kotlin data classes, through Jackson 2 with its Kotlin module (`temporalDataConverter`; temporal-kotlin's
+  `KotlinObjectMapperFactory` calls a constructor Jackson 2.21 no longer has).
+- `TEMPORAL_ADDRESS` (`spring.temporal.connection.target`) turns it on; it's off without, as Temporal's own
+  auto-configuration is, and so is what needs it (`@ConditionalOnTemporal`). In development it's compose.yml's
+  `temporal`, Temporal's development server with its UI at http://localhost:8233: `TEMPORAL_ADDRESS=localhost:7233`.
+  The `temporal` health check asks its frontend every hour.
+- What an activity changes is in the audit log as whoever asked for the workflow, through client `metaos-workflows`
+  (`actingFor`, `AuditingTransactionManager`), as nobody's signed in in a worker's thread.
+- Tests run workflows in Temporal's test server, in memory (`spring.temporal.test-server.enabled`, `TranscriptionTest`).
+
+### Agents
+
+Agents are workflows too ([`Agents.kt`](src/main/kotlin/si/ogrodje/metaos/Agents.kt)): `AgentWorkflow` runs an
+`AgentTask` (what it is, what to do, which of MetaOS's MCP tools it may use) with Spring AI's `ChatClient`, through
+Temporal's Spring AI plugin (`io.temporal:spring-ai`, Public Preview), which makes each model call and each MCP tool call
+an activity: an agent a restart interrupts goes on from its last step. Other workflows start one as a child.
+
+- The model is any of OpenRouter's, through Spring AI's OpenAI client (`spring.ai.openai.base-url`, OpenRouter speaks
+  OpenAI's API), `anthropic/claude-sonnet-5.5` by default (`METAOS_AGENTS_MODEL`) or the task's own. `OPENROUTER_API_KEY`
+  turns agents on; workflows skip what agents do without it. Spring AI doesn't retry (`max-retries=0`), Temporal does.
+- Their tools are MetaOS's own MCP tools, at its own `/mcp`, through Spring AI's MCP client (`spring.ai.mcp.client`,
+  connected when first used, and not offered as MetaOS's tools in turn), as Keycloak's `metaos-agents`: a confidential
+  client whose service account is approved (`infra/keycloak/realm/agents.tf`), with a token by client credentials
+  (Spring Security's OAuth2 client, `METAOS_AGENTS_CLIENT_SECRET`). So the tools check, audit and attribute what agents
+  do as for anyone: service-account-metaos-agents, MCP · its tool. A task names the tools it may use; it gets no others.
+- Temporal's plugin 0.1.1 finds MCP clients only as beans of their own, while Spring AI keeps them in a list, so MetaOS's
+  is a bean of its own too (`agentsMcpClient`); its main branch finds both.
+
+### Transcripts
+
+An episode's video and audio are transcribed with Google's Speech-to-Text
+([`Transcription.kt`](src/main/kotlin/si/ogrodje/metaos/Transcription.kt),
+[`SpeechToText.kt`](src/main/kotlin/si/ogrodje/metaos/SpeechToText.kt)), in a workflow, `TranscriptionWorkflow`: its ID
+is the file's (`transcribe-<media ID>`), so a file has one transcription at a time.
+
+- Speech-to-Text's batch recognition reads the file from MetaOS's private bucket itself (its service agent may, in the
+  project's buckets) and writes what it heard next to it, under `transcripts/<media ID>/<run>/`, as JSON and WebVTT:
+  minutes for an episode, or up to a day in a batch (`DYNAMIC_BATCHING`) for a fifth of the price, $0.016 or $0.003 a
+  minute. MetaOS starts it as the bucket's service account (`roles/speech.client`, `infra/gcp/storage`), and an
+  activity asks after it every 30 s, heartbeating how far it is, until it's done.
+- An episode is spoken in its show's language (`Show.language`, [`V31__show_languages.sql`](src/main/resources/db/migration/V31__show_languages.sql),
+  `create_show` and `update_show`): Slovenian (`sl-SI`, also without a show), but Borderless's English (`en-US`).
+  That's what it's transcribed as, unless `transcribe_episode` is told another (`language`), and what the agent writes
+  in.
+- Chirp 3, in location `eu` (`eu-speech.googleapis.com`, which keeps the audio in the EU), is the model that hears
+  Slovenian (Preview), and English; it doesn't tell speakers apart in Slovenian (diarization is for a dozen other
+  languages, English one of them, which MetaOS doesn't ask for yet), and word timestamps cost accuracy, so a transcript
+  is stretches of what was said, each with where it starts (`segmentsOf`). `METAOS_SPEECH_LOCATION` and `_MODEL` change
+  them.
+- A transcript ([`Transcripts.kt`](src/main/kotlin/si/ogrodje/metaos/Transcripts.kt),
+  [`V32__transcripts.sql`](src/main/resources/db/migration/V32__transcripts.sql)): what was said is in the bucket
+  (`transcript.json`, a few hundred kilobytes, which the audit log would keep again with every change), the row says
+  what it's of, how it was made and who asked, and two languages: `spoken_language`, what's said in the file, and
+  `language`, what the text is in. A file has one transcript of what's said in it (the two the same, `findSpoken`),
+  which transcribing it again replaces, only when asked (`replace`), and one in each other language, for translations
+  later. `History.kt` tells it: "Transcribed S05E08.mp3".
+- Then, unless told not to, an agent reads the transcript and posts the episode's chapters (`h:mm:ss Title`, as
+  YouTube's) and summary as a comment on it, in the episode's language (`chaptersTask`), spelling names as the episode
+  has them.
+- MCP: `transcribe_episode` (its full audio, else its full video, or a file by ID; `language`, `batch`, `replace`,
+  `chapters`) and
+  `get_episode_transcript` (`[h:mm:ss] text`, and the transcriptions that are on, with their stage). No front-end yet.
+- `TranscriptionTest` runs the workflow in Temporal's test server against a bucket and Speech-to-Text in memory
+  (`FakeSpeech`).
+
 ### Koofr
 
 MetaOS also uses the bot account in Koofr ([`Koofr.kt`](src/main/kotlin/si/ogrodje/metaos/Koofr.kt)), through
@@ -721,3 +796,4 @@ decisions behind it and what is left to do.
 
 
 
+[Temporal]: https://temporal.io/

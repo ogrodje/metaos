@@ -309,12 +309,16 @@
       "readOnlyHint" : false,
       "title" : "Create show"
     },
-    "description" : "Create a new show",
+    "description" : "Create a new show, its episodes in Slovenian unless it says otherwise",
     "inputSchema" : {
       "$schema" : "https://json-schema.org/draft/2020-12/schema",
       "properties" : {
         "color" : {
           "description" : "Color as hex RGB, e.g. #0404a4",
+          "type" : "string"
+        },
+        "language" : {
+          "description" : "What its episodes are spoken in, as a language tag, e.g. sl-SI or en-US; sl-SI by default",
           "type" : "string"
         },
         "name" : {
@@ -510,6 +514,33 @@
       "type" : "object"
     },
     "title" : "Get episode"
+  },
+  "get_episode_transcript" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "Get episode transcript"
+    },
+    "description" : "An episode's transcripts, latest first, each of one of its files, in a language, with what was said, a line a stretch, each from where it starts: [h:mm:ss] text. Without speakers, which Speech-to-Text doesn't tell apart. Also its files' transcriptions that are on, with how far each is, or that failed",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        },
+        "media" : {
+          "description" : "Only the transcript of this file, by its ID from list_episode_media",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code" ],
+      "type" : "object"
+    },
+    "title" : "Get episode transcript"
   },
   "get_history" : {
     "annotations" : {
@@ -2432,6 +2463,49 @@
     },
     "title" : "Set person link"
   },
+  "transcribe_episode" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Transcribe episode"
+    },
+    "description" : "Transcribe one of an episode's files with Google's Speech-to-Text (Chirp 3), in a durable workflow on Temporal: by default its full audio, else its full video, in the language its show's episodes are spoken in (Slovenian; Borderless's English) unless told another. Speech-to-Text takes minutes for an episode, or up to a day in a batch, for a fifth of the price; get_episode_transcript says how it's going and, once it's done, reads it. With chapters, an agent then posts the episode's chapters and summary as a comment, in the episode's language. Speech-to-Text doesn't tell speakers apart. A file with a transcript is transcribed again only with replace, which replaces it",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "batch" : {
+          "description" : "In a batch: within a day, for a fifth of the price; false by default",
+          "type" : "boolean"
+        },
+        "chapters" : {
+          "description" : "Have an agent post the chapters and summary as a comment once it's done; true by default",
+          "type" : "boolean"
+        },
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        },
+        "language" : {
+          "description" : "The language spoken in it, as a tag, e.g. sl-SI or en-US; by default its show's",
+          "type" : "string"
+        },
+        "media" : {
+          "description" : "The file's ID, from list_episode_media; by default the full audio, else the full video",
+          "format" : "uuid",
+          "type" : "string"
+        },
+        "replace" : {
+          "description" : "Replace the file's transcript, if it has one; false by default",
+          "type" : "boolean"
+        }
+      },
+      "required" : [ "code" ],
+      "type" : "object"
+    },
+    "title" : "Transcribe episode"
+  },
   "unlink_account" : {
     "annotations" : {
       "destructiveHint" : true,
@@ -2817,12 +2891,16 @@
       "readOnlyHint" : false,
       "title" : "Update show"
     },
-    "description" : "Rename a show or change its color. Omitted fields are left as they are",
+    "description" : "Rename a show, or change its color or the language its episodes are spoken in. Omitted fields are left as they are",
     "inputSchema" : {
       "$schema" : "https://json-schema.org/draft/2020-12/schema",
       "properties" : {
         "color" : {
           "description" : "Color as hex RGB, e.g. #0404a4; empty to clear",
+          "type" : "string"
+        },
+        "language" : {
+          "description" : "What its episodes are spoken in, as a language tag, e.g. sl-SI or en-US",
           "type" : "string"
         },
         "name" : {

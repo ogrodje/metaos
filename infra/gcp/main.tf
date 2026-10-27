@@ -39,6 +39,8 @@ resource "google_project_service" "used" {
     # Workload Identity Federation (ci.tf): GitHub's tokens exchanged for the service account's
     "sts.googleapis.com",
     "iamcredentials.googleapis.com",
+    # Speech-to-Text, which transcribes episodes' audio from the private buckets (Transcription.kt)
+    "speech.googleapis.com",
   ])
 
   service            = each.value

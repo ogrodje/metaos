@@ -7,9 +7,12 @@ import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
-data class ShowDto(val id: UUID?, val name: String, val color: String?)
+// language: what its episodes are spoken in, e.g. sl-SI
+data class ShowDto(val id: UUID?, val name: String, val color: String?, val language: String)
 
-private fun Show.toDto() = ShowDto(id, name, color)
+private fun Show.toDto() = ShowDto(id, name, color, language)
+
+private const val LANGUAGE = "What its episodes are spoken in, as a language tag, e.g. sl-SI or en-US"
 
 private val HEX_COLOR = Regex("#[0-9a-fA-F]{6}")
 
@@ -50,16 +53,18 @@ class ShowsMCP(
             title = "Create show",
             readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false
         ),
-        description = "Create a new show"
+        description = "Create a new show, its episodes in Slovenian unless it says otherwise"
     )
     fun create(
         @McpToolParam(description = "Unique show name (case-insensitive)") name: String,
         @McpToolParam(description = "Color as hex RGB, e.g. #0404a4", required = false) color: String?,
+        @McpToolParam(description = "$LANGUAGE; sl-SI by default", required = false) language: String? = null,
     ): ShowDto {
         val trimmed = name.trim()
         require(trimmed.isNotEmpty()) { "Name must not be blank" }
         require(shows.findByName(trimmed) == null) { "Show $trimmed already exists" }
-        return shows.save(Show(name = trimmed, color = color?.let(::hexColor))).toDto()
+        val show = Show(name = trimmed, color = color?.let(::hexColor), language = language?.let(::languageTag) ?: DEFAULT_LANGUAGE)
+        return shows.save(show).toDto()
     }
 
     @Transactional
@@ -69,12 +74,14 @@ class ShowsMCP(
             title = "Update show",
             readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
         ),
-        description = "Rename a show or change its color. Omitted fields are left as they are"
+        description = "Rename a show, or change its color or the language its episodes are spoken in. Omitted fields " +
+            "are left as they are"
     )
     fun update(
         @McpToolParam(description = "Show name (case-insensitive)") name: String,
         @McpToolParam(description = "New unique show name", required = false) newName: String?,
         @McpToolParam(description = "Color as hex RGB, e.g. #0404a4; empty to clear", required = false) color: String?,
+        @McpToolParam(description = LANGUAGE, required = false) language: String? = null,
     ): ShowDto {
         val show = requireNotNull(shows.findByName(name)) { "Show $name not found" }
         newName?.trim()?.let { new ->
@@ -83,6 +90,7 @@ class ShowsMCP(
             show.name = new
         }
         color?.let { show.color = it.ifBlank { null }?.let(::hexColor) }
+        language?.let { show.language = languageTag(it) }
         return show.toDto()
     }
 
