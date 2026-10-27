@@ -36,10 +36,11 @@ metadata:
 spec:
   # Two, so one keeps answering while the other restarts or rolls out; MCP is stateless for that (application.properties)
   replicas: 2
-  # Both new pods at once, while both old ones keep serving: one at a time, the second waited for the first to be ready
-  # and the old one gone, a minute or two more per deploy. The node has room for two more JVMs for that long.
+  # One new pod at a time, while both old ones keep serving. Both at once was a minute or two faster, until a deploy that
+  # changed every image started two more JVMs beside a second Keycloak and a new patreon-gateway, past what the node,
+  # shared and at 85% of its memory, had: it thrashed until it was reset
   strategy:
-    rollingUpdate: { maxSurge: 100%, maxUnavailable: 0 }
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
   selector: { matchLabels: { app: metaos } }
   template:
     metadata: { labels: { app: metaos } }

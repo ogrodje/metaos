@@ -645,8 +645,10 @@ decisions behind it and what is left to do.
   starts. The test JVMs share one Postgres (Testcontainers' reuse, `TESTCONTAINERS_REUSE_ENABLE`, also in devenv,
   where it stays up between runs), on which the migrations run once, into a template named after them; each Spring
   context gets a copy of it, a database of its own, dropped with it (`TestcontainersConfig`). Tests that change no
-  beans or properties share one context. A rollout starts both new pods of the app and of the front-end at once, while the old ones keep
-  serving (`maxSurge: 100%`); one at a time took a minute or two more. The images are reproducible: their
+  beans or properties share one context. A rollout starts both new pods of the front-end at once and the app's one at
+  a time, while the old ones keep serving: both of the app's at once were a minute or two faster, until a deploy that
+  changed every image ran the node, shared and at 85% of its memory, out of it (it thrashed, as the kubelet evicts
+  only below 100 MB free). The images are reproducible: their
   files have `SOURCE_DATE_EPOCH`'s time (`rewrite-timestamp`), not the build's, and the boot jars are too (no file
   timestamps, `AbstractArchiveTask`), so a layer that didn't change, e.g. the dependencies, is the blob the registry
   has, which isn't pushed again over the tailnet (a slow link, ~0.5 MB/s). An image that didn't change is the same
