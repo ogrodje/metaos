@@ -62,6 +62,8 @@ export default defineNuxtConfig({
       mcpUrl: 'http://localhost:8080/mcp',
       // The front-end's public address, for canonical URLs, link previews and the sitemap
       siteUrl: 'http://localhost:5173',
+      // New Relic's browser app (newrelic.ts), NUXT_PUBLIC_NEW_RELIC_ACCOUNT_ID, ...: off without them
+      newRelic: { accountId: '', trustKey: '', agentId: '', licenseKey: '', applicationId: '' },
     },
   },
   // The data a page was rendered with stays in it, rather than in a _payload.json of its own, which Nitro and Cloudflare

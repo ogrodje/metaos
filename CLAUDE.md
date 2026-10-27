@@ -562,6 +562,50 @@ a time; one Patreon turns away (a rate limit) tries again by itself.
   API answers and the browser is still signed in, in `metaos_patreon_connected` and in the log.
 - `PatreonTest` runs the client against a stand-in gateway; the gateway's own tests need no browser.
 
+### New Relic
+
+MetaOS is watched with New Relic, account 8666724 in its EU region, on its free plan: 100 GB a month, after which it
+takes nothing until the next, and one full user ([`NewRelic.kt`](src/main/kotlin/si/ogrodje/metaos/NewRelic.kt),
+[`newrelic/newrelic.yml`](newrelic/newrelic.yml)).
+
+- Its Java agent runs with MetaOS and patreon-gateway (`-javaagent` in their images, from `build/newrelic`, which
+  `./gradlew bootJar` and `-p patreon-gateway bootJar` fill): requests, the database, calls out, errors, the JVM, and
+  the app's logs, each with its request. It doesn't start without `NEW_RELIC_LICENSE_KEY` (`metaos-secret`, from
+  `PROD_NEW_RELIC_LICENSE_KEY`, `k8s/set_secrets.sh`), so the tests never have it. They report as `MetaOS` and
+  `patreon-gateway`, `environment:production` (`NEW_RELIC_LABELS`). The agent is 41 MB, a layer of its own, pushed
+  again only when its version changes; 8.25 is the first for Java 25.
+- GraphQL and MCP answer 200 with their errors in the body, so `NewRelic.kt` reports them, the caller's mistakes as
+  expected, which New Relic shows but doesn't count as errors (`callersMistake`: `IllegalArgumentException`, which
+  `require` throws, a GraphQL argument that doesn't convert, and being denied); the errors alert leaves them out too.
+  The agent reports GraphQL's itself, the caller's mistakes too, and a request keeps the last: each field's exception
+  (wrapped, `CompletionException`), the null a non-null field's error leaves, and invalid queries. So
+  `GraphQLErrorReports` (the first exception resolver, and an `Instrumentation`) notes each field's exception, and
+  once the request is done reports the first that isn't the caller's mistake, else the first that is, else has the
+  agent ignore its own. An advisor on `@McpTool` methods reports what a tool throws, before Spring AI makes it the
+  tool's result. Without the agent, its API does nothing. The agent leaves out 4xx responses (`ignore_status_codes`),
+  e.g. the 401 every MCP client's sign-in starts with.
+- The front-end's browser agent ([`fe/src/newrelic.ts`](fe/src/newrelic.ts), `plugins/newrelic.client.ts`) reports
+  the pages' errors, Vue's too (which Vue only logs), their load times and their requests to MetaOS, as the start of
+  their traces there. It keeps nothing in the browser (`cookies_enabled: false`), so there's nothing to ask visitors,
+  and it's off without `NUXT_PUBLIC_NEW_RELIC_*`: the browser app "MetaOS web" (`deployment-web.yaml`), whose
+  settings every page sends anyway.
+- In development: `./gradlew newRelic`, `-Xshare:off -javaagent:build/newrelic/newrelic.jar` in IntelliJ's run
+  configuration (VM options; `-Xshare:off`, as in the images, as class data sharing warns about the agent otherwise),
+  and in `.envrc` the license key, `NEW_RELIC_APP_NAME="MetaOS (dev)"`,
+  `NEW_RELIC_LABELS=environment:development`, `NEW_RELIC_APPLICATION_LOGGING_FORWARDING_ENABLED=false` and the browser
+  app "MetaOS web (dev)" (`NUXT_PUBLIC_NEW_RELIC_APPLICATION_ID` and `_AGENT_ID` 538920244, the rest as production's).
+- Ping monitors, which the free plan doesn't count, check every 5 minutes from Frankfurt, London and Milan that the
+  pages (`/healthz`), MetaOS (`/readyz`) and Keycloak (its realm's OpenID configuration) answer. The alert policy
+  "MetaOS" has conditions on them, on the back end's errors and on the browser's. Keycloak has no agent: it's
+  Keycloak's own image, watched by those checks and its metrics.
+- The cluster's Prometheus passes some of its metrics on to New Relic by remote write
+  ([`k8s/prometheus/newrelic-values.yaml`](k8s/prometheus/newrelic-values.yaml), applied by `newrelic.sh` to
+  kube-prometheus-stack, which the cluster's apps share): from namespace `metaos-prod` only, MetaOS's own
+  (`metaos_*_connected`, `metaos_changes_*`), patreon-gateway's (`patreon_gateway_*`), Keycloak's sign-ins
+  (`keycloak_user_events_total`, by event and error, which its image builds in: `KC_EVENT_METRICS_USER_ENABLED`, a
+  build option) and its password checks, and `up`; a new metric for New Relic goes in its allowlist. Keycloak's
+  metrics come from its management port (9000) through a ServiceMonitor, as MetaOS's do from 9090.
+
 ### Deployment
 
 Production runs on the ogrodje-one Kubernetes cluster, namespace `metaos-prod`: the app at `https://metaos.ogrodje.si`

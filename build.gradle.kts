@@ -32,6 +32,11 @@ dependencyManagement {
     }
 }
 
+// New Relic's Java agent (newrelic/newrelic.yml), which the image runs the app with, and its API, which does nothing
+// without it (NewRelic.kt). 8.25 is the first for Java 25.
+val newRelicVersion = "9.5.0"
+val newRelicAgent = configurations.create("newRelicAgent") { isTransitive = false }
+
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
@@ -42,6 +47,9 @@ dependencies {
     // implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     runtimeOnly("io.micrometer:micrometer-registry-prometheus") // /actuator/prometheus, scraped in k8s
+
+    newRelicAgent("com.newrelic.agent.java:newrelic-agent:$newRelicVersion")
+    implementation("com.newrelic.agent.java:newrelic-api:$newRelicVersion")
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
 
     // MCP
@@ -167,9 +175,20 @@ tasks.register<Exec>("feBuild") {
     outputs.dir(fe.dir(".output"))
 }
 
-// Fixed name, so docker/Dockerfile doesn't depend on the version
+// New Relic's Java agent and its newrelic.yml, in build/newrelic: beside the app in its image (docker/Dockerfile), and
+// for running it in development with -javaagent:build/newrelic/newrelic.jar
+val newRelic = tasks.register<Sync>("newRelic") {
+    group = "build"
+    description = "Puts New Relic's Java agent and newrelic/newrelic.yml in build/newrelic."
+    from(newRelicAgent) { rename { "newrelic.jar" } }
+    from("newrelic/newrelic.yml")
+    into(layout.buildDirectory.dir("newrelic"))
+}
+
+// Fixed name, so docker/Dockerfile doesn't depend on the version; with the agent, which the image takes too
 tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
     archiveFileName = "metaos.jar"
+    finalizedBy(newRelic)
 }
 
 // The same jar from the same sources, so the image of an unchanged app is the same image, which a deploy leaves be

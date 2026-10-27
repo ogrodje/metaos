@@ -22,6 +22,8 @@ FROM ${KEYCLOAK} AS builder
 ENV KC_DB=postgres
 ENV KC_HEALTH_ENABLED=true
 ENV KC_METRICS_ENABLED=true
+# Sign-ins, and why they failed, counted (keycloak_user_events_total), which Prometheus passes on to New Relic
+ENV KC_EVENT_METRICS_USER_ENABLED=true
 COPY --from=provider /metaos-remember-me.jar /opt/keycloak/providers/
 RUN /opt/keycloak/bin/kc.sh build
 
