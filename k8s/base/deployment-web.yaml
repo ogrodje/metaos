@@ -10,7 +10,8 @@ metadata:
 spec:
   # Two, so one keeps answering while the other restarts or rolls out; each keeps its own cache of rendered pages
   replicas: 2
-  # Both new pods at once, while both old ones keep serving, as the app's (deployment-metaos.yaml)
+  # Both new pods at once, while both old ones keep serving: they're some 60 MB each, unlike the app's
+  # (deployment-metaos.yaml)
   strategy:
     rollingUpdate: { maxSurge: 100%, maxUnavailable: 0 }
   selector: { matchLabels: { app: metaos-web } }
