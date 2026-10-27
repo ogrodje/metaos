@@ -69,8 +69,9 @@ jobs:
             dockerfile: docker/patreon-gateway.Dockerfile
             java: true
             build: ./gradlew --build-cache -p patreon-gateway test bootJar
-          # Nothing to build first. `kc.sh build` makes different files each time, so its layer comes from the cache
-          # (GitHub's), which keeps the image the same until Keycloak or the realm changes, and Keycloak running
+          # Nothing to build first: the Dockerfile compiles MetaOS's provider itself. `kc.sh build` makes different files
+          # each time, so its layer comes from the cache (GitHub's), which keeps the image the same until Keycloak, the
+          # provider or the realm changes, and Keycloak running
           - image: keycloak
             dockerfile: docker/keycloak.Dockerfile
             cache: true
