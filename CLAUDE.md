@@ -589,13 +589,15 @@ takes nothing until the next, and one full user ([`NewRelic.kt`](src/main/kotlin
   their traces there. It keeps nothing in the browser (`cookies_enabled: false`), so there's nothing to ask visitors,
   and it's off without `NUXT_PUBLIC_NEW_RELIC_*`: the browser app "MetaOS web" (`deployment-web.yaml`), whose
   settings every page sends anyway.
-- In development: `./gradlew newRelic`, `-javaagent:build/newrelic/newrelic.jar` in IntelliJ's run configuration (VM
-  options), and in `.envrc` the license key, `NEW_RELIC_APP_NAME="MetaOS (dev)"`,
+- In development: `./gradlew newRelic`, `-Xshare:off -javaagent:build/newrelic/newrelic.jar` in IntelliJ's run
+  configuration (VM options; `-Xshare:off`, as in the images, as class data sharing warns about the agent otherwise),
+  and in `.envrc` the license key, `NEW_RELIC_APP_NAME="MetaOS (dev)"`,
   `NEW_RELIC_LABELS=environment:development`, `NEW_RELIC_APPLICATION_LOGGING_FORWARDING_ENABLED=false` and the browser
   app "MetaOS web (dev)" (`NUXT_PUBLIC_NEW_RELIC_APPLICATION_ID` and `_AGENT_ID` 538920244, the rest as production's).
 - Ping monitors, which the free plan doesn't count, check every 5 minutes from Frankfurt, London and Milan that the
   pages (`/healthz`), MetaOS (`/readyz`) and Keycloak (its realm's OpenID configuration) answer. The alert policy
-  "MetaOS" has conditions on them, on the back end's errors and on the browser's.
+  "MetaOS" has conditions on them, on the back end's errors and on the browser's. Keycloak has no agent: it's
+  Keycloak's own image, and those checks are what's watched of it.
 
 ### Deployment
 

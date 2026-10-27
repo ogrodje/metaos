@@ -25,5 +25,6 @@ COPY --from=layers /layers/extracted/application/ ./
 # 8080: the app and /mcp; 9090: actuator, when MANAGEMENT_SERVER_PORT=9090 (k8s/base/deployment-metaos.yaml)
 EXPOSE 8080/tcp 9090/tcp
 ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0"
-# Conscrypt (Cloud Storage's TLS) loads its native library, which a future Java blocks without native access
-ENTRYPOINT ["java", "--enable-native-access=ALL-UNNAMED", "-javaagent:/app/newrelic/newrelic.jar", "-jar", "application.jar"]
+# Conscrypt (Cloud Storage's TLS) loads its native library, which a future Java blocks without native access. The
+# agent adds to the boot classpath, which class data sharing warns about, sharing only the JDK's classes anyway: off
+ENTRYPOINT ["java", "--enable-native-access=ALL-UNNAMED", "-Xshare:off", "-javaagent:/app/newrelic/newrelic.jar", "-jar", "application.jar"]

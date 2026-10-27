@@ -33,4 +33,5 @@ COPY --from=layers /layers/extracted/application/ ./
 # is theirs alike
 USER 1001:1001
 EXPOSE 8090/tcp
-ENTRYPOINT ["java", "-javaagent:/app/newrelic/newrelic.jar", "-jar", "application.jar"]
+# Without class data sharing, which the agent's addition to the boot classpath has it warn about (docker/Dockerfile)
+ENTRYPOINT ["java", "-Xshare:off", "-javaagent:/app/newrelic/newrelic.jar", "-jar", "application.jar"]
