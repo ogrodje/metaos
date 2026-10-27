@@ -7,12 +7,11 @@
 #   PROD_METAOS_DB_PASSWORD       the app's Postgres password
 #   PROD_KEYCLOAK_DB_PASSWORD     Keycloak's Postgres password
 #   PROD_KEYCLOAK_ADMIN_PASSWORD  Keycloak's bootstrap admin ("admin")
-#   PROD_KEYCLOAK_DEV_PASSWORD    the realm's "dev" user from metaos-realm.json
 #   DOCKER_REGISTRY_USERNAME, DOCKER_REGISTRY_PASSWORD
 #   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_DRIVE_REFRESH_TOKEN  the Google bot account's, as locally
 #   GOOGLE_GMAIL_REFRESH_TOKEN    optional, Gmail stays off without it (google/refresh_token.sh)
 #   KOOFR_APP_PASSWORD            optional, the bot's Koofr app password; Koofr stays off without it
-#   PROD_GOOGLE_STORAGE_KEY       optional, the key of production's storage service account (google/storage.sh key
+#   PROD_GOOGLE_STORAGE_KEY       optional, the key of production's storage service account (just storage-key
 #                                 prod); Cloud Storage stays off without it
 #   DROPBOX_APP_KEY, DROPBOX_APP_SECRET, DROPBOX_REFRESH_TOKEN
 #                                 optional, MetaOS's Dropbox app and the bot's refresh token (dropbox/refresh_token.sh);
@@ -35,7 +34,7 @@ NS=metaos-prod
 REGISTRY=registry.folk-decibel.ts.net
 
 : "${PROD_METAOS_DB_PASSWORD:?}" "${PROD_KEYCLOAK_DB_PASSWORD:?}"
-: "${PROD_KEYCLOAK_ADMIN_PASSWORD:?}" "${PROD_KEYCLOAK_DEV_PASSWORD:?}"
+: "${PROD_KEYCLOAK_ADMIN_PASSWORD:?}"
 : "${DOCKER_REGISTRY_USERNAME:?}" "${DOCKER_REGISTRY_PASSWORD:?}"
 : "${GOOGLE_CLIENT_ID:?}" "${GOOGLE_CLIENT_SECRET:?}" "${GOOGLE_DRIVE_REFRESH_TOKEN:?}"
 
@@ -73,7 +72,6 @@ kubectl create secret generic metaos-secret -n "$NS" \
 kubectl create secret generic keycloak-secret -n "$NS" \
   --from-literal=kc_db_password="$PROD_KEYCLOAK_DB_PASSWORD" \
   --from-literal=keycloak_admin_password="$PROD_KEYCLOAK_ADMIN_PASSWORD" \
-  --from-literal=keycloak_dev_password="$PROD_KEYCLOAK_DEV_PASSWORD" \
   --dry-run=client -o yaml | kubectl apply -f -
 
 if [[ -n "${PROD_PATREON_GATEWAY_TOKEN:-}" ]]; then

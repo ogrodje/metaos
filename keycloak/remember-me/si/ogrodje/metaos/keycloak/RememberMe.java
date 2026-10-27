@@ -17,8 +17,8 @@ import org.keycloak.provider.ProviderConfigProperty;
  * Remembers a sign-in, as "Remember me" on Keycloak's login form does, so Keycloak's sign-in cookie (KEYCLOAK_IDENTITY)
  * outlives the browser: it lasts as long as a remembered session may (ssoSessionMaxLifespanRememberMe), where it would
  * otherwise go when the browser quits, and the user with it. Sign-ins through Discord and Google never see that form, so
- * this is the last step of their post-login flows (keycloak/approval_gate.sh), which run before Keycloak makes the
- * session, and sets the auth note the form would have. Only while the realm has Remember me on.
+ * this is the last step of their post-login flows (infra/keycloak/realm/identity_providers.tf), which run before
+ * Keycloak makes the session, and sets the auth note the form would have. Only while the realm has Remember me on.
  *
  * Java rather than Kotlin, so Keycloak needs no Kotlin library beside it. docker/keycloak.Dockerfile builds it into
  * Keycloak's image.

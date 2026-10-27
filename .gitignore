@@ -28,3 +28,15 @@ verification-*
 # Claude Code
 .claude/worktrees/
 .claude/settings.local.json
+
+# Terraform: providers, state, which has secrets in it and is in Cloud Storage but for development's Keycloak, saved
+# plans, and infra/gcp's local backend while it makes the bucket (infra/README.md)
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+tfplan
+*.plan
+backend_override.tf
+# The tailnet's policy file, which is private: this repository is public (infra/tailscale/README.md)
+infra/tailscale/policy.hujson

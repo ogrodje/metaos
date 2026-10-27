@@ -8,9 +8,7 @@ resources:
 # Public URLs, read by the Deployments: Keycloak stamps them into tokens and the app checks tokens against them, so
 # they have to agree; the front-end tells the browser and search engines about them. The name gets a content hash, so
 # changing one rolls the Deployments.
-# The METAOS_* URLs only reach Keycloak at realm import (first start) - later METAOS_MCP_URL has to be changed in the
-# admin console too (Client scopes -> mcp:tools -> Mappers -> metaos-mcp-audience), and METAOS_API_URL and
-# METAOS_UI_URL with keycloak/frontend_client.sh.
+# Keycloak has the METAOS_* URLs from Terraform (infra/keycloak/prod/main.tf), which has to change with them.
 configMapGenerator:
 - literals:
   - KC_HOSTNAME=https://metaos-auth.ogrodje.si

@@ -19,7 +19,7 @@ data:
   METAOS_DRIVE_ROOT_FOLDER_ID: "1euKNkdlCpB2F5n77jvpJ4cRFtdvtS-Ff"
   # The bot's Koofr account; its app password is in metaos-secret (Koofr.kt)
   KOOFR_EMAIL: "iva.ogrodje@gmail.com"
-  # MetaOS's files (Storage.kt); the key of the service account that may use it is in metaos-secret (google/storage.sh)
+  # MetaOS's files (Storage.kt); the key of the service account that may use it is in metaos-secret (just storage-key)
   METAOS_STORAGE_BUCKET: "ogrodje-metaos-prod"
   # Its public bucket, for pictures everyone may see (Images.kt), as the same service account; Cloudflare serves it
   METAOS_MEDIA_BUCKET: "media.ogrodje.si"

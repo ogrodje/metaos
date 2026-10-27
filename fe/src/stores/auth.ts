@@ -6,7 +6,7 @@ import {
   type SignInProvider,
 } from '@/accounts'
 
-/** Realm metaos's identity providers (keycloak/discord_idp.sh, keycloak/google_idp.sh) */
+/** Realm metaos's identity providers (infra/keycloak/realm/identity_providers.tf) */
 export type IdentityProvider = 'discord' | 'google'
 
 /** Where users sign in, from the runtime config (nuxt.config.ts), so one build works with every Keycloak */

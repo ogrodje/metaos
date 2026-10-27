@@ -1,5 +1,5 @@
-# Keycloak for MetaOS: an optimized build with realm "metaos" baked in for --import-realm, and MetaOS's own provider
-# (keycloak/remember-me). compose.yml runs its dev stage, so both have the same Keycloak.
+# Keycloak for MetaOS: an optimized build with MetaOS's own provider (keycloak/remember-me). compose.yml runs its dev
+# stage, so both have the same Keycloak. Realm metaos is Terraform's (infra/keycloak), not imported from a file.
 ARG KEYCLOAK=quay.io/keycloak/keycloak:26.8.1
 
 # The provider, compiled against the Keycloak it goes in, as Keycloak's image has no JDK (its Java is 21). Jars run
@@ -13,7 +13,7 @@ RUN cd /src && javac --release 21 -cp '/keycloak/*' -d /out $(find . -name '*.ja
  && cp -r META-INF /out/ \
  && cd /out && jar --create --no-manifest --date=2026-01-01T00:00:00Z --file /metaos-remember-me.jar $(find . -type f | sort)
 
-# compose.yml's: `start-dev` builds Keycloak as it starts, and the realm is mounted rather than baked in
+# compose.yml's: `start-dev` builds Keycloak as it starts
 FROM ${KEYCLOAK} AS dev
 COPY --from=provider /metaos-remember-me.jar /opt/keycloak/providers/
 
@@ -29,7 +29,5 @@ RUN /opt/keycloak/bin/kc.sh build
 
 FROM ${KEYCLOAK}
 COPY --from=builder /opt/keycloak/ /opt/keycloak/
-# Imported on first start only - an existing realm is left untouched (see README, "Authentication")
-COPY keycloak/metaos-realm.json /opt/keycloak/data/import/
 ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]
-CMD ["start", "--optimized", "--import-realm"]
+CMD ["start", "--optimized"]

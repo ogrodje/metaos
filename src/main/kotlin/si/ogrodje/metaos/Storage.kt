@@ -51,7 +51,7 @@ data class SignedUpload(val url: URL, val headers: Map<String, String>, val expi
 
 /**
  * MetaOS's own files - pictures, videos, anything - in Google Cloud Storage: a bucket per environment, used as a service
- * account that can use only that bucket and the environment's public one (Media, google/storage.sh). Folders are only
+ * account that can use only that bucket and the environment's public one (Media, infra/gcp). Folders are only
  * the slashes in paths.
  */
 interface Storage {
@@ -97,7 +97,7 @@ fun storagePath(path: String): String {
     return parts.joinToString("/").also { require(it.toByteArray().size <= 1024) { "Storage paths are 1024 bytes at most" } }
 }
 
-/** Storage is off until its service account's key is set (google/storage.sh key) */
+/** Storage is off until its service account's key is set (just storage-key) */
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
 @ConditionalOnExpression("'\${metaos.storage.key:}' != ''")
@@ -119,7 +119,7 @@ class GoogleCloudStorage(
     private val credentials = try {
         ServiceAccountCredentials.fromStream(key.byteInputStream())
     } catch (e: IOException) {
-        throw IllegalArgumentException("GOOGLE_STORAGE_KEY isn't a service account's key; google/storage.sh key makes one", e)
+        throw IllegalArgumentException("GOOGLE_STORAGE_KEY isn't a service account's key; just storage-key makes one", e)
     }
 
     init {
@@ -140,7 +140,7 @@ class GoogleCloudStorage(
     } catch (e: StorageException) {
         if (generateSequence<Throwable>(e) { it.cause }.any { "invalid_grant" in it.message.orEmpty() }) throw IllegalStateException(
             "Google no longer accepts key ${credentials.privateKeyId} of ${credentials.clientEmail}. Make a new one with " +
-                "google/storage.sh key, put it in GOOGLE_STORAGE_KEY (.envrc, then k8s/set_secrets.sh) and restart MetaOS", e
+                "just storage-key, put it in GOOGLE_STORAGE_KEY (.envrc, then k8s/set_secrets.sh) and restart MetaOS", e
         )
         throw e
     }
@@ -217,7 +217,7 @@ class GoogleCloudStorage(
 
 /**
  * MetaOS's files for everyone, e.g. episodes' thumbnails (Images.kt): those in the environment's public bucket
- * (google/storage.sh), which anyone can read at [url] + their path, e.g. https://media.ogrodje.si/images/... in
+ * (infra/gcp), which anyone can read at [url] + their path, e.g. https://media.ogrodje.si/images/... in
  * production, through Cloudflare, and straight from Google in development.
  */
 class Media(val storage: Storage, url: String) {

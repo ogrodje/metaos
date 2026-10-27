@@ -46,11 +46,13 @@ in {
     pkgs.kubernetes-helm
     pkgs.kustomize
     pkgs.just
-    # gcloud, for google/storage.sh
+    # gcloud, for Google Cloud (just storage-key, infra/gcp's sign-in)
     pkgs.google-cloud-sdk
     # ffprobe, which reads what's in an episode's video and audio (MediaProbe.kt), as MetaOS's image has it; and ffmpeg,
     # with which MediaProbeTest makes files for it
     pkgs.ffmpeg-headless
+    # Terraform, for infra/ (Keycloak's realm); unfree (BUSL), which `unstable` allows
+    unstable.terraform
   ];
 
   env = {

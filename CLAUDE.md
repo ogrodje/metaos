@@ -17,6 +17,12 @@ MetaOS was designed for scaling, optimising and helping grow the [Ogrodje] organ
   and says whether it only reads, destroys what's there, can be repeated and reaches the open world. Spring AI's
   defaults are the cautious ones, and are sent when left out. `ToolHintsTest` says what each means here and checks every
   tool's by its name, so a new tool that doesn't fit its rules changes them too.
+- **Infrastructure is Terraform's.** Keycloak's realm, Google Cloud, New Relic, MetaOS's part of Cloudflare and the
+  tailnet's policy file are code in [`infra/`](infra/README.md), planned and applied with Terraform, never changed in a
+  console or by a script: a change made there, the next apply undoes. A change to them is a change to `infra/` (its
+  README says how, per stack, and how development and production differ); a new one goes there too, `import`ed if
+  it's there already. This repository is public: the tailnet's policy file is private, so never committed
+  (`infra/tailscale/policy.hujson`, `.gitignore`) and never applied by CI, and anything else like it goes the same way.
 - **The architecture diagram stays in sync.** [`architecture.png`](architecture.png), at the root and in README.md's
   Architecture Overview, is drawn in [`architecture.svg`](architecture.svg). Whenever the architecture or an
   integration changes, update `architecture.svg` in the same change and render the PNG again with `just architecture`
@@ -186,18 +192,21 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
 ### Authentication (Keycloak)
 
 The MCP endpoint (`/mcp`) is an OAuth2 resource server. [Keycloak] from `compose.yml` is the identity provider /
-authorization server, with realm `metaos` imported from [`keycloak/metaos-realm.json`](keycloak/metaos-realm.json).
-Keycloak persists into the `keycloak` database of the `postgres` service (same credentials as the app, from `.envrc`);
-the one-shot `keycloak-db-init` service creates that database when it is missing.
+authorization server, with realm `metaos`, which Terraform makes and keeps as it says
+([`infra/keycloak`](infra/keycloak/README.md)), in development as in production. Keycloak persists into the
+`keycloak` database of the `postgres` service (same credentials as the app, from `.envrc`); the one-shot
+`keycloak-db-init` service creates that database when it is missing.
 
 ```bash
-docker compose up -d keycloak   # http://localhost:8180 (admin console: admin / admin)
+docker compose up -d keycloak   # http://localhost:8180 (admin console: admin / admin), with the master realm only
+just keycloak adopt dev         # realm metaos, the first time (infra/keycloak/README.md)
+just keycloak apply dev         # and after each change to infra/keycloak/realm; the first time with
+                                # TF_VAR_google_client_secret=$GOOGLE_IDP_CLIENT_SECRET, for Sign in with Google
 ```
 
 - MCP clients (Claude Code, MCP Inspector, ...) discover Keycloak via `/.well-known/oauth-protected-resource/mcp`,
   register themselves with Dynamic Client Registration and log the user in. The realm's Trusted Hosts policy takes
-  redirect URIs on `localhost`, `claude.ai`, `claude.com` and `chatgpt.com` only; for realms imported before,
-  [`keycloak/trusted_hosts.sh`](keycloak/trusted_hosts.sh).
+  redirect URIs on `localhost`, `claude.ai`, `claude.com` and `chatgpt.com` only (`trusted_hosts`).
 - Tokens need the `mcp:tools` scope; it also puts the MCP URL into `aud`, which the server checks. They also need the
   realm role `metaos-user`, an approved user's (`APPROVED_ROLE` in `Security.kt`, also on `/graphql`'s team data and
   changes and the thumbnails): Keycloak can issue the scope to more than approved users, e.g. a client registered
@@ -207,31 +216,34 @@ docker compose up -d keycloak   # http://localhost:8180 (admin console: admin / 
   `metaos:write` (`API_READ_SCOPE`, `API_WRITE_SCOPE`: reading the team's data and changing it, e.g. comments), which
   put the `/graphql` URL into `aud` (and don't get them into `/mcp`). They're the client's own scopes, not realm
   defaults, as MCP clients registering themselves could ask for any realm default.
-  [`keycloak/frontend_client.sh`](keycloak/frontend_client.sh) sets them up in a realm imported without them, e.g.
-  production's (`METAOS_UI_URL` and `METAOS_API_URL` default to production's).
 - Dev login: `dev` / `dev`.
-- A sign-in lasts 7 days without use and 30 days at most (`ssoSessionIdleTimeout`, `ssoSessionMaxLifespan`; for
-  realms imported before, [`keycloak/sessions.sh`](keycloak/sessions.sh)), and refresh tokens as long. Access tokens
+- A sign-in lasts 7 days without use and 30 days at most (`sso_session_idle_timeout`, `sso_session_max_lifespan`),
+  and refresh tokens as long. Access tokens
   last 5 minutes; keycloak-js keeps them in memory and refreshes them before each request (`fe/src/stores/auth.ts`),
   and only signs the page out when Keycloak refuses the refresh token, not when it can't be reached.
 - Sign-ins through Discord and Google are remembered, as with Remember me on Keycloak's login form, which they never
-  see: 30 days without use and 90 at most (`ssoSessionIdleTimeoutRememberMe`, `ssoSessionMaxLifespanRememberMe`).
+  see: 30 days without use and 90 at most (`remember_me` and its two timeouts in `realm.tf`).
   Otherwise Keycloak's sign-in cookie, `KEYCLOAK_IDENTITY`, went when the browser quit, and with it the front-end's
   only way back to the session, so users signed in again. MetaOS's own Keycloak provider does it
   ([`keycloak/remember-me`](keycloak/remember-me), Java, which `docker/keycloak.Dockerfile` compiles against the
   Keycloak it goes in; compose runs its `dev` stage), the last step of each identity provider's post-login flow
-  (`remember_logins` in `approval_gate.sh`; `sessions.sh` adds it to a realm from before, once the image has it).
+  (`identity_providers.tf`). A Keycloak without it, e.g. compose's before `docker compose up -d --build keycloak`,
+  refuses the step.
 - `METAOS_MCP_URL` (default `http://localhost:8080/mcp`) and `METAOS_API_URL` (default
   `http://localhost:8080/graphql`) must be the public URLs of `/mcp` and `/graphql`; they are used by both Keycloak
-  (token audience) and the app (audience check). `METAOS_UI_URL` (default `http://localhost:5173`) is where the
-  front-end is, for `metaos-ui`'s redirect URIs. `KEYCLOAK_ISSUER_URI` points the app at another realm.
-- The realm is only imported when it doesn't exist yet. To re-import after editing the JSON (wipes all Keycloak data,
-  including registered MCP clients):
+  (token audience) and the app (audience check); Keycloak has them from `infra/keycloak/<env>/main.tf`, which has to
+  change with them. `METAOS_UI_URL` (default `http://localhost:5173`) is where the front-end is, for `metaos-ui`'s
+  redirect URIs. `KEYCLOAK_ISSUER_URI` points the app at another realm.
+- A change to the realm is a change to `infra/keycloak/realm`, planned and applied, never one made in the admin
+  console, which the next apply would undo; only users and who has `metaos-user` are the console's. To start over in
+  development (wipes all Keycloak data, including registered MCP clients):
 
   ```bash
   docker compose stop keycloak
   docker compose exec postgres sh -c 'dropdb -U "$POSTGRES_USER" keycloak'
-  docker compose up -d keycloak
+  rm infra/keycloak/dev/terraform.tfstate*
+  docker compose up -d keycloak && just keycloak adopt dev
+  TF_VAR_google_client_secret=$GOOGLE_IDP_CLIENT_SECRET just keycloak apply dev
   ```
 
 ### Accounts
@@ -356,8 +368,9 @@ Google revokes tokens with Gmail access when the account's password changes, and
 MetaOS's own files (pictures, videos, anything) are in Google Cloud Storage, in project `ogrodje-metaos`, through
 [`Storage.kt`](src/main/kotlin/si/ogrodje/metaos/Storage.kt). Unlike Drive and Gmail, this isn't the bot account: each
 environment has two buckets, a private one and a public one, and its own service account, which can use only those two.
-[`google/storage.sh`](google/storage.sh) `setup` creates them (it's idempotent) and `key dev|prod` makes the keys;
-gcloud comes from the devenv shell.
+Terraform has them ([`infra/gcp`](infra/gcp/main.tf), its module `storage` once for each environment); `just
+storage-key dev|prod` makes the service accounts' keys, which Terraform doesn't, so none is in its state. gcloud comes
+from the devenv shell.
 
 | Bucket                      | Service account       | For                                                                   |
 |-----------------------------|-----------------------|-----------------------------------------------------------------------|
@@ -371,17 +384,18 @@ gcloud comes from the devenv shell.
   artwork (Pictures) and its video and audio, go from the browser straight to the bucket, without MetaOS in between,
   whole or in chunks; `copy` moves one inside the bucket the same way. Their CORS allows that from the front-end's
   origins, `Content-Range` and `Range` included. Uploads MetaOS didn't take (`uploads/`) are deleted after a day, a
-  lifecycle rule (`google/storage.sh setup`).
+  lifecycle rule (`infra/gcp/storage`).
 - The public ones are for what everyone may see, e.g. episodes' thumbnails and people's avatars: anyone can read a file
   whose path they know (`allUsers` has `legacyObjectReader`, which is `storage.objects.get` only), but nobody can list
   them. Dev's is served by Google, at `https://storage.googleapis.com/ogrodje-metaos-public-dev/<path>`. Production's
   is named after its domain: `media.ogrodje.si` is a proxied CNAME to `c.storage.googleapis.com` in Cloudflare, which
-  picks the bucket by the Host header. Two rules of the zone are for it: Configuration Rule `media: SSL Full` (Google's
-  certificate is for `*.storage.googleapis.com`, which Full (strict) would refuse) and Cache Rule `media: cache`, which
-  caches its files and tells browsers as their `Cache-Control` says, and nothing without one (errors). Smart Tiered
-  Caching is on for the zone, so Cloudflare's data centres ask one near the bucket instead of each asking Google.
-  Creating a bucket named after a domain needs whoever runs `setup` to be a verified owner of `ogrodje.si` in Google
-  Search Console. A file deleted from it stays in Cloudflare's cache until it's purged there.
+  picks the bucket by the Host header. Two rules of the zone are for it: Configuration Rule `media: SSL Full`
+  (Google's certificate is for `*.storage.googleapis.com`, which Full (strict) would refuse) and Cache Rule
+  `media: cache`, which caches its files and tells browsers as their `Cache-Control` says, and nothing without one
+  (errors). Smart Tiered Caching is on for the zone, so Cloudflare's data centres ask one near the bucket instead of
+  each asking Google. The name, the rules and the caching are Terraform's (`infra/cloudflare`).
+  Creating a bucket named after a domain needs whoever applies `infra/gcp` to be a verified owner of `ogrodje.si` in
+  Google Search Console. A file deleted from it stays in Cloudflare's cache until it's purged there.
 - `GOOGLE_STORAGE_KEY` (the service account's JSON key, on one line) and `METAOS_STORAGE_BUCKET` (`.envrc`) turn it on;
   it's off without the key. `METAOS_MEDIA_BUCKET` turns on the public one (`Media`), served at `METAOS_MEDIA_URL`, by
   default `https://storage.googleapis.com/<bucket>`. In production the key is in `metaos-secret`
@@ -596,7 +610,9 @@ takes nothing until the next, and one full user ([`NewRelic.kt`](src/main/kotlin
   app "MetaOS web (dev)" (`NUXT_PUBLIC_NEW_RELIC_APPLICATION_ID` and `_AGENT_ID` 538920244, the rest as production's).
 - Ping monitors, which the free plan doesn't count, check every 5 minutes from Frankfurt, London and Milan that the
   pages (`/healthz`), MetaOS (`/readyz`) and Keycloak (its realm's OpenID configuration) answer. The alert policy
-  "MetaOS" has conditions on them, on the back end's errors and on the browser's. Keycloak has no agent: it's
+  "MetaOS" has conditions on them, on the back end's errors and on the browser's, and on the cluster's metrics
+  (below), mailed to Oto. They, the browser apps and the dashboard "MetaOS on ogrodje-one" are Terraform's
+  ([`infra/newrelic`](infra/newrelic)); the agents make their APM apps themselves. Keycloak has no agent: it's
   Keycloak's own image, watched by those checks and its metrics.
 - The cluster's Prometheus passes some of its metrics on to New Relic by remote write
   ([`k8s/prometheus/newrelic-values.yaml`](k8s/prometheus/newrelic-values.yaml), applied by `newrelic.sh` to

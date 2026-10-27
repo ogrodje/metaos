@@ -1,0 +1,79 @@
+name: Terraform
+
+# Plans one of infra/'s stacks against production, and applies the plan when asked to (infra/README.md). Started by
+# hand: Actions → Terraform → Run workflow. Not all of them: infra/gcp can give anyone anything in the project, so its
+# owners apply it themselves; infra/tailscale's policy file is private, never in this public repository, so it's
+# applied from a machine that has it; Keycloak's development realm is each developer's own.
+#
+# Terraform reaches the states in Cloud Storage as metaos-terraform-ci, through Workload Identity Federation, so with
+# no key to keep (infra/gcp/ci.tf), and each stack's provider with the production environment's secrets:
+# KEYCLOAK_ADMIN_USERNAME and KEYCLOAK_ADMIN_PASSWORD, NEW_RELIC_API_KEY (a User API key) and CLOUDFLARE_API_TOKEN.
+on:
+  workflow_dispatch:
+    inputs:
+      stack:
+        description: Stack
+        type: choice
+        options:
+          - keycloak/prod
+          - newrelic
+          - cloudflare
+      apply:
+        description: Apply the plan, rather than only show it
+        type: boolean
+        default: false
+
+# One run at a time per stack; Terraform's lock in the state stops one started elsewhere
+concurrency:
+  group: terraform-${{ inputs.stack }}
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+    defaults:
+      run:
+        working-directory: infra/${{ inputs.stack }}
+    env:
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
+      TF_VAR_keycloak_admin_username: ${{ secrets.KEYCLOAK_ADMIN_USERNAME }}
+      TF_VAR_keycloak_admin_password: ${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}
+      NEW_RELIC_API_KEY: ${{ secrets.NEW_RELIC_API_KEY }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # devenv.nix's Terraform, the same version
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.16.5
+          terraform_wrapper: false
+
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: projects/152555588938/locations/global/workloadIdentityPools/github/providers/github
+          service_account: metaos-terraform-ci@ogrodje-metaos.iam.gserviceaccount.com
+
+      - run: terraform init
+
+      # The plan in the run's summary, which is what an apply then does: a plan saved, not made again
+      - name: Plan
+        run: |
+          terraform plan -out=tfplan
+          {
+            echo "### ${{ inputs.stack }}"
+            echo '```'
+            terraform show -no-color tfplan
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - if: inputs.apply
+        name: Apply
+        run: terraform apply tfplan

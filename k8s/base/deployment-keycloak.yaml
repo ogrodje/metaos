@@ -21,7 +21,7 @@ spec:
         seccompProfile: { type: RuntimeDefault }
       containers:
         - name: keycloak
-          # Runs `start --optimized --import-realm` (docker/keycloak.Dockerfile)
+          # Runs `start --optimized` (docker/keycloak.Dockerfile); realm metaos is Terraform's (infra/keycloak)
           image: registry.folk-decibel.ts.net/metaos/keycloak
           securityContext:
             allowPrivilegeEscalation: false
@@ -37,8 +37,7 @@ spec:
               sleep: { seconds: 10 }
 
           envFrom:
-            # KC_HOSTNAME pins the public URL, so the token issuer is the same however Keycloak is reached;
-            # METAOS_MCP_URL is substituted into metaos-realm.json at import time
+            # KC_HOSTNAME pins the public URL, so the token issuer is the same however Keycloak is reached
             - configMapRef: { name: public-urls }
           env:
             - { name: KC_HTTP_ENABLED, value: "true" }
@@ -52,9 +51,6 @@ spec:
             - { name: KC_BOOTSTRAP_ADMIN_USERNAME, value: "admin" }
             - name: KC_BOOTSTRAP_ADMIN_PASSWORD
               valueFrom: { secretKeyRef: { name: keycloak-secret, key: keycloak_admin_password } }
-            # The realm's "dev" user (metaos-realm.json) - a random password here rather than its "dev" default
-            - name: KEYCLOAK_DEV_PASSWORD
-              valueFrom: { secretKeyRef: { name: keycloak-secret, key: keycloak_dev_password } }
 
           # The first check waits for the ports to open (~8 s)
           startupProbe:
