@@ -603,8 +603,13 @@ takes nothing until the next, and one full user ([`NewRelic.kt`](src/main/kotlin
   kube-prometheus-stack, which the cluster's apps share): from namespace `metaos-prod` only, MetaOS's own
   (`metaos_*_connected`, `metaos_changes_*`), patreon-gateway's (`patreon_gateway_*`), Keycloak's sign-ins
   (`keycloak_user_events_total`, by event and error, which its image builds in: `KC_EVENT_METRICS_USER_ENABLED`, a
-  build option) and its password checks, and `up`; a new metric for New Relic goes in its allowlist. Keycloak's
-  metrics come from its management port (9000) through a ServiceMonitor, as MetaOS's do from 9090.
+  build option) and its password checks, `up`, and the pods' (cAdvisor's memory and CPU, kube-state-metrics' limits,
+  restarts, last termination reasons such as OOMKilled, readiness, replicas available); and the node's, from
+  node-exporter and kube-state-metrics: memory, the root filesystem, load, and memory pressure (major page faults,
+  stalls). That's MetaOS's Kubernetes monitoring, without New Relic's own Kubernetes integration (`nri-bundle`), whose
+  agents the node's memory hasn't room for; New Relic's Kubernetes pages stay empty. A new metric for New Relic goes in
+  the allowlist. Keycloak's metrics come from its management port (9000) through a ServiceMonitor, as MetaOS's do
+  from 9090.
 
 ### Deployment
 

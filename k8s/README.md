@@ -102,7 +102,8 @@ just gateway-logs  # follow patreon-gateway
 7. **New Relic** (CLAUDE.md, "New Relic"): `PROD_NEW_RELIC_LICENSE_KEY` in `.envrc`, then `./k8s/set_secrets.sh` for
    the agents, and, where kubectl may change namespace `observability` (`ssh ogrodje-one-x`), `./k8s/prometheus/newrelic.sh
    --dry-run=server` and again without it: the cluster's Prometheus (kube-prometheus-stack, release `prom`, the
-   cluster's apps share it) then passes MetaOS's own metrics and Keycloak's sign-ins on to New Relic, and nothing else.
+   cluster's apps share it) then passes MetaOS's own metrics, Keycloak's sign-ins, `metaos-prod`'s pods' and the
+   node's on to New Relic, and nothing else (`newrelic-values.yaml` says which). Run it again after changing them.
 
 ## Checking it
 
