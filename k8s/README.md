@@ -39,7 +39,9 @@ builds and pushes that branch's images, tagged but not as `latest`, and deploys 
 
 The images are reproducible (`SOURCE_DATE_EPOCH=0`, `rewrite-timestamp`), so a push sends only the layers that changed,
 usually the application's, under a megabyte, and the deploy sets them by digest (`metaos@sha256:...`, not the tag): a
-Deployment whose image didn't change isn't rolled. They have no provenance attestation, so each is one plain manifest
+Deployment whose image didn't change isn't rolled. `nuxt build` isn't reproducible, so the front-end's image is also
+tagged `src-<key>`, by git's hashes of what it's made from and its base image's digest; a run that finds that tag
+tags the image again rather than build it. They have no provenance attestation, so each is one plain manifest
 rather than an index, which `registry garbage-collect --delete-untagged` would sweep the layers of; images pushed before
 are still indexes. A cleanup of the registry keeps what the cluster runs by its digests.
 

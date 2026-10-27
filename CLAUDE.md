@@ -656,6 +656,10 @@ decisions behind it and what is left to do.
   image, and the deploy points the Deployments at the images by digest, so it rolls only what changed: Keycloak (whose
   `kc.sh build` layer comes from GitHub's cache) and patreon-gateway (whose restart cuts its job short) mostly stay
   up. Anything that puts the build's time into a jar or an image, e.g. Spring Boot's `buildInfo()`, undoes that.
+  `nuxt build` does (a random build ID, build times, files' mtimes, its styles in the order they were done), so the
+  front-end's image is tagged `src-<key>` too, the key git's hashes of what it's made from (`sources` in the
+  workflow's matrix) and its base image's digest: a run that finds one of the same key tags it again instead of
+  building, and `metaos-web` isn't rolled.
 - patreon-gateway's image is on distroless Java, as the app's, with whose layers it shares: Playwright's driver runs
   its Node.js itself, no shell needed, and the boot jar has only Linux's (`linuxDriverBundle`; the bundle has five
   platforms', 200 MB).

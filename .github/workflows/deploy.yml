@@ -59,11 +59,14 @@ jobs:
             dockerfile: docker/Dockerfile
             java: true
             build: ./gradlew --build-cache bootJar
-          # Tested, type-checked and built into fe/.output with Yarn itself (what feTest and feBuild run)
+          # Tested, type-checked and built into fe/.output with Yarn itself (what feTest and feBuild run). `nuxt build`
+          # never makes the same files twice (a random build ID, build times, the files' mtimes in Nitro's manifest of
+          # them, its styles in the order they were done), so its image is found by what it's made from, `sources`
           - image: metaos-web
             dockerfile: docker/web.Dockerfile
             node: true
             build: cd fe && yarn test && yarn build
+            sources: fe docker/web.Dockerfile .github/actions/toolchain .github/workflows/deploy.yml
           # patreon-gateway is a build of its own (patreon-gateway/); its tests need no browser, and take seconds
           - image: patreon-gateway
             dockerfile: docker/patreon-gateway.Dockerfile
@@ -81,17 +84,7 @@ jobs:
           # `git describe` needs the tags, which a shallow clone omits
           fetch-depth: 0
 
-      - if: matrix.build
-        uses: ./.github/actions/toolchain
-        with:
-          java: ${{ matrix.java || false }}
-          node: ${{ matrix.node || false }}
-      - if: matrix.java
-        uses: gradle/actions/setup-gradle@v5
-      - if: matrix.build
-        name: Build
-        run: ${{ matrix.build }}
-
+      # Before the build, which an image of the same sources spares
       - name: Connect to Tailscale
         uses: tailscale/github-action@v4
         with:
@@ -106,6 +99,40 @@ jobs:
           username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
           password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
 
+      # The image's key: git's hashes of its sources and the digest its base image has now, so a new base (e.g. a fix
+      # in distroless) builds it again too. An image built before is tagged src-<key>
+      - if: matrix.sources
+        name: Look for an image of the same sources
+        id: sources
+        shell: bash
+        env:
+          IMAGE: ${{ env.IMAGES }}/${{ matrix.image }}
+          DOCKERFILE: ${{ matrix.dockerfile }}
+          SOURCES: ${{ matrix.sources }}
+        run: |
+          base=$(awk '$1 == "FROM" { print $2; exit }' "$DOCKERFILE")
+          base_digest=$(docker buildx imagetools inspect "$base" --format '{{json .Manifest}}' | jq -re .digest)
+          read -ra sources <<< "$SOURCES"
+          key=$({ git rev-parse "${sources[@]/#/HEAD:}"; echo "$base_digest"; } | sha256sum | cut -c1-20)
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+          if docker buildx imagetools inspect "$IMAGE:src-$key" > /dev/null 2>&1; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "$IMAGE:src-$key is there: tagged again, not built"
+          else
+            echo "No $IMAGE:src-$key: built"
+          fi
+
+      - if: matrix.build && steps.sources.outputs.found != 'true'
+        uses: ./.github/actions/toolchain
+        with:
+          java: ${{ matrix.java || false }}
+          node: ${{ matrix.node || false }}
+      - if: matrix.java
+        uses: gradle/actions/setup-gradle@v5
+      - if: matrix.build && steps.sources.outputs.found != 'true'
+        name: Build
+        run: ${{ matrix.build }}
+
       - name: Get version tag
         id: get-tag
         run: |
@@ -113,8 +140,23 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "Building ${{ matrix.image }} with tag: $TAG"
 
+      # The same manifest under the commit's tag (--prefer-index=false: a copy, not an index around it), so the deploy
+      # finds the digest the cluster runs and leaves the pods be
+      - if: steps.sources.outputs.found == 'true'
+        name: Tag the image of the same sources
+        env:
+          IMAGE: ${{ env.IMAGES }}/${{ matrix.image }}
+          KEY: ${{ steps.sources.outputs.key }}
+          TAG: ${{ steps.get-tag.outputs.tag }}
+        run: |
+          tags=(-t "$IMAGE:$TAG")
+          if [ "$GITHUB_REF" = refs/heads/master ]; then tags+=(-t "$IMAGE:latest"); fi
+          docker buildx imagetools create --prefer-index=false "${tags[@]}" "$IMAGE:src-$KEY"
+          docker buildx imagetools inspect "$IMAGE:$TAG" --format '{{json .Manifest}}' | jq -r .digest
+
       # Host networking puts buildkit on the tailnet, so it can push to the registry
-      - uses: docker/setup-buildx-action@v4
+      - if: steps.sources.outputs.found != 'true'
+        uses: docker/setup-buildx-action@v4
         with:
           driver-opts: network=host
 
@@ -122,7 +164,8 @@ jobs:
       # didn't change (the app's dependencies, ffprobe) is the same blob, which the registry has and isn't pushed again
       # over the tailnet, and an image that didn't change is the same image, which the deploy leaves running. No
       # provenance attestation, so the image is a plain manifest rather than an index (k8s/README.md, the registry)
-      - name: Build and push
+      - if: steps.sources.outputs.found != 'true'
+        name: Build and push
         uses: docker/build-push-action@v7
         env:
           SOURCE_DATE_EPOCH: 0
@@ -134,6 +177,7 @@ jobs:
           tags: |
             ${{ env.IMAGES }}/${{ matrix.image }}:${{ steps.get-tag.outputs.tag }}
             ${{ github.ref == 'refs/heads/master' && format('{0}/{1}:latest', env.IMAGES, matrix.image) || '' }}
+            ${{ matrix.sources && format('{0}/{1}:src-{2}', env.IMAGES, matrix.image, steps.sources.outputs.key) || '' }}
           outputs: type=registry,rewrite-timestamp=true
           provenance: false
           cache-from: ${{ matrix.cache && format('type=gha,scope={0}', matrix.image) || '' }}
