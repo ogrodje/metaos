@@ -5,10 +5,10 @@ Nothing in it is set up by hand or by a script: a change to it is a change here,
 
 | Stack                         | What                                                                                     | State                  | Applied                         |
 |-------------------------------|------------------------------------------------------------------------------------------|------------------------|---------------------------------|
-| [`keycloak/`](keycloak)       | Realm `metaos`: scopes, clients, sign-in providers and their approval gate, sessions, email | `prod`: Cloud Storage; `dev`: each developer's own | `just keycloak <command> dev\|prod`, CI |
+| [`keycloak/`](keycloak)       | Realm `metaos`: scopes, clients, sign-in providers and their approval gate, sessions, email | `prod`: Cloud Storage; `dev`: each developer's own | `prod`: CI, on merge; `dev`: `just keycloak <command> dev` |
 | [`gcp/`](gcp)                 | Project `ogrodje-metaos`: both environments' Cloud Storage, the states' bucket, CI's way in | Cloud Storage          | `just infra gcp <command>`, by its owners only |
-| [`newrelic/`](newrelic)       | New Relic: the browser apps, uptime checks, alerts and where they go, the dashboard       | Cloud Storage          | `just infra newrelic <command>`, CI |
-| [`cloudflare/`](cloudflare)   | Zone `ogrodje.si`, as far as MetaOS goes: its three names, the zone's cache and configuration rules, Smart Tiered Caching | Cloud Storage          | `just infra cloudflare <command>`, CI |
+| [`newrelic/`](newrelic)       | New Relic: the browser apps, uptime checks, alerts and where they go, the dashboard       | Cloud Storage          | CI, on merge |
+| [`cloudflare/`](cloudflare)   | Zone `ogrodje.si`, as far as MetaOS goes: its three names, the zone's cache and configuration rules, Smart Tiered Caching | Cloud Storage          | CI, on merge |
 | [`tailscale/`](tailscale)     | The tailnet's policy file, all of it. **Private:** never in git, never in CI (below)     | Cloud Storage          | `just infra tailscale <command>`, on a machine that has the file |
 
 ## Public and private
@@ -49,7 +49,7 @@ in them, so only the project's owners and CI read it. Development's Keycloak is 
 
 ## Signing in
 
-| What                                        | Locally (`just`)                                     | CI (environment `production`) |
+| What                                        | Locally (`just`)                                     | CI (environment `production`; only an apply is a deployment) |
 |---------------------------------------------|------------------------------------------------------|-------------------------------|
 | The states, and `gcp`                       | You, in gcloud (`gcloud auth login`): `just` hands Terraform gcloud's token | `metaos-terraform-ci`, with no key (Workload Identity Federation, `gcp/ci.tf`) |
 | Keycloak                                    | `KEYCLOAK_ADMIN_USERNAME`, `KEYCLOAK_ADMIN_PASSWORD`; development's is `admin` / `admin` | The same secrets |
@@ -59,10 +59,16 @@ in them, so only the project's owners and CI read it. Development's Keycloak is 
 
 ## CI
 
-Actions → Terraform → Run workflow ([`terraform.yml`](../.github/workflows/terraform.yml)) plans a stack against
-production and puts the plan in the run's summary; with Apply ticked, it applies that plan. Two aren't there: `gcp`
-can give anyone anything in the project, so only its owners apply it, themselves; and `tailscale`'s policy file is
-private, so not in the repository CI checks out.
+CI runs `keycloak/prod`, `newrelic` and `cloudflare` ([`terraform.yml`](../.github/workflows/terraform.yml)), as
+the deploy rolls out the app: a pull request that changes one plans it, and its merge into `master` applies it. Each
+plan is in its run's summary, which is what the apply then does: a plan saved, not made again. Actions → Terraform →
+Run workflow plans one by hand, and applies it with Apply ticked, e.g. after a change made outside Terraform. A
+change to the workflow plans, and applies, all three.
+
+Three aren't CI's: `gcp` can give anyone anything in the project, so only its owners apply it, themselves;
+`tailscale`'s policy file is private, so not in the repository CI checks out; and `keycloak/dev` is each developer's
+own. An infra change merged with an app change is applied beside the app's deploy, not before it: one the app needs
+first goes in a pull request of its own.
 
 ## The first time
 

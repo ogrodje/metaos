@@ -1,14 +1,33 @@
 name: Terraform
 
-# Plans one of infra/'s stacks against production, and applies the plan when asked to (infra/README.md). Started by
-# hand: Actions → Terraform → Run workflow. Not all of them: infra/gcp can give anyone anything in the project, so its
-# owners apply it themselves; infra/tailscale's policy file is private, never in this public repository, so it's
-# applied from a machine that has it; Keycloak's development realm is each developer's own.
+# infra/'s stacks that CI runs (infra/README.md): a pull request that changes one plans it, and its merge into master
+# applies it, as the deploy rolls out the app. Each plan is in its run's summary. Actions → Terraform → Run workflow
+# plans one by hand, and applies it when asked to, e.g. after a change made outside Terraform.
+#
+# Not every stack: infra/gcp can give anyone anything in the project, so its owners apply it themselves; infra/tailscale's
+# policy file is private, never in this public repository; Keycloak's development realm is each developer's own.
 #
 # Terraform reaches the states in Cloud Storage as metaos-terraform-ci, through Workload Identity Federation, so with
 # no key to keep (infra/gcp/ci.tf), and each stack's provider with the production environment's secrets:
-# KEYCLOAK_ADMIN_USERNAME and KEYCLOAK_ADMIN_PASSWORD, NEW_RELIC_API_KEY (a User API key) and CLOUDFLARE_API_TOKEN.
+# KEYCLOAK_ADMIN_USERNAME and KEYCLOAK_ADMIN_PASSWORD, NEW_RELIC_API_KEY (a User API key) and CLOUDFLARE_API_TOKEN. Only
+# an apply is a deployment to production; a plan uses the secrets without being one (`deployment: false`). Pull
+# requests from forks and Dependabot get no secrets, so they aren't planned.
 on:
+  pull_request:
+    paths:
+      - infra/keycloak/realm/**
+      - infra/keycloak/prod/**
+      - infra/newrelic/**
+      - infra/cloudflare/**
+      - .github/workflows/terraform.yml
+  push:
+    branches: [ master ]
+    paths:
+      - infra/keycloak/realm/**
+      - infra/keycloak/prod/**
+      - infra/newrelic/**
+      - infra/cloudflare/**
+      - .github/workflows/terraform.yml
   workflow_dispatch:
     inputs:
       stack:
@@ -23,24 +42,66 @@ on:
         type: boolean
         default: false
 
-# One run at a time per stack; Terraform's lock in the state stops one started elsewhere
-concurrency:
-  group: terraform-${{ inputs.stack }}
-
 permissions:
   contents: read
   id-token: write
 
 jobs:
+  # Which stacks the change is to: a change to this workflow is to all of them
+  stacks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      stacks: ${{ steps.changed.outputs.stacks }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - id: changed
+        env:
+          EVENT: ${{ github.event_name }}
+          STACK: ${{ inputs.stack }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ "$EVENT" = workflow_dispatch ]; then
+            stacks=$(jq -nc --arg s "$STACK" '[$s]')
+          else
+            stacks=$(git diff --name-only "$BASE" "$GITHUB_SHA" | jq -Rnc '[inputs] as $files
+              | {"keycloak/prod": ["infra/keycloak/realm/", "infra/keycloak/prod/"],
+                 "newrelic": ["infra/newrelic/"],
+                 "cloudflare": ["infra/cloudflare/"]}
+              | to_entries
+              | map(select(.value as $dirs | any($files[];
+                  . == ".github/workflows/terraform.yml" or (. as $f | any($dirs[]; . as $d | $f | startswith($d))))))
+              | map(.key)')
+          fi
+          echo "stacks=$stacks" >> "$GITHUB_OUTPUT"
+          echo "Stacks: $stacks"
+
   terraform:
+    needs: stacks
+    if: >-
+      needs.stacks.outputs.stacks != '[]' && (github.event_name != 'pull_request' ||
+      (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment:
       name: production
+      deployment: ${{ github.event_name == 'push' || inputs.apply == true }}
+    strategy:
+      fail-fast: false
+      matrix:
+        stack: ${{ fromJSON(needs.stacks.outputs.stacks) }}
+    # One run at a time per stack, applies never cut short; Terraform's lock in the state stops one started elsewhere
+    concurrency:
+      group: terraform-${{ matrix.stack }}
+      cancel-in-progress: false
     defaults:
       run:
-        working-directory: infra/${{ inputs.stack }}
+        working-directory: infra/${{ matrix.stack }}
     env:
+      APPLY: ${{ github.event_name == 'push' || inputs.apply }}
       TF_IN_AUTOMATION: "true"
       TF_INPUT: "false"
       TF_VAR_keycloak_admin_username: ${{ secrets.KEYCLOAK_ADMIN_USERNAME }}
@@ -68,12 +129,12 @@ jobs:
         run: |
           terraform plan -out=tfplan
           {
-            echo "### ${{ inputs.stack }}"
+            echo "### ${{ matrix.stack }}"
             echo '```'
             terraform show -no-color tfplan
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - if: inputs.apply
+      - if: env.APPLY == 'true'
         name: Apply
         run: terraform apply tfplan
