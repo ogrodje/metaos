@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1090" viewBox="0 0 1240 1090" role="img" aria-label="MetaOS's architecture: the browser and MCP clients reach MetaOS and Keycloak through Cloudflare and ingress-nginx. The browser gets its pages from the front-end, metaos-web, which renders those anyone may see from MetaOS's GraphQL API, and Cloudflare caches them; then it asks MetaOS itself. MetaOS checks tokens with Keycloak's keys, keeps its data in the shared Postgres, which tells it what changed for the browser's pages to show right away, and calls Cloud Storage, Google Drive, Gmail, Koofr and Dropbox, and fetches pictures from Hygraph. It reaches Ogrodje's Patreon through patreon-gateway, a pod of its own in the cluster with three containers: the gateway, which reads the campaign, its tiers, posts and members through Patreon's API with the creator token it keeps and refreshes, and uploads episodes' audio and video, from Dropbox links MetaOS gives it, straight to Patreon; a headless Chromium, in Playwright's own image, in which the gateway makes, changes and publishes posts in Patreon's web app, signed in as the bot, Iva; and Tailscale, through which only the browser goes out, by low, a VM that is the tailnet's exit node, as Patreon's bot check turns away the cluster's address. Prometheus scrapes MetaOS and patreon-gateway. New Relic gets their requests, errors and logs from its Java agent in each, the browser's errors and page loads from its agent there, and checks from outside that the pages, MetaOS and Keycloak answer. It copies pictures to its public bucket in Cloud Storage, from which the browser loads them at media.ogrodje.si, cached by Cloudflare. The team's artwork, and an episode's video and audio, go from the browser straight to MetaOS's private bucket, with a URL MetaOS signs, and MetaOS takes them from there.">
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1090" viewBox="0 0 1240 1090" role="img" aria-label="MetaOS's architecture: the browser and MCP clients reach MetaOS and Keycloak through Cloudflare and ingress-nginx. The browser gets its pages from the front-end, metaos-web, which renders those anyone may see from MetaOS's GraphQL API, and Cloudflare caches them; then it asks MetaOS itself. MetaOS checks tokens with Keycloak's keys, keeps its data in the shared Postgres, which tells it what changed for the browser's pages to show right away, and calls Cloud Storage, Google Drive, Gmail, Koofr and Dropbox, and fetches pictures from Hygraph. It reaches Ogrodje's Patreon through patreon-gateway, a pod of its own in the cluster with three containers: the gateway, which reads the campaign, its tiers, posts and members through Patreon's API with the creator token it keeps and refreshes, and uploads episodes' audio and video, from Dropbox links MetaOS gives it, straight to Patreon; a headless Chromium, in Playwright's own image, in which the gateway makes, changes and publishes posts in Patreon's web app, signed in as the bot, Iva; and Tailscale, through which only the browser goes out, by low, a VM that is the tailnet's exit node, as Patreon's bot check turns away the cluster's address. Prometheus scrapes MetaOS, patreon-gateway and Keycloak, and passes a few of their metrics, the outside connections and the sign-ins, on to New Relic. New Relic gets their requests, errors and logs from its Java agent in each, the browser's errors and page loads from its agent there, and checks from outside that the pages, MetaOS and Keycloak answer. It copies pictures to its public bucket in Cloud Storage, from which the browser loads them at media.ogrodje.si, cached by Cloudflare. The team's artwork, and an episode's video and audio, go from the browser straight to MetaOS's private bucket, with a URL MetaOS signs, and MetaOS takes them from there.">
   <!--
     MetaOS's architecture, the source of architecture.png (`just architecture` renders it). Keep it in step with the
     system: CLAUDE.md says when.
@@ -163,11 +163,12 @@
   <text class="m" x="1100" y="772">web app, from</text>
   <text class="m" x="1100" y="788">low's address</text>
 
-  <!-- Prometheus -->
-  <rect class="box" x="410" y="924" width="180" height="76" rx="8"/>
+  <!-- Prometheus, the cluster's: scrapes MetaOS, patreon-gateway and Keycloak, passes a few metrics on to New Relic -->
+  <rect class="box" x="410" y="924" width="180" height="92" rx="8"/>
   <text class="t" x="426" y="948">Prometheus</text>
   <text class="m" x="426" y="968">ServiceMonitors: MetaOS,</text>
-  <text class="m" x="426" y="984">patreon-gateway</text>
+  <text class="m" x="426" y="984">patreon-gateway, Keycloak;</text>
+  <text class="m" x="426" y="1000">some on to New Relic</text>
 
   <!-- Outside services; dashed: connected and checked, but no feature uses it yet -->
   <rect class="box" x="1060" y="132" width="160" height="56" rx="8"/>
@@ -197,8 +198,8 @@
   <!-- New Relic, EU: Java agents in MetaOS and patreon-gateway, the browser's agent, uptime checks from outside -->
   <rect class="box" x="1060" y="556" width="160" height="68" rx="8"/>
   <text class="t" x="1076" y="578">New Relic</text>
-  <text class="m" x="1076" y="596">EU · requests, errors, logs,</text>
-  <text class="m" x="1076" y="612">the browser's, uptime</text>
+  <text class="m" x="1076" y="596">EU · requests, errors, logs;</text>
+  <text class="m" x="1076" y="612">browser, uptime, metrics</text>
   <text class="m" x="1060" y="924">all but Hygraph and New</text>
   <text class="m" x="1060" y="940">Relic checked hourly,</text>
   <text class="m" x="1060" y="956">reported as</text>
@@ -222,7 +223,7 @@
   <path class="edge" d="M110 470 V440 H408" marker-end="url(#arrow)"/>
   <text class="m" x="402" y="434" text-anchor="end">registers, signs in</text>
   <path class="edge" d="M200 518 H662" marker-end="url(#arrow)"/>
-  <text class="m" x="460" y="511" text-anchor="middle">MCP over HTTP, with the token</text>
+  <text class="m" x="570" y="511" text-anchor="middle">MCP over HTTP, with the token</text>
 
   <!-- MetaOS checks tokens with Keycloak's keys -->
   <path class="edge" d="M664 420 H592" marker-end="url(#arrow)"/>
@@ -235,6 +236,8 @@
   <!-- Prometheus scrapes the actuator, which no Ingress routes -->
   <path class="edge" d="M500 924 V560 H662" marker-end="url(#arrow)"/>
   <text class="m" x="508" y="612">scrapes</text>
+  <!-- And Keycloak's management port, which no Ingress routes either -->
+  <path class="edge" d="M440 924 V492" marker-end="url(#arrow)"/>
 
   <!-- MetaOS to the outside services -->
   <path class="edge" d="M988 160 H1058" marker-end="url(#arrow)"/>

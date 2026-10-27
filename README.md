@@ -24,7 +24,9 @@ its own. Patreon's bot check turns away the cluster's address, so that browser g
 container and low, a VM whose address it lets through; the API and the uploads go straight to Patreon. Everything
 runs on Ogrodje's Kubernetes cluster, behind Cloudflare. New Relic, in its EU region, gets MetaOS's and
 patreon-gateway's requests, errors and logs from its Java agent in each, and the pages' errors and load times from its
-agent in the browser, and checks from outside that the pages, MetaOS and Keycloak answer.
+agent in the browser, and checks from outside that the pages, MetaOS and Keycloak answer. The cluster's Prometheus
+scrapes MetaOS, patreon-gateway and Keycloak, and passes a few of their metrics on to New Relic: MetaOS's outside
+connections and Keycloak's sign-ins.
 
 The diagram is drawn in [`architecture.svg`](architecture.svg); `just architecture` renders `architecture.png` from it.
 

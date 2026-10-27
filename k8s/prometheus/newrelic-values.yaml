@@ -1,0 +1,21 @@
+# What the cluster's Prometheus passes on to New Relic (account 8666724, EU) by remote write: values for
+# kube-prometheus-stack, Helm release `prom` in namespace observability, which every app on the cluster shares, so
+# newrelic.sh lays them over the release's own. Only MetaOS's own metrics (its outside connections, its stream of
+# changes), patreon-gateway's and Keycloak's sign-ins, from namespace metaos-prod, and whether their targets answer
+# (`up`): a few dozen series. The rest stay in Prometheus, as the cluster's would use up the free plan's 100 GB a month.
+prometheus:
+  prometheusSpec:
+    remoteWrite:
+      - url: https://metric-api.eu.newrelic.com/prometheus/v1/write?prometheus_server=ogrodje-one
+        # The license key, sent as a bearer token; the secret is newrelic.sh's, beside Prometheus
+        authorization:
+          credentials:
+            name: newrelic-remote-write
+            key: license_key
+        writeRelabelConfigs:
+          - sourceLabels: [namespace]
+            regex: metaos-prod
+            action: keep
+          - sourceLabels: [__name__]
+            regex: metaos_.*|patreon_gateway_.*|keycloak_user_events_total|keycloak_credentials_password_hashing_validations_total|up
+            action: keep

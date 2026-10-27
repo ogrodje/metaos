@@ -597,7 +597,14 @@ takes nothing until the next, and one full user ([`NewRelic.kt`](src/main/kotlin
 - Ping monitors, which the free plan doesn't count, check every 5 minutes from Frankfurt, London and Milan that the
   pages (`/healthz`), MetaOS (`/readyz`) and Keycloak (its realm's OpenID configuration) answer. The alert policy
   "MetaOS" has conditions on them, on the back end's errors and on the browser's. Keycloak has no agent: it's
-  Keycloak's own image, and those checks are what's watched of it.
+  Keycloak's own image, watched by those checks and its metrics.
+- The cluster's Prometheus passes some of its metrics on to New Relic by remote write
+  ([`k8s/prometheus/newrelic-values.yaml`](k8s/prometheus/newrelic-values.yaml), applied by `newrelic.sh` to
+  kube-prometheus-stack, which the cluster's apps share): from namespace `metaos-prod` only, MetaOS's own
+  (`metaos_*_connected`, `metaos_changes_*`), patreon-gateway's (`patreon_gateway_*`), Keycloak's sign-ins
+  (`keycloak_user_events_total`, by event and error, which its image builds in: `KC_EVENT_METRICS_USER_ENABLED`, a
+  build option) and its password checks, and `up`; a new metric for New Relic goes in its allowlist. Keycloak's
+  metrics come from its management port (9000) through a ServiceMonitor, as MetaOS's do from 9090.
 
 ### Deployment
 

@@ -9,10 +9,11 @@ k8s/base/
   namespace.yaml             metaos-prod
   deployment-metaos.yaml     ConfigMap, Deployment, Service, Ingress (MetaOS's own paths), ServiceMonitor
   deployment-web.yaml        the front-end (metaos-web): Deployment, Service, Ingress (everything else)
-  deployment-keycloak.yaml   Deployment, Service, Ingress
+  deployment-keycloak.yaml   Deployment, Service, Ingress, ServiceMonitor (its metrics, sign-ins among them)
   deployment-patreon-gateway.yaml  patreon-gateway: its volume, Deployment, Service (no Ingress: MetaOS's only)
   kustomization.yaml         the resources, the public URLs and the image tags
 k8s/set_secrets.sh           Postgres roles + databases, secrets, registry pull secret
+k8s/prometheus/              what the cluster's Prometheus passes on to New Relic (newrelic.sh applies it)
 k8s/ci/deployer.yaml         what CI may do in the cluster
 docker/Dockerfile            the app: boot jar on distroless java25, non-root
 docker/web.Dockerfile        the front-end: Nuxt's build (fe/.output) on distroless Node 26, non-root
@@ -95,6 +96,11 @@ just gateway-logs  # follow patreon-gateway
     - `kubectl apply -f k8s/ci/deployer.yaml` - a Role in `metaos-prod` for group `metaos-deployers`.
     - In the tailnet policy, add `metaos-deployers` to the groups `tag:ci` impersonates on `tag:k8s-operator`
       (next to `bongbong-deployers`).
+
+7. **New Relic** (CLAUDE.md, "New Relic"): `PROD_NEW_RELIC_LICENSE_KEY` in `.envrc`, then `./k8s/set_secrets.sh` for
+   the agents, and, where kubectl may change namespace `observability` (`ssh ogrodje-one-x`), `./k8s/prometheus/newrelic.sh
+   --dry-run=server` and again without it: the cluster's Prometheus (kube-prometheus-stack, release `prom`, the
+   cluster's apps share it) then passes MetaOS's own metrics and Keycloak's sign-ins on to New Relic, and nothing else.
 
 ## Checking it
 

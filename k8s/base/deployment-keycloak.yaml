@@ -77,11 +77,34 @@ kind: Service
 metadata:
   name: keycloak
   namespace: metaos-prod
+  labels: { app: keycloak }
 spec:
   type: ClusterIP
   selector: { app: keycloak }
   ports:
     - { name: http, port: 80, targetPort: http }
+    # For the ServiceMonitor; the Ingress routes port 80 only
+    - { name: management, port: 9000, targetPort: management }
+---
+# Keycloak's metrics (/metrics on its management port): its own, sign-ins among them, which Prometheus passes on to
+# New Relic (k8s/prometheus), and Quarkus's, which stay in Prometheus
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: keycloak
+  namespace: metaos-prod
+  labels: { release: prom }
+spec:
+  endpoints:
+    - interval: 30s
+      path: /metrics
+      port: management
+  namespaceSelector:
+    matchNames:
+      - metaos-prod
+  selector:
+    matchLabels:
+      app: keycloak
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
