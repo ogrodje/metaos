@@ -5,14 +5,18 @@ import { faArrowRight } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useAuthStore } from '@/stores/auth'
 
-// What a visitor who isn't signed in can do: sign in, or use MetaOS over MCP. The slot says why to.
-defineProps<{ title: string }>()
+// What a visitor who isn't signed in can do: sign in, or use MetaOS over MCP. The slot says why to. Compact, a line
+// under what the page shows everyone, e.g. the home page's releases, with only the sign-ins.
+defineProps<{
+  title: string
+  compact?: boolean
+}>()
 
 const auth = useAuthStore()
 </script>
 
 <template>
-  <section class="sign-in" aria-labelledby="sign-in">
+  <section class="sign-in" :class="{ compact }" aria-labelledby="sign-in">
     <h2 id="sign-in">{{ title }}</h2>
     <p><slot/></p>
     <div class="actions">
@@ -22,9 +26,9 @@ const auth = useAuthStore()
       <button type="button" class="button" @click="auth.login('google')">
         <FontAwesomeIcon :icon="faGoogle"/>Sign in with Google
       </button>
-      <RouterLink class="button" to="/usage">API and MCP usage<FontAwesomeIcon :icon="faArrowRight"/></RouterLink>
+      <RouterLink v-if="!compact" class="button" to="/usage">API and MCP usage<FontAwesomeIcon :icon="faArrowRight"/></RouterLink>
     </div>
-    <p class="approval">New accounts get in once an admin has approved them.</p>
+    <p v-if="!compact" class="approval">New accounts get in once an admin has approved them.</p>
   </section>
 </template>
 
@@ -61,6 +65,45 @@ const auth = useAuthStore()
     font-size: 13px;
     line-height: 20px;
     color: var(--muted);
+  }
+}
+
+// A line under the page: who it's for and why, beside the sign-ins
+.sign-in.compact {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px 24px;
+  padding: 20px 0 0;
+  border: 0;
+  border-top: 1px solid var(--hairline);
+  border-radius: 0;
+
+  h2 {
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  p {
+    grid-column: 1;
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  .actions {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    margin-top: 0;
+  }
+
+  @media (max-width: 640px) {
+    grid-template-columns: minmax(0, 1fr);
+
+    .actions {
+      grid-column: 1;
+      grid-row: auto;
+      margin-top: 10px;
+    }
   }
 }
 

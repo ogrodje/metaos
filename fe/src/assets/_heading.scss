@@ -42,6 +42,11 @@
   }
 }
 
+// Its heading, when it's beside a button, e.g. Show all
+.subheading h3 {
+  font: inherit;
+}
+
 // Right under the section's heading, the heading's own space is enough
 .heading + .subheading {
   padding-top: 0;

@@ -7,13 +7,15 @@ import FilterBar from '@/components/FilterBar.vue'
 import IdeaRow from '@/components/IdeaRow.vue'
 import LoadError from '@/components/LoadError.vue'
 import LoadingRows from '@/components/LoadingRows.vue'
+import NoMatch from '@/components/NoMatch.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import SelectFilter from '@/components/SelectFilter.vue'
 import SignInPrompt from '@/components/SignInPrompt.vue'
 import { EPISODE_FIELDS, type Idea } from '@/episodes'
 import { errorMessage, graphql } from '@/graphql'
 import { IMAGE_FIELDS } from '@/images'
 import { episodeText, matches, READINESS, readiness } from '@/lists'
-import { useQueryState } from '@/query'
+import { useClearQuery, useQueryState } from '@/query'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
@@ -25,7 +27,7 @@ const error = ref<string>()
 // Only the latest load counts: an earlier one may answer after it
 let loads = 0
 
-// Ideas are the team's, so they load only for a signed-in user. Quietly when MetaOS's data changes: what's shown stays
+// Ideas are the team's, so they load only for an approved user. Quietly when MetaOS's data changes: what's shown stays
 // until the new ones are there, and stays if they don't come.
 async function loadIdeas(quietly = false) {
   const load = ++loads
@@ -33,7 +35,7 @@ async function loadIdeas(quietly = false) {
     ideas.value = undefined
     error.value = undefined
   }
-  if (!auth.authenticated) return
+  if (!auth.team) return
   try {
     const data = await graphql<{ ideas: Idea[] }>(`{ ideas { ${EPISODE_FIELDS} addedDate recommendedBy { id name avatar { ${IMAGE_FIELDS} } } } }`)
     if (load !== loads) return
@@ -47,7 +49,7 @@ async function loadIdeas(quietly = false) {
 }
 
 // Again when one signs in
-watch(() => auth.authenticated, () => void loadIdeas(), { immediate: true })
+watch(() => auth.team, () => void loadIdeas(), { immediate: true })
 useLiveRefresh(() => loadIdeas(true))
 
 // Which, and how they're grouped, as the address says, e.g. ?show=Borderless&by=Andraž Sraka&group=recommender
@@ -55,8 +57,10 @@ const show = useQueryState('show', 'all')
 const by = useQueryState('by', 'all')
 const group = useQueryState<'readiness' | 'recommender' | 'none'>('group', 'readiness', ['readiness', 'recommender', 'none'])
 const find = useQueryState('q', '')
+const clear = useClearQuery()
 
 const all = computed(() => ideas.value ?? [])
+const filtering = computed(() => show.value !== 'all' || by.value !== 'all' || find.value.trim() !== '')
 
 // Each value of a field with how many ideas have it, the most first, and those without one last
 function counted(of: (idea: Idea) => string | null, none: string) {
@@ -67,10 +71,11 @@ function counted(of: (idea: Idea) => string | null, none: string) {
     .concat(counts.has('') ? [{ value: 'none', title: none, count: counts.get('')! }] : [])
 }
 
-const shows = computed(() => [{ value: 'all', title: 'Any show' }, ...counted((idea) => idea.show, 'No show')])
+const shows = computed(() => [{ value: 'all', title: 'Every show' }, ...counted((idea) => idea.show, 'No show')])
+// By their whole names, in a select: there may be many, and two with the same first name
 const recommenders = computed(() => [
   { value: 'all', title: 'Anyone' },
-  ...counted((idea) => idea.recommendedBy?.name ?? null, 'Nobody').map((option) => ({ ...option, title: option.title.split(' ')[0]! })),
+  ...counted((idea) => idea.recommendedBy?.name ?? null, 'Nobody'),
 ])
 
 const shown = computed(() => all.value.filter((idea) =>
@@ -110,43 +115,44 @@ const GROUPINGS = [
 
     <!-- Once planned, an idea has a code and is listed with the episodes instead -->
     <template v-else>
-      <PageHeader title="Ideas" :count="ideas?.length">
+      <PageHeader title="Ideas" :count="ideas?.length" :shown="filtering && ideas ? shown.length : undefined">
         Episodes that might be. Once an idea is planned, it gets a code and moves to Episodes.
       </PageHeader>
 
-      <FilterBar v-model:find="find" placeholder="Find an idea, a guest or who recommended it">
-        <ChipGroup v-if="shows.length > 2" v-model="show" label="Show" :options="shows"/>
-        <ChipGroup v-if="recommenders.length > 2" v-model="by" label="Recommended by" :options="recommenders"/>
-        <template #end>
-          <label class="grouping">Group by
-            <select v-model="group">
-              <option v-for="option in GROUPINGS" :key="option.value" :value="option.value">{{ option.title }}</option>
-            </select>
-          </label>
-        </template>
-      </FilterBar>
+      <!-- Signed in, but not approved yet, as the note under the header says -->
+      <p v-if="auth.ready && !auth.team" class="note">The ideas are here once an admin has approved your account.</p>
 
-      <LoadError v-if="error" what="The ideas" :error="error" @retry="loadIdeas()"/>
-      <LoadingRows v-else-if="!ideas" :rows="6" tall label="Loading the ideas"/>
-      <p v-else-if="!ideas.length" class="note">No ideas yet.</p>
-      <p v-else-if="!shown.length" class="note">No ideas match.</p>
-      <table v-else class="ideas">
-        <thead>
-          <tr>
-            <th>Idea</th>
-            <th class="by">Recommended by</th>
-            <th class="date">Recording</th>
-            <th class="date">Added</th>
-            <th class="files"><span class="visually-hidden">Files</span></th>
-          </tr>
-        </thead>
-        <tbody v-for="g in groups" :key="g.key">
-          <tr v-if="g.title" class="group">
-            <th colspan="5" scope="colgroup">{{ g.title }} <span class="count">{{ g.ideas.length }}</span></th>
-          </tr>
-          <IdeaRow v-for="idea in g.ideas" :key="idea.id" :idea="idea"/>
-        </tbody>
-      </table>
+      <template v-else>
+        <FilterBar v-model:find="find" placeholder="Find by title, guest or recommender">
+          <ChipGroup v-if="shows.length > 2" v-model="show" label="Show" :options="shows"/>
+          <template #end>
+            <SelectFilter v-if="recommenders.length > 2" v-model="by" label="Recommended by" :options="recommenders"/>
+            <SelectFilter v-model="group" label="Group by" :options="GROUPINGS"/>
+          </template>
+        </FilterBar>
+
+        <LoadError v-if="error" what="The ideas" :error="error" @retry="loadIdeas()"/>
+        <LoadingRows v-else-if="!ideas" :rows="6" tall label="Loading the ideas"/>
+        <p v-else-if="!ideas.length" class="note">No ideas yet.</p>
+        <NoMatch v-else-if="!shown.length" :find="find" @clear="clear(['show', 'by', 'q'])">No ideas match</NoMatch>
+        <table v-else class="ideas">
+          <thead>
+            <tr>
+              <th>Idea</th>
+              <th class="by">Recommended by</th>
+              <th class="date">Recording</th>
+              <th class="date">Added</th>
+              <th class="files"><span class="visually-hidden">Files</span></th>
+            </tr>
+          </thead>
+          <tbody v-for="g in groups" :key="g.key">
+            <tr v-if="g.title" class="group">
+              <th colspan="5" scope="rowgroup">{{ g.title }} <span class="count">{{ g.ideas.length }}</span></th>
+            </tr>
+            <IdeaRow v-for="idea in g.ideas" :key="idea.id" :idea="idea"/>
+          </tbody>
+        </table>
+      </template>
     </template>
   </main>
 </template>
@@ -196,25 +202,6 @@ const GROUPINGS = [
 
   tbody:first-of-type .group th {
     padding-top: 8px;
-  }
-}
-
-.grouping {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--muted);
-
-  select {
-    height: 32px;
-    padding: 0 8px;
-    font: inherit;
-    font-size: 13px;
-    color: var(--ink);
-    background: #FFFFFF;
-    border: 1px solid var(--hairline);
-    border-radius: 6.4px;
   }
 }
 

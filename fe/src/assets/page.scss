@@ -79,8 +79,8 @@
   }
 }
 
-// A section's link or button at its heading's end, e.g. Show all 17
-.heading .more {
+// A section's or a part's link or button at its heading's end, e.g. Show all 17
+.heading .more, .subheading .more {
   margin-left: auto;
   padding: 0;
   font-size: 13px;

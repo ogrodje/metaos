@@ -56,6 +56,7 @@ td {
   font-size: 14px;
   line-height: 22px;
   font-weight: 500;
+  text-wrap: pretty;
 
   .show {
     margin-left: 10px;
@@ -74,6 +75,7 @@ td {
   font-size: 13px;
   line-height: 20px;
   color: var(--muted);
+  text-wrap: pretty;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;

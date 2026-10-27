@@ -6,13 +6,14 @@ import ChipGroup from '@/components/ChipGroup.vue'
 import FilterBar from '@/components/FilterBar.vue'
 import LoadError from '@/components/LoadError.vue'
 import LoadingRows from '@/components/LoadingRows.vue'
+import NoMatch from '@/components/NoMatch.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import PersonCard from '@/components/PersonCard.vue'
 import UnlinkedAccounts from '@/components/UnlinkedAccounts.vue'
 import { errorMessage, graphql } from '@/graphql'
 import { ALPHABET, type Kind, kindOf, letterOf, matches } from '@/lists'
 import { type Person, PERSON_FIELDS } from '@/people'
-import { useQueryState } from '@/query'
+import { useClearQuery, useQueryState } from '@/query'
 import { usePageMeta } from '@/seo'
 import { useFirstLoad } from '@/ssr'
 import { useAuthStore } from '@/stores/auth'
@@ -104,10 +105,15 @@ usePageMeta(() => ({ description: "The hosts and guests of Ogrodje's podcast, wh
 // Who's shown, as the address says, e.g. ?show=team&q=sraka
 const shown = useQueryState<'all' | Kind>('show', 'all', ['all', 'team', 'guest', 'candidate'])
 const find = useQueryState('q', '')
+const clear = useClearQuery()
 
 const everyone = computed(() => people.value ?? [])
 const found = computed(() => everyone.value.filter((person) => matches(`${person.name} ${person.bio ?? ''}`, find.value)))
 const ofKind = (kind: Kind) => found.value.filter((person) => kindOf(person) === kind)
+
+// Who's left once filtered, for how many of them there are, and whether anyone is
+const filtering = computed(() => shown.value !== 'all' || find.value.trim() !== '')
+const listed = computed(() => (shown.value === 'all' ? found.value : ofKind(shown.value)))
 
 // The team by how many episodes they've been on, the most first; everyone else by name, as the API has them
 const team = computed(() => ofKind('team').sort((a, b) => b.episodes.length - a.episodes.length))
@@ -140,14 +146,14 @@ const candidatesOpen = ref(false)
 
 <template>
   <main class="content">
-    <PageHeader title="People" :count="people?.length">
+    <PageHeader title="People" :count="people?.length" :shown="filtering && people ? listed.length : undefined">
       <template v-if="auth.ready && !auth.authenticated">
         The hosts, guests and everyone else on Ogrodje's released episodes. Signed in, you see everyone, also on what's
         being made.
       </template>
     </PageHeader>
 
-    <FilterBar v-model:find="find" placeholder="Find someone by name or what they do">
+    <FilterBar v-model:find="find" placeholder="Find by name or what they do">
       <ChipGroup v-model="shown" label="Show" :options="kinds"/>
       <template v-if="shown === 'all' || shown === 'guest'" #end>
         <nav class="index" aria-label="Guests by letter">
@@ -161,7 +167,8 @@ const candidatesOpen = ref(false)
 
     <LoadError v-if="error" what="The people" :error="error" @retry="loadPeople()"/>
     <LoadingRows v-else-if="!people" :rows="6" tall label="Loading the people"/>
-    <p v-else-if="!found.length" class="note">{{ people.length ? 'No one matches.' : 'No one yet.' }}</p>
+    <p v-else-if="!people.length" class="note">No one yet.</p>
+    <NoMatch v-else-if="!listed.length" :find="find" @clear="clear(['show', 'q'])">No one matches</NoMatch>
 
     <template v-else>
       <section v-if="team.length && (shown === 'all' || shown === 'team')" aria-labelledby="the-team">
@@ -179,6 +186,10 @@ const candidatesOpen = ref(false)
           <h2 id="guests">Guests</h2>
           <span class="count">{{ guests.length }}</span>
         </div>
+        <!-- On phones, where the filters' index doesn't fit, the letters with anyone, over the guests as they scroll -->
+        <nav class="letters" aria-label="Guests by letter">
+          <a v-for="group in byLetter" :key="group.letter" :href="`#letter-${group.letter}`">{{ group.letter }}</a>
+        </nav>
         <div class="guests">
           <template v-for="group in byLetter" :key="group.letter">
             <h3 :id="`letter-${group.letter}`" class="letter">{{ group.letter }}</h3>
@@ -194,8 +205,8 @@ const candidatesOpen = ref(false)
         <div class="heading">
           <h2 id="candidates">Candidates</h2>
           <span class="count">{{ candidates.length }}</span>
-          <button v-if="shown === 'all'" type="button" class="more" :aria-expanded="candidatesOpen"
-                  @click="candidatesOpen = !candidatesOpen">{{ candidatesOpen ? 'Fold' : 'Show' }}</button>
+          <button v-if="shown === 'all'" type="button" class="more" :aria-expanded="candidatesOpen" aria-describedby="candidates"
+                  @click="candidatesOpen = !candidatesOpen">{{ candidatesOpen ? 'Fold' : `Show all ${candidates.length}` }}</button>
         </div>
         <ul v-if="candidatesOpen || shown === 'candidate'" class="people">
           <PersonCard v-for="person in candidates" :key="person.id" :person="person"/>
@@ -285,6 +296,11 @@ const candidatesOpen = ref(false)
   }
 }
 
+// The phones' index, a row of letters that stays at the top while the guests scroll by, and scrolls sideways itself
+.letters {
+  display: none;
+}
+
 @media (max-width: 640px) {
   .team {
     grid-template-columns: minmax(0, 1fr);
@@ -296,6 +312,35 @@ const candidatesOpen = ref(false)
 
   .index {
     display: none;
+  }
+
+  .letters {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    margin: 0 -16px 8px;
+    padding: 0 12px;
+    overflow-x: auto;
+    background: #FFFFFF;
+    border-bottom: 1px solid var(--rule);
+    scrollbar-width: none;
+
+    a {
+      display: grid;
+      flex: none;
+      place-items: center;
+      min-width: 36px;
+      height: 40px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--secondary);
+    }
+  }
+
+  // Past the index, which would cover it
+  .letter {
+    scroll-margin-top: 56px;
   }
 }
 </style>

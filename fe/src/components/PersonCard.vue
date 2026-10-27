@@ -3,27 +3,21 @@ import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import PersonAvatar from '@/components/PersonAvatar.vue'
 import SocialLinks from '@/components/SocialLinks.vue'
-import { roleName } from '@/episodes'
-import { roleCounts } from '@/lists'
+import { teamSummary } from '@/lists'
 import { type Person, personPath } from '@/people'
 
-// Someone on the People page. On the team, a card: their picture, large, and beside it their name, who they are, and how
-// many episodes they've been on as what, the most first. Anyone else, a line: picture, name, who they are, their
-// episodes, and where they're online.
+// Someone on the People page. On the team, a card: their picture, large, and beside it their name, who they are, and
+// what they do on how many episodes. Anyone else, a line: picture, name, who they are, their latest episode and how
+// many there are, and where they're online.
 const props = defineProps<{
   person: Person
   team?: boolean
 }>()
 
-// Host 46 · consultant 5, but not what they might be, a candidate
-const roles = computed(() => roleCounts(props.person)
-  .filter(({ role }) => role !== 'CANDIDATE')
-  .map(({ role, count }) => `${roleName(role)} ${count}`)
-  .join(' · '))
+// 37 episodes as co-host, host and consultant
+const roles = computed(() => teamSummary(props.person))
 
-// Their latest episodes by code, and how many there are: hosts have dozens
-const LATEST = 3
-const latest = computed(() => props.person.episodes.slice(0, LATEST).map(({ episode }) => episode.code ?? episode.title))
+const latest = computed(() => props.person.episodes[0]?.episode)
 </script>
 
 <template>
@@ -41,9 +35,9 @@ const latest = computed(() => props.person.episodes.slice(0, LATEST).map(({ epis
     <div class="text">
       <RouterLink class="name" :to="personPath(person)">{{ person.name }}</RouterLink>
       <p v-if="person.bio" class="bio">{{ person.bio }}</p>
-      <p v-if="person.episodes.length" class="episodes">
+      <p v-if="latest" class="episodes">
         <template v-if="person.episodes.length > 1">{{ person.episodes.length }} episodes · </template>
-        <span class="codes">{{ latest.join(', ') }}</span>
+        <span lang="sl">{{ latest.title }}</span>
       </p>
     </div>
     <span class="links"><SocialLinks :person="person"/></span>
@@ -100,6 +94,7 @@ const latest = computed(() => props.person.episodes.slice(0, LATEST).map(({ epis
   font-size: 12.5px;
   line-height: 18px;
   color: var(--muted);
+  text-wrap: pretty;
 }
 
 // Everyone else: a line each, in columns
@@ -129,11 +124,6 @@ const latest = computed(() => props.person.episodes.slice(0, LATEST).map(({ epis
   font-size: 12px;
   line-height: 18px;
   color: var(--muted);
-}
-
-.codes {
-  font-family: var(--font-mono);
-  font-size: 11.5px;
 }
 
 // Two at most, as they're icons in a narrow column; the person's page has them all

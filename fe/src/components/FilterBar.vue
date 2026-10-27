@@ -74,8 +74,9 @@ const find = defineModel<string>('find', { required: true })
 
 .end {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 8px 16px;
   margin-left: auto;
 }
 

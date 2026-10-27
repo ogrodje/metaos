@@ -1,7 +1,7 @@
 // What the list pages (Episodes, Ideas, People) filter and group by: as pure functions, apart from the pages, so they
 // can be tested, and the pages filter in the browser on what they've loaded already
 
-import { candidates, type Episode, guests, type Role } from '@/episodes'
+import { candidates, type Episode, type EpisodeStatus, guests, type Role, roleName } from '@/episodes'
 import type { Person } from '@/people'
 import { searchWords } from '@/search'
 
@@ -27,6 +27,22 @@ export function seasonOf(episode: Pick<Episode, 'code'>): number | null {
 export function seasonTitle(season: number | null) {
   if (season === null) return 'Without a code'
   return season === 99 ? 'Bonus' : `Season ${season}`
+}
+
+/** The stages an episode goes through while it's in the works, in their order */
+export const IN_THE_WORKS: EpisodeStatus[] = ['PLANNED', 'SCHEDULED', 'RECORDED', 'IN_PRODUCTION', 'READY', 'EARLY_ACCESS']
+
+/** Where an episode is put aside, out of the way of those being made */
+export const SET_ASIDE: EpisodeStatus[] = ['ON_HOLD', 'CANCELLED']
+
+/** The stages the Episodes page shows one of (?status=), e.g. from the home page's: every one but an idea's */
+export const STAGES: EpisodeStatus[] = [...IN_THE_WORKS, 'PUBLISHED', ...SET_ASIDE]
+
+/** What's in the works by stage, in the order they go through them, then what's put aside; stages without any left out */
+export function byStage<E extends Pick<Episode, 'status'>>(episodes: E[]): { status: EpisodeStatus, episodes: E[] }[] {
+  return [...IN_THE_WORKS, ...SET_ASIDE]
+    .map((status) => ({ status, episodes: episodes.filter((episode) => episode.status === status) }))
+    .filter((stage) => stage.episodes.length)
 }
 
 /** How far along an idea is: in a recording session, with a confirmed guest, with candidates only, or with no one yet */
@@ -72,4 +88,16 @@ export function roleCounts(person: Pick<Person, 'episodes'>): { role: Role, coun
   const counts = new Map<Role, number>()
   for (const { roles } of person.episodes) for (const role of roles) counts.set(role, (counts.get(role) ?? 0) + 1)
   return [...counts].map(([role, count]) => ({ role, count })).sort((a, b) => b.count - a.count)
+}
+
+/**
+ * What someone on the team does, and on how many episodes, for their card on the People page, e.g. 37 episodes as
+ * co-host, host and consultant: every episode they're on but as a candidate, and their roles on the team, the most first
+ */
+export function teamSummary(person: Pick<Person, 'episodes'>) {
+  const roles = roleCounts(person).map(({ role }) => role).filter((role) => TEAM_ROLES.includes(role)).map(roleName)
+  const what = roles.length > 1 ? `${roles.slice(0, -1).join(', ')} and ${roles.at(-1)}` : roles[0]
+  const count = person.episodes.filter(({ roles }) => roles.some((role) => role !== 'CANDIDATE')).length
+  const episodes = `${count} ${count === 1 ? 'episode' : 'episodes'}`
+  return what ? `${episodes} as ${what}` : episodes
 }

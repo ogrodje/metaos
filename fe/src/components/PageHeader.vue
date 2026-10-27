@@ -1,8 +1,10 @@
 <script setup lang="ts">
-// A list page's heading: its name, how many it has, and a line about it, e.g. for visitors what they see
+// A list page's heading: its name, how many it has, and a line about it, e.g. for visitors what they see. While it's
+// filtered, how many of them are shown, e.g. 12 of 74, which screen readers hear as it changes.
 defineProps<{
   title: string
   count?: number
+  shown?: number
 }>()
 </script>
 
@@ -10,7 +12,9 @@ defineProps<{
   <header class="page-header">
     <div class="name">
       <h1>{{ title }}</h1>
-      <span v-if="count !== undefined" class="count">{{ count }}</span>
+      <span v-if="count !== undefined" class="count" aria-live="polite" aria-atomic="true">
+        {{ shown === undefined ? count : `${shown} of ${count}` }}<span class="visually-hidden"> {{ title.toLowerCase() }}</span>
+      </span>
     </div>
     <p v-if="$slots.default" class="lede"><slot/></p>
   </header>
@@ -40,6 +44,7 @@ h1 {
   font-size: 13px;
   line-height: 20px;
   color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .lede {
