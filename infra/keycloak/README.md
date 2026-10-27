@@ -11,7 +11,7 @@ same way. Nothing else sets it up: Keycloak starts with the master realm only, a
 
 ```bash
 just keycloak plan prod     # what would change
-just keycloak apply prod    # change it, also from CI: Actions → Terraform → keycloak/prod (../README.md)
+just keycloak apply prod    # change it; CI does on a merge into master (../README.md)
 just keycloak adopt dev     # a realm the state doesn't have yet, e.g. a new compose Keycloak's (below)
 ```
 

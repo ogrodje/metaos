@@ -21,8 +21,10 @@ MetaOS was designed for scaling, optimising and helping grow the [Ogrodje] organ
   tailnet's policy file are code in [`infra/`](infra/README.md), planned and applied with Terraform, never changed in a
   console or by a script: a change made there, the next apply undoes. A change to them is a change to `infra/` (its
   README says how, per stack, and how development and production differ); a new one goes there too, `import`ed if
-  it's there already. This repository is public: the tailnet's policy file is private, so never committed
-  (`infra/tailscale/policy.hujson`, `.gitignore`) and never applied by CI, and anything else like it goes the same way.
+  it's there already. CI plans a change to `keycloak/prod`, `newrelic` or `cloudflare` on its pull request and applies
+  it once merged (`terraform.yml`); `gcp` and `tailscale` are applied by hand. This repository is public: the tailnet's
+  policy file is private, so never committed (`infra/tailscale/policy.hujson`, `.gitignore`) and never applied by CI,
+  and anything else like it goes the same way.
 - **The architecture diagram stays in sync.** [`architecture.png`](architecture.png), at the root and in README.md's
   Architecture Overview, is drawn in [`architecture.svg`](architecture.svg). Whenever the architecture or an
   integration changes, update `architecture.svg` in the same change and render the PNG again with `just architecture`
