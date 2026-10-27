@@ -574,10 +574,16 @@ takes nothing until the next, and one full user ([`NewRelic.kt`](src/main/kotlin
   `PROD_NEW_RELIC_LICENSE_KEY`, `k8s/set_secrets.sh`), so the tests never have it. They report as `MetaOS` and
   `patreon-gateway`, `environment:production` (`NEW_RELIC_LABELS`). The agent is 41 MB, a layer of its own, pushed
   again only when its version changes; 8.25 is the first for Java 25.
-- GraphQL and MCP answer 200 with their errors in the body, so the agent wouldn't count those:
-  `GraphQLErrorReports` (the first exception resolver) and an advisor on `@McpTool` methods report them with
-  `NewRelic.noticeError`, but not the caller's mistakes (`callersMistake`: `IllegalArgumentException`, which
-  `require` throws, and being denied). Without the agent, its API does nothing.
+- GraphQL and MCP answer 200 with their errors in the body, so `NewRelic.kt` reports them, the caller's mistakes as
+  expected, which New Relic shows but doesn't count as errors (`callersMistake`: `IllegalArgumentException`, which
+  `require` throws, a GraphQL argument that doesn't convert, and being denied); the errors alert leaves them out too.
+  The agent reports GraphQL's itself, the caller's mistakes too, and a request keeps the last: each field's exception
+  (wrapped, `CompletionException`), the null a non-null field's error leaves, and invalid queries. So
+  `GraphQLErrorReports` (the first exception resolver, and an `Instrumentation`) notes each field's exception, and
+  once the request is done reports the first that isn't the caller's mistake, else the first that is, else has the
+  agent ignore its own. An advisor on `@McpTool` methods reports what a tool throws, before Spring AI makes it the
+  tool's result. Without the agent, its API does nothing. The agent leaves out 4xx responses (`ignore_status_codes`),
+  e.g. the 401 every MCP client's sign-in starts with.
 - The front-end's browser agent ([`fe/src/newrelic.ts`](fe/src/newrelic.ts), `plugins/newrelic.client.ts`) reports
   the pages' errors, Vue's too (which Vue only logs), their load times and their requests to MetaOS, as the start of
   their traces there. It keeps nothing in the browser (`cookies_enabled: false`), so there's nothing to ask visitors,

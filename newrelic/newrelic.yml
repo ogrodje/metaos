@@ -23,6 +23,11 @@ common: &default_settings
     local_decorating:
       enabled: false
 
+  # Errors are the app's: a 4xx is the caller's, e.g. the 401 every MCP client's sign-in starts with, or a bot's 404.
+  # GraphQL's are as NewRelic.kt reports them
+  error_collector:
+    ignore_status_codes: 400-499
+
   # SQL with its values taken out, and the plans of slow queries
   transaction_tracer:
     record_sql: obfuscated
