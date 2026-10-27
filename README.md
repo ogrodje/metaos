@@ -26,7 +26,7 @@ runs on Ogrodje's Kubernetes cluster, behind Cloudflare. New Relic, in its EU re
 patreon-gateway's requests, errors and logs from its Java agent in each, and the pages' errors and load times from its
 agent in the browser, and checks from outside that the pages, MetaOS and Keycloak answer. The cluster's Prometheus
 scrapes MetaOS, patreon-gateway and Keycloak, and passes a few of their metrics on to New Relic: MetaOS's outside
-connections and Keycloak's sign-ins.
+connections, Keycloak's sign-ins, their pods' memory, restarts and readiness, and the node's memory and disk.
 
 The diagram is drawn in [`architecture.svg`](architecture.svg); `just architecture` renders `architecture.png` from it.
 
