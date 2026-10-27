@@ -53,6 +53,11 @@ class FakeDropbox : Dropbox {
     override fun read(place: String, path: String, maxBytes: Int) =
         files.getValue(place to path).second!!.let { it.copyOf(minOf(it.size, maxBytes)) }
 
+    override fun temporaryLink(place: String, path: String): String {
+        requireNotNull(files[place to path]) { "$path: path not found" }
+        return "https://dl.dropboxusercontent.com/fake/$place${path}"
+    }
+
     // The image itself stands in for its thumbnail
     override fun thumbnail(place: String, path: String, size: String) =
         DropboxImage("image/jpeg", requireNotNull(files[place to path]?.second) { "Dropbox can't make a picture of $path: path not found" })

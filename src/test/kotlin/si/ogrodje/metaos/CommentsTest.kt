@@ -4,6 +4,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.context.annotation.Import
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.oauth2.jwt.Jwt
@@ -16,6 +17,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @SpringBootTest
+@AutoConfigureMockMvc // the context the GraphQL tests have, so one fewer to start (TestcontainersConfig)
 @Import(TestcontainersConfig::class)
 class CommentsTest @Autowired constructor(
     private val commentsMCP: CommentsMCP,
@@ -88,7 +90,7 @@ class CommentsTest @Autowired constructor(
         assertEquals("First", edited.body)
         assertNotNull(edited.editedAt)
         // The same text again changes nothing, so it isn't edited again
-        assertTrue(edited.editedAt!!.isEqual(commentsMCP.editComment(id, "First  ").editedAt))
+        assertTrue(edited.editedAt.isEqual(commentsMCP.editComment(id, "First  ").editedAt))
 
         commentsMCP.deleteComment(id)
         assertEquals(emptyList(), commentsMCP.listEpisodeComments("cm-103"))

@@ -7,7 +7,9 @@ import com.google.cloud.storage.BlobId
 import com.google.cloud.storage.BlobInfo
 import com.google.cloud.storage.HttpMethod
 import com.google.cloud.storage.Storage.BlobListOption
+import com.google.cloud.storage.Storage.BlobTargetOption
 import com.google.cloud.storage.Storage.BlobWriteOption
+import com.google.cloud.storage.Storage.CopyRequest
 import com.google.cloud.storage.Storage.SignUrlOption
 import com.google.cloud.storage.StorageException
 import com.google.cloud.storage.StorageOptions
@@ -26,8 +28,18 @@ import java.time.Instant
 import java.time.OffsetDateTime
 import java.util.concurrent.TimeUnit
 
-/** A file in MetaOS's bucket, by its path there, e.g. "episodes/S05E08/cover.png" */
-data class StoredFile(val path: String, val size: Long, val contentType: String?, val updated: OffsetDateTime?)
+/**
+ * A file in MetaOS's bucket, by its path there, e.g. "episodes/S05E08/cover.png", with its hashes in hex as Cloud Storage
+ * has them: the same content has the same [md5]
+ */
+data class StoredFile(
+    val path: String,
+    val size: Long,
+    val contentType: String?,
+    val updated: OffsetDateTime?,
+    val md5: String? = null,
+    val crc32c: String? = null,
+)
 
 /**
  * A resumable upload straight to the bucket, without MetaOS in between - how big files get there from the browser:
@@ -60,6 +72,12 @@ interface Storage {
     /** The start of a file, at most [maxBytes] */
     fun read(path: String, maxBytes: Int): ByteArray
 
+    /**
+     * Copies a file to a path that has none, inside the bucket, without downloading it, e.g. an upload to where it's kept.
+     * [contentDisposition] is what it's downloaded with, e.g. attachment, so a browser saves it rather than plays it.
+     */
+    fun copy(from: String, to: String, contentDisposition: String? = null): StoredFile
+
     /** Lets whoever has it upload a file that isn't at the path yet, for [validFor] */
     fun uploadUrl(path: String, contentType: String, validFor: Duration): SignedUpload
 
@@ -88,7 +106,8 @@ annotation class ConditionalOnStorage
 // What V4 signatures allow
 private val MAX_SIGNED = Duration.ofDays(7)
 
-private fun Blob.toStoredFile() = StoredFile(name, size ?: 0, contentType, updateTimeOffsetDateTime)
+private fun Blob.toStoredFile() =
+    StoredFile(name, size ?: 0, contentType, updateTimeOffsetDateTime, md5?.let { md5ToHexString }, crc32c?.let { crc32cToHexString })
 
 @Component
 @ConditionalOnStorage
@@ -160,6 +179,19 @@ class GoogleCloudStorage(
             val answer = e.cause as? StorageException ?: throw e
             if (answer.code == 404) throw IllegalArgumentException("There's no file at ${storagePath(path)}")
             throw answer
+        }
+    }
+
+    // A rewrite, which Cloud Storage does in one go inside a bucket, as the file stays where it is and in its class
+    override fun copy(from: String, to: String, contentDisposition: String?): StoredFile = call {
+        val source = storage.get(id(from)) ?: throw IllegalArgumentException("There's no file at ${storagePath(from)}")
+        val target = BlobInfo.newBuilder(id(to)).setContentType(source.contentType).setContentDisposition(contentDisposition).build()
+        try {
+            storage.copy(CopyRequest.newBuilder().setSource(source.blobId).setTarget(target, BlobTargetOption.doesNotExist()).build())
+                .result.toStoredFile()
+        } catch (e: StorageException) {
+            if (e.code == 412) throw IllegalArgumentException("${target.name} is already there")
+            throw e
         }
     }
 

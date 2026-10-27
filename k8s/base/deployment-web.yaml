@@ -10,6 +10,10 @@ metadata:
 spec:
   # Two, so one keeps answering while the other restarts or rolls out; each keeps its own cache of rendered pages
   replicas: 2
+  # Both new pods at once, while both old ones keep serving: they're some 60 MB each, unlike the app's
+  # (deployment-metaos.yaml)
+  strategy:
+    rollingUpdate: { maxSurge: 100%, maxUnavailable: 0 }
   selector: { matchLabels: { app: metaos-web } }
   template:
     metadata: { labels: { app: metaos-web } }
@@ -48,6 +52,13 @@ spec:
               valueFrom: { configMapKeyRef: { name: public-urls, key: METAOS_MCP_URL } }
             - name: NUXT_PUBLIC_SITE_URL
               valueFrom: { configMapKeyRef: { name: public-urls, key: METAOS_UI_URL } }
+            # New Relic's browser app "MetaOS web" (fe/src/newrelic.ts), in account 8666724: all public, as the agent
+            # sends them from every page; the license key is the account's browser key, for sending only
+            - { name: NUXT_PUBLIC_NEW_RELIC_ACCOUNT_ID, value: "8666724" }
+            - { name: NUXT_PUBLIC_NEW_RELIC_TRUST_KEY, value: "8666724" }
+            - { name: NUXT_PUBLIC_NEW_RELIC_AGENT_ID, value: "538920243" }
+            - { name: NUXT_PUBLIC_NEW_RELIC_APPLICATION_ID, value: "538920243" }
+            - { name: NUXT_PUBLIC_NEW_RELIC_LICENSE_KEY, value: "NRJS-cf39af35336b96fdb3e" }
 
           readinessProbe:
             httpGet: { path: /healthz, port: http }

@@ -1,0 +1,179 @@
+# patreon-gateway (patreon-gateway/): Ogrodje's Patreon behind a small API, for MetaOS only - no Ingress, and every call
+# but /health needs its token. One pod, as it holds the one browser session and runs one job at a time; its tokens,
+# that session and what failed jobs saw are on a volume of its own, so they outlive a restart.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: patreon-gateway-state
+  namespace: metaos-prod
+spec:
+  accessModes: [ ReadWriteOnce ]
+  resources:
+    requests: { storage: 1Gi }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: patreon-gateway
+  namespace: metaos-prod
+  labels: { app: patreon-gateway }
+spec:
+  replicas: 1
+  # The volume is one pod's at a time
+  strategy: { type: Recreate }
+  selector: { matchLabels: { app: patreon-gateway } }
+  template:
+    metadata: { labels: { app: patreon-gateway } }
+    spec:
+      terminationGracePeriodSeconds: 30
+      # Nothing in it talks to the Kubernetes API, so no token of the namespace's service account for whoever gets in
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001   # pwuser, in Playwright's image
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: patreon-gateway
+          image: registry.folk-decibel.ts.net/metaos/patreon-gateway
+          # Chromium runs without its own sandbox (Playwright's --no-sandbox), so it needs no capabilities either
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ ALL ] }
+          ports:
+            - { containerPort: 8090, name: http }
+          # Optional, so it starts before k8s/set_secrets.sh has made them; without them it reports what's missing
+          env:
+            - name: PATREON_CLIENT_ID
+              valueFrom: { secretKeyRef: { name: patreon-gateway-secret, key: patreon_client_id, optional: true } }
+            - name: PATREON_CLIENT_SECRET
+              valueFrom: { secretKeyRef: { name: patreon-gateway-secret, key: patreon_client_secret, optional: true } }
+            # Only the first: the gateway refreshes them and keeps the new ones on its volume (PatreonApi.kt)
+            - name: PATREON_ACCESS_TOKEN
+              valueFrom: { secretKeyRef: { name: patreon-gateway-secret, key: patreon_access_token, optional: true } }
+            - name: PATREON_REFRESH_TOKEN
+              valueFrom: { secretKeyRef: { name: patreon-gateway-secret, key: patreon_refresh_token, optional: true } }
+            - name: PATREON_GATEWAY_TOKEN
+              valueFrom: { secretKeyRef: { name: patreon-gateway-secret, key: gateway_token, optional: true } }
+            - name: PATREON_DOWNLOADS_DIR
+              value: /downloads
+            # Playwright's browser server in the container beside it, in the pod only
+            - name: PATREON_BROWSER_URL
+              value: ws://127.0.0.1:3000/
+            # Its Chromium goes out through low, Tailscale's container's proxy: Patreon's bot check turns away pages
+            # from the cluster's datacenter address. Patreon's API and the uploads go out directly
+            - name: PATREON_BROWSER_PROXY
+              value: socks5://127.0.0.1:1055
+            # New Relic's Java agent, as patreon-gateway (docker/patreon-gateway.Dockerfile), with MetaOS's license key
+            - name: NEW_RELIC_LICENSE_KEY
+              valueFrom: { secretKeyRef: { name: metaos-secret, key: new_relic_license_key, optional: true } }
+            - name: NEW_RELIC_LABELS
+              value: "environment:production"
+          volumeMounts:
+            - { name: state, mountPath: /state }
+            # Episodes on their way to Patreon, gigabytes each; scratch space, gone with the pod, so nothing is left over
+            - { name: downloads, mountPath: /downloads }
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: http }
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          # The JVM and Playwright's driver; an episode on its way through is on disk, not in memory
+          resources:
+            requests: { cpu: 100m, memory: 384Mi }
+            limits: { memory: 1Gi }
+        # Chromium, from Microsoft's Playwright image, which the node pulls from Microsoft's registry: its gigabyte of
+        # browsers never goes through ours. Playwright's server starts one for each connection the gateway makes, on the
+        # pod's loopback only. Its version has to be the gateway's Playwright's (patreon-gateway/build.gradle.kts).
+        - name: browser
+          image: mcr.microsoft.com/playwright:v1.64.0-noble
+          command: [ npx, -y, playwright@1.64.0, run-server, --port, "3000", --host, 127.0.0.1 ]
+          # Chromium runs without its own sandbox (Playwright's --no-sandbox), so it needs no capabilities
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ ALL ] }
+          volumeMounts:
+            # Chromium's shared memory; the default 64M crashes it on big pages
+            - { name: shm, mountPath: /dev/shm }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 1536Mi }
+        # Tailscale, an ephemeral machine of the tailnet with low (oto.srv4all.net, a VM whose address Patreon's bot
+        # check lets through, unlike Hetzner's) as its exit node, with a SOCKS proxy on the pod's loopback for the
+        # browser. Userspace networking, so it needs no capabilities. When low is down, the browser can't reach Patreon
+        # and jobs wait and try again.
+        - name: tailscale
+          image: tailscale/tailscale:v1.104.2
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ ALL ] }
+          env:
+            # A reusable, ephemeral, pre-approved key tagged tag:patreon-gateway (k8s/set_secrets.sh)
+            - name: TS_AUTHKEY
+              valueFrom: { secretKeyRef: { name: patreon-gateway-secret, key: tailscale_auth_key, optional: true } }
+            - name: TS_HOSTNAME
+              value: patreon-gateway
+            # low's tailnet address
+            - name: TS_EXTRA_ARGS
+              value: --exit-node=100.122.26.110
+            - name: TS_USERSPACE
+              value: "true"
+            - name: TS_SOCKS5_SERVER
+              value: 127.0.0.1:1055
+            - name: TS_ACCEPT_DNS
+              value: "false"
+            # Its state in memory, not in a Kubernetes Secret: the pod has no token to write one, and an ephemeral
+            # machine is made anew at each start
+            - name: TS_KUBE_SECRET
+              value: ""
+            - name: TS_STATE_DIR
+              value: /tmp
+            - name: TS_AUTH_ONCE
+              value: "true"
+            - name: HOME
+              value: /tmp
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { memory: 256Mi }
+      volumes:
+        - name: state
+          persistentVolumeClaim: { claimName: patreon-gateway-state }
+        - name: shm
+          emptyDir: { medium: Memory, sizeLimit: 256Mi }
+        - name: downloads
+          emptyDir: { sizeLimit: 20Gi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: patreon-gateway
+  namespace: metaos-prod
+  labels: { app: patreon-gateway }
+spec:
+  type: ClusterIP
+  selector: { app: patreon-gateway }
+  ports:
+    - { name: http, port: 80, targetPort: http }
+---
+# Its patreon_gateway_api_connected and patreon_gateway_signed_in, and the JVM's; the actuator is on its one port, which
+# needs no token for it but no Ingress routes
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: patreon-gateway
+  namespace: metaos-prod
+  labels: { release: prom }
+spec:
+  endpoints:
+    - interval: 30s
+      path: /actuator/prometheus
+      port: http
+  namespaceSelector:
+    matchNames:
+      - metaos-prod
+  selector:
+    matchLabels:
+      app: patreon-gateway

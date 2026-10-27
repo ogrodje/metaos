@@ -4,6 +4,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.context.annotation.Import
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.security.core.context.SecurityContextHolder
@@ -16,6 +17,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @SpringBootTest
+@AutoConfigureMockMvc // the context the GraphQL tests have, so one fewer to start (TestcontainersConfig)
 @Import(TestcontainersConfig::class)
 class AuditTest @Autowired constructor(
     private val episodesRepository: EpisodesRepository,

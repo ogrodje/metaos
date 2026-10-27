@@ -5,6 +5,7 @@ import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.context.annotation.Import
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.core.queryForObject
@@ -16,6 +17,7 @@ import kotlin.test.assertEquals
 
 // V29 on a database of its own, as it was before: sessions are named after their location, without that being a change
 @SpringBootTest
+@AutoConfigureMockMvc // the context the GraphQL tests have, so one fewer to start (TestcontainersConfig)
 @Import(TestcontainersConfig::class)
 class SessionNamesMigrationTest @Autowired constructor(
     private val dataSource: DataSource,
@@ -25,9 +27,11 @@ class SessionNamesMigrationTest @Autowired constructor(
     @Test
     fun `names each session after its location, and leaves its history and updated_at be`() {
         val app = dataSource.unwrap(HikariDataSource::class.java)
-        jdbcTemplate.execute("create database v29_session_names")
+        // Its own name, as the tests' Postgres may be shared by other test JVMs and kept between runs (TestcontainersConfig)
+        val database = "v29_session_names_${UUID.randomUUID().toString().replace("-", "").take(12)}"
+        jdbcTemplate.execute("create database $database")
         try {
-            val url = app.jdbcUrl.replaceAfterLast('/', "v29_session_names")
+            val url = app.jdbcUrl.replaceAfterLast('/', database)
             val before = DriverManagerDataSource(url, app.username, app.password)
             fun flyway(target: String) =
                 Flyway.configure().dataSource(before).locations("classpath:db/migration").target(target).load()
@@ -53,7 +57,7 @@ class SessionNamesMigrationTest @Autowired constructor(
             db.update("update sessions set name = 'AWS Community Day' where id = ?", named)
             assertEquals(1, db.queryForObject<Int>("select count(*) from audit_log where operation = 'UPDATE' and row_id = ?", named))
         } finally {
-            jdbcTemplate.execute("drop database v29_session_names with (force)")
+            jdbcTemplate.execute("drop database $database with (force)")
         }
     }
 }

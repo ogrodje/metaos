@@ -19,10 +19,26 @@ export interface Uploaded {
 
 export type Progress = { state: 'uploading', percent: number } | { state: 'publishing' }
 
-interface ArtworkUpload {
+/** Where MetaOS says to send a file: a resumable upload (SignedUpload in Storage.kt), by its ID for MetaOS */
+export interface SignedUpload {
   id: string
   url: string
   headers: { name: string, value: string }[]
+}
+
+/** Starts a resumable upload, and says where the file goes: the upload's session, which takes it whole or in chunks */
+export async function startUpload(upload: SignedUpload, signal: AbortSignal): Promise<string> {
+  const start = await fetch(upload.url, {
+    method: 'POST',
+    headers: Object.fromEntries(upload.headers.map((header) => [header.name, header.value])),
+    signal,
+  }).catch((error) => {
+    if (signal.aborted) throw error
+    throw new Error("Google Cloud Storage can't be reached; check the connection", { cause: error })
+  })
+  const session = start.ok ? start.headers.get('Location') : null
+  if (!session) throw new Error(`Google Cloud Storage didn't take it (${start.status})`)
+  return session
 }
 
 /**
@@ -34,22 +50,13 @@ export async function uploadArtwork(
   ref: string, kind: ArtworkKind, picked: Picked, replace: boolean, onProgress: (progress: Progress) => void, signal: AbortSignal,
 ): Promise<Uploaded> {
   const type = picked.type ?? 'image/png'
-  const { artworkUpload } = await graphql<{ artworkUpload: ArtworkUpload }>(
+  const { artworkUpload } = await graphql<{ artworkUpload: SignedUpload }>(
     `mutation ($ref: String!, $contentType: String!, $size: Int!) {
       artworkUpload(ref: $ref, contentType: $contentType, size: $size) { id url headers { name value } }
     }`, { ref, contentType: type, size: picked.file.size },
   )
   onProgress({ state: 'uploading', percent: 0 })
-  const start = await fetch(artworkUpload.url, {
-    method: 'POST',
-    headers: Object.fromEntries(artworkUpload.headers.map((header) => [header.name, header.value])),
-    signal,
-  }).catch((error) => {
-    if (signal.aborted) throw error
-    throw new Error("Google Cloud Storage can't be reached; check the connection", { cause: error })
-  })
-  const session = start.ok ? start.headers.get('Location') : null
-  if (!session) throw new Error(`Google Cloud Storage didn't take it (${start.status})`)
+  const session = await startUpload(artworkUpload, signal)
   await send(session, picked.file, type, (percent) => onProgress({ state: 'uploading', percent }), signal)
   onProgress({ state: 'publishing' })
   const { setEpisodeImage } = await graphql<{ setEpisodeImage: Uploaded }>(

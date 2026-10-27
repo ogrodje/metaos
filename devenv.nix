@@ -48,12 +48,16 @@ in {
     pkgs.just
     # gcloud, for google/storage.sh
     pkgs.google-cloud-sdk
+    # ffprobe, which reads what's in an episode's video and audio (MediaProbe.kt), as MetaOS's image has it; and ffmpeg,
+    # with which MediaProbeTest makes files for it
+    pkgs.ffmpeg-headless
     # tofu, for infra/ (Keycloak's realm)
     unstable.opentofu
   ];
 
   env = {
     METAOS_ENV = "development";
+    TESTCONTAINERS_REUSE_ENABLE = "true";
   };
 
   enterShell = ''

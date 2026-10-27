@@ -31,8 +31,13 @@ services:
 
   # Identity provider / OAuth2 authorization server for the MCP endpoint, persisted in the "keycloak" database.
   # Realm "metaos" is imported from ./keycloak on first start only (existing realms are left untouched).
+  # The Keycloak production has, with MetaOS's provider (keycloak/remember-me): docker/keycloak.Dockerfile's dev stage,
+  # so `docker compose up -d --build keycloak` after a change to either.
   keycloak:
-    image: 'quay.io/keycloak/keycloak:26.8.1'
+    build:
+      context: .
+      dockerfile: docker/keycloak.Dockerfile
+      target: dev
     command: ['start-dev', '--import-realm']
     depends_on:
       keycloak-db-init:

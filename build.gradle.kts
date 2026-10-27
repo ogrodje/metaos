@@ -32,6 +32,11 @@ dependencyManagement {
     }
 }
 
+// New Relic's Java agent (newrelic/newrelic.yml), which the image runs the app with, and its API, which does nothing
+// without it (NewRelic.kt). 8.25 is the first for Java 25.
+val newRelicVersion = "9.5.0"
+val newRelicAgent = configurations.create("newRelicAgent") { isTransitive = false }
+
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
@@ -42,6 +47,9 @@ dependencies {
     // implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     runtimeOnly("io.micrometer:micrometer-registry-prometheus") // /actuator/prometheus, scraped in k8s
+
+    newRelicAgent("com.newrelic.agent.java:newrelic-agent:$newRelicVersion")
+    implementation("com.newrelic.agent.java:newrelic-api:$newRelicVersion")
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
 
     // MCP
@@ -96,11 +104,17 @@ dependencies {
     implementation("com.dropbox.core:dropbox-core-sdk:8.0.2")
 }
 
+// Without Mockito, which no test uses and the test starters bring: Spring's MockitoResetTestExecutionListener would
+// load it before every test, and its inline mock maker attach byte-buddy's agent to the JVM, which Java warns will soon
+// be disallowed
+configurations.matching { it.name.startsWith("test") }.configureEach {
+    exclude(group = "org.mockito")
+}
+
 kotlin {
     jvmToolchain(25)
     compilerOptions {
         freeCompilerArgs.addAll("-Xjsr305=strict")
-        javaParameters = true
         javaParameters = true   // tool JSON schemas need real parameter names
     }
 }
@@ -113,6 +127,11 @@ allOpen {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    // JVMs at once, each with its own Spring contexts and their Postgres: two by default, -PtestForks=<n> for more
+    // (CI, .github/workflows)
+    maxParallelForks = providers.gradleProperty("testForks").map(String::toInt).getOrElse(2)
+    // Conscrypt (Cloud Storage's TLS) loads its native library, which Java warns will soon need this
+    jvmArgs("--enable-native-access=ALL-UNNAMED")
     testLogging {
         showStandardStreams = true
         events("passed", "skipped", "failed")
@@ -128,7 +147,7 @@ val fe = layout.projectDirectory.dir("fe")
 val yarn = providers.environmentVariable("PATH").getOrElse("").split(File.pathSeparator)
     .map { File(it, "yarn") }.firstOrNull { it.canExecute() }?.path ?: "yarn"
 
-val feInstall by tasks.registering(Exec::class) {
+val feInstall = tasks.register<Exec>("feInstall") {
     group = "build"
     description = "Installs fe/'s packages, as yarn.lock has them."
     workingDir(fe)
@@ -138,7 +157,7 @@ val feInstall by tasks.registering(Exec::class) {
     outputs.file(fe.file("node_modules/.yarn-state.yml"))
 }
 
-val feTest by tasks.registering(Exec::class) {
+tasks.register<Exec>("feTest") {
     group = "verification"
     description = "Runs fe/'s tests (src/**/__tests__) with vitest."
     dependsOn(feInstall)
@@ -146,7 +165,7 @@ val feTest by tasks.registering(Exec::class) {
     commandLine(yarn, "test")
 }
 
-val feBuild by tasks.registering(Exec::class) {
+tasks.register<Exec>("feBuild") {
     group = "build"
     description = "Type-checks fe/ and builds it into fe/.output, for its image."
     dependsOn(feInstall)
@@ -156,12 +175,30 @@ val feBuild by tasks.registering(Exec::class) {
     outputs.dir(fe.dir(".output"))
 }
 
-// Fixed name, so docker/Dockerfile doesn't depend on the version
+// New Relic's Java agent and its newrelic.yml, in build/newrelic: beside the app in its image (docker/Dockerfile), and
+// for running it in development with -javaagent:build/newrelic/newrelic.jar
+val newRelic = tasks.register<Sync>("newRelic") {
+    group = "build"
+    description = "Puts New Relic's Java agent and newrelic/newrelic.yml in build/newrelic."
+    from(newRelicAgent) { rename { "newrelic.jar" } }
+    from("newrelic/newrelic.yml")
+    into(layout.buildDirectory.dir("newrelic"))
+}
+
+// Fixed name, so docker/Dockerfile doesn't depend on the version; with the agent, which the image takes too
 tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
     archiveFileName = "metaos.jar"
+    finalizedBy(newRelic)
+}
+
+// The same jar from the same sources, so the image of an unchanged app is the same image, which a deploy leaves be
+// (.github/workflows/deploy.yml)
+tasks.withType<AbstractArchiveTask>().configureEach {
+    isPreserveFileTimestamps = false
+    isReproducibleFileOrder = true
 }
 
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
-    jvmArgs = listOf("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005")
+    jvmArgs = listOf("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005", "--enable-native-access=ALL-UNNAMED")
     systemProperties = System.getProperties().toMap() as Map<String, Any>
 }

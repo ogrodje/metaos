@@ -17,7 +17,7 @@ Status (2026-10-19): everything is written and verified locally. Nothing is depl
 | Front-end                   | `https://metaos.ogrodje.si`, all other paths  | `metaos-web`: Nuxt on Node, renders the pages anyone may see; Cloudflare caches them    |
 | Keycloak                    | `https://metaos-auth.ogrodje.si`              | Own instance, realm `metaos` baked into the image and imported on first start           |
 | Postgres                    | `main-cluster` in namespace `pg`              | Databases `metaos` and `metaos_keycloak`, each owned by a role of the same name         |
-| Images                      | `registry.folk-decibel.ts.net/metaos/...`     | `metaos`, `metaos-web` and `keycloak`, tagged with `git describe`                       |
+| Images                      | `registry.folk-decibel.ts.net/metaos/...`     | `metaos`, `metaos-web`, `keycloak`, `patreon-gateway`; deployed by digest               |
 | Actuator and metrics        | Port 9090                                     | Never routed by the Ingress; Prometheus scrapes it through a ServiceMonitor             |
 | Probes                      | `/livez`, `/readyz` on port 8080              | Public through the Ingress, but they only answer UP or DOWN                             |
 
@@ -139,8 +139,14 @@ justfile                     the same steps by hand: just push, just deploy, jus
 - **Sessions last 7 days idle, 30 days at most.** Keycloak's defaults, 30 minutes and 10 hours, signed people out of
   the front-end and MCP clients several times a day, as refresh tokens last only as long as the session.
   `metaos-realm.json` has the longer ones; a realm imported before needs
-  [`keycloak/sessions.sh`](keycloak/sessions.sh) once; production has had it (2026-10-20). Keycloak's sign-in cookie still ends with the browser, as it
-  only outlives it with "Remember me", which logins through Discord and Google skip.
+  [`keycloak/sessions.sh`](keycloak/sessions.sh) once; production has had it (2026-10-20).
+- **Sign-ins are remembered, 30 days idle, 90 at most.** Keycloak's sign-in cookie otherwise ends with the browser:
+  it only outlives it with "Remember me", which logins through Discord and Google skip, so people signed in again
+  after every restart: one person had 14 sessions from six days on production (2026-10-26), unused but alive. MetaOS's own provider
+  ([`keycloak/remember-me`](keycloak/remember-me)), the last step of each identity provider's post-login flow, does
+  what the box would. It's in Keycloak's image (`docker/keycloak.Dockerfile`), which has to be deployed before
+  `sessions.sh` adds the step to a realm from before; the script refuses until it is. A flow whose step's provider
+  is gone fails every login through it, so take the step out before the provider.
 
 ## Discord login
 

@@ -1,0 +1,5 @@
+build/
+.gradle/
+.kotlin/
+# Tokens, the bot's browser session and what failed jobs saw: secrets
+state/

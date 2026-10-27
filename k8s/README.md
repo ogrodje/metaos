@@ -9,13 +9,16 @@ k8s/base/
   namespace.yaml             metaos-prod
   deployment-metaos.yaml     ConfigMap, Deployment, Service, Ingress (MetaOS's own paths), ServiceMonitor
   deployment-web.yaml        the front-end (metaos-web): Deployment, Service, Ingress (everything else)
-  deployment-keycloak.yaml   Deployment, Service, Ingress
+  deployment-keycloak.yaml   Deployment, Service, Ingress, ServiceMonitor (its metrics, sign-ins among them)
+  deployment-patreon-gateway.yaml  patreon-gateway: its volume, Deployment, Service (no Ingress: MetaOS's only)
   kustomization.yaml         the resources, the public URLs and the image tags
 k8s/set_secrets.sh           Postgres roles + databases, secrets, registry pull secret
+k8s/prometheus/              what the cluster's Prometheus passes on to New Relic (newrelic.sh applies it)
 k8s/ci/deployer.yaml         what CI may do in the cluster
 docker/Dockerfile            the app: boot jar on distroless java25, non-root
 docker/web.Dockerfile        the front-end: Nuxt's build (fe/.output) on distroless Node 26, non-root
 docker/keycloak.Dockerfile   Keycloak, optimized build, realm "metaos" baked in
+docker/patreon-gateway.Dockerfile  patreon-gateway's boot jar on distroless java25, as the app's; its Chromium is Microsoft's image, beside it
 ```
 
 | Host                     | What                                                                       |
@@ -29,9 +32,20 @@ serves traffic; those two are public, but only answer UP or DOWN.
 
 ## Day to day
 
-Pushing to `master` runs `.github/workflows/deploy.yml`: tests, builds and pushes the images, applies `k8s/base` and
-smoke-tests the public URLs. One run at a time: a push while one runs waits for it, and only the newest of those waiting
-runs. By hand (needs Tailscale up and `KUBECONFIG` pointing at `ogrodje-one-config`):
+Pushing to `master` runs `.github/workflows/deploy.yml`: tests, builds and pushes the images, each in a job of its own,
+at once (the app's tests a job of their own too), applies `k8s/base` and smoke-tests the public URLs. One run at a time: a push while one runs waits for it, and
+only the newest of those waiting runs. Started by hand on another branch (Actions → Build and Deploy → Run workflow), it
+builds and pushes that branch's images, tagged but not as `latest`, and deploys nothing.
+
+The images are reproducible (`SOURCE_DATE_EPOCH=0`, `rewrite-timestamp`), so a push sends only the layers that changed,
+usually the application's, under a megabyte, and the deploy sets them by digest (`metaos@sha256:...`, not the tag): a
+Deployment whose image didn't change isn't rolled. `nuxt build` isn't reproducible, so the front-end's image is also
+tagged `src-<key>`, by git's hashes of what it's made from and its base image's digest; a run that finds that tag
+tags the image again rather than build it. They have no provenance attestation, so each is one plain manifest
+rather than an index, which `registry garbage-collect --delete-untagged` would sweep the layers of; images pushed before
+are still indexes. A cleanup of the registry keeps what the cluster runs by its digests.
+
+By hand (needs Tailscale up and `KUBECONFIG` pointing at `ogrodje-one-config`):
 
 ```bash
 just push        # boot jar, front-end, the images (linux/amd64), push, point kustomization.yaml at the tag
@@ -39,6 +53,7 @@ just deploy      # kubectl apply -k, wait for the rollouts
 just manifests   # what would be applied
 just logs        # follow the app
 just web-logs    # follow the front-end
+just gateway-logs  # follow patreon-gateway
 ```
 
 ## One-time setup
@@ -58,7 +73,9 @@ just web-logs    # follow the front-end
    ./k8s/set_secrets.sh
    ```
 
-   It creates roles `metaos` and `metaos_keycloak`, each owning a database of the same name on `main-cluster`.
+   It creates roles `metaos` and `metaos_keycloak`, each owning a database of the same name on `main-cluster`. With
+   the Patreon app's credentials and `PROD_PATREON_GATEWAY_TOKEN` it also makes `patreon-gateway-secret`; then sign
+   the bot in to Patreon with `patreon-gateway/login.sh` ([its README](../patreon-gateway/README.md)).
 
 3. **Cloudflare caches the pages** anyone may see, as their `Cache-Control` says (`s-maxage=60,
    stale-while-revalidate=600`), but only with a Cache Rule, as it doesn't cache HTML by default: for host
@@ -81,6 +98,12 @@ just web-logs    # follow the front-end
     - `kubectl apply -f k8s/ci/deployer.yaml` - a Role in `metaos-prod` for group `metaos-deployers`.
     - In the tailnet policy, add `metaos-deployers` to the groups `tag:ci` impersonates on `tag:k8s-operator`
       (next to `bongbong-deployers`).
+
+7. **New Relic** (CLAUDE.md, "New Relic"): `PROD_NEW_RELIC_LICENSE_KEY` in `.envrc`, then `./k8s/set_secrets.sh` for
+   the agents, and, where kubectl may change namespace `observability` (`ssh ogrodje-one-x`), `./k8s/prometheus/newrelic.sh
+   --dry-run=server` and again without it: the cluster's Prometheus (kube-prometheus-stack, release `prom`, the
+   cluster's apps share it) then passes MetaOS's own metrics, Keycloak's sign-ins, `metaos-prod`'s pods' and the
+   node's on to New Relic, and nothing else (`newrelic-values.yaml` says which). Run it again after changing them.
 
 ## Checking it
 

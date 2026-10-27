@@ -10,6 +10,9 @@
   "bruteForceProtected": true,
   "ssoSessionIdleTimeout": 604800,
   "ssoSessionMaxLifespan": 2592000,
+  "rememberMe": true,
+  "ssoSessionIdleTimeoutRememberMe": 2592000,
+  "ssoSessionMaxLifespanRememberMe": 7776000,
   "attributes": {
     "CreateDefaultClientScopes": "true"
   },

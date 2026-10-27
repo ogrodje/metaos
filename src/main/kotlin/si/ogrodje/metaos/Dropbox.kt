@@ -116,6 +116,12 @@ interface Dropbox {
     fun read(place: String, path: String, maxBytes: Int): ByteArray
 
     /**
+     * A link anyone who has it can download a file by, for four hours: how a big file, e.g. an episode's video, goes to
+     * where MetaOS doesn't stream it through itself (patreon-gateway)
+     */
+    fun temporaryLink(place: String, path: String): String
+
+    /**
      * A JPEG Dropbox makes of an image (jpg, png, gif, webp, tiff, bmp, up to 20 MB), as big as fits in its [size],
      * named as Dropbox names them: w256h256, w640h480, w1024h768, w2048h1536, ...
      */
@@ -152,6 +158,14 @@ private fun Metadata.toDropboxFile(place: String, path: String) = when (this) {
     is FolderMetadata -> DropboxFile(place, path, name, true, null, null, null, id)
     else -> DropboxFile(place, path, name, false, null, null, null)
 }
+
+// The shared folder it's in: Metadata's own parentSharedFolderId is deprecated for its sharing info's
+private val Metadata.parentSharedFolder: String?
+    get() = when (this) {
+        is FileMetadata -> sharingInfo?.parentSharedFolderId
+        is FolderMetadata -> sharingInfo?.parentSharedFolderId
+        else -> null
+    }
 
 private fun LookupError.notFound() = isNotFound || isNotFolder || isNotFile
 
@@ -234,7 +248,7 @@ class DropboxStorage(
     override fun fileById(place: String, id: String): DropboxFile? = call {
         try {
             val metadata = client.withPathRoot(PathRoot.namespaceId(place)).files().getMetadata(id)
-            metadata.pathDisplay?.takeIf { metadata.parentSharedFolderId == place }?.let { metadata.toDropboxFile(place, it) }
+            metadata.pathDisplay?.takeIf { metadata.parentSharedFolder == place }?.let { metadata.toDropboxFile(place, it) }
         } catch (e: GetMetadataErrorException) {
             if (e.errorValue.isPath && e.errorValue.pathValue.notFound()) null else throw e
         } catch (_: PathRootErrorException) {
@@ -318,6 +332,10 @@ class DropboxStorage(
         } finally {
             download.close()
         }
+    }
+
+    override fun temporaryLink(place: String, path: String): String = call {
+        client.files().getTemporaryLink(at(place, path)).link
     }
 
     // Not through the SDK: since 7.1.0 it sends get_thumbnail_v2 a quality, which Dropbox refuses ("unexpected key

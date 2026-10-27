@@ -2,6 +2,7 @@
 
 import type { Comment } from '@/comments'
 import { type Image, IMAGE_FIELDS } from '@/images'
+import type { MediaFile } from '@/media'
 
 // A candidate could be the episode's guest, until they're confirmed as one; only signed-in users get them
 export type Role = 'HOST' | 'CO_HOST' | 'GUEST' | 'PRODUCER' | 'CONSULTANT' | 'DESIGNER' | 'CANDIDATE'
@@ -127,7 +128,7 @@ export interface FieldChange {
 
 /** What a change is to (ChangeKind in the schema) */
 export type ChangeKind =
-  | 'EPISODE' | 'SESSION' | 'PERSON' | 'DOCUMENT' | 'KOOFR_FOLDER' | 'DROPBOX_FOLDER' | 'COMMENT' | 'ACCOUNT' | 'OTHER'
+  | 'EPISODE' | 'SESSION' | 'PERSON' | 'DOCUMENT' | 'KOOFR_FOLDER' | 'DROPBOX_FOLDER' | 'COMMENT' | 'ACCOUNT' | 'MEDIA' | 'OTHER'
 
 /** The episode, session or person a change is to, e.g. on the home page's recent activity */
 export interface ChangeSubject {
@@ -188,6 +189,8 @@ export interface EpisodeDetails extends Episode {
   dropboxFolders: DropboxFolderWithPictures[]
   history: Change[]
   comments: Comment[]
+  // Its video and audio; none for anyone not on the team
+  media: MediaFile[]
 }
 
 /** A session with everything about it, for its page */

@@ -1,0 +1,162 @@
+# patreon-gateway
+
+Ogrodje's Patreon behind a small HTTP API, for MetaOS (`Patreon.kt`, `PatreonMCP.kt`), which is the only caller. A
+service of its own, so Chromium, the bot's Patreon session and Patreon's changing web app stay out of MetaOS: one pod,
+one browser session, one job at a time.
+
+Kotlin and Spring Boot like MetaOS, with Playwright for Java; a Gradle build of its own, apart from MetaOS's
+(`./gradlew -p patreon-gateway ...`).
+
+## How it reaches Patreon
+
+- **Reading** goes through Patreon's API (v2), as the campaign's creator, with the creator token of the Patreon app
+  "MetaOS" (its client ID and secret, an access and a refresh token, from Patreon's developer portal): the campaign,
+  its tiers, its published posts and its members (`PatreonApi.kt`). Patreon lists posts oldest first a page at a time,
+  so the gateway reads them all, keeps them for a minute and gives them newest first; the members, with their names and
+  emails, for five minutes.
+- **The creator token** is refreshed once when it's not known when it runs out (a token from the portal), to learn it,
+  then a week before it does, when Patreon refuses it, and on `POST /token/refresh`. A refresh gives a new access and
+  refresh token and ends the old ones, so the new ones are kept in `state/tokens.json`, and only one gateway may use a
+  creator token: another with the same one would be left with a dead one. A different refresh token in the environment
+  (a new one from the portal) takes over from the kept ones. Patreon's refreshed tokens last for years (2037).
+- **Writing** goes through Patreon's web app, signed in as the bot, `iva.ogrodje@gmail.com`, a member of the campaign's
+  team (`PatreonWeb.kt`). Patreon's API can't make posts or upload media. The gateway doesn't click through the editor,
+  though: Cloudflare checks headless browsers on the editor's page. It calls Patreon's own web API, as the editor does,
+  from a page of the campaign that Cloudflare lets through (`/c/ogrodje`), with the page's CSRF signature
+  (`csrf_signature` in its HTML):
+  - `POST /api/session/acting-as` with the creator's user ID: a team member acts as the creator, as the web app's
+    Switch does. While it does, `/api/current_user` answers with the creator, and the person is the page's `actor`.
+  - `POST /api/posts/new`, then `PATCH /api/posts/{id}` with the title, the text as HTML and as the editor's own
+    document (`content_json_string`, ProseMirror's JSON), the post type and its access rules (the campaign's `public`
+    rule, its `patrons` rule, or a `tier` rule per tier) and collections. `meta.auto_save` for drafts.
+  - Publishing is the same `PATCH` with `tags: {publish: true}`, or `scheduled_for` (UTC) for later, and
+    `meta.send_notifications` to email the patrons; a post whose video is still processing gets
+    `auto_publish_when_media_ready` instead, as the editor's Publish does then. The gateway refuses a post that's
+    published or scheduled already.
+  - `DELETE /api/posts/{id}`.
+  - Media: `POST /api/media` with the file's name and size, the post as its owner and `audio` or `video` as its
+    relationship, which answers where to put the file: S3 with a signed form for audio, Mux with a `PUT` for video. The
+    gateway sends it from the JVM (`Media.kt`), not through the browser, whose one thread would otherwise be held for
+    the hours an episode's video can take: the media is made in one visit to the campaign's page and the post saved in
+    another, after `GET /api/media/{id}` says it's `ready`, or a minute (a long video then publishes once it is). A
+    file whose upload failed is deleted from Patreon again, as it would keep another from the post. Audio makes the
+    post a `podcast` post, in the campaign's show (its podcast feed), as the editor does; video a
+    `video_external_file` one. A retried job doesn't upload a file again, nor make a second draft.
+  - Downloading: `GET /api/posts/{id}?include=media` gives the creator each media's `download_url`, signed: for audio
+    the MP3 as it was uploaded (`token-time`, some days), for video Mux's `highest.mp4` (a JWT, a day), which isn't the
+    file uploaded. Mux gives it only to Patreon's pages (the token's `playback_restriction_id`), so a download sends
+    `Referer: https://www.patreon.com/`, as its player does; it asks for its first byte to learn its size.
+  - Saving a post sends what changes (its title, text, access, type) and keeps its own settings, e.g. one made paid in
+    the editor; only a new draft gets the editor's defaults.
+
+  These were found by recording what the editor sends (headless Chrome is stopped by Cloudflare on its page; Chrome
+  you can see isn't) and reading its scripts. They aren't a public API: Patreon may change them. When it does, a job
+  fails with Patreon's answer, and keeps a screenshot of the page (`GET /jobs/{id}/screenshot`).
+
+## Rate limits
+
+Cloudflare answers 429 when Patreon is asked too often, after some 15–20 page loads and calls within a few minutes.
+A job Patreon turns away waits and tries again, 5, 10 and 20 minutes later, before it fails (`Jobs.kt`); the job says
+so (`error`, `retryAt`). The jobs after it wait with it, so they keep their order: an update sent before a publish is
+in the post before it's published. Each job loads one page (two for an upload) and makes a few calls. A page's own
+calls (its feed, every post's comments, chat, tracking), some twenty a page, are blocked, as are its pictures and
+fonts: they'd count against the limit too, and the gateway needs only the page's HTML (`Browser.quiet`). Its own calls
+carry `x-patreon-gateway`, which lets them through.
+
+## API
+
+Every call but the actuator's (probes, metrics) needs `Authorization: Bearer $PATREON_GATEWAY_TOKEN`.
+
+| Call                          | What                                                                                       |
+|-------------------------------|--------------------------------------------------------------------------------------------|
+| `GET /health[?check=true]`    | Patreon's API and the browser's session, as last checked (hourly, and at the first ask), or now; 503 when not ok |
+| `GET /campaign`, `GET /tiers` | the campaign; its tiers, cheapest first                                                    |
+| `GET /members?query&status&tier&limit&offset` | members, patrons first; `status` active_patron, declined_patron, former_patron or free; words in name or email |
+| `GET /token`, `POST /token/refresh` | when the creator token runs out and was refreshed (never the tokens); refresh it now |
+| `GET /posts?query&limit`      | published posts, newest first, words in their titles                                      |
+| `GET /posts/{id}`             | a published post (Patreon's API)                                                           |
+| `GET /drafts`                 | drafts, scheduled ones too, last edited first (Patreon's web app; its API lists none) |
+| `GET /posts/{id}/media`       | where to download a post's audio (the MP3 as uploaded) or video (the best MP4 Mux keeps), drafts' too: signed links, until `expiresAt`; a video's needs `referer` as its Referer |
+| `GET /posts/{id}/web`         | a post, drafts too (Patreon's web app)                                                     |
+| `POST /posts`                 | a draft: `{title, text, access: {kind: PUBLIC, PATRONS or TIERS, tiers}}`                  |
+| `PATCH /posts/{id}`           | changes a post; what's left out stays                                                      |
+| `POST /posts/{id}/media`      | `{url, kind: AUDIO or VIDEO, fileName}`: downloads the file and puts it on the post        |
+| `POST /posts/{id}/publish`    | `{at, notify}`: now, or later; patrons are emailed only with `notify`                      |
+| `DELETE /posts/{id}`          | deletes a post                                                                             |
+| `GET /jobs`, `GET /jobs/{id}` | the jobs, latest first; one                                                                |
+| `PUT /session`                | the bot's browser session, from `login.sh`                                                 |
+
+Changes answer 202 with a job, to follow at `/jobs/{id}`: QUEUED, RUNNING, SUCCEEDED with what it made, or FAILED
+and why. An `Idempotency-Key` header gives back the job it was first sent with. Jobs are kept in memory: one lost to a
+restart is one its caller sees not finish.
+
+`text` is plain text: paragraphs between blank lines, and addresses made links. A file to upload comes from an https
+URL the gateway downloads, e.g. a Dropbox temporary link (MetaOS makes them) or a signed Cloud Storage URL: only from
+the internet, also after redirects, never from the cluster, the node or the tailnet.
+
+## Running it
+
+```bash
+# PATREON_CLIENT_ID, PATREON_CLIENT_SECRET, PATREON_ACCESS_TOKEN, PATREON_REFRESH_TOKEN, PATREON_GATEWAY_TOKEN set
+./gradlew -p patreon-gateway bootRun     # http://localhost:8090
+./gradlew -p patreon-gateway test
+```
+
+`PATREON_HEADED=true` runs the browser where you can see it. State (tokens, the session, what failed jobs saw) is in
+`state/`, which git ignores: it's secret. What failed jobs' pages showed (`state/failures`, a screenshot and the HTML
+each) is deleted after 14 days (`PATREON_FAILURES_KEPT`), as it may show who's signed in. Downloads go to
+`state/downloads` (`PATREON_DOWNLOADS_DIR`), and what a restart cut short is deleted when it starts. MetaOS finds a gateway at `PATREON_GATEWAY_URL` (`http://localhost:8090` by
+default) with `PATREON_GATEWAY_TOKEN`; it's off without the token.
+
+## Signing the bot in
+
+The browser's session is the bot's Patreon sign-in, made once by hand (a password and an emailed code, a captcha):
+
+```bash
+patreon-gateway/login.sh          # to production's gateway (Tailscale, KUBECONFIG)
+patreon-gateway/login.sh local    # to one running here
+```
+
+It opens Chrome on Patreon's login: sign in as `iva.ogrodje@gmail.com`, and Reject non-essential cookies. It keeps
+only a session of that account, and hands it to the gateway (`PUT /session`), which checks it before taking it. The
+health check says when the session runs out; run it again then.
+
+## Deployment
+
+`k8s/base/deployment-patreon-gateway.yaml`: one pod (`Recreate`), its state on a 1Gi volume (`microk8s-hostpath`,
+which deleting the claim deletes), downloads on 20Gi of scratch space that goes with the pod, hardened as the others
+(seccomp, no capabilities or privilege escalation, no service-account token), and a ServiceMonitor for its
+`patreon_gateway_*` metrics. No Ingress: only MetaOS calls it, at `http://patreon-gateway`. CI tests it, builds and
+deploys it with MetaOS.
+
+The pod has two containers. The gateway's image is distroless Java, as MetaOS's, and the boot jar, no browser
+(`docker/patreon-gateway.Dockerfile`); of Playwright's driver it has only the Node.js for Linux, which the driver runs
+itself (`linuxDriverBundle` in `build.gradle.kts`). Chromium is in the `browser` container beside it: Microsoft's
+Playwright image running Playwright's browser server (`run-server`) on the pod's loopback, which the gateway connects to
+(`PATREON_BROWSER_URL=ws://127.0.0.1:3000/`) and which starts a Chromium for each connection. The node pulls that image
+from Microsoft's registry, so its gigabyte of browsers never goes through ours over the tailnet. Client and server only
+talk at the same Playwright version: the image's tag and `playwright@` there have to be `build.gradle.kts`'s
+(`BrowserVersionTest`). Locally, without `PATREON_BROWSER_URL`, the gateway starts Chromium itself.
+
+Patreon's bot check (Cloudflare) turns away its pages asked from the cluster's datacenter address (Hetzner's, a 403
+challenge), though not from a home connection, nor from low's (oto.srv4all.net, a VM at Datacenter d.o.o., AS41427;
+the gateway's own browser image got Ogrodje's page and its CSRF signature from there, in October 2026). So the browser
+goes out through low, a machine of the tailnet that offers itself as an exit node: the pod's third container,
+`tailscale`, joins the tailnet as an ephemeral machine (userspace networking, so no capabilities), with low as its exit
+node, and offers a SOCKS proxy on the pod's loopback, which Chromium uses
+(`PATREON_BROWSER_PROXY=socks5://127.0.0.1:1055`). Only the browser: Patreon's API and the uploads to S3 and Mux go
+out directly. It needs:
+
+- a Tailscale auth key, reusable, ephemeral and pre-approved, tagged `tag:patreon-gateway`, in `patreon-gateway-secret`
+  (`PROD_PATREON_TAILSCALE_AUTHKEY`, `k8s/set_secrets.sh`); the tailnet's policy has to own the tag (`tagOwners`) and
+  let it use exit nodes (`autogroup:internet`);
+- low up, signed in to the tailnet (with key expiry off, or it drops off after 180 days) and offering itself as an
+  exit node (`tailscale set --advertise-exit-node`, allowed in the admin console), with IP forwarding on and its
+  firewall (Shorewall) passing the tailnet's traffic to the internet, masqueraded. While it isn't, the browser can't
+  reach Patreon: jobs wait and try again, and the health check says so.
+
+The first time, `k8s/set_secrets.sh` with `PATREON_CLIENT_ID`, `PATREON_CLIENT_SECRET`, `PATREON_ACCESS_TOKEN`,
+`PATREON_REFRESH_TOKEN` and `PROD_PATREON_GATEWAY_TOKEN` makes `patreon-gateway-secret` (MetaOS reads the gateway token
+from it too), then `login.sh`. The tokens there only seed the gateway: it keeps refreshed ones on its volume. They have
+to be the latest: a gateway that ran here refreshed them, so take them from its `state/tokens.json`
+(`jq -r .accessToken`, `.refreshToken`), and stop that one; or make new ones in the portal.

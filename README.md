@@ -16,8 +16,17 @@ works with Google Drive, Koofr and Dropbox as Ogrodje's bot account. Postgres al
 passes on to the open pages, so they show it without being reloaded. Pictures everyone may see, like episodes'
 thumbnails from Dropbox and people's avatars from Hygraph, MetaOS copies to its public bucket in Google Cloud Storage,
 from which browsers load them at media.ogrodje.si, cached by Cloudflare; the team uploads an episode's artwork from
-its page straight to MetaOS's private bucket, and MetaOS publishes it from there. Everything runs on Ogrodje's
-Kubernetes cluster, behind Cloudflare.
+its page straight to MetaOS's private bucket, and MetaOS publishes it from there. Its video and audio go there the same
+way, and stay there, the team's only, with what ffprobe read of them. Ogrodje's Patreon MetaOS reaches through
+patreon-gateway, a pod of its own beside it, which reads through Patreon's API and makes, changes and publishes posts,
+with an episode's audio or video, in Patreon's web app, signed in as the bot, in a headless Chromium in a container of
+its own. Patreon's bot check turns away the cluster's address, so that browser goes out through the pod's Tailscale
+container and low, a VM whose address it lets through; the API and the uploads go straight to Patreon. Everything
+runs on Ogrodje's Kubernetes cluster, behind Cloudflare. New Relic, in its EU region, gets MetaOS's and
+patreon-gateway's requests, errors and logs from its Java agent in each, and the pages' errors and load times from its
+agent in the browser, and checks from outside that the pages, MetaOS and Keycloak answer. The cluster's Prometheus
+scrapes MetaOS, patreon-gateway and Keycloak, and passes a few of their metrics on to New Relic: MetaOS's outside
+connections, Keycloak's sign-ins, their pods' memory, restarts and readiness, and the node's memory and disk.
 
 The diagram is drawn in [`architecture.svg`](architecture.svg); `just architecture` renders `architecture.png` from it.
 

@@ -1,7 +1,10 @@
 name: Build and Deploy
 
-# Tests, builds the images and rolls them out to metaos-prod. The private registry and the API server are reached
-# over Tailscale as tag:ci.
+# Tests, builds the images and rolls them out to metaos-prod. The app's tests are a job of their own, beside the images
+# rather than before them, and each image is a job of its own, so the five run at once; the deploy waits for them all,
+# so an image whose tests failed is pushed but not deployed. The private registry and the API server are reached over
+# Tailscale as tag:ci. Started by hand on another branch, it builds and pushes that branch's images (not as latest) and
+# deploys nothing.
 #
 # Repo secrets:
 #   TS_OAUTH_CLIENT_ID / TS_OAUTH_SECRET                Tailscale OAuth client for tag:ci
@@ -22,37 +25,66 @@ concurrency:
 
 env:
   REGISTRY: registry.folk-decibel.ts.net
-  APP_IMAGE: registry.folk-decibel.ts.net/metaos/metaos
-  WEB_IMAGE: registry.folk-decibel.ts.net/metaos/metaos-web
-  KEYCLOAK_IMAGE: registry.folk-decibel.ts.net/metaos/keycloak
+  IMAGES: registry.folk-decibel.ts.net/metaos
 
 jobs:
-  build:
+  # The app's tests: Testcontainers runs its Postgres on the runner's Docker, and MediaProbeTest production's ffprobe
+  test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/toolchain
+        with:
+          java: true
+          ffmpeg: true
+          testcontainers: true
+      - uses: gradle/actions/setup-gradle@v5
+      # With Gradle's build cache, which setup-gradle keeps between runs, what didn't change since isn't tested again,
+      # e.g. after a change to fe/ only. Three test JVMs on the runner's four CPUs
+      - name: Test the app
+        run: ./gradlew --build-cache test -PtestForks=3
+
+  image:
+    name: ${{ matrix.image }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     outputs:
       tag: ${{ steps.get-tag.outputs.tag }}
+    strategy:
+      matrix:
+        include:
+          # The boot jar only: its tests are the test job's
+          - image: metaos
+            dockerfile: docker/Dockerfile
+            java: true
+            build: ./gradlew --build-cache bootJar
+          # Tested, type-checked and built into fe/.output with Yarn itself (what feTest and feBuild run). `nuxt build`
+          # never makes the same files twice (a random build ID, build times, the files' mtimes in Nitro's manifest of
+          # them, its styles in the order they were done), so its image is found by what it's made from, `sources`
+          - image: metaos-web
+            dockerfile: docker/web.Dockerfile
+            node: true
+            build: cd fe && yarn test && yarn build
+            sources: fe docker/web.Dockerfile .github/actions/toolchain .github/workflows/deploy.yml
+          # patreon-gateway is a build of its own (patreon-gateway/); its tests need no browser, and take seconds
+          - image: patreon-gateway
+            dockerfile: docker/patreon-gateway.Dockerfile
+            java: true
+            build: ./gradlew --build-cache -p patreon-gateway test bootJar
+          # Nothing to build first: the Dockerfile compiles MetaOS's provider itself. `kc.sh build` makes different files
+          # each time, so its layer comes from the cache (GitHub's), which keeps the image the same until Keycloak, the
+          # provider or the realm changes, and Keycloak running
+          - image: keycloak
+            dockerfile: docker/keycloak.Dockerfile
+            cache: true
     steps:
       - uses: actions/checkout@v7
         with:
           # `git describe` needs the tags, which a shallow clone omits
           fetch-depth: 0
 
-      # The JDK, Node and Yarn come from devenv.nix, as in development
-      - uses: cachix/install-nix-action@v31
-      # devenv's binary cache, so devenv itself doesn't get built
-      - uses: cachix/cachix-action@v17
-        with:
-          name: devenv
-      - name: Install devenv
-        run: nix profile add nixpkgs#devenv
-
-      - uses: gradle/actions/setup-gradle@v5
-
-      # Testcontainers runs its Postgres on the runner's Docker; feTest and feBuild test, type-check and build fe/ with
-      # devenv's Node and Yarn, into fe/.output for its image
-      - name: Test and build the boot jar and the front-end
-        run: devenv shell -- ./gradlew test feTest bootJar feBuild
-
+      # Before the build, which an image of the same sources spares
       - name: Connect to Tailscale
         uses: tailscale/github-action@v4
         with:
@@ -61,36 +93,101 @@ jobs:
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
           tags: tag:ci
 
-      - name: Login to Docker Registry
+      - uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
+          password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+
+      # The image's key: git's hashes of its sources and the digest its base image has now, so a new base (e.g. a fix
+      # in distroless) builds it again too. An image built before is tagged src-<key>
+      - if: matrix.sources
+        name: Look for an image of the same sources
+        id: sources
+        shell: bash
+        env:
+          IMAGE: ${{ env.IMAGES }}/${{ matrix.image }}
+          DOCKERFILE: ${{ matrix.dockerfile }}
+          SOURCES: ${{ matrix.sources }}
         run: |
-          echo "${{ secrets.DOCKER_REGISTRY_PASSWORD }}" \
-            | docker login "$REGISTRY" -u "${{ secrets.DOCKER_REGISTRY_USERNAME }}" --password-stdin
+          base=$(awk '$1 == "FROM" { print $2; exit }' "$DOCKERFILE")
+          base_digest=$(docker buildx imagetools inspect "$base" --format '{{json .Manifest}}' | jq -re .digest)
+          read -ra sources <<< "$SOURCES"
+          key=$({ git rev-parse "${sources[@]/#/HEAD:}"; echo "$base_digest"; } | sha256sum | cut -c1-20)
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+          if docker buildx imagetools inspect "$IMAGE:src-$key" > /dev/null 2>&1; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "$IMAGE:src-$key is there: tagged again, not built"
+          else
+            echo "No $IMAGE:src-$key: built"
+          fi
+
+      - if: matrix.build && steps.sources.outputs.found != 'true'
+        uses: ./.github/actions/toolchain
+        with:
+          java: ${{ matrix.java || false }}
+          node: ${{ matrix.node || false }}
+      - if: matrix.java
+        uses: gradle/actions/setup-gradle@v5
+      - if: matrix.build && steps.sources.outputs.found != 'true'
+        name: Build
+        run: ${{ matrix.build }}
 
       - name: Get version tag
         id: get-tag
         run: |
           TAG=$(git describe --tags --always)
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "Building images with tag: $TAG"
+          echo "Building ${{ matrix.image }} with tag: $TAG"
+
+      # The same manifest under the commit's tag (--prefer-index=false: a copy, not an index around it), so the deploy
+      # finds the digest the cluster runs and leaves the pods be
+      - if: steps.sources.outputs.found == 'true'
+        name: Tag the image of the same sources
+        env:
+          IMAGE: ${{ env.IMAGES }}/${{ matrix.image }}
+          KEY: ${{ steps.sources.outputs.key }}
+          TAG: ${{ steps.get-tag.outputs.tag }}
+        run: |
+          tags=(-t "$IMAGE:$TAG")
+          if [ "$GITHUB_REF" = refs/heads/master ]; then tags+=(-t "$IMAGE:latest"); fi
+          docker buildx imagetools create --prefer-index=false "${tags[@]}" "$IMAGE:src-$KEY"
+          docker buildx imagetools inspect "$IMAGE:$TAG" --format '{{json .Manifest}}' | jq -r .digest
 
       # Host networking puts buildkit on the tailnet, so it can push to the registry
-      - uses: docker/setup-buildx-action@v4
+      - if: steps.sources.outputs.found != 'true'
+        uses: docker/setup-buildx-action@v4
         with:
           driver-opts: network=host
 
-      - name: Build and push images
-        run: |
-          TAG=${{ steps.get-tag.outputs.tag }}
-          docker buildx build --platform linux/amd64 -f docker/Dockerfile \
-            -t "$APP_IMAGE:latest" -t "$APP_IMAGE:$TAG" --push .
-          docker buildx build --platform linux/amd64 -f docker/web.Dockerfile \
-            -t "$WEB_IMAGE:latest" -t "$WEB_IMAGE:$TAG" --push .
-          docker buildx build --platform linux/amd64 -f docker/keycloak.Dockerfile \
-            -t "$KEYCLOAK_IMAGE:latest" -t "$KEYCLOAK_IMAGE:$TAG" --push .
+      # Reproducible: the files in the layers built here get SOURCE_DATE_EPOCH's time, not the build's, so a layer that
+      # didn't change (the app's dependencies, ffprobe) is the same blob, which the registry has and isn't pushed again
+      # over the tailnet, and an image that didn't change is the same image, which the deploy leaves running. No
+      # provenance attestation, so the image is a plain manifest rather than an index (k8s/README.md, the registry)
+      - if: steps.sources.outputs.found != 'true'
+        name: Build and push
+        uses: docker/build-push-action@v7
+        env:
+          SOURCE_DATE_EPOCH: 0
+          DOCKER_BUILD_RECORD_UPLOAD: false
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64
+          tags: |
+            ${{ env.IMAGES }}/${{ matrix.image }}:${{ steps.get-tag.outputs.tag }}
+            ${{ github.ref == 'refs/heads/master' && format('{0}/{1}:latest', env.IMAGES, matrix.image) || '' }}
+            ${{ matrix.sources && format('{0}/{1}:src-{2}', env.IMAGES, matrix.image, steps.sources.outputs.key) || '' }}
+          outputs: type=registry,rewrite-timestamp=true
+          provenance: false
+          cache-from: ${{ matrix.cache && format('type=gha,scope={0}', matrix.image) || '' }}
+          cache-to: ${{ matrix.cache && format('type=gha,scope={0},mode=max', matrix.image) || '' }}
 
   deploy:
-    needs: [ build ]
+    needs: [ test, image ]
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     environment:
       name: production
       url: https://metaos.ogrodje.si
@@ -100,10 +197,17 @@ jobs:
       - name: Connect to Tailscale
         uses: tailscale/github-action@v4
         with:
-          ping: tailscale-operator.folk-decibel.ts.net
+          ping: tailscale-operator.folk-decibel.ts.net,registry.folk-decibel.ts.net
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
           tags: tag:ci
+
+      # To look up what the tag is
+      - uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
+          password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
 
       - uses: azure/setup-kubectl@v5
 
@@ -123,20 +227,26 @@ jobs:
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
-      - name: Update kustomization with the new tag
+      # By digest, not tag: every commit gets a new tag, but an image that didn't change keeps its digest, so its
+      # Deployment stays as it is and isn't rolled (Keycloak, and patreon-gateway, whose restart cuts its job short)
+      - name: Point the kustomization at the new images
+        env:
+          TAG: ${{ needs.image.outputs.tag }}
         run: |
           cd k8s/base
-          kustomize edit set image \
-            "$APP_IMAGE:${{ needs.build.outputs.tag }}" \
-            "$WEB_IMAGE:${{ needs.build.outputs.tag }}" \
-            "$KEYCLOAK_IMAGE:${{ needs.build.outputs.tag }}"
+          for image in metaos metaos-web keycloak patreon-gateway; do
+            digest=$(docker buildx imagetools inspect "$IMAGES/$image:$TAG" --format '{{json .Manifest}}' \
+              | jq -r .digest)
+            echo "$image:$TAG is $digest"
+            kustomize edit set image "$IMAGES/$image@$digest"
+          done
 
       - name: Deploy
         run: |
           kubectl apply -k k8s/base/
 
           # Own keys: deployment.kubernetes.io/revision belongs to the Deployment controller
-          kubectl annotate deployment metaos metaos-web -n metaos-prod \
+          kubectl annotate deployment metaos metaos-web patreon-gateway -n metaos-prod \
             ogrodje.si/git-sha="${GITHUB_SHA}" \
             ogrodje.si/deployed-by="${GITHUB_ACTOR}" \
             ogrodje.si/deployed-at="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
@@ -145,6 +255,7 @@ jobs:
           kubectl rollout status deployment/keycloak -n metaos-prod --timeout=5m
           kubectl rollout status deployment/metaos -n metaos-prod --timeout=5m
           kubectl rollout status deployment/metaos-web -n metaos-prod --timeout=5m
+          kubectl rollout status deployment/patreon-gateway -n metaos-prod --timeout=5m
 
       - name: Smoke the deployed app
         run: |

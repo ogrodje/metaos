@@ -4,6 +4,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.context.annotation.Import
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.security.access.AccessDeniedException
@@ -17,6 +18,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @SpringBootTest
+@AutoConfigureMockMvc // the context the GraphQL tests have, so one fewer to start (TestcontainersConfig)
 @Import(TestcontainersConfig::class)
 class PeopleTest @Autowired constructor(
     private val episodesRepository: EpisodesRepository,
@@ -222,7 +224,7 @@ class PeopleTest @Autowired constructor(
         signInAs(ACCOUNT_LINKER)
         peopleMCP.delete(person.id!!)
         signInAs("not-mine@ogrodje.si")
-        assertFailsWith<AccessDeniedException> { peopleMCP.restore(person.id!!, "not-mine@ogrodje.si") }
+        assertFailsWith<AccessDeniedException> { peopleMCP.restore(person.id, "not-mine@ogrodje.si") }
     }
 
     @Test
@@ -275,6 +277,6 @@ class PeopleTest @Autowired constructor(
 
         assertFailsWith<IllegalArgumentException> { peopleMCP.restore(first.id, newEmail = "RECLAIMED@ogrodje.si") }
         assertEquals("first@ogrodje.si", peopleMCP.restore(first.id, newEmail = " first@ogrodje.si ").email)
-        assertNull(peopleMCP.restore(second.id!!, newEmail = "").email)
+        assertNull(peopleMCP.restore(second.id, newEmail = "").email)
     }
 }

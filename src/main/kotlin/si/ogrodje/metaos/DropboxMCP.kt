@@ -119,7 +119,7 @@ class DropboxMCP(private val dropbox: Dropbox) {
         val image = dropbox.thumbnail(file.place, file.path, VIEW_SIZE)
         return McpSchema.CallToolResult.builder()
             .addTextContent("${file.path} (${file.contentType ?: "unknown type"}, ${file.size} bytes)")
-            .addContent(McpSchema.ImageContent(null, Base64.getEncoder().encodeToString(image.bytes), image.contentType))
+            .addContent(McpSchema.ImageContent.builder(Base64.getEncoder().encodeToString(image.bytes), image.contentType).build())
             .build()
     }
 

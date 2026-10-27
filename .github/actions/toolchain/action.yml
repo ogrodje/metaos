@@ -1,0 +1,75 @@
+name: Toolchain
+description: >
+  What CI builds and tests with: the JDK, Node and Yarn of devenv.nix (the same versions, without Nix: entering devenv's
+  shell took a minute a job, for gcloud, kubectl, the Java language server and the rest CI doesn't use), and ffmpeg.
+
+inputs:
+  java:
+    description: JDK 25, as jvmToolchain(25) and the images' distroless Java
+    default: "false"
+  node:
+    description: Node 26 and Yarn 4, as the front-end's image, with fe/'s packages installed
+    default: "false"
+  ffmpeg:
+    description: ffmpeg and ffprobe, for MediaProbeTest
+    default: "false"
+  testcontainers:
+    description: The app's tests' Postgres, pulled while Gradle starts and compiles
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    # In the background, so the image is there by the time the tests start, as TestcontainersConfig names it (pulling
+    # it takes seconds, less than restoring it from a cache would); no Ryuk, which cleans up after a test JVM that died,
+    # as the runner is thrown away anyway; and reuse, so the test JVMs share one Postgres, which the migrations run on
+    # once (TestPostgres)
+    - if: inputs.testcontainers == 'true'
+      shell: bash
+      run: |
+        image=$(grep -o -E 'PostgreSQLContainer\("[^"]+"' src/test/kotlin/si/ogrodje/metaos/TestcontainersConfig.kt \
+          | cut -d'"' -f2 || true)
+        if [ -n "$image" ]; then nohup docker pull "$image" > /dev/null 2>&1 & fi
+        echo "TESTCONTAINERS_RYUK_DISABLED=true" >> "$GITHUB_ENV"
+        echo "TESTCONTAINERS_REUSE_ENABLE=true" >> "$GITHUB_ENV"
+
+    - if: inputs.java == 'true'
+      uses: actions/setup-java@v6
+      with:
+        distribution: temurin
+        java-version: 25
+
+    - if: inputs.node == 'true'
+      uses: actions/setup-node@v7
+      with:
+        node-version: 26
+        package-manager-cache: false
+
+    # devenv's yarn-berry; Node 26 has no Corepack
+    - if: inputs.node == 'true'
+      shell: bash
+      run: npm install --global --no-audit --no-fund @yarnpkg/cli-dist@4.18.1
+
+    # fe/'s node_modules as yarn.lock has them, so `yarn install` has nothing to do unless it changed
+    - if: inputs.node == 'true'
+      uses: actions/cache@v6
+      with:
+        path: fe/node_modules
+        key: fe-node_modules-${{ runner.os }}-node26-${{ hashFiles('fe/yarn.lock', 'fe/package.json', 'fe/.yarnrc.yml') }}
+    - if: inputs.node == 'true'
+      shell: bash
+      working-directory: fe
+      run: yarn install --immutable
+
+    # Production's own: the static build MetaOS's image copies ffprobe from (docker/Dockerfile), with its ffmpeg, with
+    # which the test makes the files it reads
+    - if: inputs.ffmpeg == 'true'
+      shell: bash
+      run: |
+        bin="$RUNNER_TEMP/ffmpeg"
+        mkdir -p "$bin"
+        id=$(docker create mwader/static-ffmpeg:9.0.2 /ffmpeg)
+        docker cp "$id:/ffmpeg" "$bin/ffmpeg"
+        docker cp "$id:/ffprobe" "$bin/ffprobe"
+        docker rm "$id" > /dev/null
+        echo "$bin" >> "$GITHUB_PATH"

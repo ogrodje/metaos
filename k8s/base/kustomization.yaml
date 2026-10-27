@@ -3,6 +3,7 @@ resources:
 - deployment-keycloak.yaml
 - deployment-metaos.yaml
 - deployment-web.yaml
+- deployment-patreon-gateway.yaml
 
 # Public URLs, read by the Deployments: Keycloak stamps them into tokens and the app checks tokens against them, so
 # they have to agree; the front-end tells the browser and search engines about them. The name gets a content hash, so
@@ -27,5 +28,7 @@ images:
   newTag: "9156827"
 - name: registry.folk-decibel.ts.net/metaos/metaos-web
   newTag: "9156827"
+- name: registry.folk-decibel.ts.net/metaos/patreon-gateway
+  newTag: latest
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization

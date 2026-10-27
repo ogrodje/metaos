@@ -163,6 +163,25 @@ export const TOOL_GROUPS: ToolGroup[] = [
     ],
   },
   {
+    id: 'patreon',
+    title: 'Patreon',
+    about: "Ogrodje's Patreon: drafts, an episode's audio or video, and publishing",
+    tools: [
+      { name: 'list_patreon_tiers', description: 'The tiers, cheapest first, with their prices and patrons' },
+      { name: 'list_patreon_members', description: 'The members, patrons first: their status, tiers, pledge, what they gave in all and their last charge' },
+      { name: 'list_patreon_posts', description: 'The published posts, newest first, or those with words in their titles' },
+      { name: 'list_patreon_drafts', description: 'The drafts, scheduled ones too, last edited first, with where to edit them' },
+      { name: 'get_patreon_post', description: 'A post, published or a draft, with its text and who may see it' },
+      { name: 'get_patreon_post_media', description: "Download links for a post's audio (the MP3 as uploaded) or video (its best MP4), for a day or so" },
+      { name: 'create_patreon_draft', description: 'Make a draft post, for everyone, every patron or some tiers; only the team sees it' },
+      { name: 'update_patreon_post', description: "Change a post's title, text or who may see it" },
+      { name: 'set_patreon_post_media', description: "Upload an episode's audio or video from Dropbox or a URL to a draft, as a podcast or video post" },
+      { name: 'publish_patreon_post', description: "Publish a draft, now or later, emailing patrons only if asked; it can become the episode's Patreon link" },
+      { name: 'delete_patreon_post', description: "Delete a post, e.g. a draft that isn't needed" },
+      { name: 'get_patreon_job', description: 'How a change in Patreon is going, e.g. an upload: done, failed and why, or waiting to try again' },
+    ],
+  },
+  {
     id: 'pictures',
     title: 'Pictures',
     about: 'thumbnails, covers and avatars for everyone to see, at media.ogrodje.si',
@@ -173,6 +192,16 @@ export const TOOL_GROUPS: ToolGroup[] = [
       { name: 'set_person_avatar', description: "Make a picture from Hygraph, Dropbox or Koofr a person's avatar" },
       { name: 'remove_person_avatar', description: "Take a person's avatar off them" },
       { name: 'get_person_avatar', description: "A person's avatar, with its URLs" },
+    ],
+  },
+  {
+    id: 'media',
+    title: 'Video and audio',
+    about: "an episode's full video and audio and its bonuses, uploaded on its page, for the team only",
+    tools: [
+      { name: 'list_episode_media', description: "An episode's video and audio files, with what's in each (length, codecs, resolution) and a link that downloads it for an hour" },
+      { name: 'update_episode_media', description: "Change a file's title, or what it is, e.g. a bonus video that's the full video" },
+      { name: 'remove_episode_media', description: 'Take a video or audio file off its episode, and delete it' },
     ],
   },
   {

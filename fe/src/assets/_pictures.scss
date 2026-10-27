@@ -19,6 +19,10 @@ $empty: #F1F1F1;
 @mixin picture($small: false) {
   overflow: hidden;
   background: $empty;
-  border-radius: if($small, $small-radius, $radius);
+  @if $small {
+    border-radius: $small-radius;
+  } @else {
+    border-radius: $radius;
+  }
   @include edge;
 }

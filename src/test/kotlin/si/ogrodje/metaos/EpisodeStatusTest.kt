@@ -3,6 +3,7 @@ package si.ogrodje.metaos
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.context.annotation.Import
 import org.springframework.dao.DataIntegrityViolationException
 import si.ogrodje.metaos.EpisodeStatus.*
@@ -15,6 +16,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @SpringBootTest
+@AutoConfigureMockMvc // the context the GraphQL tests have, so one fewer to start (TestcontainersConfig)
 @Import(TestcontainersConfig::class)
 class EpisodeStatusTest @Autowired constructor(
     private val episodesRepository: EpisodesRepository,

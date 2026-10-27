@@ -43,7 +43,7 @@ yarn            # install, and nuxt prepare (its types, in .nuxt)
 yarn dev        # Nuxt's dev server, rendering on the server too, with hot reload, http://localhost:5173
 yarn build      # type-check (nuxt typecheck) and build into fe/.output
 yarn preview    # run the build, http://localhost:3000
-yarn test       # the tests in src/**/__tests__, with vitest (./gradlew feTest, which CI runs)
+yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feTest), which CI runs
 ```
 
 - The devenv shell runs `yarn install` in `fe/` when `yarn.lock` has changed, and `devenv up` runs `yarn dev`.
@@ -52,7 +52,7 @@ yarn test       # the tests in src/**/__tests__, with vitest (./gradlew feTest, 
   cluster the Ingress sends them to MetaOS before they get there.
 - The front-end is a service of its own, `metaos-web` ([`docker/web.Dockerfile`](docker/web.Dockerfile),
   [`k8s/base/deployment-web.yaml`](k8s/base/deployment-web.yaml)): `./gradlew feBuild` (with `feInstall`, the
-  devenv's Node and Yarn) builds it into `fe/.output`, which Node runs. MetaOS itself serves no pages, only its API.
+  devenv's Node and Yarn; CI runs `yarn build` itself) builds it into `fe/.output`, which Node runs. MetaOS itself serves no pages, only its API.
 - Its runtime config (`nuxt.config.ts`) says where users sign in (`NUXT_PUBLIC_ISSUER`, the Keycloak issuer) and as
   which client, where MCP clients connect (`NUXT_PUBLIC_MCP_URL`), the site's public address (`NUXT_PUBLIC_SITE_URL`)
   and where its server finds MetaOS (`NUXT_METAOS_URL`), so one build works in every environment.
@@ -90,7 +90,7 @@ yarn test       # the tests in src/**/__tests__, with vitest (./gradlew feTest, 
   bearer token says who is asking (`me`). What isn't public needs `metaos:read` and an approved user (realm role
   `metaos-user`, `Security.kt`): whole queries with `@PreAuthorize`, and fields that public episodes and sessions also
   have (history, comments, docs, addresses, ...) come back empty for anyone else. Changes (`Mutation`: comments of
-  Discussions, linking Accounts, an episode's pictures and links, creating and changing sessions) need `metaos:write` and an approved user
+  Discussions, linking Accounts, an episode's pictures, video and audio and links, creating and changing sessions) need `metaos:write` and an approved user
   (`@approval.writes`).
 - An episode's links (`Platform` in [`Episodes.kt`](src/main/kotlin/si/ogrodje/metaos/Episodes.kt)) are where it can
   be watched or listened to: YouTube, Spotify, Apple Podcasts, and four on Patreon, each set or cleared on its own
@@ -137,7 +137,7 @@ yarn test       # the tests in src/**/__tests__, with vitest (./gradlew feTest, 
   has scrolled away, the panel, which stays in view, says what it's about: its cover, code and title (`PanelTitle.vue`,
   `useScrolledPast`), also a way back to the top; a session's says its date and name. The main column has
   the episode's media (`MediaStrip.vue`: its titles with the thumbnails they're A/B tested with and the cover, its
-  artwork marked with what each file is used as, its photos), the summaries folded when long (`FoldedText.vue`), and
+  video and audio, its artwork marked with what each file is used as, its photos), the summaries folded when long (`FoldedText.vue`), and
   for the team its activity (`ActivityFeed.vue`, see Discussions): comments and history in one feed, from the audit
   trail as [`History.kt`](src/main/kotlin/si/ogrodje/metaos/History.kt) tells it. A released episode's page is
   anyone's, without what's the team's (its activity, alternative titles, files, ...), its thumbnail large; any other
@@ -214,6 +214,13 @@ docker compose up -d keycloak   # http://localhost:8180 (admin console: admin / 
   realms imported before, [`keycloak/sessions.sh`](keycloak/sessions.sh)), and refresh tokens as long. Access tokens
   last 5 minutes; keycloak-js keeps them in memory and refreshes them before each request (`fe/src/stores/auth.ts`),
   and only signs the page out when Keycloak refuses the refresh token, not when it can't be reached.
+- Sign-ins through Discord and Google are remembered, as with Remember me on Keycloak's login form, which they never
+  see: 30 days without use and 90 at most (`ssoSessionIdleTimeoutRememberMe`, `ssoSessionMaxLifespanRememberMe`).
+  Otherwise Keycloak's sign-in cookie, `KEYCLOAK_IDENTITY`, went when the browser quit, and with it the front-end's
+  only way back to the session, so users signed in again. MetaOS's own Keycloak provider does it
+  ([`keycloak/remember-me`](keycloak/remember-me), Java, which `docker/keycloak.Dockerfile` compiles against the
+  Keycloak it goes in; compose runs its `dev` stage), the last step of each identity provider's post-login flow
+  (`remember_logins` in `approval_gate.sh`; `sessions.sh` adds it to a realm from before, once the image has it).
 - `METAOS_MCP_URL` (default `http://localhost:8080/mcp`) and `METAOS_API_URL` (default
   `http://localhost:8080/graphql`) must be the public URLs of `/mcp` and `/graphql`; they are used by both Keycloak
   (token audience) and the app (audience check). `METAOS_UI_URL` (default `http://localhost:5173`) is where the
@@ -364,9 +371,10 @@ gcloud comes from the devenv shell.
 
 - All are in Frankfurt (`europe-west3`). The private ones have public access prevention: MetaOS hands out signed URLs
   instead, which it signs with the key itself: `uploadUrl` starts a resumable upload, so big files, e.g. an episode's
-  artwork (Pictures), go from the browser straight to the bucket, without MetaOS in between. Their CORS allows that from
-  the front-end's origins. Uploads MetaOS didn't take (`uploads/`) are deleted after a day, a lifecycle rule
-  (`google/storage.sh setup`).
+  artwork (Pictures) and its video and audio, go from the browser straight to the bucket, without MetaOS in between,
+  whole or in chunks; `copy` moves one inside the bucket the same way. Their CORS allows that from the front-end's
+  origins, `Content-Range` and `Range` included. Uploads MetaOS didn't take (`uploads/`) are deleted after a day, a
+  lifecycle rule (`google/storage.sh setup`).
 - The public ones are for what everyone may see, e.g. episodes' thumbnails and people's avatars: anyone can read a file
   whose path they know (`allUsers` has `legacyObjectReader`, which is `storage.objects.get` only), but nobody can list
   them. Dev's is served by Google, at `https://storage.googleapis.com/ogrodje-metaos-public-dev/<path>`. Production's
@@ -429,6 +437,49 @@ on `*.graphassets.com`, the only hosts MetaOS fetches pictures from).
   without one), with `srcset` from the copies (`fe/src/images.ts`), never the original, which may be 16 MB.
 - `ImagesTest` and `ArtworkTest` run against buckets in memory (`FakeStorage`), with fake Dropbox and Koofr.
 
+### Video and audio
+
+An episode's video and audio are the team's, in MetaOS's private bucket, not streamed: there to be handed on, e.g. to
+patreon-gateway, transcription or a backup ([`MediaFiles.kt`](src/main/kotlin/si/ogrodje/metaos/MediaFiles.kt),
+[`V30__episode_media.sql`](src/main/resources/db/migration/V30__episode_media.sql)). Each file is one of four kinds,
+as Patreon has them (`MediaKind`): the full video and the full audio, one each, and bonuses as video or audio, any
+number, each with a title.
+
+- The team uploads them from the episode's page as it does artwork: `mediaUpload` signs a resumable upload in the private
+  bucket (`uploads/<id>`; its `size` a `Float`, as GraphQL's `Int` stops at 2 GB), the browser sends the file there
+  itself in 16 MB chunks, going on from where Cloud Storage has it after the connection broke
+  ([`fe/src/resumable.ts`](fe/src/resumable.ts)), then `addEpisodeMedia` makes it the episode's. Video is MP4 or MOV,
+  audio MP3, M4A, WAV or FLAC (`MEDIA_TYPES`), up to 50 GB. A full one replaces the episode's only with `replace`, and
+  the same file (Cloud Storage's MD5) isn't added twice; the upload goes either way.
+- Once it's there, ffprobe reads what's in it from a signed URL, over HTTP range requests, megabytes rather than the
+  file ([`MediaProbe.kt`](src/main/kotlin/si/ogrodje/metaos/MediaProbe.kt)): a video has to have video, an audio audio
+  and no video, as a cover in an MP3 isn't video. Its whole answer is kept (`probe`, JSON), and what's shown in columns
+  (`MediaInfo`: duration, container, codecs, size, frame rate, bit depth, colour, sample rate, channels, tracks, when
+  and with what it was made). Then Cloud Storage copies it to `episode-media/<upload>/<name>` without it passing
+  through MetaOS, downloaded as a file by its name (`Content-Disposition`). ffprobe reads only the formats MetaOS takes
+  and only over https (or from disk, in tests), so a playlist uploaded as an MP4 doesn't make it fetch what it names.
+  It's a static build in MetaOS's image (`docker/Dockerfile`) and in devenv; `FFPROBE` points at another, e.g. for an
+  IDE that doesn't run devenv.
+- Removing one (`removeEpisodeMedia`, `remove_episode_media`) deletes its row and, once that's in, its file;
+  production's bucket keeps a deleted file 30 days, where only an administrator gets it back. The audit trail keeps the
+  row, and `History.kt` tells it, e.g. "Uploaded the full video: S05E08.mp4", "Made bonus.mov the full video".
+- GraphQL has them as `Episode.media` (none for anyone not on the team) and `mediaFile`, with `downloadUrl`, a link
+  for an hour, signed as it's asked for. MCP: `list_episode_media` (with those links, e.g. for
+  `set_patreon_post_media`), `update_episode_media` (title, or what it is, within video or audio) and
+  `remove_episode_media`; MCP can't send gigabytes, so it doesn't upload.
+- On the front-end, the episode's media has Video and audio (`MediaList.vue`): the full video and audio, a missing one
+  opening the upload for it, then the bonuses, each with what ffprobe read (`infoLine` in
+  [`fe/src/media.ts`](fe/src/media.ts)), Download and Remove (asked on its row). Upload video and audio
+  (`MediaUpload.vue`, styled with `ArtworkUpload.vue` by `_upload-dialog.scss`) reads each file in the browser with
+  mediainfo.js (MediaInfo in WebAssembly, loaded once a file is read), places it by what's in it and its name (the
+  longest video the full video, the longest audio the full audio, `-bonus` a bonus), refuses what MetaOS doesn't take,
+  warns about what looks wrong (a full video under 1080p, audio not at 44.1 or 48 kHz, a full audio not as long as the
+  video), asks once before replacing, and sends one at a time; leaving the page while it's sending asks first. The
+  episode's panel says when the full audio and video differ in length by more than 5 s (`mediaConcerns`).
+- `MediaFilesTest` runs against a bucket in memory with ffprobe's answers as its files (`FakeProbe`); `MediaProbeTest`
+  runs ffprobe itself where FFmpeg is installed, also on a file in the dev bucket with its key;
+  `GoogleCloudStorageTest` sends a file in chunks and copies it in the dev bucket.
+
 ### Koofr
 
 MetaOS also uses the bot account in Koofr ([`Koofr.kt`](src/main/kotlin/si/ogrodje/metaos/Koofr.kt)), through
@@ -489,6 +540,80 @@ folders and moves or renames, but never deletes or replaces anything unasked.
 - The `dropbox` health check uses it every hour and reports a rejected token there, in `metaos_dropbox_connected` and in
   the log. `DropboxTest` runs against the real account (read-only) when the refresh token is in the environment.
 
+### Patreon
+
+MetaOS reaches Ogrodje's Patreon through [patreon-gateway](patreon-gateway/README.md), a service of its own in
+[`patreon-gateway/`](patreon-gateway) (Kotlin, Spring Boot and Playwright; a Gradle build of its own,
+`./gradlew -p patreon-gateway test`), which MetaOS alone calls, with its token. It reads through Patreon's API, as the
+campaign's creator, and makes, changes, publishes and deletes posts and uploads an episode's audio or video in Patreon's
+web app, signed in as the bot, `iva.ogrodje@gmail.com`, acting as the creator, by calling Patreon's own web API from a
+page of the campaign, as its editor does (not a public API: the README says how it was found). Changes are jobs, one at
+a time; one Patreon turns away (a rate limit) tries again by itself.
+
+- [`Patreon.kt`](src/main/kotlin/si/ogrodje/metaos/Patreon.kt) is MetaOS's client: `PATREON_GATEWAY_URL` and
+  `PATREON_GATEWAY_TOKEN` turn it on (`metaos.patreon.*`); it's off without the token. `PatreonMCP` has the tools:
+  tiers, members (`list_patreon_members`: status, tiers, pledges and charges, with names and emails), posts and drafts
+  (`list_patreon_drafts`, through Patreon's web app, as its API lists only what's published), new drafts
+  (`create_patreon_draft`), their audio or video from Dropbox, as a temporary link the gateway downloads, or any https
+  URL (`set_patreon_post_media`), download links for a post's audio or video (`get_patreon_post_media`: the MP3 as
+  uploaded, or the best MP4 Patreon's video host, Mux, keeps, which needs Patreon as its referrer; signed for a day or
+  more), publishing, which can set the episode's Patreon link (`publish_patreon_post`, the only one patrons see, so the
+  only open-world one), deleting, and the jobs. Quick changes are waited for; an upload comes back as a job
+  (`get_patreon_job`).
+- The bot signs in once by hand (`patreon-gateway/login.sh`), and the gateway keeps the session and the refreshed
+  creator tokens on its volume. A refresh ends the old tokens, so only one gateway may use a creator token. The `patreon` health check asks the gateway every hour, which says whether Patreon's
+  API answers and the browser is still signed in, in `metaos_patreon_connected` and in the log.
+- `PatreonTest` runs the client against a stand-in gateway; the gateway's own tests need no browser.
+
+### New Relic
+
+MetaOS is watched with New Relic, account 8666724 in its EU region, on its free plan: 100 GB a month, after which it
+takes nothing until the next, and one full user ([`NewRelic.kt`](src/main/kotlin/si/ogrodje/metaos/NewRelic.kt),
+[`newrelic/newrelic.yml`](newrelic/newrelic.yml)).
+
+- Its Java agent runs with MetaOS and patreon-gateway (`-javaagent` in their images, from `build/newrelic`, which
+  `./gradlew bootJar` and `-p patreon-gateway bootJar` fill): requests, the database, calls out, errors, the JVM, and
+  the app's logs, each with its request. It doesn't start without `NEW_RELIC_LICENSE_KEY` (`metaos-secret`, from
+  `PROD_NEW_RELIC_LICENSE_KEY`, `k8s/set_secrets.sh`), so the tests never have it. They report as `MetaOS` and
+  `patreon-gateway`, `environment:production` (`NEW_RELIC_LABELS`). The agent is 41 MB, a layer of its own, pushed
+  again only when its version changes; 8.25 is the first for Java 25.
+- GraphQL and MCP answer 200 with their errors in the body, so `NewRelic.kt` reports them, the caller's mistakes as
+  expected, which New Relic shows but doesn't count as errors (`callersMistake`: `IllegalArgumentException`, which
+  `require` throws, a GraphQL argument that doesn't convert, and being denied); the errors alert leaves them out too.
+  The agent reports GraphQL's itself, the caller's mistakes too, and a request keeps the last: each field's exception
+  (wrapped, `CompletionException`), the null a non-null field's error leaves, and invalid queries. So
+  `GraphQLErrorReports` (the first exception resolver, and an `Instrumentation`) notes each field's exception, and
+  once the request is done reports the first that isn't the caller's mistake, else the first that is, else has the
+  agent ignore its own. An advisor on `@McpTool` methods reports what a tool throws, before Spring AI makes it the
+  tool's result. Without the agent, its API does nothing. The agent leaves out 4xx responses (`ignore_status_codes`),
+  e.g. the 401 every MCP client's sign-in starts with.
+- The front-end's browser agent ([`fe/src/newrelic.ts`](fe/src/newrelic.ts), `plugins/newrelic.client.ts`) reports
+  the pages' errors, Vue's too (which Vue only logs), their load times and their requests to MetaOS, as the start of
+  their traces there. It keeps nothing in the browser (`cookies_enabled: false`), so there's nothing to ask visitors,
+  and it's off without `NUXT_PUBLIC_NEW_RELIC_*`: the browser app "MetaOS web" (`deployment-web.yaml`), whose
+  settings every page sends anyway.
+- In development: `./gradlew newRelic`, `-Xshare:off -javaagent:build/newrelic/newrelic.jar` in IntelliJ's run
+  configuration (VM options; `-Xshare:off`, as in the images, as class data sharing warns about the agent otherwise),
+  and in `.envrc` the license key, `NEW_RELIC_APP_NAME="MetaOS (dev)"`,
+  `NEW_RELIC_LABELS=environment:development`, `NEW_RELIC_APPLICATION_LOGGING_FORWARDING_ENABLED=false` and the browser
+  app "MetaOS web (dev)" (`NUXT_PUBLIC_NEW_RELIC_APPLICATION_ID` and `_AGENT_ID` 538920244, the rest as production's).
+- Ping monitors, which the free plan doesn't count, check every 5 minutes from Frankfurt, London and Milan that the
+  pages (`/healthz`), MetaOS (`/readyz`) and Keycloak (its realm's OpenID configuration) answer. The alert policy
+  "MetaOS" has conditions on them, on the back end's errors and on the browser's. Keycloak has no agent: it's
+  Keycloak's own image, watched by those checks and its metrics.
+- The cluster's Prometheus passes some of its metrics on to New Relic by remote write
+  ([`k8s/prometheus/newrelic-values.yaml`](k8s/prometheus/newrelic-values.yaml), applied by `newrelic.sh` to
+  kube-prometheus-stack, which the cluster's apps share): from namespace `metaos-prod` only, MetaOS's own
+  (`metaos_*_connected`, `metaos_changes_*`), patreon-gateway's (`patreon_gateway_*`), Keycloak's sign-ins
+  (`keycloak_user_events_total`, by event and error, which its image builds in: `KC_EVENT_METRICS_USER_ENABLED`, a
+  build option) and its password checks, `up`, and the pods' (cAdvisor's memory and CPU, kube-state-metrics' limits,
+  restarts, last termination reasons such as OOMKilled, readiness, replicas available); and the node's, from
+  node-exporter and kube-state-metrics: memory, the root filesystem, load, and memory pressure (major page faults,
+  stalls). That's MetaOS's Kubernetes monitoring, without New Relic's own Kubernetes integration (`nri-bundle`), whose
+  agents the node's memory hasn't room for; New Relic's Kubernetes pages stay empty. A new metric for New Relic goes in
+  the allowlist. Keycloak's metrics come from its management port (9000) through a ServiceMonitor, as MetaOS's do
+  from 9090.
+
 ### Deployment
 
 Production runs on the ogrodje-one Kubernetes cluster, namespace `metaos-prod`: the app at `https://metaos.ogrodje.si`
@@ -496,6 +621,11 @@ and its Keycloak at `https://metaos-auth.ogrodje.si`. Pushes to `master` deploy 
 [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml); [`k8s/README.md`](k8s/README.md) has the manifests,
 the one-time setup and the `just` recipes for deploying by hand. [`DEPLOY.md`](DEPLOY.md) explains the setup, the
 decisions behind it and what is left to do.
+
+- Pull requests run the same tests, [`.github/workflows/test.yml`](.github/workflows/test.yml) (the check `test`),
+  which master's ruleset requires; repository admins bypass it, so they can still push to `master`. With auto-merge on
+  (`gh pr merge --auto --squash`, or Enable auto-merge on GitHub), a pull request is merged once they pass, and so
+  deployed.
 
 - The pages are the front-end's own Deployment, `metaos-web`, also two pods: the Ingress sends MetaOS's paths
   (`/graphql`, `/events`, `/mcp`, `/.well-known`, `/koofr`, `/dropbox`, the probes) to MetaOS and everything else to
@@ -506,6 +636,41 @@ decisions behind it and what is left to do.
   that another needs: MCP is stateless (`spring.ai.mcp.server.protocol=STATELESS`, no `Mcp-Session-Id`), as no tool
   needs a session and the bearer token says who's calling; every pod listens for changes (Live updates) and checks its
   connections; caches like `DropboxFolderIndex` are each pod's own. Flyway takes a lock, so both may start at once.
+- patreon-gateway is one pod (`deployment-patreon-gateway.yaml`), with its state on a volume, and no Ingress: MetaOS
+  calls it at `http://patreon-gateway`, with the token from `patreon-gateway-secret` (`k8s/set_secrets.sh`). CI tests,
+  builds and rolls it out with the rest. Its Chromium is a container of its own in the pod, Microsoft's Playwright
+  image, which the node pulls from Microsoft, so the browsers never go through our registry over the tailnet; its
+  version has to be the gateway's Playwright's (`BrowserVersionTest`). Cloudflare turns away Patreon's pages from the
+  cluster's address, so the browser goes out through low (oto.srv4all.net, a VM whose address it lets through), the
+  tailnet's exit node, by the pod's `tailscale` container (an ephemeral machine, `PROD_PATREON_TAILSCALE_AUTHKEY`);
+  while low is down, jobs wait and try again.
+- CI builds each image (`metaos`, `metaos-web`, `patreon-gateway`, `keycloak`) in a job of its own, at once, each
+  building what goes in it first (and testing it, but for the app's, whose tests, the longest, are a job of their own
+  beside them), and the deploy waits for all five. They get devenv.nix's JDK, Node and Yarn, the same versions, from
+  GitHub's setup actions rather than Nix ([`.github/actions/toolchain`](.github/actions/toolchain/action.yml), which
+  has to follow devenv.nix), as entering devenv's shell took a minute a job, and production's ffprobe for
+  `MediaProbeTest`. The app's tests run in three JVMs (`-PtestForks=3`), with their Postgres pulled while Gradle
+  starts. The test JVMs share one Postgres (Testcontainers' reuse, `TESTCONTAINERS_REUSE_ENABLE`, also in devenv,
+  where it stays up between runs), on which the migrations run once, into a template named after them; each Spring
+  context gets a copy of it, a database of its own, dropped with it (`TestcontainersConfig`). Tests that change no
+  beans or properties share one context. A rollout starts both new pods of the front-end at once and the app's one at
+  a time, while the old ones keep serving: both of the app's at once were a minute or two faster, until a deploy that
+  changed every image ran the node, shared and at 85% of its memory, out of it: it thrashed, as its kubelet evicted
+  pods only below 100 MB free. Now it evicts them below 1 GiB (`--eviction-hard` in ogrodje-one's
+  `/var/snap/microk8s/current/args/kubelet`), so a pod goes before the node freezes. The images are reproducible: their
+  files have `SOURCE_DATE_EPOCH`'s time (`rewrite-timestamp`), not the build's, and the boot jars are too (no file
+  timestamps, `AbstractArchiveTask`), so a layer that didn't change, e.g. the dependencies, is the blob the registry
+  has, which isn't pushed again over the tailnet (a slow link, ~0.5 MB/s). An image that didn't change is the same
+  image, and the deploy points the Deployments at the images by digest, so it rolls only what changed: Keycloak (whose
+  `kc.sh build` layer comes from GitHub's cache) and patreon-gateway (whose restart cuts its job short) mostly stay
+  up. Anything that puts the build's time into a jar or an image, e.g. Spring Boot's `buildInfo()`, undoes that.
+  `nuxt build` does (a random build ID, build times, files' mtimes, its styles in the order they were done), so the
+  front-end's image is tagged `src-<key>` too, the key git's hashes of what it's made from (`sources` in the
+  workflow's matrix) and its base image's digest: a run that finds one of the same key tags it again instead of
+  building, and `metaos-web` isn't rolled.
+- patreon-gateway's image is on distroless Java, as the app's, with whose layers it shares: Playwright's driver runs
+  its Node.js itself, no shell needed, and the boot jar has only Linux's (`linuxDriverBundle`; the bundle has five
+  platforms', 200 MB).
 
 [Ogrodje]: https://ogrodje.si
 [Nix]: https://nixos.org/
