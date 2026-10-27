@@ -22,19 +22,20 @@ import org.springframework.stereotype.Component
 
 const val MCP_SCOPE = "mcp:tools"
 
-/** For reading what isn't public through /graphql; the front-end's tokens have it (keycloak/frontend_client.sh) */
+/** For reading what isn't public through /graphql; the front-end's tokens have it (infra/keycloak) */
 const val API_READ_SCOPE = "metaos:read"
 
 /** For changes through /graphql, e.g. comments; the front-end's tokens have it too */
 const val API_WRITE_SCOPE = "metaos:write"
 
 /**
- * The realm role an admin grants to approve a user (keycloak/approval_gate.sh). MetaOS checks it as well as the scope,
- * as Keycloak can issue a token with the scope to more than approved users: a client registered through DCR for its own
- * service account (client_credentials: no user, no login, so no approval gate), or a user whose approval was taken back
- * while their session lives on. keycloak/approved_scopes.sh keeps the scopes out of their tokens on Keycloak's side too.
- * The role is read from the signed token, so a token issued before the role was taken away still works until it expires
- * (an access token's lifespan; the next refresh drops the role); end the user's sessions to cut that short.
+ * The realm role an admin grants to approve a user (infra/keycloak). MetaOS checks it as well as the scope, as Keycloak
+ * can issue a token with the scope to more than approved users: a client registered through DCR for its own service
+ * account (client_credentials: no user, no login, so no approval gate), or a user whose approval was taken back while
+ * their session lives on. The scopes' role mappings (infra/keycloak/realm/scopes.tf) keep the scopes out of their
+ * tokens on Keycloak's side too. The role is read from the signed token, so a token issued before the role was taken
+ * away still works until it expires (an access token's lifespan; the next refresh drops the role); end the user's
+ * sessions to cut that short.
  */
 const val APPROVED_ROLE = "metaos-user"
 

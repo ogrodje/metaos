@@ -137,3 +137,17 @@ resource "keycloak_authentication_execution" "allow" {
 
   depends_on = [keycloak_authentication_subflow.require_role]
 }
+
+# Last, MetaOS's step, which remembers the sign-in while the realm has Remember me on (realm.tf). Keycloak has it from
+# MetaOS's image (docker/keycloak.Dockerfile, keycloak/remember-me); one without it refuses to create the step.
+resource "keycloak_authentication_execution" "remember" {
+  for_each = local.gated
+
+  realm_id          = keycloak_realm.metaos.id
+  parent_flow_alias = keycloak_authentication_flow.post_login[each.key].alias
+  authenticator     = "metaos-remember-me"
+  requirement       = "REQUIRED"
+  priority          = 2
+
+  depends_on = [keycloak_authentication_execution.allow]
+}

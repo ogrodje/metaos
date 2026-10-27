@@ -3,7 +3,6 @@
 *
 !build/libs/metaos.jar
 !build/newrelic
-!keycloak/metaos-realm.json
 !keycloak/remember-me
 !fe/.output
 !patreon-gateway/build/libs/patreon-gateway.jar

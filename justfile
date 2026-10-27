@@ -93,14 +93,83 @@ architecture:
       --force-device-scale-factor=2 --window-size="$size" --virtual-time-budget=5000 \
       --screenshot="$PWD/architecture.png" "file://$PWD/architecture.svg"
 
-# Keycloak's realm metaos through OpenTofu (infra/keycloak/README.md): `just keycloak plan prod`, `just keycloak apply
-# dev`. Signs in as KEYCLOAK_ADMIN_USERNAME (admin by default) with KEYCLOAK_ADMIN_PASSWORD.
+# Keycloak's realm metaos through Terraform (infra/keycloak/README.md): `just keycloak plan prod`, `just keycloak apply
+# dev`, and `just keycloak adopt dev` for a realm its state doesn't have yet, e.g. a new compose Keycloak's. Signs in to
+# production as KEYCLOAK_ADMIN_USERNAME with KEYCLOAK_ADMIN_PASSWORD (.envrc), and to compose.yml's as admin / admin.
 keycloak command env *ARGS:
     #!/usr/bin/env bash
     set -euo pipefail
-    cd infra/keycloak
-    export TF_VAR_keycloak_admin_username="${KEYCLOAK_ADMIN_USERNAME:-admin}"
-    export TF_VAR_keycloak_admin_password="${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD}"
-    tofu init -input=false >/dev/null
-    tofu workspace select -or-create "{{env}}" >/dev/null
-    tofu "{{command}}" -var-file="{{env}}.tfvars" {{ARGS}}
+    case "{{env}}" in
+      dev) export KEYCLOAK_ADMIN_USERNAME=admin KEYCLOAK_ADMIN_PASSWORD=admin ;;
+      prod) export TF_VAR_keycloak_admin_username="${KEYCLOAK_ADMIN_USERNAME:?}" \
+              TF_VAR_keycloak_admin_password="${KEYCLOAK_ADMIN_PASSWORD:?}" \
+              GOOGLE_OAUTH_ACCESS_TOKEN="${GOOGLE_OAUTH_ACCESS_TOKEN:-$(gcloud auth print-access-token)}" ;;
+      *) echo "dev or prod" >&2; exit 2 ;;
+    esac
+    cd infra/keycloak/{{env}}
+    terraform init -input=false >/dev/null
+    if [ "{{command}}" = adopt ]; then exec ../import.sh {{env}}; fi
+    terraform "{{command}}" {{ARGS}}
+
+# A stack in infra/ with no environments of its own (infra/README.md): `just infra newrelic plan`, `just infra gcp
+# apply`. Its state is in Cloud Storage, which Terraform reaches as you, signed in to gcloud; each stack's provider
+# signs in with what .envrc has for it.
+infra stack command *ARGS:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    case "{{stack}}" in
+      gcp) ;;
+      newrelic) export NEW_RELIC_API_KEY="${NEW_RELIC_USER_KEY:?NEW_RELIC_USER_KEY, a User API key}" ;;
+      cloudflare) : "${CLOUDFLARE_API_TOKEN:?}" ;;
+      tailscale) : "${TAILSCALE_OAUTH_CLIENT_ID:?}" "${TAILSCALE_OAUTH_CLIENT_SECRET:?}" ;;
+      *) echo "gcp, newrelic, cloudflare or tailscale (Keycloak's is just keycloak)" >&2; exit 2 ;;
+    esac
+    export GOOGLE_OAUTH_ACCESS_TOKEN="${GOOGLE_OAUTH_ACCESS_TOKEN:-$(gcloud auth print-access-token)}"
+    cd infra/{{stack}}
+    terraform init -input=false >/dev/null
+    terraform "{{command}}" {{ARGS}}
+
+# The tailnet's policy file, infra/tailscale/policy.hujson, from Tailscale, on a machine that hasn't got it: it's
+# private, so never committed (infra/tailscale/README.md). --force replaces the one there with Tailscale's, e.g. after
+# a change made in Tailscale's console.
+tailscale-policy *FORCE:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    file=infra/tailscale/policy.hujson
+    if [ -e "$file" ] && [ "{{FORCE}}" != --force ]; then
+      echo "$file is there already: --force replaces it with Tailscale's" >&2
+      exit 1
+    fi
+    token=$(curl -sSf https://api.tailscale.com/api/v2/oauth/token \
+      -d "client_id=${TAILSCALE_OAUTH_CLIENT_ID:?}" -d "client_secret=${TAILSCALE_OAUTH_CLIENT_SECRET:?}" | jq -r .access_token)
+    umask 077
+    curl -sSf -H "Authorization: Bearer $token" -H "Accept: application/hujson" \
+      https://api.tailscale.com/api/v2/tailnet/-/acl -o "$file"
+    echo "$file: the tailnet's policy, as Tailscale has it"
+
+# A key for an environment's storage service account (infra/gcp), as lines for .envrc: `just storage-key dev >>
+# .envrc`; prod's is PROD_GOOGLE_STORAGE_KEY, which k8s/set_secrets.sh puts into metaos-secret. Terraform makes no keys,
+# so none is in its state. Each run makes another, and the older ones keep working, up to 10 per service account:
+# delete those no longer used with `gcloud iam service-accounts keys list|delete --iam-account=...`.
+storage-key env:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    case "{{env}}" in
+      dev) variable=GOOGLE_STORAGE_KEY ;;
+      prod) variable=PROD_GOOGLE_STORAGE_KEY ;;
+      *) echo "dev or prod" >&2; exit 2 ;;
+    esac
+    account=metaos-storage-{{env}}@ogrodje-metaos.iam.gserviceaccount.com
+    key=$(mktemp)
+    trap 'rm -f "$key"' EXIT
+    # Everything but the export lines goes to stderr, so they can be appended to .envrc as they are
+    CLOUDSDK_CORE_PROJECT=ogrodje-metaos CLOUDSDK_BILLING_QUOTA_PROJECT=ogrodje-metaos \
+      gcloud iam service-accounts keys create "$key" --iam-account="$account"
+    echo
+    echo "# Google Cloud Storage: key $(jq -r .private_key_id "$key") of $account (just storage-key {{env}})"
+    if [ "{{env}}" = dev ]; then
+      echo "export METAOS_STORAGE_BUCKET=ogrodje-metaos-dev"
+      echo "export METAOS_MEDIA_BUCKET=ogrodje-metaos-public-dev"
+    fi
+    # One line, which single quotes keep as it is: the private key's newlines are \n in JSON
+    echo "export $variable='$(jq -c . "$key")'"

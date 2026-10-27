@@ -6,7 +6,7 @@ locals {
 
 resource "keycloak_realm" "metaos" {
   realm        = "metaos"
-  display_name = "MetaOS"
+  display_name = "Ogrodje MetaOS"
   enabled      = true
   ssl_required = "external"
 
@@ -15,11 +15,20 @@ resource "keycloak_realm" "metaos" {
   login_with_email_allowed = true
   duplicate_emails_allowed = false
   reset_password_allowed   = false
+  # Wherever Keycloak can send mail: a user whose provider doesn't vouch for their address, as Discord doesn't, confirms it
+  verify_email = var.smtp != null
 
   # A sign-in lasts 7 days without use and 30 at most, and refresh tokens as long (keycloak/sessions.sh had the why)
   sso_session_idle_timeout = var.sso_session_idle_timeout
   sso_session_max_lifespan = var.sso_session_max_lifespan
   access_token_lifespan    = var.access_token_lifespan
+
+  # Sign-ins through Discord and Google are remembered, as with Remember me on the login form, which they never see (the
+  # last step of their post-login flows, identity_providers.tf), so Keycloak's sign-in cookie outlives the browser: 30
+  # days without use and 90 at most. Off, the step does nothing, and users sign in again whenever their browser restarts.
+  remember_me                          = true
+  sso_session_idle_timeout_remember_me = var.sso_session_idle_timeout_remember_me
+  sso_session_max_lifespan_remember_me = var.sso_session_max_lifespan_remember_me
 
   default_signature_algorithm = "RS256"
 
@@ -53,11 +62,14 @@ resource "keycloak_realm" "metaos" {
   dynamic "smtp_server" {
     for_each = var.smtp[*]
     content {
-      host              = smtp_server.value.host
-      port              = smtp_server.value.port
-      starttls          = smtp_server.value.starttls
-      from              = smtp_server.value.from
-      from_display_name = smtp_server.value.from_display_name
+      host                  = smtp_server.value.host
+      port                  = smtp_server.value.port
+      starttls              = smtp_server.value.starttls
+      from                  = smtp_server.value.from
+      from_display_name     = smtp_server.value.from_display_name
+      reply_to              = smtp_server.value.reply_to
+      reply_to_display_name = smtp_server.value.reply_to_display_name
+      allow_utf8            = true
       auth {
         username = smtp_server.value.username
         password = coalesce(var.smtp_password, local.kept_secret)

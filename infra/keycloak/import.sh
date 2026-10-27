@@ -1,52 +1,58 @@
 #!/usr/bin/env bash
-# Adopts an existing realm metaos into Terraform's state, once per environment: it looks up what Terraform manages by
-# name in Keycloak's admin API, and imports each by the ID Keycloak gave it. It changes nothing in Keycloak; `tofu plan`
-# afterwards says how the realm differs from the configuration.
+# Adopts realm metaos into an environment's state (dev/ or prod/): it looks up what Terraform manages by name in
+# Keycloak's admin API, and imports each by the ID Keycloak gave it. `terraform plan` afterwards says how the realm
+# differs from the configuration.
 #
-#   infra/keycloak/import.sh dev|prod
+#   just keycloak adopt dev|prod
 #
-# Also for a new realm, after `tofu apply -target=keycloak_realm.metaos`: Keycloak gives every new realm its default
-# client registration policies, which Terraform has to adopt rather than create again, as two Trusted Hosts policies
-# would refuse every registration the default one doesn't allow.
+# It changes nothing in Keycloak, but for a realm that isn't there yet, which it creates first (asking, as `terraform
+# apply` does): Keycloak gives every new realm its default client registration policies, which Terraform has to adopt
+# rather than create again, as two Trusted Hosts policies would refuse every registration the default one doesn't allow.
 #
-# Skips what's in the state already, so it can be run again. From the environment: KEYCLOAK_ADMIN_PASSWORD (and
-# KEYCLOAK_ADMIN_USERNAME, admin by default); for prod also TF_VAR_google_client_secret and TF_VAR_discord_client_secret,
-# which aren't sent to Keycloak on import, only checked to be there.
+# Skips what's in the state already, so it can be run again. Runs in the environment's directory, initialised, with
+# KEYCLOAK_ADMIN_USERNAME and KEYCLOAK_ADMIN_PASSWORD, an admin of realm master, from the environment (justfile).
 set -euo pipefail
 
 ENV=${1:?dev or prod}
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/$ENV"
 
-KC=$(sed -n 's/^keycloak_url *= *"\(.*\)"/\1/p' "$ENV.tfvars")
 REALM=metaos
-: "${KEYCLOAK_ADMIN_PASSWORD:?}"
-export TF_VAR_keycloak_admin_password=$KEYCLOAK_ADMIN_PASSWORD
-export TF_VAR_keycloak_admin_username=${KEYCLOAK_ADMIN_USERNAME:-admin}
+MODULE=module.realm
+# value EXPRESSION - an expression of the configuration's, as JSON
+value() { terraform console <<<"jsonencode($1)" | jq -r fromjson; }
+
+KC=$(value local.keycloak_url)
+: "${KEYCLOAK_ADMIN_USERNAME:?}" "${KEYCLOAK_ADMIN_PASSWORD:?}"
 
 signin=$(curl -sS --fail-with-body "$KC/realms/master/protocol/openid-connect/token" \
   -d client_id=admin-cli -d grant_type=password \
-  --data-urlencode "username=$TF_VAR_keycloak_admin_username" --data-urlencode "password=$KEYCLOAK_ADMIN_PASSWORD") ||
+  --data-urlencode "username=$KEYCLOAK_ADMIN_USERNAME" --data-urlencode "password=$KEYCLOAK_ADMIN_PASSWORD") ||
   { echo "Keycloak refused the sign-in to realm master: $signin" >&2; exit 1; }
 TOKEN=$(jq -r .access_token <<<"$signin")
 
 api() { curl -sS --fail-with-body -H "Authorization: Bearer $TOKEN" "$KC/admin/realms/$REALM$1"; }
 
-tofu workspace select -or-create "$ENV" >/dev/null
-in_state=$(tofu state list 2>/dev/null || true)
+if ! api "" >/dev/null 2>&1; then
+  echo "Realm $REALM isn't at $KC yet: creating it first, so Keycloak makes its defaults"
+  terraform apply -input=false -target="$MODULE.keycloak_realm.metaos"
+fi
 
-# adopt ADDRESS ID - imports ADDRESS unless it's in the state already, or ID is empty (not in Keycloak: plan creates it)
+in_state=$(terraform state list 2>/dev/null || true)
+
+# adopt ADDRESS ID - imports the module's ADDRESS unless it's in the state already, or ID is empty (not in Keycloak:
+# apply creates it)
 adopt() {
-  if grep -qxF "$1" <<<"$in_state"; then
+  if grep -qxF "$MODULE.$1" <<<"$in_state"; then
     echo "  $1: in the state already"
   elif [ -z "$2" ]; then
-    echo "  $1: not in Keycloak, tofu apply creates it"
+    echo "  $1: not in Keycloak, terraform apply creates it"
   else
-    tofu import -var-file="$ENV.tfvars" -input=false -no-color "$1" "$2" >/dev/null
+    terraform import -input=false -no-color "$MODULE.$1" "$2" >/dev/null
     echo "  $1: imported"
   fi
 }
 
-echo "Adopting realm $REALM at $KC into workspace $ENV"
+echo "Adopting realm $REALM at $KC into $ENV's state"
 adopt keycloak_realm.metaos "$REALM"
 
 role=$(api /roles | jq -r '.[] | select(.name == "metaos-user") | .id')
@@ -71,17 +77,15 @@ adopt keycloak_openid_client_default_scopes.metaos_ui "${ui:+$REALM/$ui}"
 adopt keycloak_openid_client_optional_scopes.metaos_ui "${ui:+$REALM/$ui}"
 
 policies=$(api "/components?type=org.keycloak.services.clientregistration.policy.ClientRegistrationPolicy")
-for key in $(tofu console -var-file="$ENV.tfvars" <<<'jsonencode(keys(local.registration_policies))' | jq -r 'fromjson | .[]'); do
-  spec=$(tofu console -var-file="$ENV.tfvars" <<<"jsonencode(local.registration_policies[\"$key\"])" | jq -r fromjson)
-  id=$(jq -r --argjson s "$spec" '.[] | select(.providerId == $s.provider_id and .subType == $s.sub_type) | .id' <<<"$policies" | head -1)
+declared=$(value "$MODULE.registration_policies")
+for key in $(jq -r 'keys[]' <<<"$declared"); do
+  id=$(jq -r --argjson s "$(jq -c --arg k "$key" '.[$k]' <<<"$declared")" \
+    '.[] | select(.providerId == $s.provider_id and .subType == $s.sub_type) | .id' <<<"$policies" | head -1)
   adopt "keycloak_realm_client_registration_policy.metaos[\"$key\"]" "${id:+$REALM/$id}"
 done
 
 flows=$(api /authentication/flows)
-for idp in google discord; do
-  declared=$(tofu console -var-file="$ENV.tfvars" <<<"var.$idp != null")
-  [ "$declared" = true ] || continue
-
+for idp in $(value "$MODULE.identity_providers" | jq -r '.[]'); do
   address=$([ "$idp" = google ] && echo "keycloak_oidc_google_identity_provider.google[0]" || echo "keycloak_oidc_identity_provider.discord[0]")
   exists=$(api /identity-provider/instances | jq -r --arg a "$idp" 'any(.[]; .alias == $a)')
   adopt "$address" "$([ "$exists" = true ] && echo "$REALM/$idp")"
@@ -96,6 +100,8 @@ for idp in google discord; do
   adopt "keycloak_authentication_subflow.require_role[\"$idp\"]" "${subflow:+$REALM/$idp-post-login/$subflow}"
   allow=$(execution allow-access-authenticator | jq -r .id)
   adopt "keycloak_authentication_execution.allow[\"$idp\"]" "${allow:+$REALM/$idp-post-login/$allow}"
+  remember=$(execution metaos-remember-me | jq -r .id)
+  adopt "keycloak_authentication_execution.remember[\"$idp\"]" "${remember:+$REALM/$idp-post-login/$remember}"
   for step in without_role:conditional-user-role deny:deny-access-authenticator; do
     name=${step%%:*} provider=${step#*:}
     id=$(execution "$provider" | jq -r .id)
@@ -106,11 +112,11 @@ for idp in google discord; do
 done
 
 dev=$(api "/users?username=dev&exact=true" | jq -r '.[0].id // empty')
-if [ "$(tofu console -var-file="$ENV.tfvars" <<<'var.dev_user')" = true ]; then
+if [ "$(value "$MODULE.dev_user")" = true ]; then
   adopt "keycloak_user.dev[0]" "${dev:+$REALM/$dev}"
   adopt "keycloak_user_roles.dev[0]" "${dev:+$REALM/$dev}"
 elif [ -n "$dev" ]; then
   echo "  (the dev user exists here but isn't managed: disable it in the admin console if nobody uses it)"
 fi
 
-echo "Done. Now: tofu plan -var-file=$ENV.tfvars"
+echo "Done. Now: just keycloak plan $ENV"

@@ -41,7 +41,7 @@ class StorageTest {
     @Test
     fun `says what GOOGLE_STORAGE_KEY should be`() {
         val error = assertFailsWith<IllegalArgumentException> { GoogleCloudStorage("""{"type": "authorized_user"}""", "ogrodje-metaos-dev") }
-        assertTrue("google/storage.sh key" in error.message.orEmpty(), error.message)
+        assertTrue("just storage-key" in error.message.orEmpty(), error.message)
     }
 }
 
@@ -206,6 +206,6 @@ class GoogleCloudStorageTest {
         val revoked = GoogleCloudStorage(json.writeValueAsString(deleted), System.getenv("METAOS_STORAGE_BUCKET"))
 
         val error = assertFailsWith<IllegalStateException> { revoked.file("$folder/anything") }
-        assertTrue("google/storage.sh key" in error.message.orEmpty(), error.message)
+        assertTrue("just storage-key" in error.message.orEmpty(), error.message)
     }
 }

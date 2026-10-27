@@ -58,8 +58,9 @@ just gateway-logs  # follow patreon-gateway
 
 ## One-time setup
 
-1. **DNS.** `metaos.ogrodje.si` and `metaos-auth.ogrodje.si` as proxied CNAMEs to `ogrodje-one.boo.run`, like
-   `goo.ogrodje.si`. Proxied, because Cloudflare holds the certificate - the cluster has no cert-manager.
+1. **DNS.** `metaos.ogrodje.si` and `metaos-auth.ogrodje.si` as proxied CNAMEs to `ogrodje-one.ogrodje.si`
+   ([infra/cloudflare](../infra/cloudflare/dns.tf)). Proxied, because Cloudflare holds the certificate - the cluster
+   has no cert-manager.
 
 2. **Database, secrets, pull secret.** Put the passwords into `.envrc` (`openssl rand -hex 24` for each) and run the
    script; it's idempotent, and re-running it with new passwords rotates them:
@@ -68,7 +69,6 @@ just gateway-logs  # follow patreon-gateway
    export PROD_METAOS_DB_PASSWORD=...
    export PROD_KEYCLOAK_DB_PASSWORD=...
    export PROD_KEYCLOAK_ADMIN_PASSWORD=...
-   export PROD_KEYCLOAK_DEV_PASSWORD=...
    export DOCKER_REGISTRY_USERNAME=... DOCKER_REGISTRY_PASSWORD=...
    ./k8s/set_secrets.sh
    ```
@@ -81,14 +81,16 @@ just gateway-logs  # follow patreon-gateway
    stale-while-revalidate=600`), but only with a Cache Rule, as it doesn't cache HTML by default: for host
    `metaos.ogrodje.si`, *Eligible for cache*, Edge TTL *Use cache-control header if present, bypass cache if not*,
    Browser TTL *Respect origin*. The team's pages say `no-store`, and the API's answers aren't cacheable, so they pass
-   through.
+   through. The zone's Cache Rules are Terraform's ([infra/cloudflare](../infra/cloudflare/caching.tf)), which has
+   `media`'s only so far: this one isn't there yet.
 
-4. **First deploy:** `just push deploy`. Keycloak imports realm `metaos` from the image on its first start, with
-   `METAOS_MCP_URL` as the token audience and `PROD_KEYCLOAK_DEV_PASSWORD` as the `dev` user's password.
+4. **First deploy:** `just push deploy`. Keycloak starts with the master realm only.
 
 5. **Keycloak, once it's up** (`https://metaos-auth.ogrodje.si/admin`, `admin` / `PROD_KEYCLOAK_ADMIN_PASSWORD`):
-    - The bootstrap admin is temporary - create a permanent admin in the master realm and delete it.
-    - Delete the `dev` user from realm `metaos`, or keep it as a smoke-test account.
+    - The bootstrap admin is temporary - create a permanent admin in the master realm and delete it. That admin is
+      `KEYCLOAK_ADMIN_USERNAME` and `KEYCLOAK_ADMIN_PASSWORD`, in `.envrc` and GitHub's environment `production`.
+    - Realm `metaos`: `just keycloak adopt prod`, then `just keycloak apply prod`, with the sign-in providers' secrets
+      ([infra/keycloak](../infra/keycloak/README.md)).
     - Add real users with **verified** emails; that's how a login is linked to a person (`Security.kt`).
 
 6. **CI** (once the repo is on GitHub):
@@ -97,7 +99,8 @@ just gateway-logs  # follow patreon-gateway
       operator kubeconfig (`tailscale configure kubeconfig tailscale-operator`), not `ogrodje-one-config`.
     - `kubectl apply -f k8s/ci/deployer.yaml` - a Role in `metaos-prod` for group `metaos-deployers`.
     - In the tailnet policy, add `metaos-deployers` to the groups `tag:ci` impersonates on `tag:k8s-operator`
-      (next to `bongbong-deployers`).
+      (next to `bongbong-deployers`): `infra/tailscale/policy.hujson`, which is private, applied with
+      `just infra tailscale apply` ([infra/tailscale](../infra/tailscale/README.md)).
 
 7. **New Relic** (CLAUDE.md, "New Relic"): `PROD_NEW_RELIC_LICENSE_KEY` in `.envrc`, then `./k8s/set_secrets.sh` for
    the agents, and, where kubectl may change namespace `observability` (`ssh ogrodje-one-x`), `./k8s/prometheus/newrelic.sh
@@ -122,17 +125,13 @@ Then point an MCP client at `https://metaos.ogrodje.si/mcp`, e.g.
 
 ## Notes
 
-- **The realm is imported once.** Later edits to `keycloak/metaos-realm.json` don't reach production; make them in the
-  admin console too. Same for `METAOS_MCP_URL`: changing it in `kustomization.yaml` rolls the app, but Keycloak's
-  `mcp:tools` audience mapper keeps the old value until it's edited there.
+- **Realm `metaos` is Terraform's** ([infra/keycloak](../infra/keycloak/README.md)): a change to it is a change there,
+  planned and applied, never made in the admin console. That includes `METAOS_MCP_URL` and `METAOS_API_URL`: changing
+  them in `kustomization.yaml` rolls the app, but the scopes' audience mappers keep the old URLs until
+  `infra/keycloak/prod` has the new ones and is applied.
 - **Dynamic Client Registration allows redirect URIs on a few hosts only** (the realm's Trusted Hosts policy):
   `localhost` for Claude Code and MCP Inspector, `claude.ai` and `claude.com` for Claude's connectors, `chatgpt.com`
-  for ChatGPT's. `keycloak/trusted_hosts.sh` adds them to a realm imported before; another hosted client needs its
-  host added there.
-- **Actions → Keycloak → Run workflow** (`.github/workflows/keycloak.yml`) runs `trusted_hosts.sh` or `sessions.sh`
-  against production's realm, through a port-forward. It signs in with the repo secrets `KEYCLOAK_ADMIN_USERNAME` and
-  `KEYCLOAK_ADMIN_PASSWORD`, or without them as `admin` with `keycloak-secret`'s password, which Keycloak only uses to
-  create the first admin.
+  for ChatGPT's. Another hosted client needs its host in `trusted_hosts` (infra/keycloak/realm/variables.tf).
 - Every deploy rolls Keycloak and the front-end too, since the images get the same tag. It's a rolling update, so the old pod serves
   until the new one is ready, and for 10 s after it's told to stop, until ingress-nginx has dropped it.
 - The registry isn't cleaned up: tags are commit hashes, which don't sort by age, so boo-run's keep-the-newest-three

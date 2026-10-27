@@ -25,9 +25,9 @@ Status (2026-10-19): everything is written and verified locally. Nothing is depl
 
 ```
 docker/Dockerfile            the app: boot jar on distroless Java 25, Spring Boot layers, runs as non-root
-docker/keycloak.Dockerfile   Keycloak 26.8.1, optimized build, keycloak/metaos-realm.json baked in
+docker/keycloak.Dockerfile   Keycloak 26.8.1, optimized build, with MetaOS's provider (keycloak/remember-me)
 docker/web.Dockerfile        the front-end: Nuxt's build (fe/.output) on distroless Node 26, runs as non-root
-.dockerignore                allowlist: only the boot jar, the realm JSON and fe/.output enter the build context
+.dockerignore                allowlist: only the boot jar, the provider's sources and fe/.output enter the build context
 k8s/base/
   namespace.yaml             metaos-prod
   deployment-metaos.yaml     ConfigMap, Deployment, Service, Ingress (MetaOS's own paths), ServiceMonitor
@@ -63,8 +63,8 @@ justfile                     the same steps by hand: just push, just deploy, jus
 - **`set_secrets.sh` is idempotent.** It finds the CNPG primary by label, creates roles and databases only if
   missing, and always resets the passwords, so re-running it with new values rotates them. Secrets are applied
   rather than deleted and recreated, so there is no window without them.
-- **The `dev` user.** The realm JSON has a `dev` user whose password comes from `KEYCLOAK_DEV_PASSWORD`. In production
-  that is a random secret, so the account is unusable until someone deliberately uses or deletes it.
+- **The `dev` user** (`dev` / `dev`) is development's only: production's realm has none (`dev_user` in
+  `infra/keycloak`).
 
 ## Changes to the app
 
@@ -109,8 +109,8 @@ justfile                     the same steps by hand: just push, just deploy, jus
 - **Own Keycloak.** MetaOS gets its own Keycloak, as in `compose.yml`. The alternative is a `metaos` realm on goo's
   existing Keycloak at `keycloak.ogrodje.si`.
 - **Login from claude.ai and ChatGPT.** The realm lets clients register themselves with redirect URIs on `localhost`,
-  `claude.ai`, `claude.com` and `chatgpt.com` (its Trusted Hosts policy; `keycloak/trusted_hosts.sh` for production's
-  realm, imported before). Anyone can register such a client, but its tokens only work for an approved user who
+  `claude.ai`, `claude.com` and `chatgpt.com` (its Trusted Hosts policy, `infra/keycloak/realm/registration.tf`).
+  Anyone can register such a client, but its tokens only work for an approved user who
   signed in and agreed to the consent screen.
 
 ## Differences from the older projects
@@ -124,34 +124,36 @@ justfile                     the same steps by hand: just push, just deploy, jus
 
 ## Known trade-offs
 
-- **The realm is imported once.** Later edits to `keycloak/metaos-realm.json` don't reach production; make them in the
-  admin console too. The same goes for `METAOS_MCP_URL`: changing it rolls the app, but Keycloak's `mcp:tools`
-  audience mapper keeps the old value until it's edited there.
+- **Realm `metaos` is Terraform's** ([`infra/keycloak`](infra/keycloak/README.md)), in every environment: Keycloak
+  used to import it from `keycloak/metaos-realm.json` on its first start only, so production drifted from the file,
+  changed by scripts and in the admin console. A change to it is now planned and applied, and one made in the console
+  the next apply undoes. That includes `METAOS_MCP_URL` and `METAOS_API_URL`, the scopes' audiences:
+  `infra/keycloak/prod` has to change with them.
 - **Every deploy rolls Keycloak**, since both images get the same tag. It's a rolling update, so the old pod serves
   until the new one is ready.
 - **Realms imported from the older realm file lack built-in client scopes.** An import that lists client scopes leaves
   Keycloak's own clients (account console, admin console, ...) without `roles`, `profile`, `email`, ..., so their
   tokens carry no roles and the account console fails with "Something went wrong" (a 403 from the account API).
   `metaos-realm.json` now lists only `mcp:tools` and sets the realm attribute `CreateDefaultClientScopes`, which makes
-  the import create Keycloak's standard scopes and assign them as in a fresh realm. A realm imported from the file
-  before that change - production, and local databases from before - needs
-  [`keycloak/fix_builtin_clients.sh`](keycloak/fix_builtin_clients.sh) once; production has had it.
+  the import create Keycloak's standard scopes and assign them as in a fresh realm. Production, imported before that
+  change, had them added once by a script; realms Terraform makes have them from the start.
 - **Sessions last 7 days idle, 30 days at most.** Keycloak's defaults, 30 minutes and 10 hours, signed people out of
   the front-end and MCP clients several times a day, as refresh tokens last only as long as the session.
-  `metaos-realm.json` has the longer ones; a realm imported before needs
-  [`keycloak/sessions.sh`](keycloak/sessions.sh) once; production has had it (2026-10-20).
+  `infra/keycloak` has the longer ones; production has had them since 2026-10-20.
 - **Sign-ins are remembered, 30 days idle, 90 at most.** Keycloak's sign-in cookie otherwise ends with the browser:
   it only outlives it with "Remember me", which logins through Discord and Google skip, so people signed in again
   after every restart: one person had 14 sessions from six days on production (2026-10-26), unused but alive. MetaOS's own provider
   ([`keycloak/remember-me`](keycloak/remember-me)), the last step of each identity provider's post-login flow, does
   what the box would. It's in Keycloak's image (`docker/keycloak.Dockerfile`), which has to be deployed before
-  `sessions.sh` adds the step to a realm from before; the script refuses until it is. A flow whose step's provider
-  is gone fails every login through it, so take the step out before the provider.
+  Terraform adds the step: Keycloak refuses a step whose provider it doesn't have. A flow whose step's provider is
+  gone fails every login through it, so take the step out before the provider.
 
 ## Discord login
 
-[`keycloak/discord_idp.sh`](keycloak/discord_idp.sh) adds "Sign in with Discord" to realm `metaos` through the admin
-API. It's not in the realm JSON, because the realm is imported only once and the client secret doesn't belong in git.
+"Sign in with Discord" is in realm `metaos`'s Terraform
+([`identity_providers.tf`](infra/keycloak/realm/identity_providers.tf)), first set up by a script through the admin
+API. Its client secret comes from the environment when it's set or changed (`TF_VAR_discord_client_secret`), never
+from git.
 
 - **Generic OAuth v2 provider.** Keycloak has no Discord provider; the generic one reads `id`, `username`,
   `global_name` and `email` from `https://discord.com/api/users/@me`. The community keycloak-discord extension could
@@ -169,9 +171,7 @@ API. It's not in the realm JSON, because the realm is imported only once and the
 
 ## Google login
 
-[`keycloak/google_idp.sh`](keycloak/google_idp.sh) adds "Sign in with Google" the same way, with Keycloak's built-in
-Google provider. The role, the post-login flows and the admin API helpers are shared with the Discord script, in
-[`keycloak/approval_gate.sh`](keycloak/approval_gate.sh).
+"Sign in with Google" is beside it, with Keycloak's built-in Google provider, and the same approval gate.
 
 - **OAuth client.** "Web application" client "Keycloak" in Google Cloud project `ogrodje-metaos`, with redirect URIs
   `https://metaos-auth.ogrodje.si/realms/metaos/broker/google/endpoint` and
@@ -194,19 +194,12 @@ client register for its own service account (`client_credentials`), whose token 
 approval. So both sides now require the realm role `metaos-user`:
 
 - **Keycloak** puts `mcp:tools`, `metaos:read` and `metaos:write` into a token only when its user has the role, through
-  the scopes' role scope mappings. They're in the realm JSON for new realms;
-  [`keycloak/approved_scopes.sh`](keycloak/approved_scopes.sh) adds them to an existing one.
+  the scopes' role scope mappings ([`scopes.tf`](infra/keycloak/realm/scopes.tf)).
 - **MetaOS** requires the role next to the scope on `/mcp`, `/graphql`'s team data and the thumbnails (`Security.kt`).
 
-The mappings take effect at once, so the order matters. As the IdP scripts, with `KEYCLOAK_ADMIN_USERNAME` and
-`KEYCLOAK_ADMIN_PASSWORD` from `.envrc`:
-
-```bash
-keycloak/approved_scopes.sh           # 1. report: enabled users without the role, service accounts with it
-                                      # 2. grant metaos-user to those who should keep access
-keycloak/approved_scopes.sh --apply   # 3. map the scopes; refuses while users without the role remain (--force: they go)
-                                      # 4. deploy the MetaOS that checks the role
-```
+The mappings take effect at once, so production got them in this order, with a script that first reported who would
+lose access: everyone who should keep it was granted `metaos-user`, then the scopes were mapped, then the MetaOS that
+checks the role was deployed.
 
 Taking the role away now ends access within an access token's lifespan, at the next refresh; end the user's sessions
 in Keycloak to make it immediate.
@@ -218,14 +211,9 @@ script changes nothing; it refuses `--apply` while unapproved users remain, and 
 
 The front-end signs users in with keycloak-js as client `metaos-ui`, and its "Sign in with Discord/Google" buttons go
 straight to the identity provider (`idpHint`), so the approval gates above apply to it as they do to MCP clients.
-`metaos-ui` and its scopes `metaos:read` and `metaos:write`, which put `/graphql` into the tokens' audience, are in the
-realm JSON for new realms; [`keycloak/frontend_client.sh`](keycloak/frontend_client.sh) adds them to an existing one:
-
-```bash
-keycloak/frontend_client.sh   # as the IdP scripts: KEYCLOAK_ADMIN_USERNAME and KEYCLOAK_ADMIN_PASSWORD from .envrc
-```
-
-Production has it (2026-10-19).
+`metaos-ui` and its scopes `metaos:read` and `metaos:write`, which put `/graphql` into the tokens' audience, are in
+[`clients.tf`](infra/keycloak/realm/clients.tf) and [`scopes.tf`](infra/keycloak/realm/scopes.tf). Production has had
+them since 2026-10-19.
 
 - **Public client with PKCE.** A browser can't keep a secret. Redirect URIs and web origins are `METAOS_UI_URL` only.
 - **Not realm defaults.** The scopes are assigned to `metaos-ui` alone: clients that register themselves (DCR) may
@@ -270,10 +258,11 @@ server and hydrates them into the same single-page app (CLAUDE.md, Front-end).
 
 1. [ ] **DNS.** Add `metaos.ogrodje.si` and `metaos-auth.ogrodje.si` as proxied Cloudflare CNAMEs to
    `ogrodje-one.boo.run`, like `goo.ogrodje.si`.
-2. [ ] **Secrets.** Add `PROD_METAOS_DB_PASSWORD`, `PROD_KEYCLOAK_DB_PASSWORD`, `PROD_KEYCLOAK_ADMIN_PASSWORD`,
-   `PROD_KEYCLOAK_DEV_PASSWORD` (`openssl rand -hex 24` each), `DOCKER_REGISTRY_USERNAME` and
+2. [ ] **Secrets.** Add `PROD_METAOS_DB_PASSWORD`, `PROD_KEYCLOAK_DB_PASSWORD`, `PROD_KEYCLOAK_ADMIN_PASSWORD`
+   (`openssl rand -hex 24` each), `DOCKER_REGISTRY_USERNAME` and
    `DOCKER_REGISTRY_PASSWORD` to `.envrc`, then run `./k8s/set_secrets.sh`.
-3. [ ] **First deploy.** `just push deploy`.
+3. [ ] **First deploy.** `just push deploy`, then realm `metaos`: `just keycloak adopt prod` and `just keycloak
+   apply prod` ([infra/keycloak](infra/keycloak/README.md)).
 4. [ ] **Keycloak.** At `https://metaos-auth.ogrodje.si/admin`, sign in as `admin`, create a permanent admin in the
    master realm, then delete the temporary bootstrap admin and the `dev` user. Add real users with verified emails;
    that's how a login's account is linked to a person by itself (otherwise, `link_account`).

@@ -1,20 +1,3 @@
-variable "keycloak_url" {
-  description = "Where Keycloak is, e.g. https://metaos-auth.ogrodje.si"
-  type        = string
-}
-
-variable "keycloak_admin_username" {
-  description = "An admin of realm master (KEYCLOAK_ADMIN_USERNAME)"
-  type        = string
-  default     = "admin"
-}
-
-variable "keycloak_admin_password" {
-  description = "Its password (KEYCLOAK_ADMIN_PASSWORD)"
-  type        = string
-  sensitive   = true
-}
-
 variable "metaos_mcp_url" {
   description = "Public URL of /mcp, the audience of mcp:tools tokens (METAOS_MCP_URL)"
   type        = string
@@ -28,6 +11,12 @@ variable "metaos_api_url" {
 variable "metaos_ui_url" {
   description = "Where the front-end is, for metaos-ui's redirect URIs (METAOS_UI_URL)"
   type        = string
+}
+
+variable "metaos_ui_other_urls" {
+  description = "Where else a front-end signs in as metaos-ui, e.g. in development a worktree's on another port"
+  type        = list(string)
+  default     = []
 }
 
 variable "trusted_hosts" {
@@ -46,6 +35,18 @@ variable "sso_session_max_lifespan" {
   description = "A sign-in ends after this long in any case"
   type        = string
   default     = "720h"
+}
+
+variable "sso_session_idle_timeout_remember_me" {
+  description = "A remembered sign-in, as Discord's and Google's are, ends after this long without use"
+  type        = string
+  default     = "720h"
+}
+
+variable "sso_session_max_lifespan_remember_me" {
+  description = "A remembered sign-in ends after this long in any case"
+  type        = string
+  default     = "2160h"
 }
 
 variable "access_token_lifespan" {
@@ -87,14 +88,16 @@ variable "discord_client_secret" {
 }
 
 variable "smtp" {
-  description = "How Keycloak sends email; null leaves it unset"
+  description = "How Keycloak sends email, which it then asks users to verify; null leaves it unset"
   type = object({
-    host              = string
-    port              = string
-    starttls          = bool
-    from              = string
-    from_display_name = string
-    username          = string
+    host                  = string
+    port                  = string
+    starttls              = bool
+    from                  = string
+    from_display_name     = string
+    reply_to              = optional(string)
+    reply_to_display_name = optional(string)
+    username              = string
   })
   default = null
 }

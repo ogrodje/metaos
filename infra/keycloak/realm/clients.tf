@@ -1,3 +1,7 @@
+locals {
+  ui_urls = concat([var.metaos_ui_url], var.metaos_ui_other_urls)
+}
+
 # The front-end (fe/), signing users in with keycloak-js. Public, as a browser can't keep a secret, so with PKCE.
 resource "keycloak_openid_client" "metaos_ui" {
   realm_id    = keycloak_realm.metaos.id
@@ -17,9 +21,9 @@ resource "keycloak_openid_client" "metaos_ui" {
 
   backchannel_logout_session_required = false
 
-  valid_redirect_uris             = ["${var.metaos_ui_url}/*"]
+  valid_redirect_uris             = [for url in local.ui_urls : "${url}/*"]
   valid_post_logout_redirect_uris = ["+"]
-  web_origins                     = [var.metaos_ui_url]
+  web_origins                     = local.ui_urls
 }
 
 # Its tokens always carry metaos:read and metaos:write, which let them into /graphql; mcp:tools is no business of its
