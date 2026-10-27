@@ -2,7 +2,8 @@ name: Terraform
 
 # infra/'s stacks that CI runs (infra/README.md): a pull request that changes one plans it, and its merge into master
 # applies it, as the deploy rolls out the app. Each plan is in its run's summary. Actions → Terraform → Run workflow
-# plans one by hand, and applies it when asked to, e.g. after a change made outside Terraform.
+# plans one by hand, and applies it when asked to, e.g. after a change made outside Terraform. tflint checks every
+# stack in infra/, these and the others, on every change to it.
 #
 # Not every stack: infra/gcp can give anyone anything in the project, so its owners apply it themselves; infra/tailscale's
 # policy file is private, never in this public repository; Keycloak's development realm is each developer's own.
@@ -15,18 +16,12 @@ name: Terraform
 on:
   pull_request:
     paths:
-      - infra/keycloak/realm/**
-      - infra/keycloak/prod/**
-      - infra/newrelic/**
-      - infra/cloudflare/**
+      - infra/**
       - .github/workflows/terraform.yml
   push:
     branches: [ master ]
     paths:
-      - infra/keycloak/realm/**
-      - infra/keycloak/prod/**
-      - infra/newrelic/**
-      - infra/cloudflare/**
+      - infra/**
       - .github/workflows/terraform.yml
   workflow_dispatch:
     inputs:
@@ -47,6 +42,26 @@ permissions:
   id-token: write
 
 jobs:
+  # devenv.nix's tflint, the same version, over all of infra/ (`just tflint`)
+  tflint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: terraform-linters/setup-tflint@v6
+        with:
+          tflint_version: v0.64.0
+
+      - run: tflint --init --config "$PWD/.tflint.hcl"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - run: tflint --recursive --config "$PWD/.tflint.hcl" --format compact
+
   # Which stacks the change is to: a change to this workflow is to all of them
   stacks:
     runs-on: ubuntu-latest

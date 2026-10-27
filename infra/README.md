@@ -65,6 +65,9 @@ plan is in its run's summary, which is what the apply then does: a plan saved, n
 Run workflow plans one by hand, and applies it with Apply ticked, e.g. after a change made outside Terraform. A
 change to the workflow plans, and applies, all three.
 
+tflint checks every stack, CI's and the others, on every change to `infra/` (`.tflint.hcl`: Terraform's
+recommended rules, and Google's for `gcp`); `just tflint` does the same locally, with devenv's tflint.
+
 Three aren't CI's: `gcp` can give anyone anything in the project, so only its owners apply it, themselves;
 `tailscale`'s policy file is private, so not in the repository CI checks out; and `keycloak/dev` is each developer's
 own. An infra change merged with an app change is applied beside the app's deploy, not before it: one the app needs

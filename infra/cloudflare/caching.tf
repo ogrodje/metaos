@@ -1,6 +1,12 @@
 # How Cloudflare serves MetaOS's names. Each phase's rules are one ruleset for the whole zone, so these are every Cache
 # Rule and Configuration Rule ogrodje.si has: another site's go here too.
 
+locals {
+  # MetaOS's own paths, which the Ingress sends to it rather than to the pages (k8s/base): never cached, whatever
+  # they'd say, so that an answer for one signed-in user can't reach another
+  metaos_paths = ["/graphql", "/events", "/mcp", "/.well-known", "/koofr", "/dropbox"]
+}
+
 resource "cloudflare_ruleset" "cache" {
   zone_id = local.zone_id
   kind    = "zone"
@@ -13,6 +19,21 @@ resource "cloudflare_ruleset" "cache" {
       ref         = "c5123650b90043d792f4b4f970202f38"
       description = "media: cache"
       expression  = "(http.host eq \"media.ogrodje.si\")"
+      action      = "set_cache_settings"
+      action_parameters = {
+        cache       = true
+        edge_ttl    = { mode = "bypass_by_default" }
+        browser_ttl = { mode = "respect_origin" }
+      }
+      enabled = true
+    },
+    {
+      # The pages, which Cloudflare doesn't cache without a rule, as they're HTML: as their Cache-Control says, and
+      # nothing without one. The pages anyone may see say s-maxage=60, stale-while-revalidate=600, so each is
+      # rendered once a minute, not once a visit (routeRules, fe/nuxt.config.ts); the team's pages say no-store.
+      ref         = "metaos-pages"
+      description = "metaos: pages"
+      expression  = "(http.host eq \"metaos.ogrodje.si\" and not (${join(" or ", [for path in local.metaos_paths : "starts_with(http.request.uri.path, \"${path}\")"])}))"
       action      = "set_cache_settings"
       action_parameters = {
         cache       = true
