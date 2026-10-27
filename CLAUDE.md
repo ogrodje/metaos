@@ -645,8 +645,8 @@ decisions behind it and what is left to do.
 - The pages are the front-end's own Deployment, `metaos-web`, also two pods: the Ingress sends MetaOS's paths
   (`/graphql`, `/events`, `/mcp`, `/.well-known`, `/koofr`, `/dropbox`, the probes) to MetaOS and everything else to
   it; its server asks MetaOS's GraphQL inside the cluster (`http://metaos`). Cloudflare caches the pages anyone may
-  see as their `Cache-Control` says, which a Cache Rule has to allow, as it doesn't cache HTML by default; the team's
-  pages say `no-store`.
+  see as their `Cache-Control` says, which a Cache Rule has to allow, as it doesn't cache HTML by default (`metaos:
+  pages`, `infra/cloudflare/caching.tf`, which keeps MetaOS's own paths out); the team's pages say `no-store`.
 - MetaOS runs as two pods, so one answers while the other restarts or rolls out. Nothing may live in one pod's memory
   that another needs: MCP is stateless (`spring.ai.mcp.server.protocol=STATELESS`, no `Mcp-Session-Id`), as no tool
   needs a session and the bearer token says who's calling; every pod listens for changes (Live updates) and checks its

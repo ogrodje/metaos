@@ -81,8 +81,8 @@ just gateway-logs  # follow patreon-gateway
    stale-while-revalidate=600`), but only with a Cache Rule, as it doesn't cache HTML by default: for host
    `metaos.ogrodje.si`, *Eligible for cache*, Edge TTL *Use cache-control header if present, bypass cache if not*,
    Browser TTL *Respect origin*. The team's pages say `no-store`, and the API's answers aren't cacheable, so they pass
-   through. The zone's Cache Rules are Terraform's ([infra/cloudflare](../infra/cloudflare/caching.tf)), which has
-   `media`'s only so far: this one isn't there yet.
+   through. It's `metaos: pages`, Terraform's ([infra/cloudflare](../infra/cloudflare/caching.tf)), which also
+   leaves MetaOS's own paths (`/graphql`, `/events`, `/mcp`, ...) uncached, whatever they say.
 
 4. **First deploy:** `just push deploy`. Keycloak starts with the master realm only.
 

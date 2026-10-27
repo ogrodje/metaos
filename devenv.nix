@@ -51,8 +51,9 @@ in {
     # ffprobe, which reads what's in an episode's video and audio (MediaProbe.kt), as MetaOS's image has it; and ffmpeg,
     # with which MediaProbeTest makes files for it
     pkgs.ffmpeg-headless
-    # Terraform, for infra/ (Keycloak's realm); unfree (BUSL), which `unstable` allows
+    # Terraform, for infra/; unfree (BUSL), which `unstable` allows. tflint checks it (infra/.tflint.hcl, just tflint)
     unstable.terraform
+    unstable.tflint
   ];
 
   env = {

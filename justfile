@@ -129,6 +129,14 @@ infra stack command *ARGS:
     terraform init -input=false >/dev/null
     terraform "{{command}}" {{ARGS}}
 
+# tflint over every stack in infra/ (infra/.tflint.hcl), as CI does; the first run installs its plugins
+tflint:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd infra
+    GITHUB_TOKEN="${GITHUB_TOKEN:-$(gh auth token 2>/dev/null || true)}" tflint --init --config "$PWD/.tflint.hcl" >/dev/null
+    tflint --recursive --config "$PWD/.tflint.hcl"
+
 # The tailnet's policy file, infra/tailscale/policy.hujson, from Tailscale, on a machine that hasn't got it: it's
 # private, so never committed (infra/tailscale/README.md). --force replaces the one there with Tailscale's, e.g. after
 # a change made in Tailscale's console.
