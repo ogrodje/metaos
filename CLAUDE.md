@@ -17,6 +17,19 @@ MetaOS was designed for scaling, optimising and helping grow the [Ogrodje] organ
   and says whether it only reads, destroys what's there, can be repeated and reaches the open world. Spring AI's
   defaults are the cautious ones, and are sent when left out. `ToolHintsTest` says what each means here and checks every
   tool's by its name, so a new tool that doesn't fit its rules changes them too.
+- **Every change to the MCP tools changes their version, and old tools keep working.** Assistants keep the tools they
+  were given, whatever version MetaOS says it has, until they're refreshed: Claude's apps until the user refreshes the
+  connector, ChatGPT's workspaces until an admin does. So the tools have a version (`spring.ai.mcp.server.version` in
+  [`mcp.properties`](src/main/resources/mcp.properties), semver), which `McpToolsTest` works out from their snapshot as
+  `tools/list` has them ([`mcp-tools.json`](src/test/resources/mcp-tools.json)): a tool, parameter or value that's gone,
+  a new parameter that's required or another type is major; a new tool, optional parameter or value minor; a title,
+  description or hint a patch. After a change to the tools, `just mcp-tools` writes the snapshot and the version, also
+  the Usage page's (`TOOLS_VERSION`), to commit with it; CI fails without them, and Claude Code is reminded after each
+  edit of a file with tools (a hook in [`.claude/settings.json`](.claude/settings.json)). It refuses a major change unless it's
+  `just mcp-tools --breaking`: rather, a new parameter is optional, and for 14 days a renamed tool or parameter keeps
+  its old name too (a tool whose description starts "Deprecated: use `<new>`."), and a removed tool answers what to use
+  instead; then they go, `--breaking`. A call that doesn't fit its tool says the assistant may have older tools, and
+  where the Usage page says how to refresh them (`StaleToolInputs` in `McpVersion.kt`, `/usage#refresh`).
 - **Infrastructure is Terraform's.** Keycloak's realm, Google Cloud, New Relic, MetaOS's part of Cloudflare and the
   tailnet's policy file are code in [`infra/`](infra/README.md), planned and applied with Terraform, never changed in a
   console or by a script: a change made there, the next apply undoes. A change to them is a change to `infra/` (its
@@ -88,7 +101,8 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   `Person`). [`fe/server/routes`](fe/server/routes) has `/sitemap.xml`, with every page anyone may see, and
   `/robots.txt`, which keeps crawlers off the team's pages and the API; and `/healthz`, for the probes. A not-found
   page answers 404 (`NotFound.vue`).
-- The API and MCP usage page (`/usage`) shows how to install the MCP server and lists its tools by hand, from
+- The API and MCP usage page (`/usage`) shows how to install the MCP server, and how each assistant gets its tools
+  again once they've changed (`#refresh`, with their version), and lists its tools by hand, from
   [`fe/src/tools.ts`](fe/src/tools.ts), which has to follow every change to the tools (see above). It also shows how to
   use the GraphQL API with curl, with or without a token (a signed-in user copies theirs); its examples have to keep
   working as the schema changes.

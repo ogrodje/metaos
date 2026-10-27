@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_input.file_path // .tool_response.filePath // empty'); case \"$f\" in */src/main/kotlin/*.kt) grep -q '@McpTool' \"$f\" && jq -n --arg f \"${f##*/}\" '{hookSpecificOutput: {hookEventName: \"PostToolUse\", additionalContext: ($f + \" has MCP tools. If this changed one (its name, title, description, hints or parameters), run `just mcp-tools` and commit the snapshot and version it writes, keeping old tools working (CLAUDE.md); McpToolsTest fails until then.\")}}';; esac; exit 0"
+          }
+        ]
+      }
+    ]
+  }
+}

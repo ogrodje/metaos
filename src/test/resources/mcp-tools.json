@@ -1,0 +1,2969 @@
+{
+  "assign_person_to_episode" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Assign person to episode"
+    },
+    "description" : "Give a person a role on an episode and return all of their roles on it. A person can have several roles on one episode; assigning a role they already have changes nothing",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        },
+        "personId" : {
+          "description" : "Person ID",
+          "format" : "uuid",
+          "type" : "string"
+        },
+        "role" : {
+          "description" : "Role on the episode; CANDIDATE for someone who could be its guest, until confirm_guest makes them one",
+          "enum" : [ "HOST", "CO_HOST", "GUEST", "PRODUCER", "CONSULTANT", "DESIGNER", "CANDIDATE" ],
+          "type" : "string"
+        }
+      },
+      "required" : [ "code", "personId", "role" ],
+      "type" : "object"
+    },
+    "title" : "Assign person to episode"
+  },
+  "comment_on_episode" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : false,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Comment on episode"
+    },
+    "description" : "Comment on an episode or idea as the signed-in user, in Markdown. The team sees it in the episode's discussion and history, marked as written with this tool",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "body" : {
+          "description" : "What to say, in Markdown; at most 20000 characters",
+          "type" : "string"
+        },
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code", "body" ],
+      "type" : "object"
+    },
+    "title" : "Comment on episode"
+  },
+  "comment_on_session" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : false,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Comment on session"
+    },
+    "description" : "Comment on a recording session as the signed-in user, in Markdown, as comment_on_episode does",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "body" : {
+          "description" : "What to say, in Markdown; at most 20000 characters",
+          "type" : "string"
+        },
+        "sessionId" : {
+          "description" : "Session ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "sessionId", "body" ],
+      "type" : "object"
+    },
+    "title" : "Comment on session"
+  },
+  "confirm_guest" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Confirm guest"
+    },
+    "description" : "Make a candidate a guest: a person who is a CANDIDATE on an episode, someone who could be its guest, becomes its GUEST, e.g. once they've said yes. Returns all of their roles on it",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        },
+        "personId" : {
+          "description" : "Person ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code", "personId" ],
+      "type" : "object"
+    },
+    "title" : "Confirm guest"
+  },
+  "create_dropbox_folder" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Create Dropbox folder"
+    },
+    "description" : "Create a folder in Dropbox",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "name" : {
+          "description" : "Name of the new folder",
+          "type" : "string"
+        },
+        "parent" : {
+          "description" : "Folder to create it in; / when omitted",
+          "type" : "string"
+        },
+        "place" : {
+          "description" : "A folder shared with Ogrodje's bot in Dropbox, by name or ID (list_dropbox_places)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "place", "name" ],
+      "type" : "object"
+    },
+    "title" : "Create Dropbox folder"
+  },
+  "create_episode" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : false,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Create episode"
+    },
+    "description" : "Create a new episode. It starts as an IDEA, which can do without a code until it is planned. It's recommended by the person linked to you, unless you name someone else",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Unique episode code, e.g. S05E08",
+          "type" : "string"
+        },
+        "recommendedBy" : {
+          "description" : "ID of the person who recommended it; omit for the person linked to you by email, if there is one",
+          "format" : "uuid",
+          "type" : "string"
+        },
+        "title" : {
+          "description" : "Episode title",
+          "type" : "string"
+        }
+      },
+      "required" : [ "title" ],
+      "type" : "object"
+    },
+    "title" : "Create episode"
+  },
+  "create_koofr_folder" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Create Koofr folder"
+    },
+    "description" : "Create a folder in Koofr",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "name" : {
+          "description" : "Name of the new folder",
+          "type" : "string"
+        },
+        "parent" : {
+          "description" : "Folder to create it in; / when omitted",
+          "type" : "string"
+        },
+        "place" : {
+          "description" : "A folder shared with Ogrodje's bot in Koofr, by name or ID (list_koofr_places)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "place", "name" ],
+      "type" : "object"
+    },
+    "title" : "Create Koofr folder"
+  },
+  "create_patreon_draft" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : false,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Create Patreon draft"
+    },
+    "description" : "Make a draft post on Ogrodje's Patreon, which only the team sees until it's published (publish_patreon_post); give it the episode's audio or video with set_patreon_post_media. Changes in Patreon run as jobs: what's quick comes back done, else as a job to follow with get_patreon_job",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "access" : {
+          "description" : "Who may see it: PUBLIC (anyone), PATRONS (every patron, free ones too) or TIERS (only the tiers in tiers); PATRONS when omitted",
+          "enum" : [ "PUBLIC", "PATRONS", "TIERS" ],
+          "type" : "string"
+        },
+        "text" : {
+          "description" : "The post's text: paragraphs between blank lines; addresses become links",
+          "type" : "string"
+        },
+        "tiers" : {
+          "description" : "For TIERS: the tiers' IDs (list_patreon_tiers)",
+          "items" : {
+            "type" : "string"
+          },
+          "type" : "array"
+        },
+        "title" : {
+          "description" : "Its title, e.g. S05E08 Miha Zidar: Pametnejši razvoj v dobi umetne inteligence",
+          "type" : "string"
+        }
+      },
+      "required" : [ "title" ],
+      "type" : "object"
+    },
+    "title" : "Create Patreon draft"
+  },
+  "create_person" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : false,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Create person"
+    },
+    "description" : "Create a new person. Only otobrglez@gmail.com gives them an email, as it links accounts to them",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "email" : {
+          "description" : "Unique email address (case-insensitive)",
+          "type" : "string"
+        },
+        "name" : {
+          "description" : "Full name",
+          "type" : "string"
+        }
+      },
+      "required" : [ "name" ],
+      "type" : "object"
+    },
+    "title" : "Create person"
+  },
+  "create_session" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : false,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Create session"
+    },
+    "description" : "Create a new recording session: its date, what it's called, where it is and the address. Without a name it goes by its location",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "address" : {
+          "description" : "Street address of the location",
+          "type" : "string"
+        },
+        "date" : {
+          "description" : "Date of the session, e.g. 2026-10-19",
+          "format" : "date",
+          "type" : "string"
+        },
+        "location" : {
+          "description" : "Location, e.g. the name of the venue",
+          "type" : "string"
+        },
+        "name" : {
+          "description" : "What the session is called, e.g. AWS Community Day Adria 2026",
+          "type" : "string"
+        }
+      },
+      "required" : [ "date" ],
+      "type" : "object"
+    },
+    "title" : "Create session"
+  },
+  "create_show" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Create show"
+    },
+    "description" : "Create a new show",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "color" : {
+          "description" : "Color as hex RGB, e.g. #0404a4",
+          "type" : "string"
+        },
+        "name" : {
+          "description" : "Unique show name (case-insensitive)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "name" ],
+      "type" : "object"
+    },
+    "title" : "Create show"
+  },
+  "delete_comment" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Delete comment"
+    },
+    "description" : "Delete one of the signed-in user's comments. It leaves the discussion; the history keeps that it was there",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "commentId" : {
+          "description" : "Comment ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "commentId" ],
+      "type" : "object"
+    },
+    "title" : "Delete comment"
+  },
+  "delete_episode" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Delete episode"
+    },
+    "description" : "Soft-delete an episode by its code (case-insensitive) or ID",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code" ],
+      "type" : "object"
+    },
+    "title" : "Delete episode"
+  },
+  "delete_patreon_post" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Delete Patreon post"
+    },
+    "description" : "Delete a post from Ogrodje's Patreon, e.g. a draft that isn't needed; Patreon can't bring it back. Changes in Patreon run as jobs: what's quick comes back done, else as a job to follow with get_patreon_job",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "id" : {
+          "description" : "The Patreon post's ID, the number at the end of its URL, e.g. 171593625",
+          "type" : "string"
+        }
+      },
+      "required" : [ "id" ],
+      "type" : "object"
+    },
+    "title" : "Delete Patreon post"
+  },
+  "delete_person" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Delete person"
+    },
+    "description" : "Soft-delete a person. They drop off their episodes, and the episodes they recommended, until they are restored",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "personId" : {
+          "description" : "Person ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "personId" ],
+      "type" : "object"
+    },
+    "title" : "Delete person"
+  },
+  "delete_session" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Delete session"
+    },
+    "description" : "Soft-delete a session. Its episodes are kept and taken out of the session",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "sessionId" : {
+          "description" : "Session ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "sessionId" ],
+      "type" : "object"
+    },
+    "title" : "Delete session"
+  },
+  "delete_show" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Delete show"
+    },
+    "description" : "Soft-delete a show. Its episodes are kept and taken out of the show",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "name" : {
+          "description" : "Show name (case-insensitive)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "name" ],
+      "type" : "object"
+    },
+    "title" : "Delete show"
+  },
+  "edit_comment" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Edit comment"
+    },
+    "description" : "Change the text of one of the signed-in user's comments. It shows as edited, and the history keeps what it said before",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "body" : {
+          "description" : "Its new text, in Markdown; at most 20000 characters",
+          "type" : "string"
+        },
+        "commentId" : {
+          "description" : "Comment ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "commentId", "body" ],
+      "type" : "object"
+    },
+    "title" : "Edit comment"
+  },
+  "get_episode" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "Get episode"
+    },
+    "description" : "Find an episode by its code (case-insensitive) or ID, with its summaries",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code" ],
+      "type" : "object"
+    },
+    "title" : "Get episode"
+  },
+  "get_history" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "Get history"
+    },
+    "description" : "List every change to an episode, person, session or show, oldest first: what changed, when, by whom, through which MCP client and tool. Includes people's roles on an episode, the documents, Koofr and Dropbox folders linked to an episode or session, the comments in an episode's or session's discussion, an episode's video and audio, the accounts linked to and unlinked from a person, episodes moving in and out of a session or show and the episodes a person is credited with recommending. Soft deletes show up as updates that set deleted_at; a removed link comes back with restore_link and the ID of the change that removed it",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "id" : {
+          "description" : "ID of the episode, person, session or show",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "id" ],
+      "type" : "object"
+    },
+    "title" : "Get history"
+  },
+  "get_patreon_job" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "Get Patreon job"
+    },
+    "description" : "How a change in Patreon is going: QUEUED, RUNNING, SUCCEEDED with what it made, or FAILED and why. A job Patreon turned away for now waits and tries again by itself (retryAt)",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "id" : {
+          "description" : "The job's ID",
+          "type" : "string"
+        }
+      },
+      "required" : [ "id" ],
+      "type" : "object"
+    },
+    "title" : "Get Patreon job"
+  },
+  "get_patreon_post" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "Get Patreon post"
+    },
+    "description" : "A post on Ogrodje's Patreon: a published one with its text and who may see it, or a draft, with where to edit it",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "id" : {
+          "description" : "The Patreon post's ID, the number at the end of its URL, e.g. 171593625",
+          "type" : "string"
+        }
+      },
+      "required" : [ "id" ],
+      "type" : "object"
+    },
+    "title" : "Get Patreon post"
+  },
+  "get_patreon_post_media" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "Get Patreon post media"
+    },
+    "description" : "Download links for a Patreon post's audio and video, a draft's too: AUDIO is the MP3 as it was uploaded, VIDEO the best MP4 Patreon keeps of the video (not the file uploaded). The links are signed and give the file to anyone who has them until expiresAt (a day for video, a few for audio), so give them only to the team. A video's link needs its referer sent as the Referer header, else it's refused (403), e.g. curl -L -H 'Referer: https://www.patreon.com/' -o '<fileName>' '<url>'",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "id" : {
+          "description" : "The Patreon post's ID, the number at the end of its URL, e.g. 171593625",
+          "type" : "string"
+        }
+      },
+      "required" : [ "id" ],
+      "type" : "object"
+    },
+    "title" : "Get Patreon post media"
+  },
+  "get_person_avatar" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "Get person avatar"
+    },
+    "description" : "A person's avatar, with its URLs; none when they have none",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "personId" : {
+          "description" : "Person ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "personId" ],
+      "type" : "object"
+    },
+    "title" : "Get person avatar"
+  },
+  "get_show" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "Get show"
+    },
+    "description" : "Find a show by its name (case-insensitive)",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "name" : {
+          "description" : "Show name, e.g. Bytes",
+          "type" : "string"
+        }
+      },
+      "required" : [ "name" ],
+      "type" : "object"
+    },
+    "title" : "Get show"
+  },
+  "link_account" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Link account"
+    },
+    "description" : "Link an account to the person it is, so their comments and changes go by that person's name, also those made before. An account linked to someone else has to be unlinked first (unlink_account). Only otobrglez@gmail.com may",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "accountId" : {
+          "description" : "Account ID, from list_accounts",
+          "format" : "uuid",
+          "type" : "string"
+        },
+        "personId" : {
+          "description" : "Person ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "accountId", "personId" ],
+      "type" : "object"
+    },
+    "title" : "Link account"
+  },
+  "link_episode_document" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Link doc to episode"
+    },
+    "description" : "Link a Google Doc in Ogrodje's Google Drive folder to an episode it is about, e.g. its preparation doc. A doc can be linked to several episodes; the doc of a recording session goes to the session (link_session_document)",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        },
+        "document" : {
+          "description" : "Google Doc URL or Drive file ID",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code", "document" ],
+      "type" : "object"
+    },
+    "title" : "Link doc to episode"
+  },
+  "link_episode_dropbox_folder" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Link Dropbox folder to episode"
+    },
+    "description" : "Link a Dropbox folder to an episode it is about, e.g. the folder with its artwork, with a link that only those with access to the folder can open (url). Linking a folder again makes the link when there's none yet. A folder for a whole recording session goes to the session (link_session_dropbox_folder)",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        },
+        "path" : {
+          "description" : "Path in the place, e.g. /S05E08/cover.png; / is the shared folder itself",
+          "type" : "string"
+        },
+        "place" : {
+          "description" : "A folder shared with Ogrodje's bot in Dropbox, by name or ID (list_dropbox_places)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code", "place", "path" ],
+      "type" : "object"
+    },
+    "title" : "Link Dropbox folder to episode"
+  },
+  "link_episode_koofr_folder" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Link Koofr folder to episode"
+    },
+    "description" : "Link a Koofr folder to an episode it is about, e.g. the folder with its recordings. A folder for a whole recording session goes to the session (link_session_koofr_folder)",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        },
+        "path" : {
+          "description" : "Path in the place, e.g. /Epizode/S05E08; / is the shared folder itself",
+          "type" : "string"
+        },
+        "place" : {
+          "description" : "A folder shared with Ogrodje's bot in Koofr, by name or ID (list_koofr_places)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code", "place", "path" ],
+      "type" : "object"
+    },
+    "title" : "Link Koofr folder to episode"
+  },
+  "link_session_document" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Link doc to session"
+    },
+    "description" : "Link a Google Doc in Ogrodje's Google Drive folder to a recording session it is about, e.g. its recording day plan (\"Ogrodje Snemalni Dan - ...\")",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "document" : {
+          "description" : "Google Doc URL or Drive file ID",
+          "type" : "string"
+        },
+        "sessionId" : {
+          "description" : "Session ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "sessionId", "document" ],
+      "type" : "object"
+    },
+    "title" : "Link doc to session"
+  },
+  "link_session_dropbox_folder" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Link Dropbox folder to session"
+    },
+    "description" : "Link a Dropbox folder to a recording session it is about, e.g. the folder with that day's photos, with a link that only those with access to the folder can open (url). Linking a folder again makes the link when there's none yet",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "path" : {
+          "description" : "Path in the place, e.g. /S05E08/cover.png; / is the shared folder itself",
+          "type" : "string"
+        },
+        "place" : {
+          "description" : "A folder shared with Ogrodje's bot in Dropbox, by name or ID (list_dropbox_places)",
+          "type" : "string"
+        },
+        "sessionId" : {
+          "description" : "Session ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "sessionId", "place", "path" ],
+      "type" : "object"
+    },
+    "title" : "Link Dropbox folder to session"
+  },
+  "link_session_koofr_folder" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Link Koofr folder to session"
+    },
+    "description" : "Link a Koofr folder to a recording session it is about, e.g. the folder with everything recorded that day",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "path" : {
+          "description" : "Path in the place, e.g. /Epizode/S05E08; / is the shared folder itself",
+          "type" : "string"
+        },
+        "place" : {
+          "description" : "A folder shared with Ogrodje's bot in Koofr, by name or ID (list_koofr_places)",
+          "type" : "string"
+        },
+        "sessionId" : {
+          "description" : "Session ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "sessionId", "place", "path" ],
+      "type" : "object"
+    },
+    "title" : "Link Koofr folder to session"
+  },
+  "list_accounts" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List accounts"
+    },
+    "description" : "List the Keycloak users MetaOS has seen, the newest first, with the person each is and how it was linked: by its verified email or by someone. Optionally only those not linked to anyone yet",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "unlinked" : {
+          "description" : "Only those not linked to a person",
+          "type" : "boolean"
+        }
+      },
+      "required" : [ ],
+      "type" : "object"
+    },
+    "title" : "List accounts"
+  },
+  "list_deleted" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List deleted"
+    },
+    "description" : "List what has been soft-deleted and can be restored: episodes, people, recording sessions and shows, the most recently deleted first, with when and by whom. restore_episode takes an episode's code or ID, restore_person and restore_session an ID, restore_show a name",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "kind" : {
+          "description" : "Only list those of this kind",
+          "enum" : [ "EPISODE", "PERSON", "SESSION", "SHOW" ],
+          "type" : "string"
+        }
+      },
+      "required" : [ ],
+      "type" : "object"
+    },
+    "title" : "List deleted"
+  },
+  "list_drive_folder" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List Drive folder"
+    },
+    "description" : "List the files and folders directly in a folder of Ogrodje's Google Drive folder, by name",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "folder" : {
+          "description" : "Google Drive folder URL or ID; the Ogrodje folder when omitted",
+          "type" : "string"
+        }
+      },
+      "required" : [ ],
+      "type" : "object"
+    },
+    "title" : "List Drive folder"
+  },
+  "list_dropbox_folder" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List Dropbox folder"
+    },
+    "description" : "List the files and folders directly in a Dropbox folder",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "path" : {
+          "description" : "Path in the place, e.g. /S05E08/cover.png; / is the shared folder itself; / when omitted",
+          "type" : "string"
+        },
+        "place" : {
+          "description" : "A folder shared with Ogrodje's bot in Dropbox, by name or ID (list_dropbox_places)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "place" ],
+      "type" : "object"
+    },
+    "title" : "List Dropbox folder"
+  },
+  "list_dropbox_places" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List Dropbox places"
+    },
+    "description" : "List the folders shared with Ogrodje's bot in Dropbox, e.g. Artwork - MetaOS works only in these - and whether it may change them",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : { },
+      "required" : [ ],
+      "type" : "object"
+    },
+    "title" : "List Dropbox places"
+  },
+  "list_episode_comments" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List episode comments"
+    },
+    "description" : "List the comments in an episode's discussion (ideas too), oldest first: what each says, in Markdown, who wrote it and when, whether it was edited, and the MCP tool it was written with, if any",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code" ],
+      "type" : "object"
+    },
+    "title" : "List episode comments"
+  },
+  "list_episode_documents" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List episode docs"
+    },
+    "description" : "List the Google Docs of an episode, by name: those linked to the episode and those linked to its recording session, e.g. the recording day plan; linkedTo says which. Docs deleted since are listed as missing",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code" ],
+      "type" : "object"
+    },
+    "title" : "List episode docs"
+  },
+  "list_episode_dropbox_folders" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List episode Dropbox folders"
+    },
+    "description" : "List the Dropbox folders of an episode, e.g. its artwork: those linked to the episode and those linked to its recording session; linkedTo says which. Folders moved or renamed, also in the Dropbox app, stay linked; those deleted or moved out of their shared folder are listed as missing",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code" ],
+      "type" : "object"
+    },
+    "title" : "List episode Dropbox folders"
+  },
+  "list_episode_images" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List episode images"
+    },
+    "description" : "List an episode's pictures: its thumbnail, thumbnails B and C, web picture and cover, with their URLs; none where it has none",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code" ],
+      "type" : "object"
+    },
+    "title" : "List episode images"
+  },
+  "list_episode_koofr_folders" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List episode Koofr folders"
+    },
+    "description" : "List the Koofr folders of an episode: those linked to the episode and those linked to its recording session; linkedTo says which. Folders moved outside MetaOS are listed as missing",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code" ],
+      "type" : "object"
+    },
+    "title" : "List episode Koofr folders"
+  },
+  "list_episode_media" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List episode media"
+    },
+    "description" : "List an episode's video and audio, the first uploaded first: its full video and full audio, one each, and its bonuses as video and audio, any number, each with a title. With what's in each, as ffprobe read it (duration, container, video codec, size and frame rate, audio codec, sample rate and channels, ...), and a link that downloads it for an hour, e.g. for set_patreon_post_media. The team uploads them on the episode's page (Upload video and audio)",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code" ],
+      "type" : "object"
+    },
+    "title" : "List episode media"
+  },
+  "list_episode_people" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List episode people"
+    },
+    "description" : "List the people on an episode and their roles",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code" ],
+      "type" : "object"
+    },
+    "title" : "List episode people"
+  },
+  "list_episodes" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List episodes"
+    },
+    "description" : "List episodes, latest season and episode first, then the bonus season (S99) and ideas without a code last, optionally only those with a given status. Of the summaries only the tiny one is there; get_episode has them all",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "status" : {
+          "description" : "Only list episodes with this status",
+          "enum" : [ "IDEA", "PLANNED", "SCHEDULED", "RECORDED", "IN_PRODUCTION", "READY", "EARLY_ACCESS", "PUBLISHED", "ON_HOLD", "CANCELLED" ],
+          "type" : "string"
+        }
+      },
+      "required" : [ ],
+      "type" : "object"
+    },
+    "title" : "List episodes"
+  },
+  "list_koofr_folder" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List Koofr folder"
+    },
+    "description" : "List the files and folders directly in a Koofr folder",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "path" : {
+          "description" : "Path in the place, e.g. /Epizode/S05E08; / is the shared folder itself; / when omitted",
+          "type" : "string"
+        },
+        "place" : {
+          "description" : "A folder shared with Ogrodje's bot in Koofr, by name or ID (list_koofr_places)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "place" ],
+      "type" : "object"
+    },
+    "title" : "List Koofr folder"
+  },
+  "list_koofr_places" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List Koofr places"
+    },
+    "description" : "List the folders shared with Ogrodje's bot in Koofr - MetaOS works only in these - and whether it may change them",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : { },
+      "required" : [ ],
+      "type" : "object"
+    },
+    "title" : "List Koofr places"
+  },
+  "list_patreon_drafts" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List Patreon drafts"
+    },
+    "description" : "List the drafts on Ogrodje's Patreon, scheduled ones too, last edited first: what they are (text, audio or video post) and where to edit them. Only the team sees them until they're published",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : { },
+      "required" : [ ],
+      "type" : "object"
+    },
+    "title" : "List Patreon drafts"
+  },
+  "list_patreon_members" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List Patreon members"
+    },
+    "description" : "List the members of Ogrodje's Patreon, patrons first, with their status, tiers, monthly pledge, what they've given in all, since when, and their last charge; with their names and emails, which are theirs: don't pass them on. With the total that match",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "limit" : {
+          "description" : "How many, 50 when omitted, at most 500",
+          "format" : "int32",
+          "type" : "integer"
+        },
+        "offset" : {
+          "description" : "How many to skip, for the next page",
+          "format" : "int32",
+          "type" : "integer"
+        },
+        "query" : {
+          "description" : "Words in the name or email",
+          "type" : "string"
+        },
+        "status" : {
+          "description" : "Only ACTIVE_PATRON, DECLINED_PATRON (their last charge failed), FORMER_PATRON or FREE ones",
+          "enum" : [ "ACTIVE_PATRON", "DECLINED_PATRON", "FORMER_PATRON", "FREE" ],
+          "type" : "string"
+        },
+        "tier" : {
+          "description" : "Only those in a tier, by its title, e.g. Engineer",
+          "type" : "string"
+        }
+      },
+      "required" : [ ],
+      "type" : "object"
+    },
+    "title" : "List Patreon members"
+  },
+  "list_patreon_posts" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List Patreon posts"
+    },
+    "description" : "List the published posts on Ogrodje's Patreon, newest first, with who may see them; drafts aren't listed",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "limit" : {
+          "description" : "How many, 20 when omitted, at most 200",
+          "format" : "int32",
+          "type" : "integer"
+        },
+        "query" : {
+          "description" : "Words in the title, e.g. S05E07",
+          "type" : "string"
+        }
+      },
+      "required" : [ ],
+      "type" : "object"
+    },
+    "title" : "List Patreon posts"
+  },
+  "list_patreon_tiers" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List Patreon tiers"
+    },
+    "description" : "List the tiers of Ogrodje's Patreon, cheapest first, with their prices and patrons; a post can be limited to some of them",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : { },
+      "required" : [ ],
+      "type" : "object"
+    },
+    "title" : "List Patreon tiers"
+  },
+  "list_people" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List people"
+    },
+    "description" : "List all people",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : { },
+      "required" : [ ],
+      "type" : "object"
+    },
+    "title" : "List people"
+  },
+  "list_person_episodes" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List person episodes"
+    },
+    "description" : "List the episodes a person is on and their roles in each, latest first",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "personId" : {
+          "description" : "Person ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "personId" ],
+      "type" : "object"
+    },
+    "title" : "List person episodes"
+  },
+  "list_recent_changes" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List recent changes"
+    },
+    "description" : "List the latest changes to all data, newest first",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "limit" : {
+          "description" : "How many changes to list, 20 by default",
+          "format" : "int32",
+          "type" : "integer"
+        }
+      },
+      "required" : [ ],
+      "type" : "object"
+    },
+    "title" : "List recent changes"
+  },
+  "list_session_comments" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List session comments"
+    },
+    "description" : "List the comments in a recording session's discussion, oldest first, as list_episode_comments does",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "sessionId" : {
+          "description" : "Session ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "sessionId" ],
+      "type" : "object"
+    },
+    "title" : "List session comments"
+  },
+  "list_session_documents" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List session docs"
+    },
+    "description" : "List the Google Docs linked to a recording session, by name. Docs deleted since are listed as missing",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "sessionId" : {
+          "description" : "Session ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "sessionId" ],
+      "type" : "object"
+    },
+    "title" : "List session docs"
+  },
+  "list_session_dropbox_folders" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List session Dropbox folders"
+    },
+    "description" : "List the Dropbox folders linked to a recording session. Folders moved or renamed, also in the Dropbox app, stay linked; those deleted or moved out of their shared folder are listed as missing",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "sessionId" : {
+          "description" : "Session ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "sessionId" ],
+      "type" : "object"
+    },
+    "title" : "List session Dropbox folders"
+  },
+  "list_session_episodes" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List session episodes"
+    },
+    "description" : "List the episodes of a session, latest season and episode first",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "sessionId" : {
+          "description" : "Session ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "sessionId" ],
+      "type" : "object"
+    },
+    "title" : "List session episodes"
+  },
+  "list_session_koofr_folders" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List session Koofr folders"
+    },
+    "description" : "List the Koofr folders linked to a recording session. Folders moved outside MetaOS are listed as missing",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "sessionId" : {
+          "description" : "Session ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "sessionId" ],
+      "type" : "object"
+    },
+    "title" : "List session Koofr folders"
+  },
+  "list_sessions" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List sessions"
+    },
+    "description" : "List all sessions, newest first",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : { },
+      "required" : [ ],
+      "type" : "object"
+    },
+    "title" : "List sessions"
+  },
+  "list_show_episodes" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List show episodes"
+    },
+    "description" : "List the episodes of a show, latest season and episode first",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "name" : {
+          "description" : "Show name (case-insensitive)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "name" ],
+      "type" : "object"
+    },
+    "title" : "List show episodes"
+  },
+  "list_shows" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List shows"
+    },
+    "description" : "List all shows by name",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : { },
+      "required" : [ ],
+      "type" : "object"
+    },
+    "title" : "List shows"
+  },
+  "match_episode_documents" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Match docs to episodes"
+    },
+    "description" : "Match the Google Docs directly in a folder to episodes by the episode code in their title, e.g. \"S05E03 - Guest: Title\" or \"Ogrodje S05E7 - Title\" (S05E07). Only reports what it would link, unless apply is true",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "apply" : {
+          "description" : "Link the matches, instead of only reporting them",
+          "type" : "boolean"
+        },
+        "folder" : {
+          "description" : "Google Drive folder URL or ID; the Ogrodje folder when omitted",
+          "type" : "string"
+        }
+      },
+      "required" : [ ],
+      "type" : "object"
+    },
+    "title" : "Match docs to episodes"
+  },
+  "move_dropbox_file" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Move Dropbox file"
+    },
+    "description" : "Move or rename a file or folder in Dropbox, also into another shared folder. Never replaces what's at the new path",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "path" : {
+          "description" : "Path in the place, e.g. /S05E08/cover.png; / is the shared folder itself",
+          "type" : "string"
+        },
+        "place" : {
+          "description" : "A folder shared with Ogrodje's bot in Dropbox, by name or ID (list_dropbox_places)",
+          "type" : "string"
+        },
+        "to" : {
+          "description" : "New path, with the name, e.g. /Archive/cover.png",
+          "type" : "string"
+        },
+        "toPlace" : {
+          "description" : "Place to move it into; the same when omitted",
+          "type" : "string"
+        }
+      },
+      "required" : [ "place", "path", "to" ],
+      "type" : "object"
+    },
+    "title" : "Move Dropbox file"
+  },
+  "move_koofr_file" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Move Koofr file"
+    },
+    "description" : "Move or rename a file or folder in Koofr, also into another shared folder. Never replaces what's at the new path. Folders linked to episodes or sessions stay linked",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "path" : {
+          "description" : "Path in the place, e.g. /Epizode/S05E08; / is the shared folder itself",
+          "type" : "string"
+        },
+        "place" : {
+          "description" : "A folder shared with Ogrodje's bot in Koofr, by name or ID (list_koofr_places)",
+          "type" : "string"
+        },
+        "to" : {
+          "description" : "New path, with the name, e.g. /Arhiv/notes.md",
+          "type" : "string"
+        },
+        "toPlace" : {
+          "description" : "Place to move it into; the same when omitted",
+          "type" : "string"
+        }
+      },
+      "required" : [ "place", "path", "to" ],
+      "type" : "object"
+    },
+    "title" : "Move Koofr file"
+  },
+  "my_episodes" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "My episodes"
+    },
+    "description" : "List the episodes the signed-in user is on and their roles in each, latest first",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : { },
+      "required" : [ ],
+      "type" : "object"
+    },
+    "title" : "My episodes"
+  },
+  "publish_patreon_post" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : true,
+      "readOnlyHint" : false,
+      "title" : "Publish Patreon post"
+    },
+    "description" : "Publish a Patreon draft, now or at a set time: who it's for see it, and are emailed when notify is set. Refused for a post that's already published. With an episode, the post becomes that episode's Patreon link (link: PATREON, PATREON_AUDIO, PATREON_BONUS or PATREON_BONUS_AUDIO) when the job is done in this call; when it comes back still to finish, set the link with set_episode_link to its result's url once get_patreon_job says SUCCEEDED. Check the draft with get_patreon_post first; ask before publishing. Changes in Patreon run as jobs: what's quick comes back done, else as a job to follow with get_patreon_job",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "at" : {
+          "description" : "When to publish it, e.g. 2026-11-03T06:00:00+01:00; now when omitted",
+          "type" : "string"
+        },
+        "episode" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet), whose Patreon link the post becomes",
+          "type" : "string"
+        },
+        "id" : {
+          "description" : "The Patreon post's ID, the number at the end of its URL, e.g. 171593625",
+          "type" : "string"
+        },
+        "link" : {
+          "description" : "Which of the episode's Patreon links; PATREON when omitted",
+          "enum" : [ "YOUTUBE", "SPOTIFY", "APPLE_PODCASTS", "PATREON", "PATREON_AUDIO", "PATREON_BONUS", "PATREON_BONUS_AUDIO" ],
+          "type" : "string"
+        },
+        "notify" : {
+          "description" : "Email the patrons who may see it; false when omitted",
+          "type" : "boolean"
+        }
+      },
+      "required" : [ "id" ],
+      "type" : "object"
+    },
+    "title" : "Publish Patreon post"
+  },
+  "read_document" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "Read Google Doc"
+    },
+    "description" : "Read a Google Doc in Ogrodje's Google Drive folder, as Markdown",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "document" : {
+          "description" : "Google Doc URL or Drive file ID",
+          "type" : "string"
+        }
+      },
+      "required" : [ "document" ],
+      "type" : "object"
+    },
+    "title" : "Read Google Doc"
+  },
+  "read_dropbox_file" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "Read Dropbox file"
+    },
+    "description" : "Read a text file (txt, md, csv, json, srt, ...) from Dropbox, at most 200 kB of it. view_dropbox_image shows pictures; for other files, list_dropbox_folder tells their size and type",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "path" : {
+          "description" : "Path in the place, e.g. /S05E08/cover.png; / is the shared folder itself",
+          "type" : "string"
+        },
+        "place" : {
+          "description" : "A folder shared with Ogrodje's bot in Dropbox, by name or ID (list_dropbox_places)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "place", "path" ],
+      "type" : "object"
+    },
+    "title" : "Read Dropbox file"
+  },
+  "read_koofr_file" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "Read Koofr file"
+    },
+    "description" : "Read a text file (txt, md, csv, json, srt, ...) from Koofr, at most 200 kB of it. For other files, list_koofr_folder tells their size and type",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "path" : {
+          "description" : "Path in the place, e.g. /Epizode/S05E08; / is the shared folder itself",
+          "type" : "string"
+        },
+        "place" : {
+          "description" : "A folder shared with Ogrodje's bot in Koofr, by name or ID (list_koofr_places)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "place", "path" ],
+      "type" : "object"
+    },
+    "title" : "Read Koofr file"
+  },
+  "remove_episode_image" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Remove episode image"
+    },
+    "description" : "Take one of an episode's pictures off it, e.g. a thumbnail B no longer tested. Returns the one it had",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        },
+        "kind" : {
+          "description" : "Which of the episode's pictures",
+          "enum" : [ "THUMBNAIL", "THUMBNAIL_B", "THUMBNAIL_C", "WEB", "COVER" ],
+          "type" : "string"
+        }
+      },
+      "required" : [ "code", "kind" ],
+      "type" : "object"
+    },
+    "title" : "Remove episode image"
+  },
+  "remove_episode_media" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Remove episode media"
+    },
+    "description" : "Take a video or audio file off its episode and delete it from MetaOS's bucket; production's keeps deleted files 30 days, where only an administrator gets them back. The history keeps that it was there. Returns the file it was, without a link",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "id" : {
+          "description" : "The file's ID, from list_episode_media",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "id" ],
+      "type" : "object"
+    },
+    "title" : "Remove episode media"
+  },
+  "remove_person_avatar" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Remove person avatar"
+    },
+    "description" : "Take a person's avatar off them. Returns the one they had",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "personId" : {
+          "description" : "Person ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "personId" ],
+      "type" : "object"
+    },
+    "title" : "Remove person avatar"
+  },
+  "remove_person_from_episode" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Remove person from episode"
+    },
+    "description" : "Take a person off an episode: one of their roles on it, or all of them when no role is given. Returns the roles they still have on it",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        },
+        "personId" : {
+          "description" : "Person ID",
+          "format" : "uuid",
+          "type" : "string"
+        },
+        "role" : {
+          "description" : "Role to remove; omit to remove all of the person's roles",
+          "enum" : [ "HOST", "CO_HOST", "GUEST", "PRODUCER", "CONSULTANT", "DESIGNER", "CANDIDATE" ],
+          "type" : "string"
+        }
+      },
+      "required" : [ "code", "personId" ],
+      "type" : "object"
+    },
+    "title" : "Remove person from episode"
+  },
+  "restore_episode" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Restore episode"
+    },
+    "description" : "Bring back a soft-deleted episode by its code (case-insensitive) or ID, with its people, links, session, show and who recommended it. Any of those deleted meanwhile come back to it once they're restored too. Under a new code, if its own has been taken since",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        },
+        "newCode" : {
+          "description" : "New unique code to restore it under, e.g. when its own has been taken since",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code" ],
+      "type" : "object"
+    },
+    "title" : "Restore episode"
+  },
+  "restore_link" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Restore link"
+    },
+    "description" : "Bring back a link that was removed, as it was: a person's role on an episode, or a Google Doc, Koofr folder or Dropbox folder linked to an episode or session. Takes the ID of the change that removed it, from get_history or list_recent_changes",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "changeId" : {
+          "description" : "ID of the change that removed the link",
+          "format" : "int64",
+          "type" : "integer"
+        }
+      },
+      "required" : [ "changeId" ],
+      "type" : "object"
+    },
+    "title" : "Restore link"
+  },
+  "restore_person" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Restore person"
+    },
+    "description" : "Bring back a soft-deleted person, with their roles on episodes and the episodes they recommended (unless someone else has been credited with one since). With another email, or none, if theirs has been taken since",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "newEmail" : {
+          "description" : "Email to restore them with, e.g. when theirs has been taken since; empty to restore them without one",
+          "type" : "string"
+        },
+        "personId" : {
+          "description" : "Person ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "personId" ],
+      "type" : "object"
+    },
+    "title" : "Restore person"
+  },
+  "restore_session" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Restore session"
+    },
+    "description" : "Bring back a soft-deleted session, with the episodes deleting it took out of it (unless they have been deleted or moved since)",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "sessionId" : {
+          "description" : "Session ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "sessionId" ],
+      "type" : "object"
+    },
+    "title" : "Restore session"
+  },
+  "restore_show" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Restore show"
+    },
+    "description" : "Bring back a soft-deleted show by its name (case-insensitive), with the episodes deleting it took out of it (unless they have been deleted or moved since). Under a new name, if its own has been taken since",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "name" : {
+          "description" : "Show name (case-insensitive)",
+          "type" : "string"
+        },
+        "newName" : {
+          "description" : "New unique name to restore it under, e.g. when its own has been taken since",
+          "type" : "string"
+        }
+      },
+      "required" : [ "name" ],
+      "type" : "object"
+    },
+    "title" : "Restore show"
+  },
+  "search" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "Search MetaOS"
+    },
+    "description" : "Find episodes (ideas too), people and recording sessions by an episode code, a name or the words in their titles, alternative titles, people, show, summaries (not the AI one), bio, place, address or date, the best first, with where each matched and, for a summary, the text around the match. An episode code, however it's typed (S05E08, s5e8, 5x08), or an episode's ID finds that episode on its own, and a season (S04) its episodes. Case and diacritics don't matter, and the start of a word is enough",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "limit" : {
+          "description" : "How many of each kind to list, 10 by default, at most 100",
+          "format" : "int32",
+          "type" : "integer"
+        },
+        "text" : {
+          "description" : "What to look for: an episode code, a name or words",
+          "type" : "string"
+        }
+      },
+      "required" : [ "text" ],
+      "type" : "object"
+    },
+    "title" : "Search MetaOS"
+  },
+  "search_documents" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "Search Google Docs"
+    },
+    "description" : "Search the Google Docs in Ogrodje's Google Drive folder, or in a folder of it and its subfolders, by the words in their title or text. Most relevant first, at most 25",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "folder" : {
+          "description" : "Google Drive folder URL or ID; the Ogrodje folder when omitted",
+          "type" : "string"
+        },
+        "text" : {
+          "description" : "Words to look for; \"in double quotes\" for an exact phrase",
+          "type" : "string"
+        }
+      },
+      "required" : [ "text" ],
+      "type" : "object"
+    },
+    "title" : "Search Google Docs"
+  },
+  "search_dropbox" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "Search Dropbox"
+    },
+    "description" : "Search the folders shared with Ogrodje's bot in Dropbox for files and folders by name, most relevant first, at most 25",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "place" : {
+          "description" : "A folder shared with Ogrodje's bot in Dropbox, by name or ID (list_dropbox_places); all of them when omitted",
+          "type" : "string"
+        },
+        "text" : {
+          "description" : "Words in the name",
+          "type" : "string"
+        }
+      },
+      "required" : [ "text" ],
+      "type" : "object"
+    },
+    "title" : "Search Dropbox"
+  },
+  "search_koofr" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "Search Koofr"
+    },
+    "description" : "Search the folders shared with Ogrodje's bot in Koofr for files and folders by name, most relevant first, at most 25",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "place" : {
+          "description" : "A folder shared with Ogrodje's bot in Koofr, by name or ID (list_koofr_places); all of them when omitted",
+          "type" : "string"
+        },
+        "text" : {
+          "description" : "Words in the name",
+          "type" : "string"
+        }
+      },
+      "required" : [ "text" ],
+      "type" : "object"
+    },
+    "title" : "Search Koofr"
+  },
+  "set_episode_image" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : true,
+      "readOnlyHint" : false,
+      "title" : "Set episode image"
+    },
+    "description" : "Make a picture, e.g. new artwork in Dropbox, one of an episode's pictures, each in PNG or JPEG and exactly as big as it says, or it's refused: its THUMBNAIL (1920 × 1080), THUMBNAIL_B or THUMBNAIL_C (1920 × 1080), which go with its alternative titles B and C as they're A/B tested together, its WEB picture (1920 × 1080), the thumbnail without its words, for ogrodje.si, or its COVER (3000 × 3000, e.g. for podcast apps). In the Artwork folder in Dropbox, an episode's folder usually has its cover (...-podcast.png), thumbnails (...-thumb1.png, -thumb2, -thumb3) and web picture (...-web.png). MetaOS copies it to its public bucket, where anyone can see it, with copies of it 320, 640, 1280 and 1920 px wide (those narrower than it), and returns their URLs. Up to 50 MB. The copy stays as it is when the picture changes where it came from; setting it again makes a new one",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        },
+        "from" : {
+          "description" : "Where the picture is: DROPBOX or KOOFR, with place and path, or URL, with url",
+          "enum" : [ "DROPBOX", "KOOFR", "URL", "UPLOAD" ],
+          "type" : "string"
+        },
+        "kind" : {
+          "description" : "Which of the episode's pictures it is",
+          "enum" : [ "THUMBNAIL", "THUMBNAIL_B", "THUMBNAIL_C", "WEB", "COVER" ],
+          "type" : "string"
+        },
+        "name" : {
+          "description" : "For URL: the picture's file name, e.g. Hygraph's fileName, as its URL has none; the URL's last part when omitted",
+          "type" : "string"
+        },
+        "path" : {
+          "description" : "For DROPBOX or KOOFR: the picture's path in the place, e.g. /Season 5/S05E07 - vres gams/ogrodje-vresGams-thumb1.png",
+          "type" : "string"
+        },
+        "place" : {
+          "description" : "For DROPBOX or KOOFR: a folder shared with Ogrodje's bot there, by name or ID (list_dropbox_places, list_koofr_places)",
+          "type" : "string"
+        },
+        "url" : {
+          "description" : "For URL: an https URL of a picture in Hygraph, the CMS (*.graphassets.com)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code", "kind", "from" ],
+      "type" : "object"
+    },
+    "title" : "Set episode image"
+  },
+  "set_episode_link" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Set episode link"
+    },
+    "description" : "Set or clear where an episode can be watched or listened to: YouTube, Spotify, Apple Podcasts or Patreon. Patreon has four links, each set or cleared on its own: the full episode as video (PATREON) or audio only (PATREON_AUDIO), and its bonus as video (PATREON_BONUS) or audio only (PATREON_BONUS_AUDIO)",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        },
+        "platform" : {
+          "description" : "Platform the link points to; for Patreon, which of its four: PATREON is the full episode as video, PATREON_AUDIO the full episode as audio only, PATREON_BONUS the bonus as video, PATREON_BONUS_AUDIO the bonus as audio only",
+          "enum" : [ "YOUTUBE", "SPOTIFY", "APPLE_PODCASTS", "PATREON", "PATREON_AUDIO", "PATREON_BONUS", "PATREON_BONUS_AUDIO" ],
+          "type" : "string"
+        },
+        "url" : {
+          "description" : "https URL of the episode on that platform; omit to clear",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code", "platform" ],
+      "type" : "object"
+    },
+    "title" : "Set episode link"
+  },
+  "set_episode_recommended_by" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Set who recommended episode"
+    },
+    "description" : "Set who recommended an episode, e.g. someone else than who added it, or clear it",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        },
+        "personId" : {
+          "description" : "Person ID; omit to clear",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code" ],
+      "type" : "object"
+    },
+    "title" : "Set who recommended episode"
+  },
+  "set_episode_session" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Set episode session"
+    },
+    "description" : "Move an episode into a session, or take it out of the session it is in",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        },
+        "sessionId" : {
+          "description" : "Session ID; omit to take the episode out of its session",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code" ],
+      "type" : "object"
+    },
+    "title" : "Set episode session"
+  },
+  "set_episode_show" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Set episode show"
+    },
+    "description" : "Move an episode into a show, or take it out of the show it is in",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        },
+        "show" : {
+          "description" : "Show name (case-insensitive); omit to take the episode out of its show",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code" ],
+      "type" : "object"
+    },
+    "title" : "Set episode show"
+  },
+  "set_episode_status" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Set episode status"
+    },
+    "description" : "Move an episode through its lifecycle: IDEA → PLANNED → SCHEDULED → RECORDED → IN_PRODUCTION → READY → EARLY_ACCESS (optional) → PUBLISHED, one step forward or back to any earlier step; ON_HOLD or CANCELLED any time before it is published. Each step needs what the ones before it did, plus: PLANNED a code and a host, SCHEDULED a recording date, RECORDED one that is not in the future, IN_PRODUCTION a producer, READY a summary, EARLY_ACCESS any of its Patreon links, PUBLISHED a YouTube, Spotify or Apple Podcasts link. Publishing sets the aired date to today if there is none",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        },
+        "status" : {
+          "description" : "Status to move the episode to",
+          "enum" : [ "IDEA", "PLANNED", "SCHEDULED", "RECORDED", "IN_PRODUCTION", "READY", "EARLY_ACCESS", "PUBLISHED", "ON_HOLD", "CANCELLED" ],
+          "type" : "string"
+        }
+      },
+      "required" : [ "code", "status" ],
+      "type" : "object"
+    },
+    "title" : "Set episode status"
+  },
+  "set_patreon_post_media" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Set Patreon post media"
+    },
+    "description" : "Upload an episode's audio or video, from Dropbox or an https URL, to a Patreon draft: with AUDIO it becomes a podcast post, in the campaign's podcast feed, with VIDEO a video post. The gateway downloads the file itself and Patreon processes it, which takes minutes for an episode: this returns a job to follow with get_patreon_job",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "id" : {
+          "description" : "The Patreon post's ID, the number at the end of its URL, e.g. 171593625",
+          "type" : "string"
+        },
+        "kind" : {
+          "description" : "AUDIO or VIDEO",
+          "enum" : [ "AUDIO", "VIDEO" ],
+          "type" : "string"
+        },
+        "name" : {
+          "description" : "The file's name on Patreon; the path's or URL's last part when omitted",
+          "type" : "string"
+        },
+        "path" : {
+          "description" : "For a file in Dropbox: its path in the place, e.g. /S05E08/ogrodje-s05e08.mp3",
+          "type" : "string"
+        },
+        "place" : {
+          "description" : "For a file in Dropbox: a folder shared with the bot, by name or ID (list_dropbox_places)",
+          "type" : "string"
+        },
+        "url" : {
+          "description" : "Else an https URL the file can be downloaded from",
+          "type" : "string"
+        }
+      },
+      "required" : [ "id", "kind" ],
+      "type" : "object"
+    },
+    "title" : "Set Patreon post media"
+  },
+  "set_person_avatar" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : true,
+      "readOnlyHint" : false,
+      "title" : "Set person avatar"
+    },
+    "description" : "Make a picture a person's avatar, e.g. one from Hygraph, the CMS, or a photo in Dropbox or Koofr: PNG, JPEG, WebP or GIF, of any size. MetaOS copies it to its public bucket, where anyone can see it, with copies of it 320, 640, 1280 and 1920 px wide (those narrower than it), and returns their URLs. Up to 50 MB. The copy stays as it is when the picture changes where it came from; setting it again makes a new one",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "from" : {
+          "description" : "Where the picture is: DROPBOX or KOOFR, with place and path, or URL, with url",
+          "enum" : [ "DROPBOX", "KOOFR", "URL", "UPLOAD" ],
+          "type" : "string"
+        },
+        "name" : {
+          "description" : "For URL: the picture's file name, e.g. Hygraph's fileName, as its URL has none; the URL's last part when omitted",
+          "type" : "string"
+        },
+        "path" : {
+          "description" : "For DROPBOX or KOOFR: the picture's path in the place, e.g. /Season 5/S05E07 - vres gams/ogrodje-vresGams-thumb1.png",
+          "type" : "string"
+        },
+        "personId" : {
+          "description" : "Person ID",
+          "format" : "uuid",
+          "type" : "string"
+        },
+        "place" : {
+          "description" : "For DROPBOX or KOOFR: a folder shared with Ogrodje's bot there, by name or ID (list_dropbox_places, list_koofr_places)",
+          "type" : "string"
+        },
+        "url" : {
+          "description" : "For URL: an https URL of a picture in Hygraph, the CMS (*.graphassets.com)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "personId", "from" ],
+      "type" : "object"
+    },
+    "title" : "Set person avatar"
+  },
+  "set_person_bio" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Set person bio"
+    },
+    "description" : "Set or clear the line about who a person is, e.g. their role and company",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "bio" : {
+          "description" : "Bio, e.g. \"CTO @ Koofr\"; omit or empty to clear",
+          "type" : "string"
+        },
+        "personId" : {
+          "description" : "Person ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "personId" ],
+      "type" : "object"
+    },
+    "title" : "Set person bio"
+  },
+  "set_person_email" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Set person email"
+    },
+    "description" : "Set or clear a person's email, as otobrglez@gmail.com only. Accounts with the same verified email that aren't linked to anyone are linked to this person (unless someone unlinked them)",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "email" : {
+          "description" : "Unique email address (case-insensitive); omit to clear",
+          "type" : "string"
+        },
+        "personId" : {
+          "description" : "Person ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "personId" ],
+      "type" : "object"
+    },
+    "title" : "Set person email"
+  },
+  "set_person_link" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Set person link"
+    },
+    "description" : "Set or clear where a person can be found online: their homepage, LinkedIn, Twitter/X, Instagram or Facebook",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "network" : {
+          "description" : "Personal website or social network the link points to",
+          "enum" : [ "HOMEPAGE", "LINKEDIN", "TWITTER", "INSTAGRAM", "FACEBOOK" ],
+          "type" : "string"
+        },
+        "personId" : {
+          "description" : "Person ID",
+          "format" : "uuid",
+          "type" : "string"
+        },
+        "url" : {
+          "description" : "URL of the person's page there (https, except a homepage); omit to clear",
+          "type" : "string"
+        }
+      },
+      "required" : [ "personId", "network" ],
+      "type" : "object"
+    },
+    "title" : "Set person link"
+  },
+  "unlink_account" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Unlink account"
+    },
+    "description" : "Unlink an account from its person, e.g. one linked to the wrong person. Its email doesn't link it again; link_account does. Only otobrglez@gmail.com may",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "accountId" : {
+          "description" : "Account ID, from list_accounts",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "accountId" ],
+      "type" : "object"
+    },
+    "title" : "Unlink account"
+  },
+  "unlink_episode_document" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Unlink doc from episode"
+    },
+    "description" : "Unlink a Google Doc from an episode. The doc stays in Drive",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        },
+        "document" : {
+          "description" : "Google Doc URL or Drive file ID",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code", "document" ],
+      "type" : "object"
+    },
+    "title" : "Unlink doc from episode"
+  },
+  "unlink_episode_dropbox_folder" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Unlink Dropbox folder from episode"
+    },
+    "description" : "Unlink a Dropbox folder from an episode. The folder stays in Dropbox",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        },
+        "path" : {
+          "description" : "Path in the place, e.g. /S05E08/cover.png; / is the shared folder itself; for a missing folder, the path list_episode_dropbox_folders gives",
+          "type" : "string"
+        },
+        "place" : {
+          "description" : "A folder shared with Ogrodje's bot in Dropbox, by name or ID (list_dropbox_places)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code", "place", "path" ],
+      "type" : "object"
+    },
+    "title" : "Unlink Dropbox folder from episode"
+  },
+  "unlink_episode_koofr_folder" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Unlink Koofr folder from episode"
+    },
+    "description" : "Unlink a Koofr folder from an episode. The folder stays in Koofr",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        },
+        "path" : {
+          "description" : "Path in the place, e.g. /Epizode/S05E08; / is the shared folder itself",
+          "type" : "string"
+        },
+        "place" : {
+          "description" : "A folder shared with Ogrodje's bot in Koofr, by name or ID (list_koofr_places)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code", "place", "path" ],
+      "type" : "object"
+    },
+    "title" : "Unlink Koofr folder from episode"
+  },
+  "unlink_session_document" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Unlink doc from session"
+    },
+    "description" : "Unlink a Google Doc from a recording session. The doc stays in Drive",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "document" : {
+          "description" : "Google Doc URL or Drive file ID",
+          "type" : "string"
+        },
+        "sessionId" : {
+          "description" : "Session ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "sessionId", "document" ],
+      "type" : "object"
+    },
+    "title" : "Unlink doc from session"
+  },
+  "unlink_session_dropbox_folder" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Unlink Dropbox folder from session"
+    },
+    "description" : "Unlink a Dropbox folder from a recording session. The folder stays in Dropbox",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "path" : {
+          "description" : "Path in the place, e.g. /S05E08/cover.png; / is the shared folder itself; for a missing folder, the path list_session_dropbox_folders gives",
+          "type" : "string"
+        },
+        "place" : {
+          "description" : "A folder shared with Ogrodje's bot in Dropbox, by name or ID (list_dropbox_places)",
+          "type" : "string"
+        },
+        "sessionId" : {
+          "description" : "Session ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "sessionId", "place", "path" ],
+      "type" : "object"
+    },
+    "title" : "Unlink Dropbox folder from session"
+  },
+  "unlink_session_koofr_folder" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Unlink Koofr folder from session"
+    },
+    "description" : "Unlink a Koofr folder from a recording session. The folder stays in Koofr",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "path" : {
+          "description" : "Path in the place, e.g. /Epizode/S05E08; / is the shared folder itself",
+          "type" : "string"
+        },
+        "place" : {
+          "description" : "A folder shared with Ogrodje's bot in Koofr, by name or ID (list_koofr_places)",
+          "type" : "string"
+        },
+        "sessionId" : {
+          "description" : "Session ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "sessionId", "place", "path" ],
+      "type" : "object"
+    },
+    "title" : "Unlink Koofr folder from session"
+  },
+  "update_episode" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Update episode"
+    },
+    "description" : "Change an episode's code, title, alternative titles (B and C, for A/B tests), summaries or dates. Omitted fields are left as they are",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "addedDate" : {
+          "description" : "When the episode was added, e.g. 2026-10-19",
+          "format" : "date",
+          "type" : "string"
+        },
+        "airedDate" : {
+          "description" : "When the episode was released, e.g. 2026-10-19",
+          "format" : "date",
+          "type" : "string"
+        },
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        },
+        "machineSummary" : {
+          "description" : "AI-generated summary of the episode, in Markdown; empty to clear",
+          "type" : "string"
+        },
+        "newCode" : {
+          "description" : "New unique episode code",
+          "type" : "string"
+        },
+        "recordingDate" : {
+          "description" : "When the episode is or was recorded, e.g. 2026-10-19",
+          "format" : "date",
+          "type" : "string"
+        },
+        "summary" : {
+          "description" : "Description of the episode, in Markdown; empty to clear",
+          "type" : "string"
+        },
+        "tinySummary" : {
+          "description" : "Very short summary of the episode, e.g. a sentence, in Markdown; empty to clear",
+          "type" : "string"
+        },
+        "title" : {
+          "description" : "New title",
+          "type" : "string"
+        },
+        "titleB" : {
+          "description" : "Alternative title B, which the title is A/B tested against; empty to clear",
+          "type" : "string"
+        },
+        "titleC" : {
+          "description" : "Alternative title C, which the title is A/B tested against; empty to clear",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code" ],
+      "type" : "object"
+    },
+    "title" : "Update episode"
+  },
+  "update_episode_media" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Update episode media"
+    },
+    "description" : "Change one of an episode's video or audio files: its title (an empty one clears it), or what it is, e.g. a bonus video that's the full video. Video stays video and audio audio, and a file becomes the full video or full audio only while the episode has none. What's left out stays as it is",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "id" : {
+          "description" : "The file's ID, from list_episode_media",
+          "format" : "uuid",
+          "type" : "string"
+        },
+        "kind" : {
+          "description" : "What it is",
+          "enum" : [ "FULL_VIDEO", "FULL_AUDIO", "BONUS_VIDEO", "BONUS_AUDIO" ],
+          "type" : "string"
+        },
+        "title" : {
+          "description" : "Its title, e.g. what a bonus is about; empty to clear it",
+          "type" : "string"
+        }
+      },
+      "required" : [ "id" ],
+      "type" : "object"
+    },
+    "title" : "Update episode media"
+  },
+  "update_patreon_post" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Update Patreon post"
+    },
+    "description" : "Change a Patreon post's title, text or who may see it, a draft's or a published one's; what's omitted stays. Changes in Patreon run as jobs: what's quick comes back done, else as a job to follow with get_patreon_job",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "access" : {
+          "description" : "Who may see it: PUBLIC (anyone), PATRONS (every patron, free ones too) or TIERS (only the tiers in tiers)",
+          "enum" : [ "PUBLIC", "PATRONS", "TIERS" ],
+          "type" : "string"
+        },
+        "id" : {
+          "description" : "The Patreon post's ID, the number at the end of its URL, e.g. 171593625",
+          "type" : "string"
+        },
+        "text" : {
+          "description" : "The post's text: paragraphs between blank lines; addresses become links; replaces all of it",
+          "type" : "string"
+        },
+        "tiers" : {
+          "description" : "For TIERS: the tiers' IDs (list_patreon_tiers)",
+          "items" : {
+            "type" : "string"
+          },
+          "type" : "array"
+        },
+        "title" : {
+          "description" : "Its new title",
+          "type" : "string"
+        }
+      },
+      "required" : [ "id" ],
+      "type" : "object"
+    },
+    "title" : "Update Patreon post"
+  },
+  "update_session" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Update session"
+    },
+    "description" : "Change a session's date, name, location or address. Omitted fields are left as they are",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "address" : {
+          "description" : "Street address of the location; empty to clear",
+          "type" : "string"
+        },
+        "date" : {
+          "description" : "Date of the session, e.g. 2026-10-19",
+          "format" : "date",
+          "type" : "string"
+        },
+        "location" : {
+          "description" : "Location, e.g. the name of the venue; empty to clear",
+          "type" : "string"
+        },
+        "name" : {
+          "description" : "What the session is called; empty to clear, after which it goes by its location",
+          "type" : "string"
+        },
+        "sessionId" : {
+          "description" : "Session ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "sessionId" ],
+      "type" : "object"
+    },
+    "title" : "Update session"
+  },
+  "update_show" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Update show"
+    },
+    "description" : "Rename a show or change its color. Omitted fields are left as they are",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "color" : {
+          "description" : "Color as hex RGB, e.g. #0404a4; empty to clear",
+          "type" : "string"
+        },
+        "name" : {
+          "description" : "Show name (case-insensitive)",
+          "type" : "string"
+        },
+        "newName" : {
+          "description" : "New unique show name",
+          "type" : "string"
+        }
+      },
+      "required" : [ "name" ],
+      "type" : "object"
+    },
+    "title" : "Update show"
+  },
+  "upload_dropbox_file" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Upload Dropbox file"
+    },
+    "description" : "Upload a file into a Dropbox folder: text, or base64 for anything else, at most 10 MB. A file of the same name is only replaced with overwrite, and Dropbox keeps the old one as a version",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "base64" : {
+          "description" : "content is base64",
+          "type" : "boolean"
+        },
+        "content" : {
+          "description" : "The file's content: text, or base64 if base64 is true",
+          "type" : "string"
+        },
+        "folder" : {
+          "description" : "Folder to upload into, e.g. /S05E08",
+          "type" : "string"
+        },
+        "name" : {
+          "description" : "File name, e.g. cover.png",
+          "type" : "string"
+        },
+        "overwrite" : {
+          "description" : "Replace a file of the same name",
+          "type" : "boolean"
+        },
+        "place" : {
+          "description" : "A folder shared with Ogrodje's bot in Dropbox, by name or ID (list_dropbox_places)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "place", "folder", "name", "content" ],
+      "type" : "object"
+    },
+    "title" : "Upload Dropbox file"
+  },
+  "upload_koofr_file" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Upload Koofr file"
+    },
+    "description" : "Upload a file into a Koofr folder: text, or base64 for anything else, at most 10 MB. A file of the same name is only replaced with overwrite, and Koofr keeps the old one as a version",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "base64" : {
+          "description" : "content is base64",
+          "type" : "boolean"
+        },
+        "content" : {
+          "description" : "The file's content: text, or base64 if base64 is true",
+          "type" : "string"
+        },
+        "folder" : {
+          "description" : "Folder to upload into, e.g. /Epizode/S05E08",
+          "type" : "string"
+        },
+        "name" : {
+          "description" : "File name, e.g. notes.md",
+          "type" : "string"
+        },
+        "overwrite" : {
+          "description" : "Replace a file of the same name",
+          "type" : "boolean"
+        },
+        "place" : {
+          "description" : "A folder shared with Ogrodje's bot in Koofr, by name or ID (list_koofr_places)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "place", "folder", "name", "content" ],
+      "type" : "object"
+    },
+    "title" : "Upload Koofr file"
+  },
+  "view_dropbox_image" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "View Dropbox image"
+    },
+    "description" : "Look at a picture in Dropbox, e.g. artwork for an episode: a JPEG of it, at most 1024 × 768 (jpg, png, gif, webp, tiff or bmp, up to 20 MB)",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "path" : {
+          "description" : "Path in the place, e.g. /S05E08/cover.png; / is the shared folder itself",
+          "type" : "string"
+        },
+        "place" : {
+          "description" : "A folder shared with Ogrodje's bot in Dropbox, by name or ID (list_dropbox_places)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "place", "path" ],
+      "type" : "object"
+    },
+    "title" : "View Dropbox image"
+  },
+  "whoami" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "Who am I"
+    },
+    "description" : "Show the signed-in user, their account and the person they are: their account's, or else the one with their verified email; and the version of MetaOS's tools, which the assistant's may be older than",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : { },
+      "required" : [ ],
+      "type" : "object"
+    },
+    "title" : "Who am I"
+  }
+}
