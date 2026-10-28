@@ -253,6 +253,8 @@ jobs:
             --overwrite
 
           kubectl rollout status deployment/keycloak -n metaos-prod --timeout=5m
+          kubectl rollout status deployment/temporal -n metaos-prod --timeout=5m
+          kubectl rollout status deployment/temporal-ui -n metaos-prod --timeout=5m
           kubectl rollout status deployment/metaos -n metaos-prod --timeout=5m
           kubectl rollout status deployment/metaos-web -n metaos-prod --timeout=5m
           kubectl rollout status deployment/patreon-gateway -n metaos-prod --timeout=5m

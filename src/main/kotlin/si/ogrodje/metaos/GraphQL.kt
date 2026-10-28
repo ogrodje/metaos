@@ -84,6 +84,9 @@ class EpisodesGraphQL(private val episodes: EpisodesRepository, private val epis
     @SchemaMapping(typeName = "Episode")
     fun showColor(episode: Episode): String? = episode.show?.color
 
+    @SchemaMapping(typeName = "Episode")
+    fun language(episode: Episode): String = episode.language
+
     // The people of all the episodes in an answer, in one query. Candidates, who aren't guests yet, are the team's.
     @BatchMapping(typeName = "Episode")
     fun people(episodes: List<Episode>): Map<Episode, List<EpisodePersonDto>> {

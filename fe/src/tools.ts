@@ -210,10 +210,14 @@ export const TOOL_GROUPS: ToolGroup[] = [
   {
     id: 'transcripts',
     title: 'Transcripts',
-    about: "what's said in an episode's video and audio, by Google's Speech-to-Text, in a durable workflow",
+    about: "what's said in an episode's video and audio, by Google's Speech-to-Text or Soniox, in a durable workflow",
     tools: [
-      { name: 'transcribe_episode', description: "Transcribe an episode's full audio or video, or another of its files; then, if asked, an agent posts its chapters and summary as a comment" },
-      { name: 'get_episode_transcript', description: "An episode's transcripts, with timestamps, and how its transcriptions that are on are going" },
+      { name: 'transcribe_episode', description: "Transcribe an episode's full audio or video, or another of its files, with Google's Speech-to-Text or Soniox; it waits its turn when the provider is busy" },
+      { name: 'list_transcriptions', description: 'Transcriptions, the latest first: queued, on, done, failed or cancelled, by provider or episode' },
+      { name: 'get_transcription', description: 'One transcription by its ID, as it is now, to watch it till it\'s done' },
+      { name: 'cancel_transcription', description: "Stop a transcription that's on, and the provider's with it" },
+      { name: 'get_episode_transcript', description: "An episode's transcripts, by each provider, with timestamps and speakers where told apart, and how its transcriptions that are on are going" },
+      { name: 'remove_transcript', description: 'Remove one of an episode\'s transcripts, and what it says' },
     ],
   },
   {

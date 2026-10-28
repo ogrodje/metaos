@@ -33,10 +33,11 @@ data class AgentAnswer(val text: String)
  * (Spring AI's ChatClient, with Temporal's plugin). Each model call and each tool call is an activity, so an agent that
  * a restart interrupts goes on from its last step, with what it had, rather than doing it all again; the tools are
  * called as metaos-agents (Workflows.kt), so they check, and the history says, what agents do as for anyone. Other
- * workflows start one as a child, e.g. for an episode's chapters once it's transcribed (Transcription.kt).
+ * workflows start one, e.g. the Editor, to come. So many work at once (Slots.kt, metaos.slots.agents, 2), as each
+ * may read a whole transcript through a model, which costs; the rest wait their turn.
  */
 @WorkflowInterface
-interface AgentWorkflow {
+interface AgentWorkflow : SlotHolder {
     @WorkflowMethod
     fun run(task: AgentTask): AgentAnswer
 }
@@ -44,10 +45,22 @@ interface AgentWorkflow {
 @WorkflowImpl(taskQueues = [WORKFLOWS_QUEUE])
 class AgentWorkflowImpl : AgentWorkflow {
 
-    override fun run(task: AgentTask): AgentAnswer {
+    private val granted = mutableSetOf<String>()
+
+    override fun granted(resource: String) {
+        granted += resource
+    }
+
+    override fun run(task: AgentTask): AgentAnswer = withSlot(AGENTS_SLOTS, granted) { work(task) }
+
+    private fun work(task: AgentTask): AgentAnswer {
         // MCP's tools are named after the server, e.g. metaos_get_episode
         val tools = McpToolCallback.fromMcpClient(ActivityMcpClient.create(MCP_CALLS))
-            .filter { tool -> task.tools.any { tool.toolDefinition.name() == it || tool.toolDefinition.name().endsWith("_$it") } }
+            .filter { tool ->
+                task.tools.any {
+                    tool.toolDefinition.name() == it || tool.toolDefinition.name().endsWith("_$it")
+                }
+            }
         val missing = task.tools.filter { name -> tools.none { it.toolDefinition.name().endsWith(name) } }
         require(missing.isEmpty()) { "MetaOS has no MCP tools $missing" }
 
@@ -62,44 +75,20 @@ class AgentWorkflowImpl : AgentWorkflow {
 
     private companion object {
         // A long transcript makes for a long call; a model that's down is tried again a few times, an invalid request isn't
-        val MODEL_CALLS: ActivityOptions = ActivityOptions.newBuilder(ActivityChatModel.defaultActivityOptions())
-            .setStartToCloseTimeout(Duration.ofMinutes(5))
-            .setRetryOptions(
-                RetryOptions.newBuilder(ActivityChatModel.defaultActivityOptions().retryOptions)
-                    .setMaximumAttempts(4)
-                    .setInitialInterval(Duration.ofSeconds(10))
-                    .build()
-            )
-            .build()
+        val MODEL_CALLS: ActivityOptions =
+            ActivityOptions.newBuilder(ActivityChatModel.defaultActivityOptions())
+                .setStartToCloseTimeout(Duration.ofMinutes(5))
+                .setRetryOptions(
+                    RetryOptions.newBuilder(ActivityChatModel.defaultActivityOptions().retryOptions)
+                        .setMaximumAttempts(4)
+                        .setInitialInterval(Duration.ofSeconds(10))
+                        .build()
+                )
+                .build()
 
-        val MCP_CALLS: ActivityOptions = ActivityOptions.newBuilder(ActivityMcpClient.defaultActivityOptions())
-            .setStartToCloseTimeout(Duration.ofMinutes(1))
-            .build()
+        val MCP_CALLS: ActivityOptions =
+            ActivityOptions.newBuilder(ActivityMcpClient.defaultActivityOptions())
+                .setStartToCloseTimeout(Duration.ofMinutes(1))
+                .build()
     }
 }
-
-/**
- * The episode's chapters and summary, from its transcript, posted as a comment on it, in the [language] it's spoken in
- * (BCP-47): the first thing MetaOS's agents do, once an episode is transcribed (Transcription.kt)
- */
-fun chaptersTask(episode: String, language: String) = AgentTask(
-    system = """
-        You are an editor at Ogrodje, a Slovenian podcast and YouTube show about software, technology and the people who
-        make them, mostly in Slovenian, and in English for guests from abroad. You work in MetaOS, Ogrodje's system,
-        through its tools. You write in the language an episode is spoken in, as its viewers will read it.
-    """.trimIndent(),
-    prompt = """
-        Episode $episode has just been transcribed. Read the episode (get_episode), its people (list_episode_people) and
-        its transcript (get_episode_transcript). Speech-to-Text doesn't tell the speakers apart, and gets names, products
-        and technical terms wrong: spell them as the episode's title, summary and people do, or as they're known.
-
-        Then post one comment on the episode (comment_on_episode), in Markdown, in ${languageName(language)}, the
-        language the episode is spoken in, with two headings of its own:
-        - Chapters: 6 to 15 of them, each on its own line as `h:mm:ss Title`, the first at 0:00:00, in order, each where
-          its topic starts in the transcript, titled in a few words, as YouTube's chapters are;
-        - Summary: what the episode is about, in three to five sentences.
-
-        Post exactly one comment, then answer with its ID and nothing else.
-    """.trimIndent(),
-    tools = listOf("get_episode", "list_episode_people", "get_episode_transcript", "comment_on_episode"),
-)

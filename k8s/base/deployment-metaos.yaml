@@ -26,6 +26,8 @@ data:
   METAOS_MEDIA_URL: "https://media.ogrodje.si"
   # New Relic's Java agent (newrelic/newrelic.yml) reports as MetaOS, with this; its license key is in metaos-secret
   NEW_RELIC_LABELS: "environment:production"
+  # Temporal's frontend (deployment-temporal.yaml): MetaOS's pods are its workers, and start its workflows (Workflows.kt)
+  TEMPORAL_ADDRESS: "temporal:7233"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -97,6 +99,9 @@ spec:
               valueFrom: { secretKeyRef: { name: metaos-secret, key: dropbox_app_secret, optional: true } }
             - name: DROPBOX_REFRESH_TOKEN
               valueFrom: { secretKeyRef: { name: metaos-secret, key: dropbox_refresh_token, optional: true } }
+            # Soniox, the second speech-to-text provider (Soniox.kt), is off without it
+            - name: SONIOX_API_KEY
+              valueFrom: { secretKeyRef: { name: metaos-secret, key: soniox_api_key, optional: true } }
             # Patreon, through patreon-gateway (deployment-patreon-gateway.yaml); off without its token
             - name: PATREON_GATEWAY_URL
               value: http://patreon-gateway

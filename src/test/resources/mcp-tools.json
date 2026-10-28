@@ -31,6 +31,29 @@
     },
     "title" : "Assign person to episode"
   },
+  "cancel_transcription" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Cancel transcription"
+    },
+    "description" : "Cancel a transcription that's on (queued, starting or being heard): its workflow stops, and asks the provider to stop too, which it may not have time to; the file keeps the transcript it had",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "id" : {
+          "description" : "The transcription's ID, from list_transcriptions",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "id" ],
+      "type" : "object"
+    },
+    "title" : "Cancel transcription"
+  },
   "comment_on_episode" : {
     "annotations" : {
       "destructiveHint" : false,
@@ -523,7 +546,7 @@
       "readOnlyHint" : true,
       "title" : "Get episode transcript"
     },
-    "description" : "An episode's transcripts, latest first, each of one of its files, in a language, with what was said, a line a stretch, each from where it starts: [h:mm:ss] text. Without speakers, which Speech-to-Text doesn't tell apart. Also its files' transcriptions that are on, with how far each is, or that failed",
+    "description" : "An episode's transcripts, latest first, each of one of its files, in a language, by a provider (google or soniox), with what was said, a line a stretch, each from where it starts: [h:mm:ss] text, or [h:mm:ss] Speaker 1: text where the provider tells speakers apart (Soniox), by their names once they're named. Also its files' transcriptions that are on (QUEUED, with its place in line, STARTING, RECOGNIZING), or that failed or were cancelled last",
     "inputSchema" : {
       "$schema" : "https://json-schema.org/draft/2020-12/schema",
       "properties" : {
@@ -534,6 +557,10 @@
         "media" : {
           "description" : "Only the transcript of this file, by its ID from list_episode_media",
           "format" : "uuid",
+          "type" : "string"
+        },
+        "provider" : {
+          "description" : "Only the transcript by this provider: google or soniox",
           "type" : "string"
         }
       },
@@ -675,6 +702,29 @@
       "type" : "object"
     },
     "title" : "Get show"
+  },
+  "get_transcription" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "Get transcription"
+    },
+    "description" : "One transcription by its ID, from transcribe_episode or list_transcriptions, as it is now, to watch it: QUEUED (with its place in line), STARTING, RECOGNIZING (with how far the provider got, where it says), DONE (with the transcript it made, transcriptId, which get_episode_transcript reads), FAILED (with why) or CANCELLED. Speech-to-text takes minutes, so asking every minute or so is enough",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "id" : {
+          "description" : "The transcription's ID, from transcribe_episode or list_transcriptions",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "id" ],
+      "type" : "object"
+    },
+    "title" : "Get transcription"
   },
   "link_account" : {
     "annotations" : {
@@ -1545,6 +1595,41 @@
     },
     "title" : "List shows"
   },
+  "list_transcriptions" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List transcriptions"
+    },
+    "description" : "Transcriptions of episodes' files, the latest first: each with its episode and file, its provider, and how far it is: QUEUED (waiting for its turn at the provider, with its place in line), STARTING, RECOGNIZING (with how far the provider got, where it says), DONE (with the transcript it made, for get_episode_transcript), FAILED (with why) or CANCELLED",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Only those of this episode: Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        },
+        "limit" : {
+          "description" : "At most this many, up to 500; 20 by default",
+          "format" : "int32",
+          "type" : "integer"
+        },
+        "provider" : {
+          "description" : "Only those by this provider: google or soniox",
+          "type" : "string"
+        },
+        "status" : {
+          "description" : "Which: on (queued, starting or being heard), done, failed, cancelled or all; all by default",
+          "type" : "string"
+        }
+      },
+      "required" : [ ],
+      "type" : "object"
+    },
+    "title" : "List transcriptions"
+  },
   "match_episode_documents" : {
     "annotations" : {
       "destructiveHint" : false,
@@ -1873,6 +1958,29 @@
       "type" : "object"
     },
     "title" : "Remove person from episode"
+  },
+  "remove_transcript" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Remove transcript"
+    },
+    "description" : "Remove one of an episode's transcripts, and what it says; the bucket keeps its files, and the episode's history that it was there. Transcribing the file again makes another",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "id" : {
+          "description" : "The transcript's ID, from get_episode_transcript",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "id" ],
+      "type" : "object"
+    },
+    "title" : "Remove transcript"
   },
   "restore_episode" : {
     "annotations" : {
@@ -2471,16 +2579,12 @@
       "readOnlyHint" : false,
       "title" : "Transcribe episode"
     },
-    "description" : "Transcribe one of an episode's files with Google's Speech-to-Text (Chirp 3), in a durable workflow on Temporal: by default its full audio, else its full video, in the language its show's episodes are spoken in (Slovenian; Borderless's English) unless told another. Speech-to-Text takes minutes for an episode, or up to a day in a batch, for a fifth of the price; get_episode_transcript says how it's going and, once it's done, reads it. With chapters, an agent then posts the episode's chapters and summary as a comment, in the episode's language. Speech-to-Text doesn't tell speakers apart. A file with a transcript is transcribed again only with replace, which replaces it",
+    "description" : "Transcribe one of an episode's files, in a durable workflow on Temporal, by a provider: google, Google's Speech-to-Text (model long, in the EU), which doesn't punctuate Slovenian or tell speakers apart, or soniox, Soniox (stt-async-v5, in the US), which does both. By default its full audio, else its full video, in the language its show's episodes are spoken in (Slovenian; Borderless's English) unless told another. It takes minutes for an episode, or with Google up to a day in a batch, for a fifth of the price; a provider transcribes a few files at once, and the rest wait their turn. list_transcriptions and get_episode_transcript say how it's going, and the latter reads it once it's done; cancel_transcription stops it. A file has a transcript by each provider, to compare them; one it has is transcribed again by that provider only with replace, which replaces it",
     "inputSchema" : {
       "$schema" : "https://json-schema.org/draft/2020-12/schema",
       "properties" : {
         "batch" : {
-          "description" : "In a batch: within a day, for a fifth of the price; false by default",
-          "type" : "boolean"
-        },
-        "chapters" : {
-          "description" : "Have an agent post the chapters and summary as a comment once it's done; true by default",
+          "description" : "With Google, in a batch: within a day, for a fifth of the price; false by default",
           "type" : "boolean"
         },
         "code" : {
@@ -2496,8 +2600,12 @@
           "format" : "uuid",
           "type" : "string"
         },
+        "provider" : {
+          "description" : "Who transcribes it: google or soniox; by default MetaOS's, google",
+          "type" : "string"
+        },
         "replace" : {
-          "description" : "Replace the file's transcript, if it has one; false by default",
+          "description" : "Replace the file's transcript by that provider, if it has one; false by default",
           "type" : "boolean"
         }
       },

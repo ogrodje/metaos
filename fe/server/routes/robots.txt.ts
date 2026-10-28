@@ -9,6 +9,7 @@ export default defineEventHandler((event) => {
   return [
     'User-agent: *',
     'Disallow: /ideas',
+    'Disallow: /transcriptions',
     'Disallow: /search',
     'Disallow: /sessions/',
     'Disallow: /graphql',

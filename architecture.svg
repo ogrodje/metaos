@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1090" viewBox="0 0 1240 1090" role="img" aria-label="MetaOS's architecture: the browser and MCP clients reach MetaOS and Keycloak through Cloudflare and ingress-nginx. The browser gets its pages from the front-end, metaos-web, which renders those anyone may see from MetaOS's GraphQL API, and Cloudflare caches them; then it asks MetaOS itself. MetaOS checks tokens with Keycloak's keys, keeps its data in the shared Postgres, which tells it what changed for the browser's pages to show right away, and calls Cloud Storage, Google Drive, Gmail, Koofr and Dropbox, and fetches pictures from Hygraph. It reaches Ogrodje's Patreon through patreon-gateway, a pod of its own in the cluster with three containers: the gateway, which reads the campaign, its tiers, posts and members through Patreon's API with the creator token it keeps and refreshes, and uploads episodes' audio and video, from Dropbox links MetaOS gives it, straight to Patreon; a headless Chromium, in Playwright's own image, in which the gateway makes, changes and publishes posts in Patreon's web app, signed in as the bot, Iva; and Tailscale, through which only the browser goes out, by low, a VM that is the tailnet's exit node, as Patreon's bot check turns away the cluster's address. Prometheus scrapes MetaOS, patreon-gateway and Keycloak, and passes a few of their metrics on to New Relic: the outside connections, the sign-ins, the pods' memory and restarts, and the node's memory. New Relic gets their requests, errors and logs from its Java agent in each, the browser's errors and page loads from its agent there, and checks from outside that the pages, MetaOS and Keycloak answer. It copies pictures to its public bucket in Cloud Storage, from which the browser loads them at media.ogrodje.si, cached by Cloudflare. The team's artwork, and an episode's video and audio, go from the browser straight to MetaOS's private bucket, with a URL MetaOS signs, and MetaOS takes them from there.">
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1130" viewBox="0 0 1240 1130" role="img" aria-label="MetaOS's architecture: the browser and MCP clients reach MetaOS and Keycloak through Cloudflare and ingress-nginx. The browser gets its pages from the front-end, metaos-web, which renders those anyone may see from MetaOS's GraphQL API, and Cloudflare caches them; then it asks MetaOS itself. MetaOS checks tokens with Keycloak's keys, keeps its data in the shared Postgres, which tells it what changed for the browser's pages to show right away, and calls Cloud Storage, Google Drive, Gmail, Koofr and Dropbox, and fetches pictures from Hygraph. Its workflows run on Temporal, a server of its own in the cluster, whose databases are in the shared Postgres and whose UI is on the tailnet only; MetaOS's pods are its workers, and transcribe episodes with Google's Speech-to-Text or Soniox. It reaches Ogrodje's Patreon through patreon-gateway, a pod of its own in the cluster with three containers: the gateway, which reads the campaign, its tiers, posts and members through Patreon's API with the creator token it keeps and refreshes, and uploads episodes' audio and video, from Dropbox links MetaOS gives it, straight to Patreon; a headless Chromium, in Playwright's own image, in which the gateway makes, changes and publishes posts in Patreon's web app, signed in as the bot, Iva; and Tailscale, through which only the browser goes out, by low, a VM that is the tailnet's exit node, as Patreon's bot check turns away the cluster's address. Prometheus scrapes MetaOS, patreon-gateway, Keycloak and Temporal, and passes a few of their metrics on to New Relic: the outside connections, the sign-ins, the pods' memory and restarts, and the node's memory. New Relic gets their requests, errors and logs from its Java agent in each, the browser's errors and page loads from its agent there, and checks from outside that the pages, MetaOS and Keycloak answer. It copies pictures to its public bucket in Cloud Storage, from which the browser loads them at media.ogrodje.si, cached by Cloudflare. The team's artwork, and an episode's video and audio, go from the browser straight to MetaOS's private bucket, with a URL MetaOS signs, and MetaOS takes them from there.">
   <!--
     MetaOS's architecture, the source of architecture.png (`just architecture` renders it). Keep it in step with the
     system: CLAUDE.md says when.
@@ -30,7 +30,7 @@
     </marker>
   </defs>
 
-  <rect width="1240" height="1090" fill="#FFFFFF"/>
+  <rect width="1240" height="1130" fill="#FFFFFF"/>
 
   <!-- Room above for the pictures' way from Cloud Storage to the browser -->
   <g transform="translate(0 30)">
@@ -45,7 +45,7 @@
   <text class="m" transform="translate(251 396) rotate(-90)" text-anchor="middle">Cloudflare: TLS, caches public pages → ingress-nginx, by path</text>
 
   <!-- Cluster and namespace -->
-  <rect class="zone" x="276" y="66" width="748" height="970" rx="12"/>
+  <rect class="zone" x="276" y="66" width="748" height="1012" rx="12"/>
   <text class="zl" x="292" y="88">ogrodje-one · Kubernetes</text>
   <rect class="zone" x="292" y="100" width="716" height="806" rx="10"/>
   <text class="zl" x="308" y="122">namespace metaos-prod</text>
@@ -106,6 +106,7 @@
   <text x="680" y="408">every change logged: who, with</text>
   <text x="680" y="426">which client and which MCP tool</text>
   <text x="680" y="448">outside connections checked hourly</text>
+  <text x="680" y="470">episodes transcribed in workflows</text>
 
   <rect class="row" x="676" y="500" width="300" height="36" rx="5"/>
   <text class="mono" x="688" y="522">/mcp</text>
@@ -115,7 +116,7 @@
   <text x="812" y="564">actuator: health, metrics</text>
 
   <!-- Postgres, shared with the cluster's other apps -->
-  <rect class="box" x="664" y="924" width="324" height="92" rx="8"/>
+  <rect class="box" x="664" y="924" width="324" height="140" rx="8"/>
   <text class="t" x="680" y="948">Postgres</text>
   <text class="m" x="972" y="948" text-anchor="end">CNPG main-cluster, shared</text>
   <rect class="row" x="676" y="960" width="146" height="44" rx="5"/>
@@ -124,6 +125,9 @@
   <rect class="row" x="830" y="960" width="146" height="44" rx="5"/>
   <text class="mono" x="842" y="978">metaos_keycloak</text>
   <text class="m" x="842" y="995">Keycloak's realm</text>
+  <rect class="row" x="676" y="1012" width="300" height="44" rx="5"/>
+  <text class="mono" x="688" y="1030">metaos_temporal(_visibility)</text>
+  <text class="m" x="688" y="1047">Temporal's workflows, and what it lists of them</text>
 
   <!-- patreon-gateway: Ogrodje's Patreon for MetaOS alone, in the namespace, no Ingress; one pod, three containers -->
   <rect class="box" x="708" y="636" width="280" height="254" rx="8"/>
@@ -163,32 +167,55 @@
   <text class="m" x="1100" y="772">web app, from</text>
   <text class="m" x="1100" y="788">low's address</text>
 
+  <!-- Temporal: one pod, its services all in one; MetaOS's pods are its workers; its UI is on the tailnet only -->
+  <rect class="box" x="512" y="640" width="164" height="150" rx="8"/>
+  <text class="t" x="528" y="664">Temporal</text>
+  <text class="m" x="660" y="664" text-anchor="end">1.32</text>
+  <text class="m" x="528" y="682">durable workflows</text>
+  <rect class="row" x="524" y="694" width="140" height="34" rx="5"/>
+  <text class="mono" x="534" y="716">server</text>
+  <text class="m" x="590" y="716">one pod</text>
+  <rect class="row" x="524" y="742" width="140" height="34" rx="5"/>
+  <text class="mono" x="534" y="763">ui</text>
+  <text class="m" x="590" y="763">tailnet only</text>
+  <path class="edge" d="M670 594 V638" marker-end="url(#arrow)"/>
+  <text class="m" x="662" y="612" text-anchor="end">workflows, as</text>
+  <text class="m" x="662" y="627" text-anchor="end">its workers</text>
+  <path class="edge" d="M670 790 V922" marker-end="url(#arrow)"/>
+
   <!-- Prometheus, the cluster's: scrapes MetaOS, patreon-gateway and Keycloak, passes a few metrics on to New Relic -->
-  <rect class="box" x="410" y="924" width="180" height="92" rx="8"/>
+  <rect class="box" x="410" y="924" width="180" height="108" rx="8"/>
   <text class="t" x="426" y="948">Prometheus</text>
   <text class="m" x="426" y="968">ServiceMonitors: MetaOS,</text>
-  <text class="m" x="426" y="984">patreon-gateway, Keycloak;</text>
-  <text class="m" x="426" y="1000">some on to New Relic</text>
+  <text class="m" x="426" y="984">patreon-gateway, Keycloak,</text>
+  <text class="m" x="426" y="1000">Temporal; some on to</text>
+  <text class="m" x="426" y="1016">New Relic</text>
 
   <!-- Outside services; dashed: connected and checked, but no feature uses it yet -->
-  <rect class="box" x="1060" y="132" width="160" height="56" rx="8"/>
-  <text class="t" x="1076" y="156">Cloud Storage</text>
-  <text class="m" x="1076" y="174">pictures, video, audio · key</text>
-  <rect class="box" x="1060" y="204" width="160" height="56" rx="8"/>
-  <text class="t" x="1076" y="228">Google Drive</text>
-  <text class="m" x="1076" y="246">docs · refresh token</text>
-  <rect class="box unused" x="1060" y="276" width="160" height="56" rx="8"/>
-  <text class="t" x="1076" y="300">Gmail</text>
-  <text class="m" x="1076" y="318">not used yet</text>
-  <rect class="box" x="1060" y="348" width="160" height="56" rx="8"/>
-  <text class="t" x="1076" y="372">Koofr</text>
-  <text class="m" x="1076" y="390">recordings, photos</text>
-  <rect class="box" x="1060" y="420" width="160" height="56" rx="8"/>
-  <text class="t" x="1076" y="444">Dropbox</text>
-  <text class="m" x="1076" y="462">artwork, episode files</text>
-  <rect class="box" x="1060" y="492" width="160" height="56" rx="8"/>
-  <text class="t" x="1076" y="516">Hygraph</text>
-  <text class="m" x="1076" y="534">CMS · pictures by URL</text>
+  <rect class="box" x="1060" y="132" width="160" height="46" rx="8"/>
+  <text class="t" x="1076" y="152">Cloud Storage</text>
+  <text class="m" x="1076" y="169">pictures, video, audio · key</text>
+  <rect class="box" x="1060" y="186" width="160" height="46" rx="8"/>
+  <text class="t" x="1076" y="206">Google Drive</text>
+  <text class="m" x="1076" y="223">docs · refresh token</text>
+  <rect class="box unused" x="1060" y="240" width="160" height="46" rx="8"/>
+  <text class="t" x="1076" y="260">Gmail</text>
+  <text class="m" x="1076" y="277">not used yet</text>
+  <rect class="box" x="1060" y="294" width="160" height="46" rx="8"/>
+  <text class="t" x="1076" y="314">Koofr</text>
+  <text class="m" x="1076" y="331">recordings, photos</text>
+  <rect class="box" x="1060" y="348" width="160" height="46" rx="8"/>
+  <text class="t" x="1076" y="368">Dropbox</text>
+  <text class="m" x="1076" y="385">artwork, episode files</text>
+  <rect class="box" x="1060" y="402" width="160" height="46" rx="8"/>
+  <text class="t" x="1076" y="422">Hygraph</text>
+  <text class="m" x="1076" y="439">CMS · pictures by URL</text>
+  <rect class="box" x="1060" y="456" width="160" height="46" rx="8"/>
+  <text class="t" x="1076" y="476">Speech-to-Text</text>
+  <text class="m" x="1076" y="493">Google · transcripts · EU</text>
+  <rect class="box" x="1060" y="510" width="160" height="46" rx="8"/>
+  <text class="t" x="1076" y="530">Soniox</text>
+  <text class="m" x="1076" y="547">transcripts, speakers · US</text>
   <rect class="box" x="1060" y="636" width="160" height="100" rx="8"/>
   <text class="t" x="1076" y="660">Patreon</text>
   <text class="m" x="1076" y="680">API: tiers, posts,</text>
@@ -196,14 +223,15 @@
   <text class="m" x="1076" y="714">web app, as Iva: drafts,</text>
   <text class="m" x="1076" y="730">audio, video, publishing</text>
   <!-- New Relic, EU: Java agents in MetaOS and patreon-gateway, the browser's agent, uptime checks from outside -->
-  <rect class="box" x="1060" y="556" width="160" height="68" rx="8"/>
-  <text class="t" x="1076" y="578">New Relic</text>
-  <text class="m" x="1076" y="596">EU · requests, errors, logs;</text>
-  <text class="m" x="1076" y="612">browser, uptime, metrics</text>
-  <text class="m" x="1060" y="924">all but Hygraph and New</text>
-  <text class="m" x="1060" y="940">Relic checked hourly,</text>
-  <text class="m" x="1060" y="956">reported as</text>
-  <text class="mono m" x="1060" y="974">metaos_*_connected</text>
+  <rect class="box" x="1060" y="564" width="160" height="64" rx="8"/>
+  <text class="t" x="1076" y="584">New Relic</text>
+  <text class="m" x="1076" y="601">EU · requests, errors, logs;</text>
+  <text class="m" x="1076" y="617">browser, uptime, metrics</text>
+  <text class="m" x="1060" y="924">all but Hygraph, New Relic</text>
+  <text class="m" x="1060" y="940">and the speech-to-text</text>
+  <text class="m" x="1060" y="956">providers checked hourly,</text>
+  <text class="m" x="1060" y="972">reported as</text>
+  <text class="mono m" x="1060" y="990">metaos_*_connected</text>
 
   <!-- Browser to the front-end for its pages, which asks MetaOS's GraphQL API inside the cluster -->
   <path class="edge" d="M200 166 H408" marker-end="url(#arrow)"/>
@@ -231,7 +259,7 @@
 
   <!-- MetaOS to Postgres -->
   <path class="edge" d="M684 594 V922" marker-end="url(#arrow)"/>
-  <text class="m" x="676" y="760" text-anchor="end">JPA · Flyway · LISTEN</text>
+  <text class="m" x="692" y="919">JPA · Flyway · LISTEN</text>
 
   <!-- Prometheus scrapes the actuator, which no Ingress routes -->
   <path class="edge" d="M500 924 V560 H662" marker-end="url(#arrow)"/>
@@ -240,17 +268,19 @@
   <path class="edge" d="M440 924 V492" marker-end="url(#arrow)"/>
 
   <!-- MetaOS to the outside services -->
-  <path class="edge" d="M988 160 H1058" marker-end="url(#arrow)"/>
-  <path class="edge" d="M988 232 H1058" marker-end="url(#arrow)"/>
-  <path class="edge" d="M988 304 H1058" marker-end="url(#arrow)"/>
-  <path class="edge" d="M988 376 H1058" marker-end="url(#arrow)"/>
-  <path class="edge" d="M988 448 H1058" marker-end="url(#arrow)"/>
-  <path class="edge" d="M988 520 H1058" marker-end="url(#arrow)"/>
-  <text class="m" x="1023" y="152" text-anchor="middle">copies</text>
+  <path class="edge" d="M988 155 H1058" marker-end="url(#arrow)"/>
+  <path class="edge" d="M988 209 H1058" marker-end="url(#arrow)"/>
+  <path class="edge" d="M988 263 H1058" marker-end="url(#arrow)"/>
+  <path class="edge" d="M988 317 H1058" marker-end="url(#arrow)"/>
+  <path class="edge" d="M988 371 H1058" marker-end="url(#arrow)"/>
+  <path class="edge" d="M988 425 H1058" marker-end="url(#arrow)"/>
+  <path class="edge" d="M988 479 H1058" marker-end="url(#arrow)"/>
+  <path class="edge" d="M988 533 H1058" marker-end="url(#arrow)"/>
+  <text class="m" x="1023" y="149" text-anchor="middle">copies</text>
 
   <!-- Their Java agents report to New Relic -->
-  <path class="edge" d="M988 584 H1058" marker-end="url(#arrow)"/>
-  <path class="edge" d="M968 636 V606 H1058" marker-end="url(#arrow)"/>
+  <path class="edge" d="M988 588 H1058" marker-end="url(#arrow)"/>
+  <path class="edge" d="M968 636 V612 H1058" marker-end="url(#arrow)"/>
 
   <!-- The browser loads pictures from the public bucket, past MetaOS: at media.ogrodje.si, cached by Cloudflare -->
   <path class="edge" d="M140 140 V-8 H1204 V130" marker-end="url(#arrow)"/>
