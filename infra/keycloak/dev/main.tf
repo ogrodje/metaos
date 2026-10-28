@@ -50,3 +50,9 @@ variable "google_client_secret" {
   sensitive   = true
   default     = null
 }
+
+# For agents/ in development: `terraform -chdir=infra/keycloak/dev output -raw agents_client_secret`
+output "agents_client_secret" {
+  value     = module.realm.agents_client_secret
+  sensitive = true
+}

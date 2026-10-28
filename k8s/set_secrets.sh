@@ -7,6 +7,7 @@
 #   PROD_METAOS_DB_PASSWORD       the app's Postgres password
 #   PROD_KEYCLOAK_DB_PASSWORD     Keycloak's Postgres password
 #   PROD_KEYCLOAK_ADMIN_PASSWORD  Keycloak's bootstrap admin ("admin")
+#   PROD_TEMPORAL_DB_PASSWORD     Temporal's Postgres password (deployment-temporal.yaml)
 #   DOCKER_REGISTRY_USERNAME, DOCKER_REGISTRY_PASSWORD
 #   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_DRIVE_REFRESH_TOKEN  the Google bot account's, as locally
 #   GOOGLE_GMAIL_REFRESH_TOKEN    optional, Gmail stays off without it (google/refresh_token.sh)
@@ -27,13 +28,15 @@
 #                                 ephemeral, pre-approved, tagged tag:patreon-gateway
 #   PROD_NEW_RELIC_LICENSE_KEY    optional, an ingest license key of New Relic's account 8666724 (EU), which MetaOS's
 #                                 and patreon-gateway's Java agents report with; they don't start without it
+#   SONIOX_API_KEY                optional, Soniox's (project Ogrodje One, US region), as locally, unless
+#                                 PROD_SONIOX_API_KEY has production's own; Soniox stays off without it (Soniox.kt)
 # The DB passwords go into SQL literals, so keep them alphanumeric: `openssl rand -hex 24`.
 set -euo pipefail
 
 NS=metaos-prod
 REGISTRY=registry.folk-decibel.ts.net
 
-: "${PROD_METAOS_DB_PASSWORD:?}" "${PROD_KEYCLOAK_DB_PASSWORD:?}"
+: "${PROD_METAOS_DB_PASSWORD:?}" "${PROD_KEYCLOAK_DB_PASSWORD:?}" "${PROD_TEMPORAL_DB_PASSWORD:?}"
 : "${PROD_KEYCLOAK_ADMIN_PASSWORD:?}"
 : "${DOCKER_REGISTRY_USERNAME:?}" "${DOCKER_REGISTRY_PASSWORD:?}"
 : "${GOOGLE_CLIENT_ID:?}" "${GOOGLE_CLIENT_SECRET:?}" "${GOOGLE_DRIVE_REFRESH_TOKEN:?}"
@@ -41,17 +44,22 @@ REGISTRY=registry.folk-decibel.ts.net
 # No cd: KUBECONFIG may be relative to where this runs, as .envrc's is
 kubectl apply -f "$(dirname "$0")/base/namespace.yaml"
 
-# Roles and databases - names as in base/deployment-*.yaml. Each role owns its database, so the app's
-# `CREATE EXTENSION citext` (V1__init.sql) works: citext is a trusted extension.
+# Roles and databases - names as in base/deployment-*.yaml. Each role owns its database(s), so the app's
+# `CREATE EXTENSION citext` (V1__init.sql) and Temporal's `CREATE EXTENSION btree_gin` (its visibility schema) work:
+# both are trusted extensions. Temporal has two, its own and its visibility's, whose schemas it sets up itself.
 PRIMARY=$(kubectl get pod -n pg -l cnpg.io/cluster=main-cluster,cnpg.io/instanceRole=primary -o name)
 kubectl exec -n pg -i "$PRIMARY" -- psql -U postgres -v ON_ERROR_STOP=1 -q postgres <<SQL
 \set metaos_password '$PROD_METAOS_DB_PASSWORD'
 \set keycloak_password '$PROD_KEYCLOAK_DB_PASSWORD'
-SELECT format('CREATE ROLE %I LOGIN', r) FROM unnest(ARRAY['metaos', 'metaos_keycloak']) r
+\set temporal_password '$PROD_TEMPORAL_DB_PASSWORD'
+SELECT format('CREATE ROLE %I LOGIN', r) FROM unnest(ARRAY['metaos', 'metaos_keycloak', 'metaos_temporal']) r
   WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r) \gexec
 ALTER ROLE metaos PASSWORD :'metaos_password';
 ALTER ROLE metaos_keycloak PASSWORD :'keycloak_password';
+ALTER ROLE metaos_temporal PASSWORD :'temporal_password';
 SELECT format('CREATE DATABASE %I OWNER %I', d, d) FROM unnest(ARRAY['metaos', 'metaos_keycloak']) d
+  WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = d) \gexec
+SELECT format('CREATE DATABASE %I OWNER metaos_temporal', d) FROM unnest(ARRAY['metaos_temporal', 'metaos_temporal_visibility']) d
   WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = d) \gexec
 SQL
 
@@ -67,6 +75,11 @@ kubectl create secret generic metaos-secret -n "$NS" \
   --from-literal=dropbox_app_secret="${DROPBOX_APP_SECRET:-}" \
   --from-literal=dropbox_refresh_token="${DROPBOX_REFRESH_TOKEN:-}" \
   --from-literal=new_relic_license_key="${PROD_NEW_RELIC_LICENSE_KEY:-}" \
+  --from-literal=soniox_api_key="${PROD_SONIOX_API_KEY:-${SONIOX_API_KEY:-}}" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+kubectl create secret generic temporal-secret -n "$NS" \
+  --from-literal=postgres_password="$PROD_TEMPORAL_DB_PASSWORD" \
   --dry-run=client -o yaml | kubectl apply -f -
 
 kubectl create secret generic keycloak-secret -n "$NS" \

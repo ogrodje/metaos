@@ -76,6 +76,17 @@ adopt keycloak_openid_client.metaos_ui "${ui:+$REALM/$ui}"
 adopt keycloak_openid_client_default_scopes.metaos_ui "${ui:+$REALM/$ui}"
 adopt keycloak_openid_client_optional_scopes.metaos_ui "${ui:+$REALM/$ui}"
 
+agents=$(api "/clients?clientId=metaos-agents" | jq -r '.[0].id // empty')
+adopt keycloak_openid_client.metaos_agents "${agents:+$REALM/$agents}"
+adopt keycloak_openid_client_default_scopes.metaos_agents "${agents:+$REALM/$agents}"
+adopt keycloak_openid_client_optional_scopes.metaos_agents "${agents:+$REALM/$agents}"
+if [ -n "$agents" ] && [ -n "$role" ]; then
+  account=$(api "/clients/$agents/service-account-user" | jq -r '.id')
+  approved=$(api "/users/$account/role-mappings/realm" | jq -r --arg r "$role" 'any(.[]; .id == $r)')
+fi
+adopt keycloak_openid_client_service_account_realm_role.metaos_agents \
+  "$([ "${approved:-}" = true ] && echo "$REALM/$account/$role")"
+
 policies=$(api "/components?type=org.keycloak.services.clientregistration.policy.ClientRegistrationPolicy")
 declared=$(value "$MODULE.registration_policies")
 for key in $(jq -r 'keys[]' <<<"$declared"); do

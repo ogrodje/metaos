@@ -70,6 +70,21 @@ type Query {
 
     "One of an episode's video or audio files by its ID, e.g. for a link to download it; null if there's none. Needs a signed-in user."
     mediaFile(id: ID!): MediaFile
+
+    """
+    Transcriptions of episodes' files, the latest first: those in statuses (all, without them), by provider (google
+    or soniox) where it's given, at most limit, up to 500. Needs a signed-in user.
+    """
+    transcriptions(statuses: [TranscriptionStatus!], provider: String, limit: Int! = 100): [Transcription!]!
+
+    "A transcription by its ID, as it is now, e.g. to watch it; null if there's none. Needs a signed-in user."
+    transcription(id: ID!): Transcription
+
+    "A transcript by its ID, with what was said; null if there's none. Needs a signed-in user."
+    transcript(id: ID!): Transcript
+
+    "The speech-to-text providers MetaOS has, to transcribe with. Needs a signed-in user."
+    speechProviders: [SpeechProvider!]!
 }
 
 """
@@ -130,6 +145,18 @@ type Mutation {
     updateEpisodeMedia(id: ID!, title: String, kind: MediaKind): MediaFile!
     "Take a video or audio file off its episode, and delete it from MetaOS's bucket; the history keeps it. Its ID."
     removeEpisodeMedia(id: ID!): ID!
+    """
+    Transcribe one of an episode's files by a provider, as transcribe_episode does over MCP: google (Speech-to-Text,
+    in the EU, which doesn't punctuate Slovenian or tell speakers apart) or soniox (in the US, which does both), by
+    default MetaOS's; its full audio, else its full video, unless media says which; in its show's language unless told
+    another (e.g. en-GB). A file it has a transcript of by that provider only with replace. With Google, batch is
+    within a day, for a fifth of the price. It waits for its turn at the provider, which hears a few at once.
+    """
+    transcribeEpisode(ref: String!, media: ID, provider: String, language: String, batch: Boolean! = false, replace: Boolean! = false): Transcription!
+    "Cancel a transcription that's on: it stops, and asks the provider to stop too"
+    cancelTranscription(id: ID!): Transcription!
+    "Remove a transcript, and what it says; the bucket keeps its files, and the history that it was there. Its ID."
+    removeTranscript(id: ID!): ID!
     """
     Set or clear one of an episode's links, by its code or ID: an https URL of the episode on that platform, or null
     to clear it. Each of the four Patreon links is set or cleared on its own.
@@ -201,6 +228,96 @@ type MediaUpload {
     url: String!
     headers: [Header!]!
     expires: String!
+}
+
+"""
+How far a transcription is: waiting for its turn at its provider, starting it, the provider hearing it; then done,
+failed or cancelled
+"""
+enum TranscriptionStatus {
+    QUEUED
+    STARTING
+    RECOGNIZING
+    DONE
+    FAILED
+    CANCELLED
+}
+
+"One of an episode's files to be transcribed by a provider, from when it's asked for till it's done, failed or cancelled"
+type Transcription {
+    id: ID!
+    "Its episode; null once that's deleted"
+    episode: Episode
+    mediaId: ID!
+    "The file's name, e.g. S05E08.mp3"
+    mediaName: String!
+    "Who hears it: google or soniox"
+    provider: String!
+    "The provider's model, once it's started"
+    model: String
+    "What's said in the file, BCP-47, e.g. sl-SI"
+    language: String!
+    batch: Boolean!
+    status: TranscriptionStatus!
+    "While it's QUEUED, its place in line, 1 next"
+    queued: Int
+    "While it's RECOGNIZING, how far the provider got, by tens, where it says (Google)"
+    percent: Int
+    "Why it failed"
+    error: String
+    "The transcript it made, while it's there"
+    transcript: Transcript
+    "Who asked for it: their person's name, or else their username"
+    requestedBy: String
+    createdAt: String!
+    "When the provider started on it"
+    startedAt: String
+    finishedAt: String
+}
+
+"A transcript of one of an episode's files, in a language, by a provider"
+type Transcript {
+    id: ID!
+    "Its episode; null once that's deleted"
+    episode: Episode
+    mediaId: ID!
+    mediaName: String!
+    "What the text is in, and what's said in the file, BCP-47: the same, but for a translation"
+    language: String!
+    spokenLanguage: String!
+    provider: String!
+    model: String!
+    "Seconds of audio, as the provider billed them"
+    duration: Float
+    "How many stretches of what was said, and words"
+    segments: Int!
+    words: Int!
+    "Its speakers, where the provider tells them apart (Soniox), by their labels, and names once they're named"
+    speakers: [TranscriptSpeaker!]!
+    requestedBy: String
+    createdAt: String!
+    "What was said, a stretch at a time, each from where it starts"
+    lines: [TranscriptLine!]!
+}
+
+type TranscriptSpeaker {
+    label: String!
+    name: String
+}
+
+"A stretch of what was said, from start to end, in seconds from the start of the file"
+type TranscriptLine {
+    speaker: String
+    start: Float!
+    end: Float!
+    text: String!
+}
+
+"A speech-to-text provider: its name, model, and how many files it hears at once"
+type SpeechProvider {
+    name: String!
+    model: String!
+    slots: Int!
 }
 
 "One of an episode's video or audio files, in MetaOS's private bucket"
@@ -285,6 +402,8 @@ type Episode {
     show: String
     "Its show's colour, as hex RGB, e.g. #0404a4"
     showColor: String
+    "What it's spoken in, BCP-47: its show's language (en-GB for Borderless), else Slovenian, sl-SI; what it's transcribed as"
+    language: String!
     status: EpisodeStatus!
     "The recording session it's part of"
     session: Session
@@ -340,6 +459,8 @@ type Episode {
     cover: Image
     "Its video and audio: the full episode and its bonuses, the first uploaded first. None without a signed-in user."
     media: [MediaFile!]!
+    "Its files' transcripts, the latest first, without what they say (Transcript.lines). None without a signed-in user."
+    transcripts: [Transcript!]!
 }
 
 """

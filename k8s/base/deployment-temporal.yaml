@@ -1,0 +1,276 @@
+# Temporal (https://temporal.io), which runs MetaOS's workflows (Workflows.kt): one server, all its services in one
+# process, on the shared CNPG cluster, in databases of its own (metaos_temporal and metaos_temporal_visibility, owned by
+# role metaos_temporal, as Keycloak's metaos_keycloak, which k8s/set_secrets.sh makes); MetaOS's pods are its workers (TEMPORAL_ADDRESS, deployment-metaos.yaml). Its UI is on
+# the tailnet only, as nothing here signs anyone in: https://metaos-temporal.folk-decibel.ts.net. Versions: the server
+# and admin-tools the same, as the schema is the server's; check the release notes before moving on, as a server may
+# skip no minor version on its way up (1.32 to 1.34 goes through 1.33).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: temporal-dynamic-config
+  namespace: metaos-prod
+data:
+  # Temporal's dynamic config, which it reads every minute (DYNAMIC_CONFIG_FILE_PATH); none of its defaults changed yet
+  dynamic-config.yaml: |
+    {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: temporal
+  namespace: metaos-prod
+  labels: { app: temporal }
+spec:
+  replicas: 1
+  # The new server beside the old one till it's ready: they share the history shards between them meanwhile
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector: { matchLabels: { app: temporal } }
+  template:
+    metadata: { labels: { app: temporal } }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000    # the images' temporal
+        runAsGroup: 1000
+        seccompProfile: { type: RuntimeDefault }
+      initContainers:
+        # Its databases' schema, as this version has it: made the first time, updated after an upgrade, and left as it
+        # is otherwise, so it runs before every start
+        - name: schema
+          image: temporalio/admin-tools:1.32.1
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ ALL ] }
+          command: [ sh, -c ]
+          args:
+            - |
+              set -eu
+              for db in metaos_temporal metaos_temporal_visibility; do
+                if [ "$db" = metaos_temporal ]; then schema=temporal; else schema=visibility; fi
+                temporal-sql-tool --db "$db" setup-schema -v 0.0
+                temporal-sql-tool --db "$db" update-schema -d "/etc/temporal/schema/postgresql/v12/$schema/versioned"
+              done
+          env:
+            - { name: SQL_PLUGIN, value: postgres12 }
+            - { name: SQL_HOST, value: main-cluster-rw.pg.svc.cluster.local }
+            - { name: SQL_PORT, value: "5432" }
+            - { name: SQL_USER, value: metaos_temporal }
+            - name: SQL_PASSWORD
+              valueFrom: { secretKeyRef: { name: temporal-secret, key: postgres_password } }
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { memory: 256Mi }
+      containers:
+        - name: temporal
+          image: temporalio/server:1.32.1
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ ALL ] }
+          ports:
+            - { containerPort: 7233, name: grpc }
+            - { containerPort: 9090, name: metrics }
+          # Its config is the image's own, from these (the server's config_template_embedded.yaml)
+          env:
+            - { name: DB, value: postgres12 }
+            - { name: POSTGRES_SEEDS, value: main-cluster-rw.pg.svc.cluster.local }
+            - { name: DB_PORT, value: "5432" }
+            - { name: POSTGRES_USER, value: metaos_temporal }
+            - name: POSTGRES_PWD
+              valueFrom: { secretKeyRef: { name: temporal-secret, key: postgres_password } }
+            - { name: DBNAME, value: metaos_temporal }
+            - { name: VISIBILITY_DBNAME, value: metaos_temporal_visibility }
+            # Fixed once the database is made: 4, enough for one server's handful of workflows a day
+            - { name: NUM_HISTORY_SHARDS, value: "4" }
+            # At most 15 of the shared cluster's 100 connections (20 and 10 by default)
+            - { name: SQL_MAX_CONNS, value: "10" }
+            - { name: SQL_MAX_IDLE_CONNS, value: "5" }
+            - { name: SQL_VIS_MAX_CONNS, value: "5" }
+            - { name: SQL_VIS_MAX_IDLE_CONNS, value: "2" }
+            - { name: PROMETHEUS_ENDPOINT, value: "0.0.0.0:9090" }
+            - { name: DYNAMIC_CONFIG_FILE_PATH, value: /etc/temporal/dynamic-config/dynamic-config.yaml }
+            # Go's garbage collector keeps it under the limit, rather than the kernel killing it
+            - { name: GOMEMLIMIT, value: 900MiB }
+          volumeMounts:
+            - { name: dynamic-config, mountPath: /etc/temporal/dynamic-config, readOnly: true }
+          # Serving once it's joined its cluster (membership), as its frontend says over gRPC's health service
+          startupProbe:
+            grpc: { port: 7233, service: temporal.api.workflowservice.v1.WorkflowService }
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            grpc: { port: 7233, service: temporal.api.workflowservice.v1.WorkflowService }
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            tcpSocket: { port: grpc }
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          # ~80 MB idle (1.32.1 locally, 2026-10-28); room for MetaOS's workflows
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 1Gi }
+      volumes:
+        - name: dynamic-config
+          configMap: { name: temporal-dynamic-config }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: temporal
+  namespace: metaos-prod
+  labels: { app: temporal }
+spec:
+  type: ClusterIP
+  selector: { app: temporal }
+  ports:
+    # Its frontend, which MetaOS's workers, the UI and the namespace job reach as temporal:7233
+    - { name: grpc, port: 7233, targetPort: grpc }
+    - { name: metrics, port: 9090, targetPort: metrics }
+---
+# Its metrics (workflows, activities, task queues, persistence), in Prometheus only
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: temporal
+  namespace: metaos-prod
+  labels: { release: prom }
+spec:
+  endpoints:
+    - { interval: 30s, path: /metrics, port: metrics }
+  namespaceSelector:
+    matchNames: [ metaos-prod ]
+  selector:
+    matchLabels: { app: temporal }
+---
+# Nothing signs in to Temporal: whoever reaches its frontend may start, signal or terminate any workflow. So only
+# what's in metaos-prod (MetaOS's workers, the UI, the namespace job) and Prometheus may, not the cluster's other apps;
+# and another server, during a rollout, on all its services' ports (history, matching, worker, membership)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: temporal
+  namespace: metaos-prod
+spec:
+  podSelector:
+    matchLabels: { app: temporal }
+  policyTypes: [ Ingress ]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: { app: temporal }
+    - from:
+        - podSelector: {}
+      ports:
+        - { port: 7233 }
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: observability }
+      ports:
+        - { port: 9090 }
+---
+# MetaOS's namespace, default, with what Temporal keeps of a closed workflow for two weeks; once, and again after a
+# deploy that finds it gone (it's deleted an hour after it's done), which changes nothing then
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: temporal-namespace
+  namespace: metaos-prod
+spec:
+  backoffLimit: 20
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: OnFailure
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: namespace
+          image: temporalio/admin-tools:1.32.1
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ ALL ] }
+          command: [ sh, -c ]
+          args:
+            - |
+              set -eu
+              temporal operator namespace describe --namespace default > /dev/null 2>&1 \
+                || temporal operator namespace create --namespace default --retention 14d --description "MetaOS's workflows"
+          env:
+            - { name: TEMPORAL_ADDRESS, value: "temporal:7233" }
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { memory: 128Mi }
+---
+# Temporal's web UI: workflows, their histories, task queues; on the tailnet only
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: temporal-ui
+  namespace: metaos-prod
+  labels: { app: temporal-ui }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: temporal-ui } }
+  template:
+    metadata: { labels: { app: temporal-ui } }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: ui
+          image: temporalio/ui:2.57.0
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ ALL ] }
+          ports:
+            - { containerPort: 8080, name: http }
+          env:
+            - { name: TEMPORAL_ADDRESS, value: "temporal:7233" }
+            - { name: TEMPORAL_DEFAULT_NAMESPACE, value: default }
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 10m, memory: 48Mi }
+            limits: { memory: 192Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: temporal-ui
+  namespace: metaos-prod
+  labels: { app: temporal-ui }
+spec:
+  type: ClusterIP
+  selector: { app: temporal-ui }
+  ports:
+    - { name: http, port: 80, targetPort: http }
+---
+# https://metaos-temporal.folk-decibel.ts.net, through the Tailscale operator (ogrodje-one-infra), as Grafana is
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: temporal-ui
+  namespace: metaos-prod
+  labels:
+    tailscale.com/proxy-class: tailnet-ingress
+  annotations:
+    tailscale.com/hostname: metaos-temporal
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: temporal-ui
+      port: { number: 80 }
+  tls:
+    - hosts: [ metaos-temporal ]

@@ -42,6 +42,7 @@ export default defineNuxtConfig({
     '/people/**': PUBLIC,
     '/usage': PUBLIC,
     '/ideas': TEAM,
+    '/transcriptions': TEAM,
     '/search': TEAM,
     '/sessions/**': TEAM,
     '/sitemap.xml': DEV ? {} : { cache: { swr: true, maxAge: 3600 } },

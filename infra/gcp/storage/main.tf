@@ -159,6 +159,15 @@ resource "google_storage_bucket_iam_member" "storage" {
   member = google_service_account.storage.member
 }
 
+# Speech-to-Text (SpeechToText.kt), which transcribes episodes' audio in the private bucket: MetaOS starts it and asks
+# after it as this account, while Speech-to-Text's own service agent reads the file and writes what it heard, which it
+# may do in the project's buckets by itself (roles/speech.serviceAgent)
+resource "google_project_iam_member" "speech" {
+  project = google_service_account.storage.project
+  role    = "roles/speech.client"
+  member  = google_service_account.storage.member
+}
+
 output "service_account" {
   value = google_service_account.storage.email
 }

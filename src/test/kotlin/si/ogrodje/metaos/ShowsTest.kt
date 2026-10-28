@@ -27,10 +27,10 @@ class ShowsTest @Autowired constructor(
     @Test
     fun `creates, renames and recolors shows`() {
         val created = showsMCP.create(name = " Zagon Test ", color = "#0404a4")
-        assertEquals(ShowDto(created.id, "Zagon Test", "#0404a4"), created)
+        assertEquals(ShowDto(created.id, "Zagon Test", "#0404a4", "sl-SI"), created)
 
         showsMCP.update(name = "ZAGON TEST", newName = "Start Test", color = null)
-        assertEquals(ShowDto(created.id, "Start Test", "#0404a4"), showsMCP.get("start test"))
+        assertEquals(ShowDto(created.id, "Start Test", "#0404a4", "sl-SI"), showsMCP.get("start test"))
 
         showsMCP.update(name = "Start Test", newName = null, color = "")
         assertNull(showsMCP.get("Start Test")?.color)

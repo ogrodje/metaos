@@ -14,3 +14,10 @@ output "dev_user" {
   description = "Whether the realm has the dev user"
   value       = var.dev_user
 }
+
+# The agents' client secret, which Keycloak made (agents.tf): METAOS_AGENTS_CLIENT_SECRET, for agents/
+output "agents_client_secret" {
+  description = "metaos-agents' client secret"
+  value       = keycloak_openid_client.metaos_agents.client_secret
+  sensitive   = true
+}

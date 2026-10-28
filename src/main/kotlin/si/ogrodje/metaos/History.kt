@@ -42,7 +42,7 @@ private fun kindOf(table: String) = when (table) {
     "episode_dropbox_folders", "session_dropbox_folders" -> ChangeKind.DROPBOX_FOLDER
     "comments" -> ChangeKind.COMMENT
     "accounts" -> ChangeKind.ACCOUNT
-    "episode_media" -> ChangeKind.MEDIA
+    "episode_media", "transcripts" -> ChangeKind.MEDIA
     "people" -> ChangeKind.PERSON
     else -> ChangeKind.OTHER
 }
@@ -54,8 +54,8 @@ private fun AuditRow.subject(): Pair<ChangeKind, String>? {
         "episodes" -> ChangeKind.EPISODE to rowId.toString()
         "sessions" -> ChangeKind.SESSION to rowId.toString()
         "people" -> ChangeKind.PERSON to rowId.toString()
-        "episode_people", "episode_documents", "episode_koofr_folders", "episode_dropbox_folders", "episode_media" ->
-            id("episode_id")?.let { ChangeKind.EPISODE to it }
+        "episode_people", "episode_documents", "episode_koofr_folders", "episode_dropbox_folders", "episode_media",
+        "transcripts" -> id("episode_id")?.let { ChangeKind.EPISODE to it }
         "session_documents", "session_koofr_folders", "session_dropbox_folders" -> id("session_id")?.let { ChangeKind.SESSION to it }
         "comments" -> id("episode_id")?.let { ChangeKind.EPISODE to it } ?: id("session_id")?.let { ChangeKind.SESSION to it }
         "accounts" -> id("person_id")?.let { ChangeKind.PERSON to it }
@@ -194,6 +194,7 @@ private class Names(
         "comments" -> comment(row)
         "accounts" -> account(row)
         "episode_media" -> media(row)
+        "transcripts" -> transcript(row)
         "people" -> change(row, "person", PERSON_COLUMNS)
         else -> Described("Changed ${row.table}")
     }
@@ -240,6 +241,16 @@ private class Names(
                 }
                 Described(summary, fields)
             }
+        }
+    }
+
+    // A transcript of one of the episode's files (Transcription.kt), by the file's name: made, made again, or named
+    private fun transcript(row: AuditRow): Described {
+        val name = (row.new["media_name"] ?: row.old["media_name"])?.toString()
+        return when (row.operation) {
+            "INSERT" -> Described("Transcribed $name")
+            "DELETE" -> Described("Removed the transcript of $name")
+            else -> Described(if (row.diff()["speakers"] != null) "Named the speakers in the transcript of $name" else "Changed the transcript of $name")
         }
     }
 

@@ -1,6 +1,6 @@
 # Deploying MetaOS
 
-The app, its front-end and its Keycloak in namespace `metaos-prod` on the ogrodje-one cluster, the way goo, boo-run and bongbong
+The app, its front-end, its Keycloak and its Temporal in namespace `metaos-prod` on the ogrodje-one cluster, the way goo, boo-run and bongbong
 deploy there: images in the tailnet registry, `kustomize` picks the tags, Postgres is the shared CNPG `main-cluster`,
 ingress-nginx routes and Cloudflare terminates TLS.
 
@@ -11,6 +11,8 @@ k8s/base/
   deployment-web.yaml        the front-end (metaos-web): Deployment, Service, Ingress (everything else)
   deployment-keycloak.yaml   Deployment, Service, Ingress, ServiceMonitor (its metrics, sign-ins among them)
   deployment-patreon-gateway.yaml  patreon-gateway: its volume, Deployment, Service (no Ingress: MetaOS's only)
+  deployment-temporal.yaml   Temporal: its server (schema set up before it starts), Service, ServiceMonitor,
+                             NetworkPolicy; the Job that makes its namespace; its UI, on the tailnet only
   kustomization.yaml         the resources, the public URLs and the image tags
 k8s/set_secrets.sh           Postgres roles + databases, secrets, registry pull secret
 k8s/prometheus/              what the cluster's Prometheus passes on to New Relic (newrelic.sh applies it)
@@ -25,6 +27,7 @@ docker/patreon-gateway.Dockerfile  patreon-gateway's boot jar on distroless java
 |--------------------------|----------------------------------------------------------------------------|
 | `metaos.ogrodje.si`      | the front-end's pages; the app's `/graphql`, `/events`, `/mcp`, ...        |
 | `metaos-auth.ogrodje.si` | Keycloak; realm `metaos` issues the tokens, `/admin` is the admin console |
+| `metaos-temporal.folk-decibel.ts.net` | Temporal's UI, on the tailnet only (nothing signs in to it): workflows and their histories |
 
 Actuator (`/actuator/health/*`, `/actuator/prometheus`) is on port 9090, which no Ingress routes - Prometheus reaches
 it, the internet doesn't. The app's probes use `/livez` and `/readyz` on port 8080 instead, so they check the port that
@@ -69,11 +72,14 @@ just gateway-logs  # follow patreon-gateway
    export PROD_METAOS_DB_PASSWORD=...
    export PROD_KEYCLOAK_DB_PASSWORD=...
    export PROD_KEYCLOAK_ADMIN_PASSWORD=...
+   export PROD_TEMPORAL_DB_PASSWORD=...
    export DOCKER_REGISTRY_USERNAME=... DOCKER_REGISTRY_PASSWORD=...
    ./k8s/set_secrets.sh
    ```
 
-   It creates roles `metaos` and `metaos_keycloak`, each owning a database of the same name on `main-cluster`. With
+   It creates roles `metaos` and `metaos_keycloak`, each owning a database of the same name on `main-cluster`, and
+   `metaos_temporal`, owning `metaos_temporal` and `metaos_temporal_visibility`, whose schemas Temporal sets up itself (its pod's `schema`
+   init container, before every start: made the first time, updated after an upgrade). With
    the Patreon app's credentials and `PROD_PATREON_GATEWAY_TOKEN` it also makes `patreon-gateway-secret`; then sign
    the bot in to Patreon with `patreon-gateway/login.sh` ([its README](../patreon-gateway/README.md)).
 
@@ -108,6 +114,12 @@ just gateway-logs  # follow patreon-gateway
    cluster's apps share it) then passes MetaOS's own metrics, Keycloak's sign-ins, `metaos-prod`'s pods' and the
    node's on to New Relic, and nothing else (`newrelic-values.yaml` says which). Run it again after changing them.
 
+8. **Temporal** (CLAUDE.md, "Workflows"): `PROD_TEMPORAL_DB_PASSWORD` in `.envrc`, then `./k8s/set_secrets.sh` for its
+   role, databases and `temporal-secret`, before the deploy that brings `deployment-temporal.yaml`. The deploy starts
+   its server, the Job `temporal-namespace` makes namespace `default` (two weeks' retention) once the server answers,
+   and MetaOS's pods connect as its workers (`TEMPORAL_ADDRESS`). What MetaOS's workflows use needs its keys too:
+   `SONIOX_API_KEY` (Soniox), and the Speech-to-Text API on in project `ogrodje-metaos` (infra/gcp).
+
 ## Checking it
 
 ```bash
@@ -118,6 +130,10 @@ curl -s https://metaos.ogrodje.si/episodes | grep -c 'href="/episodes/S'        
 kubectl -n metaos-prod get pods,svc,ingress
 kubectl -n metaos-prod port-forward deploy/metaos 9090 &
 curl -s localhost:9090/actuator/health
+kubectl -n metaos-prod logs deploy/temporal -c schema               # its schema, set up or as it was
+kubectl -n metaos-prod get job temporal-namespace                    # namespace default made
+kubectl -n metaos-prod run temporal-cli --rm -it --restart=Never --image=temporalio/admin-tools:1.32.1 \
+  --env TEMPORAL_ADDRESS=temporal:7233 -- temporal task-queue describe --task-queue metaos   # MetaOS's pods poll it
 ```
 
 Then point an MCP client at `https://metaos.ogrodje.si/mcp`, e.g.
@@ -134,5 +150,10 @@ Then point an MCP client at `https://metaos.ogrodje.si/mcp`, e.g.
   for ChatGPT's. Another hosted client needs its host in `trusted_hosts` (infra/keycloak/realm/variables.tf).
 - Every deploy rolls Keycloak and the front-end too, since the images get the same tag. It's a rolling update, so the old pod serves
   until the new one is ready, and for 10 s after it's told to stop, until ingress-nginx has dropped it.
+- **Temporal's Job** (`temporal-namespace`) is deleted an hour after it's done, and the next deploy makes it again,
+  which changes nothing then. A deploy within that hour that changes the Job fails on it, as a Job can't be changed:
+  delete it first (`kubectl -n metaos-prod delete job temporal-namespace`).
+- **Upgrading Temporal**: the server and admin-tools at the same version, one minor version at a time (1.32 to 1.34
+  goes through 1.33), after reading its release notes; the `schema` init container updates its databases first.
 - The registry isn't cleaned up: tags are commit hashes, which don't sort by age, so boo-run's keep-the-newest-three
   job can't be reused as is.

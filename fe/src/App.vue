@@ -2,7 +2,7 @@
 import {computed, nextTick, ref, watch} from 'vue'
 import {RouterLink, useRoute, useRouter} from 'vue-router'
 import {faDiscord, faGithub} from '@fortawesome/free-brands-svg-icons'
-import {faHouse, faLightbulb, faMicrophone, faUserGroup} from '@fortawesome/free-solid-svg-icons'
+import {faClosedCaptioning, faHouse, faLightbulb, faMicrophone, faUserGroup} from '@fortawesome/free-solid-svg-icons'
 import {FontAwesomeIcon} from '@fortawesome/vue-fontawesome'
 import {NuxtPage} from '#components'
 import {useHead, useRuntimeConfig} from '#imports'
@@ -81,6 +81,7 @@ const pages = computed(() => [
   {path: '/episodes', title: 'Episodes', icon: faMicrophone},
   {path: '/ideas', title: 'Ideas', icon: faLightbulb, team: true},
   {path: '/people', title: 'People', icon: faUserGroup},
+  {path: '/transcriptions', title: 'Transcriptions', icon: faClosedCaptioning, team: true},
 ].filter((page) => !page.team || auth.likelyMember))
 
 // Going to another page, as a screen reader hears it: focus moves to the page, which starts there for the keyboard too,

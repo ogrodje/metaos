@@ -55,6 +55,13 @@ export const routes: RouteRecordRaw[] = [
     meta: { title: 'Ideas' },
     component: () => import('../views/IdeasView.vue'),
   },
+  // Episodes' transcriptions, and the transcripts they made, behind sign-in
+  {
+    path: '/transcriptions',
+    name: 'transcriptions',
+    meta: { title: 'Transcriptions' },
+    component: () => import('../views/TranscriptionsView.vue'),
+  },
   // An episode's page, by its code, or its ID while it has none: for anyone not signed in, a released one's, without
   // what's the team's; a session's page, behind sign-in
   {

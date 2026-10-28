@@ -1,3 +1,6 @@
+# One project, whichever checkout it runs from (a worktree's too), so its containers and volumes are the same ones
+name: metaos
+
 services:
   postgres:
     image: 'postgres:18-alpine'
@@ -62,7 +65,20 @@ services:
       timeout: 5s
       retries: 30
 
+  # Temporal, which runs MetaOS's workflows (Workflows.kt): its development server, from Temporal's CLI, with its own
+  # SQLite in a volume and its web UI, http://localhost:8233. MetaOS connects with TEMPORAL_ADDRESS=localhost:7233.
+  temporal:
+    image: 'temporalio/temporal:1.9.1'
+    command: ['server', 'start-dev', '--ip', '0.0.0.0', '--db-filename', '/home/temporal/temporal.db']
+    ports:
+      - '127.0.0.1:7233:7233'
+      - '127.0.0.1:8233:8233'
+    volumes:
+      # Its home, which the image has as its user's, so the volume is theirs too
+      - temporal-data:/home/temporal
+
 volumes:
+  temporal-data:
   pg-data:
     driver: "local"
     driver_opts:
