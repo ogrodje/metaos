@@ -222,6 +222,9 @@ spec:
     metadata: { labels: { app: temporal-ui } }
     spec:
       automountServiceAccountToken: false
+      # Without the Services' addresses as variables, which Kubernetes gives every pod in the namespace otherwise: the
+      # UI's port is TEMPORAL_UI_PORT, which this one's Service, temporal-ui, makes tcp://<its IP>:80, so it didn't start
+      enableServiceLinks: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
