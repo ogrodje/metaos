@@ -40,3 +40,10 @@ tfplan
 backend_override.tf
 # The tailnet's policy file, which is private: this repository is public (infra/tailscale/README.md)
 infra/tailscale/policy.hujson
+
+# Impeccable: its design.json is the design system's (DESIGN.md); its drafts, critiques and each session's state stay
+# out
+**/.impeccable/mocks/
+**/.impeccable/critique/
+**/.impeccable/hook.*.json
+**/.impeccable/config.local.json
