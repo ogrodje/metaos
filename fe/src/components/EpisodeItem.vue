@@ -59,7 +59,7 @@ const guestNames = computed(() => guests(props.episode).join(', '))
 // Why a search found it
 .found {
   margin-top: 4px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--secondary);
 
@@ -76,7 +76,7 @@ const guestNames = computed(() => guests(props.episode).join(', '))
   }
 
   .code {
-    font-size: 12px;
+    font-size: var(--text-caption);
     line-height: 18px;
   }
 

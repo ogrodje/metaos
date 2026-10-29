@@ -151,9 +151,11 @@ usePageMeta(() => ({ description: "Every released episode of Ogrodje's podcast, 
 <template>
   <main class="content">
     <PageHeader title="Episodes" :count="episodes?.length" :shown="filtering && episodes ? shown.length : undefined">
-      <template v-if="auth.ready && !auth.authenticated">
+      <template v-if="auth.team">What's being made, by stage, then what's released, by season.</template>
+      <template v-else-if="auth.ready && !auth.authenticated">
         Every released episode of Ogrodje's podcast. Signed in, you also see what's being recorded and produced.
       </template>
+      <template v-else>Every released episode of Ogrodje's podcast, by season.</template>
     </PageHeader>
 
     <FilterBar v-model:find="find" placeholder="Find by title, guest or code">
@@ -183,7 +185,7 @@ usePageMeta(() => ({ description: "Every released episode of Ogrodje's podcast, 
         <template v-if="setAside.length">
           <div class="subheading">
             <h3 id="set-aside">On hold or cancelled <span class="count">{{ setAside.length }}</span></h3>
-            <button v-if="!filtering" type="button" class="more" :aria-expanded="!setAsideFolded" aria-describedby="set-aside"
+            <button v-if="!filtering" type="button" class="text-button more" :aria-expanded="!setAsideFolded" aria-describedby="set-aside"
                     @click="setAsideOpen = !setAsideOpen">{{ setAsideFolded ? `Show all ${setAside.length}` : 'Fold' }}</button>
           </div>
           <ul v-if="!setAsideFolded" class="episodes">
@@ -196,7 +198,7 @@ usePageMeta(() => ({ description: "Every released episode of Ogrodje's podcast, 
         <div class="heading">
           <h2 :id="group.id">{{ group.title }}</h2>
           <span class="count">{{ group.episodes.length }}</span>
-          <button v-if="group.foldable" type="button" class="more" :aria-expanded="!group.folded" :aria-describedby="group.id"
+          <button v-if="group.foldable" type="button" class="text-button more" :aria-expanded="!group.folded" :aria-describedby="group.id"
                   @click="toggle(group)">{{ group.folded ? `Show all ${group.episodes.length}` : 'Fold' }}</button>
         </div>
         <ul v-if="view === 'grid'" class="episode-cards">

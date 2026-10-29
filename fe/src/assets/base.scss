@@ -1,21 +1,56 @@
-// The design foundation: one grey ramp, the logo's pink as the only accent, Inter and a monospace for codes, and
-// spacing in steps of 4 px
+// The design foundation: one grey ramp, the logo's pink as the only accent, Inter and a monospace for codes, a type
+// scale, three radii and two shadows, and spacing in steps of 4 px. Components take their values from here rather than
+// writing their own; DESIGN.md says what each is for.
 
 :root {
+  // Greys, from text to the page: text that reads (ink, secondary, muted: 4.5:1 and up on white), then lines and fills
   --ink: #141414;
+  --ink-hover: #2B2B2B;
   --secondary: #525252;
   --muted: #6B6B6B;
+  // A control's edge while it's pointed at or open
+  --hairline-strong: #A3A3A3;
+  // What mustn't read as text: a link's underline, a letter with nothing under it, an upload's dashed edge
+  --faint: #C4C4C4;
   --hairline: #E6E6E6;
   --rule: #EEEEEE;
   --hover: #F5F5F5;
+  // A quieter panel: a comment's header, code, a place where something can go
+  --surface: #FAFAFA;
   // The logo's pink, for marks: 3.7:1 on white is too little for text, for which there's --accent-text (5.7:1)
   --accent: #EC4870;
   --accent-text: #C02A55;
-  // Behind the words a search found
+  --accent-hover: #A3244A;
+  // Behind the words a search found, and what's chosen in a list
   --mark: #FCE1E9;
+  --accent-wash: #FDF0F3;
+  // What went well or needs a look, for words only, as the accent says what went wrong
+  --success: #1F7A4D;
+  --warning: #8A5A00;
 
   --font-sans: 'Inter Variable', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  // One size a role: badges and keys; a line about something (who, when, how big); most of the interface; text to
+  // read, the body's; a card's or a dialog's title; a section's heading; a page's
+  --text-micro: 11px;
+  --text-caption: 12px;
+  --text-small: 13px;
+  --text-body: 14px;
+  --text-lead: 16px;
+  --text-section: 18px;
+  --text-page: 28px;
+
+  // Corners: keys and tags; controls (buttons, fields); containers (cards, panels, menus' items); what floats over the
+  // page (dialogs, menus) and the cards that stand alone. Pictures have their own (_pictures.scss), people are round.
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 12px;
+
+  // What floats over the page: a menu, and a dialog, which is further from it
+  --shadow-menu: 0 0 0 1px rgba(0, 0, 0, .08), 0 18px 40px -12px rgba(0, 0, 0, .28);
+  --shadow-dialog: 0 0 0 1px rgba(0, 0, 0, .08), 0 24px 60px -12px rgba(0, 0, 0, .35);
 
   // The frame of every page, the header's and the footer's too, so they don't jump between pages; running text in it
   // keeps a measure of its own, e.g. MarkdownText's
@@ -47,7 +82,7 @@ body {
   color: var(--ink);
 
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: var(--text-body);
   line-height: 22px;
 
   text-rendering: optimizeLegibility;
@@ -82,18 +117,128 @@ mark {
   gap: 8px;
   min-height: 44px;
   padding: 0 14px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   font-weight: 500;
   color: var(--ink);
   background: #FFFFFF;
   border: 1px solid var(--hairline);
-  border-radius: 6.4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 
   &:hover {
     color: var(--ink);
-    border-color: #A3A3A3;
+    border-color: var(--hairline-strong);
+  }
+
+  // In a row of a list, beside what it acts on, e.g. Download and Remove; bigger for fingers
+  &.small {
+    min-height: 32px;
+    padding: 0 10px;
+
+    @media (pointer: coarse) {
+      min-height: 40px;
+    }
+  }
+
+  // Beside the one that matters, e.g. Cancel
+  &.quiet {
+    color: var(--secondary);
+  }
+
+  // The one thing a form or dialog is for, filled, e.g. Comment, Save, Upload
+  &.primary {
+    color: #FFFFFF;
+    background: var(--ink);
+    border-color: var(--ink);
+
+    &:hover {
+      color: #FFFFFF;
+      background: var(--ink-hover);
+      border-color: var(--ink-hover);
+    }
+  }
+
+  // What can't be undone, once it's been asked, e.g. Remove
+  &.danger {
+    color: #FFFFFF;
+    background: var(--accent-text);
+    border-color: var(--accent-text);
+
+    &:hover {
+      color: #FFFFFF;
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+  }
+
+  // Said to be unavailable, e.g. while there's nothing to send or it's being sent, rather than disabled, so it keeps
+  // its focus and screen readers still find it
+  &[aria-disabled='true'], &[aria-disabled='true']:hover, &:disabled, &:disabled:hover {
+    color: var(--muted);
+    background: var(--hover);
+    border-color: var(--hairline);
+    cursor: default;
+  }
+}
+
+// A text field or a select, as tall as a button beside it; small in a list's filters, where a button would be
+.input {
+  min-width: 0;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 0 10px;
+  font: inherit;
+  font-size: var(--text-body);
+  color: var(--ink);
+  background: #FFFFFF;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+
+  &:hover {
+    border-color: var(--hairline-strong);
+  }
+
+  &::placeholder {
+    color: var(--muted);
+  }
+
+  // The ring in place of the edge, so the field doesn't grow
+  &:focus-visible {
+    outline-offset: -1px;
+    border-color: transparent;
+  }
+
+  &[readonly] {
+    color: var(--secondary);
+    background: var(--surface);
+  }
+
+  &.small {
+    min-height: 32px;
+    padding: 0 8px;
+    font-size: var(--text-small);
+  }
+}
+
+select.input {
+  cursor: pointer;
+}
+
+// A button that reads as a link among words, in the accent: Show all, Read all of it, Rename, Try again
+.text-button {
+  padding: 0;
+  font-size: var(--text-small);
+  line-height: 20px;
+  font-weight: 500;
+  color: var(--accent-text);
+  background: none;
+  border: 0;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 }
 
@@ -104,7 +249,7 @@ mark {
   justify-content: center;
   width: var(--icon-link);
   height: var(--icon-link);
-  border-radius: 8px;
+  border-radius: var(--radius);
 
   &:hover {
     background: var(--hover);

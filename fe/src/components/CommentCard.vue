@@ -11,12 +11,17 @@ import { personPath } from '@/people'
 
 // A comment in a discussion: who wrote it, when and how, and what. Its author edits it in place, and deletes it once
 // they've said so here, rather than in a dialog.
-const props = defineProps<{ comment: Comment }>()
+const props = defineProps<{
+  comment: Comment
+  // With Fold, back to a line, e.g. in an episode's side panel (ActivityPanel)
+  foldable?: boolean
+}>()
 
 const emit = defineEmits<{
   // As MetaOS answered, which the discussion shows until the page has it too
   edited: [comment: Comment]
   deleted: [id: string]
+  fold: []
 }>()
 
 const id = useId()
@@ -116,9 +121,12 @@ async function remove() {
           <RouterLink class="permalink" :to="{ hash: `#${anchor}` }" :aria-current="linked ? 'location' : undefined">commented <time :datetime="comment.createdAt" :title="fullDateTime(comment.createdAt)">{{ formatDate(comment.createdAt) }}</time></RouterLink>
           <span v-if="via" class="via" :title="`Written through MCP, with the ${comment.tool} tool`">{{ via }}</span>
           <time v-if="comment.editedAt" class="edited" :datetime="comment.editedAt" :title="`Edited ${fullDateTime(comment.editedAt)}`">edited</time>
-          <span v-if="comment.mine && !confirming" class="actions">
-            <button ref="editButton" type="button" @click="edit">Edit</button>
-            <button ref="deleteButton" type="button" @click="askToDelete">Delete</button>
+          <span v-if="(comment.mine || foldable) && !confirming" class="actions">
+            <template v-if="comment.mine">
+              <button ref="editButton" type="button" @click="edit">Edit</button>
+              <button ref="deleteButton" type="button" @click="askToDelete">Delete</button>
+            </template>
+            <button v-if="foldable" type="button" @click="emit('fold')">Fold</button>
           </span>
         </header>
 
@@ -171,7 +179,7 @@ async function remove() {
   overflow: hidden;
   background: #FFFFFF;
   border: 1px solid var(--hairline);
-  border-radius: 8px;
+  border-radius: var(--radius);
 }
 
 .head {
@@ -180,10 +188,10 @@ async function remove() {
   align-items: center;
   gap: 2px 8px;
   padding: 6px 8px 6px 14px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--muted);
-  background: #FAFAFA;
+  background: var(--surface);
   border-bottom: 1px solid var(--hairline);
 }
 
@@ -196,12 +204,12 @@ async function remove() {
 .via {
   padding: 0 7px;
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: var(--text-micro);
   line-height: 18px;
   color: var(--secondary);
   background: #FFFFFF;
   border: 1px solid var(--hairline);
-  border-radius: 9px;
+  border-radius: var(--radius);
 }
 
 // Its title says when
@@ -219,12 +227,12 @@ async function remove() {
   button {
     min-height: var(--icon-link);
     padding: 0 8px;
-    font-size: 13px;
+    font-size: var(--text-small);
     line-height: 20px;
     color: var(--muted);
     background: none;
     border: 0;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
 
     &:hover {
@@ -252,7 +260,7 @@ async function remove() {
   justify-content: flex-end;
   gap: 8px 16px;
   padding: 8px 14px;
-  background: #FAFAFA;
+  background: var(--surface);
   border-top: 1px solid var(--rule);
 
   .question {
@@ -288,7 +296,7 @@ async function remove() {
 
 .error {
   margin-top: 8px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--accent-text);
 }
@@ -296,11 +304,6 @@ async function remove() {
 // Beside the buttons when editing, which have their own space
 .main > .editor .error {
   margin-top: 0;
-}
-
-a:focus-visible, button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
 }
 
 @media (max-width: 640px) {

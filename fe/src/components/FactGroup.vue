@@ -32,7 +32,7 @@ h2 {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--text-caption);
   line-height: 16px;
   font-weight: 600;
   color: var(--muted);

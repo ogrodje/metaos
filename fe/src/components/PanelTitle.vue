@@ -99,7 +99,7 @@ function toTop() {
 
 .code {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--text-caption);
   line-height: 16px;
   color: var(--muted);
 }
@@ -108,7 +108,7 @@ function toTop() {
 .name {
   display: -webkit-box;
   overflow: hidden;
-  font-size: 13.5px;
+  font-size: var(--text-small);
   line-height: 19px;
   font-weight: 600;
   -webkit-box-orient: vertical;

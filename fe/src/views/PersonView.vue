@@ -188,90 +188,94 @@ const hasLinks = computed(() => (person.value ? socialLinks(person.value).length
       </template>
     </NotFound>
 
-    <template v-else>
-      <header class="person">
-        <PersonAvatar :image="person.avatar" :name="person.name" :size="96"/>
-        <div class="title">
-          <p class="kicker">{{ person.episodes.length ? rolesOf(person) : 'Person' }}</p>
-          <h1>{{ person.name }}</h1>
-          <p v-if="person.bio" class="subtitle">{{ person.bio }}</p>
-        </div>
-      </header>
-
-      <div class="workspace">
-        <FactPanel :label="`About ${person.name}`">
-          <FactGroup v-if="roleCounts.length || person.recommended.length" title="On episodes" :count="person.episodes.length">
-            <!-- Each also shows only those -->
-            <div class="roles" role="group" aria-label="Show their episodes as">
-              <button v-for="{ role: r, count } in roleCounts" :key="r" type="button" class="role" :aria-pressed="role === r" @click="pick(r)">
-                <b>{{ count }}</b><span>as {{ roleName(r) }}</span>
-              </button>
-              <a v-if="person.recommended.length" class="role" href="#recommended">
-                <b>{{ person.recommended.length }}</b><span>recommended</span>
-              </a>
-            </div>
-          </FactGroup>
-          <FactGroup v-if="hasLinks || firstOn">
-            <dl>
-              <Fact v-if="hasLinks" label="Online"><span class="icons"><SocialLinks :person="person"/></span></Fact>
-              <Fact v-if="person.homepageUrl" label="Website">
-                <a :href="person.homepageUrl">{{ person.homepageUrl.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') }}</a>
-              </Fact>
-              <Fact v-if="firstOn" label="First on">
-                <RouterLink :to="episodePath(firstOn)">{{ firstOn.code ?? firstOn.title }}</RouterLink> <span class="aside" lang="sl">{{ firstOn.title }}</span>
-              </Fact>
-            </dl>
-          </FactGroup>
-        </FactPanel>
-
-        <div class="main">
-          <p v-if="!person.episodes.length && !person.recommended.length" class="note">Not on any episode yet.</p>
-
-          <section v-if="comingUp.length" aria-labelledby="coming-up">
-            <div class="heading">
-              <h2 id="coming-up">Coming up</h2>
-              <span class="count">{{ comingUp.length }}</span>
-            </div>
-            <ul class="episodes">
-              <EpisodeRow v-for="on in comingUp" :key="on.episode.id" :episode="on.episode" :role="on.as"/>
-            </ul>
-          </section>
-
-          <section v-if="released.length" aria-labelledby="released">
-            <div class="heading">
-              <h2 id="released">Released</h2>
-              <span class="count">{{ released.length }}</span>
-              <ViewToggle v-model="view" class="view"/>
-            </div>
-            <ul v-if="view === 'grid'" class="episode-cards">
-              <EpisodeCard v-for="on in released" :key="on.episode.id" :episode="on.episode" :role="`as ${on.as}`"/>
-            </ul>
-            <template v-for="group in bySeason" v-else :key="group.title">
-              <h3 class="subheading">{{ group.title }} <span class="count">{{ group.episodes.length }}</span></h3>
-              <ul class="episodes">
-                <EpisodeRow v-for="on in group.episodes" :key="on.episode.id" :episode="on.episode" :role="on.as" thumbnail/>
-              </ul>
-            </template>
-          </section>
-
-          <section v-if="person.recommended.length" id="recommended" aria-labelledby="recommended-heading">
-            <div class="heading">
-              <h2 id="recommended-heading">Recommended</h2>
-              <span class="count">{{ person.recommended.length }}</span>
-              <button v-if="person.recommended.length > RECOMMENDED" type="button" class="more" :aria-expanded="allRecommended"
-                      @click="allRecommended = !allRecommended">
-                {{ allRecommended ? 'Show the first few' : `Show all ${person.recommended.length}` }}
-              </button>
-            </div>
-            <ul class="episodes">
-              <EpisodeRow v-for="episode in recommended" :key="episode.id" :episode="episode"/>
-            </ul>
-          </section>
-
-          <PersonSignIns :person="person" :accounts="person.accounts" :me="me" :can-link="canLinkAccounts" @changed="reloadQuietly"/>
-        </div>
+    <!-- Who they are, as an episode's page has what it is; at the right their episodes as what, and where they're online;
+         under them their episodes -->
+    <div v-else class="workspace">
+      <div class="lead">
+        <header class="person">
+          <PersonAvatar :image="person.avatar" :name="person.name" :size="96"/>
+          <div class="title">
+            <h1>{{ person.name }}</h1>
+            <p v-if="person.episodes.length" class="meta">{{ rolesOf(person) }}</p>
+            <p v-if="person.bio" class="subtitle">{{ person.bio }}</p>
+          </div>
+        </header>
       </div>
-    </template>
+
+      <FactPanel :label="`About ${person.name}`" tall>
+        <FactGroup v-if="roleCounts.length || person.recommended.length" title="On episodes" :count="person.episodes.length">
+          <!-- Each also shows only those -->
+          <ul class="roles" aria-label="Show their episodes as">
+            <li v-for="{ role: r, count } in roleCounts" :key="r">
+              <button type="button" class="role" :aria-pressed="role === r" @click="pick(r)">
+                <span class="name">{{ roleName(r) }}</span><b>{{ count }}</b>
+              </button>
+            </li>
+            <li v-if="person.recommended.length">
+              <a class="role" href="#recommended"><span class="name">recommended</span><b>{{ person.recommended.length }}</b></a>
+            </li>
+          </ul>
+        </FactGroup>
+        <FactGroup v-if="hasLinks || firstOn">
+          <dl>
+            <Fact v-if="hasLinks" label="Online"><span class="icons"><SocialLinks :person="person"/></span></Fact>
+            <Fact v-if="person.homepageUrl" label="Website">
+              <a :href="person.homepageUrl">{{ person.homepageUrl.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') }}</a>
+            </Fact>
+            <Fact v-if="firstOn" label="First on">
+              <RouterLink :to="episodePath(firstOn)">{{ firstOn.code ?? firstOn.title }}</RouterLink> <span class="aside" lang="sl">{{ firstOn.title }}</span>
+            </Fact>
+          </dl>
+        </FactGroup>
+      </FactPanel>
+
+      <div class="main">
+        <p v-if="!person.episodes.length && !person.recommended.length" class="note">Not on any episode yet.</p>
+
+        <section v-if="comingUp.length" aria-labelledby="coming-up">
+          <div class="heading">
+            <h2 id="coming-up">Coming up</h2>
+            <span class="count">{{ comingUp.length }}</span>
+          </div>
+          <ul class="episodes">
+            <EpisodeRow v-for="on in comingUp" :key="on.episode.id" :episode="on.episode" :role="on.as"/>
+          </ul>
+        </section>
+
+        <section v-if="released.length" aria-labelledby="released">
+          <div class="heading">
+            <h2 id="released">Released</h2>
+            <span class="count">{{ released.length }}</span>
+            <ViewToggle v-model="view" class="view"/>
+          </div>
+          <ul v-if="view === 'grid'" class="episode-cards">
+            <EpisodeCard v-for="on in released" :key="on.episode.id" :episode="on.episode" :role="`as ${on.as}`"/>
+          </ul>
+          <template v-for="group in bySeason" v-else :key="group.title">
+            <h3 class="subheading">{{ group.title }} <span class="count">{{ group.episodes.length }}</span></h3>
+            <ul class="episodes">
+              <EpisodeRow v-for="on in group.episodes" :key="on.episode.id" :episode="on.episode" :role="on.as" thumbnail/>
+            </ul>
+          </template>
+        </section>
+
+        <section v-if="person.recommended.length" id="recommended" aria-labelledby="recommended-heading">
+          <div class="heading">
+            <h2 id="recommended-heading">Recommended</h2>
+            <span class="count">{{ person.recommended.length }}</span>
+            <button v-if="person.recommended.length > RECOMMENDED" type="button" class="text-button more" :aria-expanded="allRecommended"
+                    @click="allRecommended = !allRecommended">
+              {{ allRecommended ? 'Show the first few' : `Show all ${person.recommended.length}` }}
+            </button>
+          </div>
+          <ul class="episodes">
+            <EpisodeRow v-for="episode in recommended" :key="episode.id" :episode="episode"/>
+          </ul>
+        </section>
+
+        <PersonSignIns :person="person" :accounts="person.accounts" :me="me" :can-link="canLinkAccounts" @changed="reloadQuietly"/>
+      </div>
+    </div>
   </main>
 </template>
 
@@ -285,42 +289,56 @@ const hasLinks = computed(() => (person.value ? socialLinks(person.value).length
   gap: 20px;
 }
 
-// How many episodes as what, each a button that shows only those
+// How many episodes as what, a line each, as Home's stages are; each a button that shows only those, pressed while it
+// does
 .roles {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
+  padding: 0;
+  list-style: none;
+
+  li + li {
+    border-top: 1px solid var(--rule);
+  }
 }
 
 .role {
-  display: grid;
-  padding: 6px 10px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 6px 8px;
+  margin: 0 -8px;
+  box-sizing: content-box;
+  font-size: var(--text-small);
+  line-height: 20px;
   text-align: left;
-  background: #FFFFFF;
-  border: 1px solid var(--hairline);
-  border-radius: 8px;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 
+  .name::first-letter {
+    text-transform: uppercase;
+  }
+
+  .name {
+    display: inline-block;
+  }
+
   b {
-    font-size: 17px;
-    line-height: 24px;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
 
-  span {
-    font-size: 11.5px;
-    line-height: 16px;
-    color: var(--muted);
-  }
-
   &:hover {
-    border-color: #A3A3A3;
+    color: var(--ink);
+    background: var(--hover);
   }
 
   &[aria-pressed="true"] {
-    border-color: var(--ink);
-    box-shadow: inset 0 0 0 1px var(--ink);
+    color: #FFFFFF;
+    background: var(--ink);
   }
 }
 

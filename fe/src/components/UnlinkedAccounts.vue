@@ -165,14 +165,14 @@ h2:focus {
 
 // The signed-in user's own
 .you {
-  font-size: 11.5px;
+  font-size: var(--text-micro);
   line-height: 18px;
   font-weight: 600;
   color: var(--accent-text);
 }
 
 .how {
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--muted);
 }
@@ -182,30 +182,30 @@ h2:focus {
   flex: none;
   min-height: var(--icon-link);
   padding: 0 12px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   font-weight: 500;
   color: var(--ink);
   background: #FFFFFF;
   border: 1px solid var(--hairline);
-  border-radius: 6.4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 
   &:hover {
-    border-color: #A3A3A3;
+    border-color: var(--hairline-strong);
   }
 }
 
 .error {
   margin-top: 8px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--accent-text);
 }
 
 .done {
   margin-top: 12px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--secondary);
 
@@ -221,11 +221,6 @@ h2:focus {
       text-decoration: underline;
     }
   }
-}
-
-button:focus-visible, a:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
 }
 
 </style>

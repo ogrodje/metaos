@@ -31,7 +31,7 @@ const size = computed(() => [
       <span v-if="long" class="note size">{{ size }}</span>
     </div>
     <MarkdownText :id="`${id}-text`" :class="{ folded: long && !open }" :source="source" lang="sl"/>
-    <button v-if="long" type="button" class="fold" :aria-expanded="open" :aria-controls="`${id}-text`" @click="open = !open">
+    <button v-if="long" type="button" class="text-button fold" :aria-expanded="open" :aria-controls="`${id}-text`" @click="open = !open">
       {{ open ? 'Fold it' : 'Read all of it' }}
     </button>
   </section>
@@ -53,18 +53,5 @@ const size = computed(() => [
 
 .fold {
   margin-top: 8px;
-  padding: 0;
-  font-size: 13px;
-  line-height: 20px;
-  font-weight: 500;
-  color: var(--accent-text);
-  background: none;
-  border: 0;
-  cursor: pointer;
-
-  &:hover {
-    text-decoration: underline;
-    text-underline-offset: 3px;
-  }
 }
 </style>

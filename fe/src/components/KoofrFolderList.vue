@@ -42,7 +42,7 @@ defineProps<{ folders: KoofrFolder[] }>()
 
   .path {
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: var(--text-small);
     color: var(--secondary);
   }
 }

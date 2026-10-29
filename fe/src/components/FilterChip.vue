@@ -25,7 +25,7 @@ defineEmits<{ clear: [] }>()
   align-items: center;
   gap: 6px;
   padding: 3px 10px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: #FFFFFF;
   white-space: nowrap;
@@ -44,7 +44,7 @@ defineEmits<{ clear: [] }>()
 }
 
 .icon {
-  font-size: 11px;
+  font-size: var(--text-micro);
   color: rgba(255, 255, 255, 0.7);
 }
 </style>

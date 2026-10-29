@@ -50,10 +50,10 @@ const episodeLink = computed(() => (t.value.episode ? `/episodes/${t.value.episo
 
 <template>
   <li class="transcription" :class="t.status.toLowerCase()">
+    <!-- Its episode's code in a column of its own, as the Episodes page has it -->
+    <span class="code" :aria-hidden="!t.episode?.code">{{ t.episode?.code ?? '—' }}</span>
     <div class="what">
-      <RouterLink v-if="episodeLink && t.episode" :to="episodeLink" class="episode">
-        <span v-if="t.episode.code" class="code">{{ t.episode.code }}</span> {{ t.episode.title }}
-      </RouterLink>
+      <RouterLink v-if="episodeLink && t.episode" :to="episodeLink" class="episode" lang="sl">{{ t.episode.title }}</RouterLink>
       <span v-else class="episode gone">A deleted episode</span>
       <span class="file">{{ t.mediaName }}</span>
     </div>
@@ -98,14 +98,16 @@ const episodeLink = computed(() => (t.value.episode ? `/episodes/${t.value.episo
 </template>
 
 <style scoped lang="scss">
-// Four columns at the frame's width, the same in every row: what, how, when and what may be done (as wide as Read and
-// Remove); stacked on phones
+// Columns at the frame's width, the same in every row: its episode's code, what, how, when and what may be done (as wide
+// as Read and Remove); on phones the code beside the rest, stacked. The code's column is as wide as the Episodes page's
+// ($code-width in _episode.scss)
 .transcription {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 1.2fr) 176px;
-  gap: 4px 16px;
+  grid-template-columns: 72px minmax(0, 2fr) minmax(0, 2fr) minmax(0, 1.2fr) 176px;
+  column-gap: 16px;
+  row-gap: 4px;
   align-items: start;
-  padding: 12px 0;
+  padding: 11px 0;
   border-top: 1px solid var(--rule);
 }
 
@@ -114,12 +116,12 @@ const episodeLink = computed(() => (t.value.episode ? `/episodes/${t.value.episo
   flex-direction: column;
   gap: 2px;
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
 }
 
 .episode {
-  font-size: 14px;
+  font-size: var(--text-body);
   font-weight: 500;
   color: var(--ink);
 
@@ -133,8 +135,10 @@ const episodeLink = computed(() => (t.value.episode ? `/episodes/${t.value.episo
 }
 
 .code {
-  font-variant-numeric: tabular-nums;
-  color: var(--secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-small);
+  line-height: 20px;
+  color: var(--muted);
 }
 
 .file, .provider, .when, .summary, .took {
@@ -164,40 +168,18 @@ const episodeLink = computed(() => (t.value.episode ? `/episodes/${t.value.episo
 }
 
 .ask {
-  font-size: 13px;
+  font-size: var(--text-small);
   color: var(--secondary);
-}
-
-.button.small {
-  min-height: 32px;
-  padding: 0 10px;
-}
-
-.button.quiet {
-  color: var(--secondary);
-}
-
-.button.danger {
-  color: #FFFFFF;
-  background: var(--accent-text);
-  border-color: var(--accent-text);
-
-  &:hover {
-    color: #FFFFFF;
-    background: #A3244A;
-    border-color: #A3244A;
-  }
 }
 
 .button[aria-disabled='true'] {
-  color: var(--muted);
   cursor: progress;
 }
 
 .error {
   grid-column: 1 / -1;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-small);
   color: var(--accent-text);
 }
 
@@ -208,7 +190,11 @@ const episodeLink = computed(() => (t.value.episode ? `/episodes/${t.value.episo
 
 @media (max-width: 640px) {
   .transcription {
-    grid-template-columns: 1fr;
+    grid-template-columns: 60px minmax(0, 1fr);
+  }
+
+  .what, .how, .when, .actions {
+    grid-column: 2;
   }
 
   .actions {

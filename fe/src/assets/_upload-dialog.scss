@@ -7,10 +7,10 @@ kbd {
   min-width: 20px;
   padding: 0 5px;
   border: 1px solid var(--hairline);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: var(--hover);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--text-micro);
   line-height: 18px;
   color: var(--muted);
   text-align: center;
@@ -22,10 +22,10 @@ kbd {
   margin: 40px auto auto;
   padding: 0;
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   background: #FFFFFF;
   color: var(--ink);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, .08), 0 24px 60px -12px rgba(0, 0, 0, .35);
+  box-shadow: var(--shadow-dialog);
   overflow: hidden;
 
   &::backdrop {
@@ -42,7 +42,7 @@ kbd {
   &.dragging {
     outline: 2px dashed var(--accent);
     outline-offset: -6px;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
   }
 }
 
@@ -60,7 +60,7 @@ kbd {
   }
 
   h2 {
-    font-size: 16px;
+    font-size: var(--text-lead);
     line-height: 24px;
     font-weight: 600;
   }
@@ -68,7 +68,7 @@ kbd {
   .sub {
     display: flex;
     gap: 8px;
-    font-size: 13px;
+    font-size: var(--text-small);
     line-height: 20px;
     color: var(--muted);
 
@@ -88,13 +88,13 @@ kbd {
     align-items: center;
     padding: 6px;
     border: 0;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     background: none;
     cursor: pointer;
 
     .cancel {
       display: none;
-      font-size: 15px;
+      font-size: var(--text-lead);
       line-height: 20px;
       font-weight: 500;
       color: var(--accent-text);
@@ -117,9 +117,9 @@ kbd {
   margin-bottom: 8px;
   padding: 20px;
   text-align: center;
-  background: #FAFAFA;
-  border: 1.5px dashed #CFCFCF;
-  border-radius: 10px;
+  background: var(--surface);
+  border: 1.5px dashed var(--faint);
+  border-radius: var(--radius);
 
   .big-icon {
     width: 22px;
@@ -128,13 +128,13 @@ kbd {
   }
 
   .big {
-    font-size: 14px;
+    font-size: var(--text-body);
     line-height: 20px;
     font-weight: 500;
   }
 
   .small {
-    font-size: 12.5px;
+    font-size: var(--text-caption);
     line-height: 18px;
     color: var(--muted);
   }
@@ -146,7 +146,7 @@ kbd {
 
 .mono {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--text-caption);
 }
 
 .dropbar {
@@ -155,11 +155,11 @@ kbd {
   gap: 10px;
   margin-bottom: 8px;
   padding: 6px 6px 6px 12px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--secondary);
   border: 1px solid var(--hairline);
-  border-radius: 8px;
+  border-radius: var(--radius);
 
   > svg {
     color: var(--muted);
@@ -177,14 +177,14 @@ kbd {
 }
 
 .note {
-  font-size: 12.5px;
+  font-size: var(--text-caption);
   line-height: 18px;
   color: var(--muted);
 }
 
 .group {
   padding: 14px 0 2px;
-  font-size: 12px;
+  font-size: var(--text-caption);
   line-height: 16px;
   font-weight: 600;
   color: var(--muted);
@@ -221,14 +221,14 @@ kbd {
   gap: 8px;
 
   b {
-    font-size: 13.5px;
+    font-size: var(--text-body);
     line-height: 20px;
     font-weight: 600;
   }
 
   .file-name {
     font-family: var(--font-mono);
-    font-size: 12.5px;
+    font-size: var(--text-caption);
     font-weight: 500;
     overflow-wrap: anywhere;
   }
@@ -236,7 +236,7 @@ kbd {
 
 .size {
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: var(--text-micro);
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -246,20 +246,20 @@ kbd {
   flex-wrap: wrap;
   align-items: center;
   gap: 2px 8px;
-  font-size: 12.5px;
+  font-size: var(--text-caption);
   line-height: 18px;
   color: var(--muted);
 }
 
 .file {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--text-caption);
   color: var(--secondary);
   overflow-wrap: anywhere;
 }
 
 .state .file {
-  font-size: 11.5px;
+  font-size: var(--text-micro);
   color: var(--muted);
 }
 
@@ -306,7 +306,7 @@ kbd {
   }
 
   &.ok {
-    color: #1F7A4D;
+    color: var(--success);
   }
 }
 
@@ -353,46 +353,11 @@ select {
   min-height: 32px;
   padding: 0 8px;
   font: inherit;
-  font-size: 12.5px;
+  font-size: var(--text-caption);
   color: var(--ink);
   background: #FFFFFF;
   border: 1px solid var(--hairline);
-  border-radius: 6.4px;
-}
-
-.button.small {
-  min-height: 32px;
-  padding: 0 10px;
-  font-size: 12.5px;
-}
-
-.button.quiet {
-  color: var(--secondary);
-}
-
-.button:disabled {
-  color: var(--muted);
-  cursor: default;
-}
-
-// The dialog's one action, filled; said to be unavailable while there's nothing to send
-.button.primary {
-  color: #FFFFFF;
-  background: var(--ink);
-  border-color: var(--ink);
-
-  &:hover {
-    color: #FFFFFF;
-    background: #2B2B2B;
-    border-color: #2B2B2B;
-  }
-
-  &[aria-disabled='true'] {
-    color: var(--muted);
-    background: var(--hover);
-    border-color: var(--hairline);
-    cursor: default;
-  }
+  border-radius: var(--radius-sm);
 }
 
 .iconbutton {
@@ -403,7 +368,7 @@ select {
   color: var(--muted);
   background: none;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius);
   cursor: pointer;
 
   &:hover:not(:disabled) {
@@ -442,7 +407,7 @@ select {
   flex: none;
 
   .summary {
-    font-size: 13px;
+    font-size: var(--text-small);
     line-height: 20px;
     color: var(--secondary);
   }
@@ -456,14 +421,14 @@ select {
   display: grid;
   gap: 12px;
   padding: 16px 20px;
-  background: #FAFAFA;
+  background: var(--surface);
   border-top: 1px solid var(--hairline);
   overflow-y: auto;
   max-height: 60dvh;
   flex: none;
 
   .question {
-    font-size: 14px;
+    font-size: var(--text-body);
     line-height: 20px;
     font-weight: 600;
     outline: 0;
@@ -478,7 +443,7 @@ select {
   padding: 12px;
   background: #FFFFFF;
   border: 1px solid var(--hairline);
-  border-radius: 10px;
+  border-radius: var(--radius);
   cursor: pointer;
 
   input {
@@ -489,7 +454,7 @@ select {
   }
 
   b {
-    font-size: 13.5px;
+    font-size: var(--text-body);
     font-weight: 600;
   }
 

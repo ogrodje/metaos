@@ -227,7 +227,7 @@ h2:focus {
 .day {
   position: relative;
   padding: 8px 0 0 44px;
-  font-size: 12px;
+  font-size: var(--text-caption);
   line-height: 16px;
   font-weight: 600;
   color: var(--muted);
@@ -256,7 +256,7 @@ h2:focus {
   height: 9px;
   border-radius: 50%;
   background: #FFFFFF;
-  border: 1px solid #A3A3A3;
+  border: 1px solid var(--hairline-strong);
 
   // Where it all began
   &.first {
@@ -270,7 +270,7 @@ h2:focus {
 }
 
 .headline {
-  font-size: 14px;
+  font-size: var(--text-body);
   line-height: 22px;
   font-weight: 500;
 }
@@ -280,7 +280,7 @@ h2:focus {
   display: grid;
   gap: 2px;
   margin-top: 2px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--secondary);
 
@@ -306,7 +306,7 @@ h2:focus {
 
 .meta {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--text-caption);
   line-height: 18px;
   color: var(--muted);
   overflow-wrap: anywhere;
@@ -330,7 +330,7 @@ h2:focus {
 }
 
 .error {
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--accent-text);
 }

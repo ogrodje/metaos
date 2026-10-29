@@ -23,12 +23,12 @@ const DESCRIPTION_LENGTH = 200
 // Links' text, without their addresses, and no emphasis
 const markdown = new MarkdownIt({ html: false })
 
-/** [source], Markdown, as plain text: its words, e.g. a summary's for a description */
+/** [source], Markdown, as plain text: its words, e.g. a summary's for a description; its paragraphs, headings and list items apart */
 export function plainText(source: string) {
   return markdown.parse(source, {})
-    .flatMap((token) => token.children ?? [])
-    .map((token) => (token.type === 'softbreak' || token.type === 'hardbreak' ? ' ' : token.content))
-    .join('')
+    .flatMap((token) => (token.children ? [token.children] : []))
+    .map((inline) => inline.map((token) => (token.type === 'softbreak' || token.type === 'hardbreak' ? ' ' : token.content)).join(''))
+    .join(' ')
     .replace(/\s+/g, ' ')
     .trim()
 }

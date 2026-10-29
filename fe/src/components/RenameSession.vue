@@ -44,7 +44,7 @@ async function save() {
   <form class="rename" @submit.prevent="save" @keydown.esc.prevent="emit('close')">
     <label for="session-name" class="label">Name</label>
     <div class="row">
-      <input id="session-name" ref="input" v-model="draft" type="text" lang="sl" autocomplete="off" :readonly="busy"
+      <input id="session-name" ref="input" v-model="draft" class="input" type="text" lang="sl" autocomplete="off" :readonly="busy"
              :placeholder="session.location ?? 'e.g. AWS Community Day Adria 2026'" aria-describedby="session-name-hint">
       <button type="submit" class="button primary" :aria-disabled="busy || undefined">{{ busy ? 'Saving…' : 'Save' }}</button>
       <button type="button" class="button" :disabled="busy" @click="emit('close')">Cancel</button>
@@ -65,7 +65,7 @@ async function save() {
 }
 
 .label {
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   font-weight: 500;
   color: var(--secondary);
@@ -78,69 +78,27 @@ async function save() {
 }
 
 // As big as the heading it stands in for
-input {
+// The name being written, in the heading's weight
+.input {
   flex: 1 1 280px;
-  min-width: 0;
-  min-height: 44px;
   padding: 0 12px;
-  font: inherit;
-  font-size: 20px;
+  font-size: var(--text-section);
   font-weight: 600;
-  color: var(--ink);
-  background: #FFFFFF;
-  border: 1px solid var(--hairline);
-  border-radius: 6.4px;
 
   &::placeholder {
     font-weight: 400;
-    color: #9A9A9A;
   }
-
-  &:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 1px;
-  }
-}
-
-// Its one action, filled, as a comment's Comment is
-.button.primary {
-  color: #FFFFFF;
-  background: var(--ink);
-  border-color: var(--ink);
-
-  &:hover {
-    color: #FFFFFF;
-    background: #2B2B2B;
-    border-color: #2B2B2B;
-  }
-
-  &[aria-disabled='true'] {
-    color: var(--muted);
-    background: var(--hover);
-    border-color: var(--hairline);
-    cursor: default;
-  }
-}
-
-.button:disabled {
-  color: var(--muted);
-  cursor: default;
 }
 
 .hint {
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--muted);
 }
 
 .error {
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--accent-text);
-}
-
-button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
 }
 </style>

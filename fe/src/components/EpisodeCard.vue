@@ -71,7 +71,7 @@ const guestNames = computed(() => guests(props.episode).join(', '))
   place-items: center;
   height: 100%;
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: var(--text-small);
   color: var(--muted);
 }
 
@@ -86,7 +86,7 @@ const guestNames = computed(() => guests(props.episode).join(', '))
   flex-wrap: wrap;
   align-items: center;
   gap: 2px 8px;
-  font-size: 12.5px;
+  font-size: var(--text-caption);
   line-height: 18px;
   color: var(--muted);
 }
@@ -96,14 +96,14 @@ const guestNames = computed(() => guests(props.episode).join(', '))
 }
 
 .title {
-  font-size: 15px;
+  font-size: var(--text-body);
   line-height: 21px;
   font-weight: 600;
   letter-spacing: -0.005em;
 }
 
 .who {
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 19px;
   color: var(--secondary);
 }
@@ -119,7 +119,7 @@ const guestNames = computed(() => guests(props.episode).join(', '))
 
 
   .title {
-    font-size: 14px;
+    font-size: var(--text-body);
     line-height: 20px;
   }
 }

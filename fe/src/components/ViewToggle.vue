@@ -25,14 +25,14 @@ const view = defineModel<ListView>({ required: true })
   display: inline-flex;
   overflow: hidden;
   border: 1px solid var(--hairline);
-  border-radius: 6.4px;
+  border-radius: var(--radius-sm);
 
   button {
     display: inline-grid;
     place-items: center;
     width: var(--icon-link);
     height: var(--icon-link);
-    font-size: 13px;
+    font-size: var(--text-small);
     color: var(--muted);
     background: #FFFFFF;
     border: 0;

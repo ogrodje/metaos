@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { recentActivity } from '@/activity'
 import { type Change, type ChangeSubject, DATE_LOCALE, episodePath, sessionPath, TIME_ZONE } from '@/episodes'
@@ -10,6 +10,11 @@ import { personPath } from '@/people'
 const props = defineProps<{ changes: Change[] }>()
 
 const entries = computed(() => recentActivity(props.changes))
+
+// The latest few, about as long as the column beside them, until the rest are asked for
+const FIRST = 6
+const all = ref(false)
+const shown = computed(() => (all.value ? entries.value : entries.value.slice(0, FIRST)))
 
 function pathOf(subject: ChangeSubject) {
   if (subject.kind === 'EPISODE') return episodePath(subject)
@@ -29,8 +34,8 @@ function when(at: string) {
 
 <template>
   <p v-if="!entries.length" class="note">Nothing yet.</p>
-  <ol v-else class="recent">
-    <li v-for="entry in entries" :key="entry.key">
+  <ol v-else id="recent-entries" class="recent">
+    <li v-for="entry in shown" :key="entry.key">
       <!-- What, then what it was to, each leading to its page -->
       <p class="what">{{ entry.headline }}</p>
       <p v-if="entry.about.length" class="about">
@@ -46,6 +51,10 @@ function when(at: string) {
       </p>
     </li>
   </ol>
+  <button v-if="entries.length > FIRST" type="button" class="text-button fold" aria-controls="recent-entries"
+          :aria-expanded="all" @click="all = !all">
+    {{ all ? 'Fold' : `Show all ${entries.length}` }}
+  </button>
 </template>
 
 <style scoped lang="scss">
@@ -60,13 +69,17 @@ function when(at: string) {
   }
 }
 
+.fold {
+  margin-top: 4px;
+}
+
 .what {
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
 }
 
 .about {
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   overflow-wrap: anywhere;
 
@@ -91,13 +104,13 @@ function when(at: string) {
 .code {
   margin-right: 4px;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--text-caption);
   color: var(--muted);
 }
 
 .who {
   margin-top: 2px;
-  font-size: 12px;
+  font-size: var(--text-caption);
   line-height: 18px;
   color: var(--muted);
 }

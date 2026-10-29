@@ -11,7 +11,7 @@ const PAGE = 8
 // A section of photos, a page at a time, with a link that opens [folder] in [service] by its title. Artwork is shown
 // whole, as it comes in all shapes (covers, thumbnails, stories), and by name, as its file names say what each is for,
 // and with what each is used as, e.g. Thumbnail A, when [uses] says so. Bare, it's without its heading, e.g. in a tab of
-// MediaStrip, which names it.
+// EpisodePictures, which names it.
 const props = defineProps<{
   title: string
   photos: (KoofrPhoto | DropboxPicture)[]
@@ -127,12 +127,12 @@ onBeforeUnmount(release)
   display: inline-flex;
   align-items: baseline;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--secondary);
 
   svg {
-    font-size: 11px;
+    font-size: var(--text-micro);
   }
 }
 
@@ -155,15 +155,15 @@ onBeforeUnmount(release)
     justify-content: center;
     width: var(--icon-link);
     height: var(--icon-link);
-    font-size: 13px;
+    font-size: var(--text-small);
     color: var(--ink);
     background: #FFFFFF;
     border: 1px solid var(--hairline);
-    border-radius: 8px;
+    border-radius: var(--radius);
     cursor: pointer;
 
     &:hover:not(:disabled) {
-      border-color: #A3A3A3;
+      border-color: var(--hairline-strong);
     }
 
     &:disabled {
@@ -221,7 +221,7 @@ onBeforeUnmount(release)
     display: block;
     margin-top: 6px;
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: var(--text-caption);
     line-height: 16px;
     color: var(--secondary);
     overflow-wrap: anywhere;
@@ -234,7 +234,7 @@ onBeforeUnmount(release)
   // What it's used as: a thumbnail, the cover; or not used, e.g. a thumbnail not set as B or C yet
   .use {
     display: block;
-    font-size: 12px;
+    font-size: var(--text-caption);
     line-height: 16px;
     font-weight: 500;
     color: var(--ink);

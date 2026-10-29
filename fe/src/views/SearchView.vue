@@ -231,11 +231,11 @@ useLiveRefresh(() => search(true))
   height: 48px;
   padding: 0 16px;
   border: 1px solid var(--hairline);
-  border-radius: 10px;
+  border-radius: var(--radius);
   color: var(--muted);
 
   &:focus-within {
-    border-color: #A3A3A3;
+    border-color: var(--hairline-strong);
   }
 
   input {
@@ -245,7 +245,7 @@ useLiveRefresh(() => search(true))
     outline: 0;
     background: none;
     font: inherit;
-    font-size: 16px;
+    font-size: var(--text-lead);
     line-height: 24px;
     color: var(--ink);
 
@@ -265,7 +265,7 @@ useLiveRefresh(() => search(true))
     padding: 8px 10px;
     border: 0;
     background: none;
-    font-size: 13px;
+    font-size: var(--text-small);
     line-height: 20px;
     color: var(--secondary);
     cursor: pointer;

@@ -63,9 +63,9 @@ async function copy() {
 .code {
   margin-top: 12px;
   overflow: hidden;
-  background: #FAFAFA;
+  background: var(--surface);
   border: 1px solid var(--hairline);
-  border-radius: 8px;
+  border-radius: var(--radius);
 }
 
 // What it is, and the copy button at the top right
@@ -78,7 +78,7 @@ async function copy() {
   border-bottom: 1px solid var(--rule);
 
   .label {
-    font-size: 12px;
+    font-size: var(--text-caption);
     line-height: 18px;
     color: var(--muted);
   }
@@ -96,7 +96,7 @@ async function copy() {
     }
 
     &:focus-visible {
-      outline: 2px solid var(--accent);
+      outline: 2px solid var(--accent-text);
       outline-offset: -2px;
     }
   }
@@ -108,7 +108,7 @@ pre {
   padding: 12px 14px;
   overflow-x: auto;
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 22px;
   color: var(--ink);
   tab-size: 2;

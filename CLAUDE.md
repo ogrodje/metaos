@@ -121,10 +121,11 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   (`set_episode_link`, `setEpisodeLink`): the full episode as video (`PATREON`, `patreonUrl`, the only one there was
   at first) or audio only (`PATREON_AUDIO`), and its bonus as video (`PATREON_BONUS`) or audio only
   (`PATREON_BONUS_AUDIO`). All four are optional and public; `EARLY_ACCESS` needs any one of them. The front-end shows only `patreonUrl` yet.
-- The header ([`App.vue`](fe/src/App.vue)) is two rows: the logo, and at the right Search and you
+- The header ([`App.vue`](fe/src/App.vue)) is one row: the logo, the pages as tabs, and at the right Search and you
   (`UserMenu.vue`: your initials, which open your name, your page, your sign-ins (see Accounts) and Sign out; or
-  Sign in, which asks Discord or Google); under them the pages as tabs, in the order they're used (`pages`), which
-  scroll sideways when they don't fit: Home, Episodes, Ideas (the team's), People and Transcriptions (the team's). A
+  Sign in, which asks Discord or Google); on narrower screens the tabs go to a row of their own under them. The tabs
+  are in the order they're used (`pages`), and scroll sideways when they don't fit: Home, Episodes, Ideas (the team's),
+  People and Transcriptions (the team's). A
   new section, e.g. Partners or Analytics, is another tab there. A tab is
   underlined on its own pages too, Episodes on an episode's. "API and MCP usage" isn't a tab: the footer links to it,
   as do the sign-in prompts. The user menu is a button that shows and hides its links, not an ARIA menu.
@@ -144,13 +145,23 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   each stage (`StageBar.vue`, a line each, which leads to Ideas or to Episodes with only that stage, `?status=`), the
   latest releases and what the team did lately (`RecentActivity.vue`), from `recentChanges`: the audit trail's latest
   changes, as `History.kt` tells them, each with what it's a change to, one person's close together as one entry
-  (`recentActivity` in `activity.ts`), e.g. Created 28 episodes.
-- The list pages (Episodes, Ideas, People) have a `PageHeader` and a `FilterBar` (a box that finds as you type, with
-  `fold`, and `ChipGroup`s, or a `SelectFilter` where there'd be too many chips), and keep their filters and view in
-  the address (`useQueryState`, `fe/src/query.ts`), so a link keeps them and the server renders them. While filtered,
-  the header says how many are shown, e.g. 12 of 74, which screen readers hear; when nothing's left, `NoMatch.vue`
-  says what was looked for, with Clear filters (`useClearQuery`). What they filter and group by is in
-  [`fe/src/lists.ts`](fe/src/lists.ts), with tests, and happens in the browser on what's loaded.
+  (`recentActivity` in `activity.ts`), e.g. Created 28 episodes; the latest six, then Show all.
+- The list pages (Episodes, Ideas, People, Transcriptions) are alike: a `PageHeader` (the name, how many, a line about
+  what's listed, and what else the page does as a button at its end, e.g. Transcribe an episode), a `FilterBar`, then a
+  section a group, its heading with how many (`.heading`), and rows under rules that line up from row to row, as the
+  Episodes page's (`EpisodeRow`: the code in a column of its own, the title, a line about it, dates and links at the
+  right); nothing in boxes. The `FilterBar` is a box that finds as you type, with `fold`, and `ChipGroup`s, or a
+  `SelectFilter` where there'd be too many chips. They keep their filters and view in the address (`useQueryState`,
+  `fe/src/query.ts`), so a link keeps them and the server renders them. While filtered, the header says how many are
+  shown, e.g. 12 of 74, which screen readers hear; when nothing's left, `NoMatch.vue` says what was looked for, with
+  Clear filters (`useClearQuery`). What they filter and group by is in [`fe/src/lists.ts`](fe/src/lists.ts), with tests,
+  and happens in the browser on what's loaded.
+- The look is one design system, written down in [`DESIGN.md`](DESIGN.md) (and `.impeccable/design.json`, for the
+  Impeccable skill): neutral greys, Inter and the logo's pink, as the brand is in the episodes' pictures, not the
+  interface. Its tokens are in [`base.scss`](fe/src/assets/base.scss): the greys, the type scale (`--text-*`, seven
+  sizes), the radii (`--radius-*`) and the shadows of what floats; and its shared classes, `.button` (`.primary`,
+  `.danger`, `.quiet`, `.small`), `.text-button` and `.input`. A component takes its values from them rather than
+  writing its own, and a value they don't have is a new token, with what it's for, and a change to DESIGN.md.
 - Pictures follow one set of rules ([`_pictures.scss`](fe/src/assets/_pictures.scss)): people round (`PersonAvatar`),
   things (episodes' pictures, artwork, photos) rounded, 6 px up to 56 px across and 8 px above, with a hairline edge
   inside; sizes from one scale (24, 32, 40, 56, 72, 96 px, and the grids' widths); a picture that isn't there is the
@@ -159,22 +170,39 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   between pages; running text keeps a measure of its own (`MarkdownText.vue`'s 680 px). The width goes to side panels,
   grids and tables.
 - Episode titles lead to their pages, `/episodes/<code or ID>`, and for the team session labels to `/sessions/<ID>`:
-  a workspace (`.workspace` in `page.scss`), with the facts in a panel at the right (`FactPanel.vue`, `FactGroup.vue`,
-  `Fact.vue`: dates, session, people with their pictures (`PersonLine.vue`), where to listen, files, and what needs
-  attention by Home's rules, `episodeConcerns`), first in the page, so above the rest on phones. Once the page's title
+  a workspace (`.workspace` in `page.scss`), as a person's page is too: what it is in its lead (its name, and its
+  picture), the rest under it, and the facts in a panel at the right, beside them from the top (`FactPanel.vue`,
+  `FactGroup.vue`, `Fact.vue`: dates, session, where to listen, and what needs attention by Home's rules,
+  `episodeConcerns`), after the lead in the page, so under the name and above the rest on phones. Once the page's title
   has scrolled away, the panel, which stays in view, says what it's about: its cover, code and title (`PanelTitle.vue`,
-  `useScrolledPast`), also a way back to the top; a session's says its date and name. The main column has
-  the episode's media (`MediaStrip.vue`: its titles with the thumbnails they're A/B tested with and the cover, its
-  video and audio, its artwork marked with what each file is used as, its photos), the summaries folded when long (`FoldedText.vue`), and
-  for the team its activity (`ActivityFeed.vue`, see Discussions): comments and history in one feed, from the audit
-  trail as [`History.kt`](src/main/kotlin/si/ogrodje/metaos/History.kt) tells it. A released episode's page is
-  anyone's, without what's the team's (its activity, alternative titles, files, ...), its thumbnail large; any other
-  episode is the team's, and not found for anyone else, as one that isn't there.
+  `useScrolledPast`), also a way back to the top; a session's says its date and name, and its main column has its
+  episodes, photos and activity (`ActivityFeed.vue`, see Discussions).
+- An episode's page ([`EpisodeView.vue`](fe/src/views/EpisodeView.vue)) is the episode as anyone sees it, with what's
+  the team's on top of it, quietly: its title, and its thumbnail large (the team switches it to B and C, which it's A/B
+  tested with); then who's on it (`PersonLine.vue`) and where to listen, its summaries, folded when long
+  (`FoldedText.vue`), and for anyone not signed in, a line to sign in. The panel at the right, which stays in view
+  however tall it is (`FactPanel`'s `tall`, `useStickySide` in `scroll.ts`: without a scrollbar of its own, it scrolls
+  along with the page till its end is in view and sticks there, and back up the same with its top), has the facts (when
+  it aired, what it's spoken in, ...) and, for anyone not on the team, where on the page to go; on phones it comes after
+  the thumbnail. The team gets, first in the panel, what needs attention and the episode's activity
+  (`ActivityPanel.vue`, see Discussions), and under the facts "See it as the public does", which shows a released
+  episode's page without what's theirs until they go back. At the end of the main column, Behind the episode
+  (`BehindEpisode.vue`) is the team's: its transcript, pictures, and video and audio, each folded to a line that says
+  what there is and what's missing (`pictureParts`, `mediaParts`, `transcriptsLine`), loaded once opened, and opened by
+  a link to it (`#transcript`, `#pictures`, `#media`). Each comes once there's something to it: the pictures once it's
+  recorded, has some or has titles to test, the video and audio once it's recorded, the transcript once there's a file;
+  so an idea or a scheduled episode has none of it. While it's in the works, a part that misses something starts open,
+  as that's the work left; released, all are folded. Last come its files (docs, Koofr and Dropbox folders, `#files`),
+  not folded, as their links are what they're for. Its pictures (`EpisodePictures.vue`) are its titles with the
+  thumbnails they're A/B tested with, its cover and web picture, its artwork marked with what each file is used as, and
+  its photos. A released episode's page is anyone's; any other episode is the team's, and not found for anyone else, as
+  one that isn't there. Chapters come once they're an episode's own (an agent writes them as a comment so far).
 - A recording session has a name (e.g. AWS Community Day Adria 2026), apart from its location (the venue) and address;
   [`V29__session_names.sql`](src/main/resources/db/migration/V29__session_names.sql) named each one after its
   location to begin with. Without a name it goes by its location, else by its date, wherever it's labelled
   (`sessionName` and `sessionTitle` in `fe/src/episodes.ts`, the names `History.kt` gives sessions). Its page's
-  heading is its name, with its date and, where the name doesn't say it, its location under it; the team renames it
+  heading is its name, with Recording session, its date and, where the name doesn't say it, its location under it, as
+  an episode's code, show and stage are under its title (`.title .meta`, never above it); the team renames it
   there (`RenameSession.vue`), through the `updateSession` mutation (`SessionsGraphQL.kt`, with `metaos:write`, as
   `update_session` does over MCP; both through `Sessions` in `Sessions.kt`). `createSession` creates one, as
   `create_session` does; no page uses it yet.
@@ -183,18 +211,20 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   (`EpisodeRow`, with its cover, square, or else its thumbnail: `listPicture`) or a grid of `EpisodeCard`s
   (`?view=grid`), by show and season; seasons older than the two latest show their first row until opened. `?status=`
   shows one stage, as Home's stages do, as a chip that turns it off (`FilterChip.vue`).
-- Episode ideas (`IDEA`) have a page of their own, `/ideas`, from the `ideas` query, which needs `metaos:read`, as
-  does its link in the header; the `episodes` query, and so the Episodes page, leaves them out. It's a table
-  (`IdeaRow.vue`), grouped by how far along each is (`readiness`: in a session, with a guest, with candidates, no
-  one yet), by who recommended it, or not at all, and filtered by show and recommender (by their whole names, in a
-  select, as two may share a first name). It loads for an approved user only; one who isn't yet gets a note.
-- The People page, `/people`, lists everyone by name (Slovenian order, past a "dr."), from the `people` query: who
-  they are, and links to their website and social profiles (`PersonCard.vue`). The team first, as cards with their
-  pictures large, their bios, and how many episodes they're on as what (`teamSummary`, e.g. 37 episodes as co-host,
-  host and consultant; `kindOf` in `lists.ts`: anyone credited as host, co-host, producer, consultant or designer),
-  then the guests in three columns under their letters, each with their latest episode's title and how many they're
-  on, with an A–Z index (on phones a row of letters that stays at the top), then, folded, the candidates. Anyone not
-  signed in gets only those on the released episodes, with only those episodes; candidates are the team's.
+- Episode ideas (`IDEA`) have a page of their own, `/ideas`, from the `ideas` query, which needs `metaos:read`, as does
+  its link in the header; the `episodes` query, and so the Episodes page, leaves them out. It lists them as the Episodes
+  page lists what's in the works (`IdeaRow.vue`: the title, who it's with, who recommended it and when it was added in a
+  line, its tiny summary, then when it's recorded and its files), a section a group, by how far along each is
+  (`readiness`: in a session, with a guest, with candidates, no one yet), by who recommended it, or not at all, and
+  filtered by show and recommender (by their whole names, in a select, as two may share a first name). It loads for an
+  approved user only; one who isn't yet gets a note.
+- The People page, `/people`, lists everyone by name (Slovenian order, past a "dr."), from the `people` query: who they
+  are, and links to their website and social profiles (`PersonCard.vue`). The team first, under rules as the rest, with
+  their pictures large, their bios, and how many episodes they're on as what (`teamSummary`, e.g. 37 episodes as
+  co-host, host and consultant; `kindOf` in `lists.ts`: anyone credited as host, co-host, producer, consultant or
+  designer), then the guests in three columns under their letters, each with their latest episode's title and how many
+  they're on, with an A–Z index (on phones a row of letters that stays at the top), then, folded, the candidates. Anyone
+  not signed in gets only those on the released episodes, with only those episodes; candidates are the team's.
 - People's names (on the People page and an episode's page, and who recommended an idea) lead to their pages,
   `/people/<ID>`, from the `person` query: a workspace like an episode's, with how many episodes they're on as what
   in its panel, each also a filter (`?role=HOST`), and where they're online; what's coming up (the team's), their
@@ -372,6 +402,14 @@ by whoever was signed in, on MetaOS's pages or over MCP. They're the team's: wri
   says so, deleting one isn't. The preview renders with `MarkdownText.vue`, as posted comments do; ⌘↵ sends. A
   comment's "commented <date>" links to it, its page's address with `#comment-<id>`: opened, the feed shows
   everything, scrolls to it once its comments are there, and outlines it.
+- An episode's page has its activity in its side panel instead (`ActivityPanel.vue`), so it stays in view: a box to
+  comment, closed to a line until it's pressed, then the latest five entries, the newest first, and Show all, every
+  entry, filtered as the feed is. Each is a line or so, so the panel stays short: a comment's first lines in a box,
+  which opens it whole (`CommentCard`, with Edit and Delete on your own, and Fold), as does a link to it, which the page
+  scrolls to, the panel along with it; a change's headline, which opens what it changed, field by field.
+  What others did since the viewer last opened the page is marked new (`isNew` in `activity.ts`), by when that was,
+  which each browser keeps for each episode in `localStorage` (`metaos.seen.episode.<ID>`), so nothing's new the first
+  time; one's own comments and changes never are.
 
 ### Google (Drive and Gmail)
 
@@ -468,15 +506,16 @@ on `*.graphassets.com`, the only hosts MetaOS fetches pictures from).
   the episode's first Dropbox folder too, unless the same content (Dropbox's content hash) is right in it or in a folder
   right in it, under another name ("(1)") when its own is taken; a read-only place or a missing folder only says so
   (`dropbox.error`). MCP's `set_episode_image` doesn't take uploads.
-- On the front-end, Upload artwork in the episode's media (`MediaStrip.vue`, which shows the team its five places)
-  opens `ArtworkUpload.vue`, as a missing picture's place does, at its row: drop the episode's folder or pictures, or
-  choose them, or one on its row. [`fe/src/artwork.ts`](fe/src/artwork.ts) reads each file's size from its header and its SHA-256, and places
-  it by size and name (`-thumb1`/`-thumb-1`/`-thumbnail` A, `-thumb2` B, `-thumb3` C, `-web`, `-podcast`/`-cover`; the
-  only square one is the cover), refusing what fits nowhere; the same file as the current one isn't sent. Upload asks
-  once about every picture that would replace one, then sends them one at a time (`fe/src/uploads.ts`), each with its
-  progress; one refused or failed holds nothing back, and Try again sends only that one. The front-end shows an episode's on
-  its page (`MediaStrip.vue`) and avatars on the People, person and episode pages (`PersonAvatar.vue`, initials
-  without one), with `srcset` from the copies (`fe/src/images.ts`), never the original, which may be 16 MB.
+- On the front-end, Upload artwork in the episode's pictures (`EpisodePictures.vue`, which shows the team its five
+  places) opens `ArtworkUpload.vue`, as a missing picture's place does, at its row: drop the episode's folder or
+  pictures, or choose them, or one on its row. [`fe/src/artwork.ts`](fe/src/artwork.ts) reads each file's size from its
+  header and its SHA-256, and places it by size and name (`-thumb1`/`-thumb-1`/`-thumbnail` A, `-thumb2` B, `-thumb3` C,
+  `-web`, `-podcast`/`-cover`; the only square one is the cover), refusing what fits nowhere; the same file as the
+  current one isn't sent. Upload asks once about every picture that would replace one, then sends them one at a time
+  (`fe/src/uploads.ts`), each with its progress; one refused or failed holds nothing back, and Try again sends only that
+  one. The front-end shows an episode's on its page (its thumbnail large, and to the team in `EpisodePictures.vue`) and
+  avatars on the People, person and episode pages (`PersonAvatar.vue`, initials without one), with `srcset` from the
+  copies (`fe/src/images.ts`), never the original, which may be 16 MB.
 - `ImagesTest` and `ArtworkTest` run against buckets in memory (`FakeStorage`), with fake Dropbox and Koofr.
 
 ### Video and audio
@@ -509,8 +548,8 @@ number, each with a title.
   for an hour, signed as it's asked for. MCP: `list_episode_media` (with those links, e.g. for
   `set_patreon_post_media`), `update_episode_media` (title, or what it is, within video or audio) and
   `remove_episode_media`; MCP can't send gigabytes, so it doesn't upload.
-- On the front-end, the episode's media has Video and audio (`MediaList.vue`): the full video and audio, a missing one
-  opening the upload for it, then the bonuses, each with what ffprobe read (`infoLine` in
+- On the front-end, Behind the episode on its page has Video and audio (`MediaList.vue`): the full video and audio, a
+  missing one opening the upload for it, then the bonuses, each with what ffprobe read (`infoLine` in
   [`fe/src/media.ts`](fe/src/media.ts)), Download and Remove (asked on its row). Upload video and audio
   (`MediaUpload.vue`, styled with `ArtworkUpload.vue` by `_upload-dialog.scss`) reads each file in the browser with
   mediainfo.js (MediaInfo in WebAssembly, loaded once a file is read), places it by what's in it and its name (the
@@ -674,13 +713,19 @@ GraphQL (`TranscriptsGraphQL`) and the Transcriptions page alike, as Sessions an
   what was said), `speechProviders` and `Episode.transcripts`, for the team (empty or refused for anyone else);
   `transcribeEpisode`, `cancelTranscription` and `removeTranscript`, with `metaos:write`.
 - The Transcriptions page (`/transcriptions`, the team's, a tab; `TranscriptionsView.vue`,
-  [`fe/src/transcriptions.ts`](fe/src/transcriptions.ts)) transcribes a file (`TranscribeForm.vue`: an episode by its
-  code, then its file, the provider and the language, Slovenian or English (its show's to begin with: Borderless's is
-  English, `Episode.language`); Replace only for a file the provider has transcribed, Batch only with Google) and lists
-  what's on, with its place in line or how far it is and Cancel, then what ended, the latest first, with how long it
-  took and why it failed, each transcript's lines to Read (`TranscriptLines.vue`) and Remove, asked on its row
+  [`fe/src/transcriptions.ts`](fe/src/transcriptions.ts)) transcribes a file, from Transcribe an episode at the end of
+  its heading (`TranscribeForm.vue`, opened under it and closed once one's started: an episode by its code, then its
+  file, the provider and the language, Slovenian or English (its show's to begin with: Borderless's is English,
+  `Episode.language`); Replace only for a file the provider has transcribed, Batch only with Google) and lists what's
+  on, with its place in line or how far it is and Cancel, then what ended, the latest first, with how long it took and
+  why it failed, each transcript's lines to Read (`TranscriptLines.vue`) and Remove, asked on its row
   (`TranscriptionRow.vue`). It filters by status and provider, and finds by episode or file; live updates keep it as it
   is, as rows change.
+- An episode's page shows the team its transcript, in Behind the episode (`EpisodeTranscript.vue`), as a conversation
+  reads: a speaker's lines one after another are one turn (`turns`), each from where it starts, which opens the episode
+  on YouTube there when it's of the full audio or video (`youtubeAt`); the first twelve, then all of them. The one that
+  tells speakers apart first (`firstTranscript`, Soniox's), the others a switch away, and a note that a machine heard
+  it. Only to read: editing it is for the Editor to come.
 - `TranscriptionTest` runs the workflow in Temporal's test server against a bucket and providers in memory
   (`FakeSpeech`: `fake`, `other`, and `single`, with one turn), over MCP and GraphQL.
 
@@ -735,7 +780,7 @@ folders and moves or renames, but never deletes or replaces anything unasked.
 - On the front-end, a linked folder shows like a Koofr one: Dropbox's logo in lists, and in the episode's and session's
   details, opening its link for members, or else its path in Dropbox's web app as the bot has it. Lists ask Dropbox
   where the folders are once per place and minute (`DropboxFolderIndex`), not per folder.
-- An episode's page shows the pictures in its folders as its Artwork, a tab of its media beside its photos and like
+- An episode's page shows the pictures in its folders as its Artwork, a tab of its pictures beside its photos and like
   them, eight at a time: each whole, as covers, thumbnails and stories have different shapes, by file name, as that
   says what it's for, and with what it's used as, e.g. Thumbnail A, by the file its picture was made from. As with Koofr's photos,
   they're those right in a folder, then those in the folders right in it ([`DropboxPictures.kt`](src/main/kotlin/si/ogrodje/metaos/DropboxPictures.kt)).

@@ -41,17 +41,17 @@ const find = defineModel<string>('find', { required: true })
   height: 36px;
   padding: 0 10px;
   border: 1px solid var(--hairline);
-  border-radius: 6.4px;
+  border-radius: var(--radius-sm);
   cursor: text;
 
   &:focus-within {
-    border-color: #A3A3A3;
+    border-color: var(--hairline-strong);
     outline: 2px solid var(--accent-text);
     outline-offset: 1px;
   }
 
   .icon {
-    font-size: 12px;
+    font-size: var(--text-caption);
     color: var(--muted);
   }
 
@@ -60,7 +60,7 @@ const find = defineModel<string>('find', { required: true })
     min-width: 0;
     padding: 0;
     font: inherit;
-    font-size: 14px;
+    font-size: var(--text-body);
     color: var(--ink);
     background: none;
     border: 0;

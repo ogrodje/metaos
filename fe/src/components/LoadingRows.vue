@@ -52,7 +52,7 @@ withDefaults(defineProps<{
   display: block;
   height: 10px;
   margin: 6px 0;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: var(--hover);
 }
 

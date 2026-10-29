@@ -222,7 +222,7 @@ watch(() => route.fullPath, () => { open.value = false })
   border-radius: 50%;
   background: var(--ink);
   color: #FFFFFF;
-  font-size: 11.5px;
+  font-size: var(--text-micro);
   line-height: 32px;
   font-weight: 600;
   letter-spacing: .02em;
@@ -241,8 +241,8 @@ watch(() => route.fullPath, () => { open.value = false })
   z-index: 20;
   max-width: calc(100vw - 32px);
   background: #FFFFFF;
-  border-radius: 10px;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, .08), 0 18px 40px -12px rgba(0, 0, 0, .28);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-menu);
 }
 
 .menu {
@@ -263,9 +263,9 @@ watch(() => route.fullPath, () => { open.value = false })
   width: 100%;
   padding: 8px 10px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: none;
-  font-size: 14px;
+  font-size: var(--text-body);
   line-height: 20px;
   color: var(--ink);
   text-align: left;
@@ -294,7 +294,7 @@ watch(() => route.fullPath, () => { open.value = false })
   padding: 8px 10px 10px;
   margin-bottom: 6px;
   border-bottom: 1px solid var(--rule);
-  font-size: 14px;
+  font-size: var(--text-body);
   line-height: 20px;
 
   b {
@@ -302,7 +302,7 @@ watch(() => route.fullPath, () => { open.value = false })
   }
 
   span {
-    font-size: 12px;
+    font-size: var(--text-caption);
     line-height: 18px;
     color: var(--muted);
     overflow-wrap: anywhere;
@@ -314,7 +314,7 @@ watch(() => route.fullPath, () => { open.value = false })
   display: flex;
   gap: 10px;
   padding: 8px 10px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--secondary);
 
@@ -332,7 +332,7 @@ watch(() => route.fullPath, () => { open.value = false })
 
 .label {
   padding: 6px 10px 2px;
-  font-size: 11px;
+  font-size: var(--text-micro);
   line-height: 16px;
   font-weight: 600;
   letter-spacing: .06em;
@@ -342,7 +342,7 @@ watch(() => route.fullPath, () => { open.value = false })
 
 .loading {
   padding: 8px 10px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--muted);
 }
@@ -359,7 +359,7 @@ watch(() => route.fullPath, () => { open.value = false })
   gap: 10px;
   min-height: 36px;
   padding: 4px 6px 4px 10px;
-  font-size: 13.5px;
+  font-size: var(--text-small);
   line-height: 20px;
 
   .brand {
@@ -384,7 +384,7 @@ watch(() => route.fullPath, () => { open.value = false })
 // The one this sign-in came through, when Keycloak says
 .this {
   flex: none;
-  font-size: 11.5px;
+  font-size: var(--text-micro);
   line-height: 18px;
   font-weight: 600;
   color: var(--accent-text);
@@ -395,17 +395,17 @@ watch(() => route.fullPath, () => { open.value = false })
   flex: none;
   min-height: 28px;
   padding: 0 10px;
-  font-size: 12.5px;
+  font-size: var(--text-caption);
   line-height: 18px;
   font-weight: 500;
   color: var(--ink);
   background: #FFFFFF;
   border: 1px solid var(--hairline);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 
   &:hover {
-    border-color: #A3A3A3;
+    border-color: var(--hairline-strong);
   }
 
   &[aria-disabled='true'] {
@@ -422,7 +422,7 @@ watch(() => route.fullPath, () => { open.value = false })
 
 .note {
   padding: 6px 10px 4px;
-  font-size: 12px;
+  font-size: var(--text-caption);
   line-height: 18px;
   color: var(--muted);
 }
@@ -434,7 +434,7 @@ watch(() => route.fullPath, () => { open.value = false })
   gap: 8px;
   width: 320px;
   padding: 10px 6px 10px 12px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
 
   .mark {
@@ -464,7 +464,7 @@ watch(() => route.fullPath, () => { open.value = false })
   margin: -4px 0;
   padding: 0;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: none;
   color: var(--muted);
   cursor: pointer;
@@ -482,11 +482,6 @@ watch(() => route.fullPath, () => { open.value = false })
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
-}
-
-button:focus-visible, a:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
 }
 
 // The menu's own rows, in its padding

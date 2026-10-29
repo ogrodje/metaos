@@ -147,10 +147,12 @@ const candidatesOpen = ref(false)
 <template>
   <main class="content">
     <PageHeader title="People" :count="people?.length" :shown="filtering && people ? listed.length : undefined">
-      <template v-if="auth.ready && !auth.authenticated">
+      <template v-if="auth.team">Ogrodje's team, the guests on its episodes, and who could be one.</template>
+      <template v-else-if="auth.ready && !auth.authenticated">
         The hosts, guests and everyone else on Ogrodje's released episodes. Signed in, you see everyone, also on what's
         being made.
       </template>
+      <template v-else>The hosts, guests and everyone else on Ogrodje's released episodes.</template>
     </PageHeader>
 
     <FilterBar v-model:find="find" placeholder="Find by name or what they do">
@@ -205,7 +207,7 @@ const candidatesOpen = ref(false)
         <div class="heading">
           <h2 id="candidates">Candidates</h2>
           <span class="count">{{ candidates.length }}</span>
-          <button v-if="shown === 'all'" type="button" class="more" :aria-expanded="candidatesOpen" aria-describedby="candidates"
+          <button v-if="shown === 'all'" type="button" class="text-button more" :aria-expanded="candidatesOpen" aria-describedby="candidates"
                   @click="candidatesOpen = !candidatesOpen">{{ candidatesOpen ? 'Fold' : `Show all ${candidates.length}` }}</button>
         </div>
         <ul v-if="candidatesOpen || shown === 'candidate'" class="people">
@@ -227,11 +229,11 @@ const candidatesOpen = ref(false)
 <style scoped lang="scss">
 @use '../assets/page';
 
-// The team: three cards a row in the frame, fewer as it narrows
+// The team: three a row in the frame, fewer as it narrows, in the guests' columns
 .team {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  column-gap: 32px;
   padding: 0;
   list-style: none;
 }
@@ -239,7 +241,7 @@ const candidatesOpen = ref(false)
 // The guests under their letters, a line each, in three columns
 .letter {
   padding: 16px 0 6px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   font-weight: 600;
   color: var(--muted);
@@ -262,13 +264,13 @@ const candidatesOpen = ref(false)
 .index {
   display: flex;
   flex-wrap: wrap;
-  font-size: 12.5px;
+  font-size: var(--text-caption);
   line-height: 20px;
   font-weight: 500;
 
   a, span {
     padding: 2px 5px;
-    border-radius: 4px;
+    border-radius: var(--radius-xs);
   }
 
   a {
@@ -280,7 +282,7 @@ const candidatesOpen = ref(false)
   }
 
   span {
-    color: #CDCDCD;
+    color: var(--faint);
   }
 }
 
@@ -332,7 +334,7 @@ const candidatesOpen = ref(false)
       place-items: center;
       min-width: 36px;
       height: 40px;
-      font-size: 13px;
+      font-size: var(--text-small);
       font-weight: 500;
       color: var(--secondary);
     }

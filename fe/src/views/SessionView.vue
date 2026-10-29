@@ -117,70 +117,72 @@ const hasFiles = computed(() => !!session.value
     </NotFound>
     <LoadingRows v-else-if="!session" :rows="6" label="Loading the session"/>
 
-    <template v-else>
-      <header ref="titleBlock" class="title">
-        <p class="kicker">Recording session</p>
-        <!-- What it's called, else its date; the team renames it in place -->
-        <RenameSession v-if="renaming" :session="session" @renamed="renamed" @close="stopRenaming"/>
-        <div v-else class="named">
-          <h1 v-if="sessionName(session)" lang="sl">{{ sessionName(session) }}</h1>
-          <h1 v-else><time :datetime="session.date">{{ formatDate(session.date) }}</time></h1>
-          <button v-if="auth.team" ref="renameButton" type="button" class="rename" @click="renaming = true">
-            {{ session.name ? 'Rename' : 'Name it' }}
-          </button>
-        </div>
-        <p v-if="sessionName(session)" class="subtitle">
-          <time :datetime="session.date">{{ formatDate(session.date) }}</time>
-          <template v-if="sessionPlace(session)"> · {{ sessionPlace(session) }}</template>
-        </p>
-      </header>
-
-      <!-- Where and when at the right, its episodes and activity in the main column; on phones the facts come first -->
-      <div class="workspace">
-        <FactPanel label="About the session">
-          <PanelTitle :title="sessionTitle(session)" :shown="pastTitle"/>
-          <FactGroup>
-            <dl>
-              <Fact label="When">
-                <time :datetime="session.date">{{ formatDate(session.date) }}</time>
-                <span class="aside"> · {{ relativeDate(session.date) }}</span>
-              </Fact>
-              <Fact v-if="session.location" label="Location">{{ session.location }}</Fact>
-              <Fact v-if="session.address" label="Address">{{ session.address }}</Fact>
-            </dl>
-          </FactGroup>
-          <FactGroup v-if="hasFiles" title="Files">
-            <dl>
-              <Fact v-if="session.documents.length" label="Docs"><span class="icons"><DocLinks :documents="session.documents"/></span></Fact>
-              <Fact v-if="session.koofrFolders.length" label="Koofr" stacked><KoofrFolderList :folders="session.koofrFolders"/></Fact>
-              <Fact v-if="session.dropboxFolders.length" label="Dropbox" stacked><DropboxFolderList :folders="session.dropboxFolders"/></Fact>
-            </dl>
-          </FactGroup>
-        </FactPanel>
-
-        <div class="main">
-          <section aria-labelledby="episodes">
-            <div class="heading">
-              <h2 id="episodes">Episodes</h2>
-              <span class="count">{{ session.episodes.length }}</span>
-            </div>
-            <p v-if="!session.episodes.length" class="note">No episodes are in this session yet.</p>
-            <!-- Each as the other lists have it: a line while it's in the works, its summary once it's released -->
-            <ul v-else class="episodes">
-              <template v-for="episode in session.episodes" :key="episode.id">
-                <EpisodeItem v-if="episode.status === 'PUBLISHED'" :episode="episode"/>
-                <EpisodeRow v-else :episode="episode" under-session/>
-              </template>
-            </ul>
-          </section>
-
-          <PhotoStrip v-if="photos.length" title="Photos" :photos="photos" :folder="session.koofrFolders[0]?.url" service="Koofr"/>
-
-          <ActivityFeed :comments="session.comments" :changes="session.history" :session-id="session.id"
-                        @changed="reloadQuietly(session.id)"/>
-        </div>
+    <!-- What it is, and where and when at the right, its episodes and activity under it; on phones the facts after its
+         name -->
+    <div v-else class="workspace">
+      <div class="lead">
+        <header ref="titleBlock" class="title">
+          <!-- What it's called, else its date; the team renames it in place -->
+          <RenameSession v-if="renaming" :session="session" @renamed="renamed" @close="stopRenaming"/>
+          <div v-else class="named">
+            <h1 v-if="sessionName(session)" lang="sl">{{ sessionName(session) }}</h1>
+            <h1 v-else><time :datetime="session.date">{{ formatDate(session.date) }}</time></h1>
+            <button v-if="auth.team" ref="renameButton" type="button" class="text-button rename" @click="renaming = true">
+              {{ session.name ? 'Rename' : 'Name it' }}
+            </button>
+          </div>
+          <p class="meta">
+            <span>Recording session<template v-if="sessionName(session)">
+              · <time :datetime="session.date">{{ formatDate(session.date) }}</time>
+              <template v-if="sessionPlace(session)"> · {{ sessionPlace(session) }}</template>
+            </template></span>
+          </p>
+        </header>
       </div>
-    </template>
+
+      <FactPanel label="About the session">
+        <PanelTitle :title="sessionTitle(session)" :shown="pastTitle"/>
+        <FactGroup>
+          <dl>
+            <Fact label="When">
+              <time :datetime="session.date">{{ formatDate(session.date) }}</time>
+              <span class="aside"> · {{ relativeDate(session.date) }}</span>
+            </Fact>
+            <Fact v-if="session.location" label="Location">{{ session.location }}</Fact>
+            <Fact v-if="session.address" label="Address">{{ session.address }}</Fact>
+          </dl>
+        </FactGroup>
+        <FactGroup v-if="hasFiles" title="Files">
+          <dl>
+            <Fact v-if="session.documents.length" label="Docs"><span class="icons"><DocLinks :documents="session.documents"/></span></Fact>
+            <Fact v-if="session.koofrFolders.length" label="Koofr" stacked><KoofrFolderList :folders="session.koofrFolders"/></Fact>
+            <Fact v-if="session.dropboxFolders.length" label="Dropbox" stacked><DropboxFolderList :folders="session.dropboxFolders"/></Fact>
+          </dl>
+        </FactGroup>
+      </FactPanel>
+
+      <div class="main">
+        <section aria-labelledby="episodes">
+          <div class="heading">
+            <h2 id="episodes">Episodes</h2>
+            <span class="count">{{ session.episodes.length }}</span>
+          </div>
+          <p v-if="!session.episodes.length" class="note">No episodes are in this session yet.</p>
+          <!-- Each as the other lists have it: a line while it's in the works, its summary once it's released -->
+          <ul v-else class="episodes">
+            <template v-for="episode in session.episodes" :key="episode.id">
+              <EpisodeItem v-if="episode.status === 'PUBLISHED'" :episode="episode"/>
+              <EpisodeRow v-else :episode="episode" under-session/>
+            </template>
+          </ul>
+        </section>
+
+        <PhotoStrip v-if="photos.length" title="Photos" :photos="photos" :folder="session.koofrFolders[0]?.url" service="Koofr"/>
+
+        <ActivityFeed :comments="session.comments" :changes="session.history" :session-id="session.id"
+                      @changed="reloadQuietly(session.id)"/>
+      </div>
+    </div>
   </main>
 </template>
 
@@ -193,27 +195,6 @@ const hasFiles = computed(() => !!session.value
   flex-wrap: wrap;
   align-items: baseline;
   column-gap: 12px;
-}
-
-.rename {
-  padding: 0;
-  font-size: 13px;
-  line-height: 20px;
-  font-weight: 500;
-  color: var(--accent-text);
-  background: none;
-  border: 0;
-  cursor: pointer;
-
-  &:hover {
-    text-decoration: underline;
-    text-underline-offset: 3px;
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
 }
 
 .aside {

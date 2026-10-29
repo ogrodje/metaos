@@ -36,7 +36,7 @@ defineProps<{
   text-overflow: ellipsis;
   white-space: nowrap;
   text-decoration: underline;
-  text-decoration-color: #C4C4C4;
+  text-decoration-color: var(--faint);
   text-underline-offset: 3px;
 
   &:hover {

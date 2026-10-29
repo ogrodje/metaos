@@ -44,7 +44,7 @@ li {
   justify-content: space-between;
   gap: 12px;
   padding: 7px 0;
-  font-size: 13.5px;
+  font-size: var(--text-small);
   line-height: 20px;
 
   b {

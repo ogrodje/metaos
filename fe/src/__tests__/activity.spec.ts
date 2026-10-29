@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { activity, BURST_MINUTES, type ChangeEntry, filtered, recentActivity } from '@/activity'
+import { activity, BURST_MINUTES, type ChangeEntry, filtered, isNew, recentActivity, shortWhen } from '@/activity'
 import type { Comment } from '@/comments'
 import type { Change, ChangeKind, ChangeSubject, FieldChange } from '@/episodes'
 
@@ -155,6 +155,52 @@ describe('recentActivity', () => {
       change('10:01', 'Changed the person', 'PERSON', [field('Bio', null, 'X')], { about: { kind: 'PERSON', id: 'p', name: 'Ana', code: null } }),
     ])
     expect(entry?.headline).toBe('Changed 1 episode and 1 person')
+  })
+})
+
+describe("what's new", () => {
+  const seen = Date.parse('2026-10-19T16:00:00Z')
+  const by = (actor: string, ...at: string[]) => at.map((time) =>
+    change(time, 'Changed the episode', 'EPISODE', [field('Title', 'A', 'B')], { actor }))
+
+  it('is what others did since the page was last opened', () => {
+    const [entry] = activity(by('Jan Dolar', '16:30'), [])
+    expect(isNew(entry!, seen, 'Oto Brglez')).toBe(true)
+    expect(isNew(entry!, seen, 'Jan Dolar')).toBe(false)
+    expect(isNew(entry!, Date.parse('2026-10-19T17:00:00Z'), 'Oto Brglez')).toBe(false)
+  })
+
+  it('is nothing the first time the page is opened', () => {
+    const [entry] = activity(by('Jan Dolar', '16:30'), [])
+    expect(isNew(entry!, null, 'Oto Brglez')).toBe(false)
+  })
+
+  it("isn't one's own comment", () => {
+    const [mine] = activity([], [comment('1', '16:30')])
+    const [theirs] = activity([], [{ ...comment('2', '16:30'), mine: false }])
+    expect(isNew(mine!, seen, null)).toBe(false)
+    expect(isNew(theirs!, seen, null)).toBe(true)
+  })
+
+  it('counts changes made close together by when the last was made', () => {
+    const [entry] = activity(by('Jan Dolar', '15:50', '16:05'), [])
+    expect(isNew(entry!, seen, 'Oto Brglez')).toBe(true)
+  })
+})
+
+describe('shortWhen', () => {
+  // 15:00 in Ljubljana
+  const now = new Date('2026-10-28T14:00:00Z')
+
+  it('says today and yesterday with the time, else the date, with its year when it was another', () => {
+    expect(shortWhen('2026-10-28T13:14:00Z', now)).toBe('today, 14:14')
+    expect(shortWhen('2026-10-27T16:32:00Z', now)).toBe('yesterday, 17:32')
+    expect(shortWhen('2026-10-23T10:00:00Z', now)).toBe('23 Oct')
+    expect(shortWhen('2025-10-23T10:00:00Z', now)).toBe('23 Oct 2025')
+  })
+
+  it("goes by Ogrodje's days, whatever the browser's time zone", () => {
+    expect(shortWhen('2026-10-27T23:30:00Z', now)).toBe('today, 00:30')
   })
 })
 

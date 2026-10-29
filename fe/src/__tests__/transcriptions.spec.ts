@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   defaultFile, formatWhen, hasTranscript, languageOf, isOn, ordinal, providerName, speakerName, split, statusText, timestamp, took, type Transcription,
-  transcriptSummary,
+  transcriptSummary, firstTranscript, transcriptsLine, turns, youtubeAt, type EpisodeTranscript,
 } from '@/transcriptions'
 
 function transcription(status: Transcription['status'], more: Partial<Transcription> = {}): Transcription {
@@ -75,5 +75,41 @@ describe('transcriptions', () => {
     expect(languageOf({ language: 'en-GB' })).toBe('en-GB')
     expect(languageOf({ language: 'en-US' })).toBe('en-GB')
     expect(languageOf({ language: 'hr-HR' })).toBe('sl-SI')
+  })
+})
+
+describe("an episode's transcripts", () => {
+  const line = (speaker: string | null, start: number, text: string) => ({ speaker, start, end: start + 5, text })
+
+  it("reads a speaker's lines one after another as one turn", () => {
+    expect(turns([line('1', 79, 'Ej, samo ta prvi GAMS'), line('1', 84, 'je bil treniran.'), line('2', 90, 'Je bil edgy.'),
+      line('1', 98, 'Tudi.')])).toEqual([
+      { speaker: '1', start: 79, text: 'Ej, samo ta prvi GAMS je bil treniran.' },
+      { speaker: '2', start: 90, text: 'Je bil edgy.' },
+      { speaker: '1', start: 98, text: 'Tudi.' },
+    ])
+  })
+
+  it("keeps a line each where the provider doesn't tell speakers apart", () => {
+    expect(turns([line(null, 0, 'uvod'), line(null, 20, 'in naprej')])).toHaveLength(2)
+  })
+
+  it('opens YouTube where a line was said', () => {
+    expect(youtubeAt('https://youtu.be/SLF_CvGQ6q4', 82.6)).toBe('https://youtu.be/SLF_CvGQ6q4?t=82')
+    expect(youtubeAt('https://www.youtube.com/watch?v=SLF_CvGQ6q4', 82)).toBe('https://www.youtube.com/watch?v=SLF_CvGQ6q4&t=82')
+  })
+
+  const transcript = (id: string, provider: string, speakers: number, words: number): EpisodeTranscript => ({
+    id, mediaId: 'm', mediaName: 'S05E07.mp3', provider, model: 'x', language: 'sl-SI', createdAt: '2026-10-28T10:00:00Z',
+    segments: 187, words, duration: 3314, speakers: Array.from({ length: speakers }, (_, i) => ({ label: String(i + 1), name: null })),
+  })
+
+  it('shows the one that tells speakers apart first, and says what they all are', () => {
+    const google = transcript('g', 'google', 0, 8000)
+    const soniox = transcript('s', 'soniox', 2, 8445)
+    expect(firstTranscript([google, soniox])).toBe(soniox)
+    expect(transcriptsLine([google, soniox])).toBe('Soniox, 2 speakers, 8,445 words · also by Google Speech-to-Text')
+    expect(transcriptsLine([google])).toBe('Google Speech-to-Text, 8,000 words')
+    expect(transcriptsLine([])).toBe('None yet')
   })
 })

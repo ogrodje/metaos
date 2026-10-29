@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-28T19:30:00Z",
+  "title": "Design System: Ogrodje MetaOS",
+  "extensions": {
+    "colorMeta": {
+      "ink": { "role": "neutral", "displayName": "Ink", "canonical": "#141414" },
+      "muted": { "role": "neutral", "displayName": "Muted", "canonical": "#6B6B6B" },
+      "hairline": { "role": "neutral", "displayName": "Hairline", "canonical": "#E6E6E6" },
+      "surface": { "role": "neutral", "displayName": "Surface", "canonical": "#FAFAFA" },
+      "accent": { "role": "primary", "displayName": "Logo Pink", "canonical": "#EC4870" },
+      "accent-text": { "role": "primary", "displayName": "Deep Pink", "canonical": "#C02A55" },
+      "mark": { "role": "primary", "displayName": "Search Blush", "canonical": "#FCE1E9" }
+    },
+    "typographyMeta": {
+      "page": { "displayName": "Page", "purpose": "A page's h1: an episode's or person's name." },
+      "section": { "displayName": "Section", "purpose": "A section's heading, with its count." },
+      "lead": { "displayName": "Lead", "purpose": "A card's or dialog's title." },
+      "body": { "displayName": "Body", "purpose": "The page's text and row titles." },
+      "small": { "displayName": "Small", "purpose": "Most of the interface: buttons, chips, meta lines, counts." },
+      "caption": { "displayName": "Caption", "purpose": "A line about something: who, when, how big." },
+      "micro": { "displayName": "Micro", "purpose": "Keys, tags, a file's size." }
+    },
+    "shadows": [
+      { "name": "menu", "value": "0 0 0 1px rgba(0, 0, 0, .08), 0 18px 40px -12px rgba(0, 0, 0, .28)", "purpose": "The user menu and other popovers." },
+      { "name": "dialog", "value": "0 0 0 1px rgba(0, 0, 0, .08), 0 24px 60px -12px rgba(0, 0, 0, .35)", "purpose": "Search and the upload dialogs." }
+    ],
+    "motion": [
+      { "name": "quick", "value": "150ms", "purpose": "Hover and fade of controls." },
+      { "name": "fold", "value": "300ms ease", "purpose": "A section folding open." }
+    ],
+    "breakpoints": [
+      { "name": "phone", "value": "640px" },
+      { "name": "two-up", "value": "800px" },
+      { "name": "workspace-stacks", "value": "960px" },
+      { "name": "three-up", "value": "1100px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "Quiet outlined button, for most actions.",
+      "html": "<button class=\"ds-button\">Read</button>",
+      "css": ".ds-button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; font: 500 13px/20px 'Inter Variable', Inter, sans-serif; color: #141414; background: #FFFFFF; border: 1px solid #E6E6E6; border-radius: 6px; cursor: pointer; } .ds-button:hover { border-color: #A3A3A3; } .ds-button:focus-visible { outline: 2px solid #C02A55; outline-offset: 2px; }"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one thing a form or dialog is for.",
+      "html": "<button class=\"ds-button-primary\">Comment</button>",
+      "css": ".ds-button-primary { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; font: 500 13px/20px 'Inter Variable', Inter, sans-serif; color: #FFFFFF; background: #141414; border: 1px solid #141414; border-radius: 6px; cursor: pointer; } .ds-button-primary:hover { background: #2B2B2B; border-color: #2B2B2B; } .ds-button-primary:focus-visible { outline: 2px solid #C02A55; outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Button",
+      "kind": "button",
+      "refersTo": "text-button",
+      "description": "A button that reads as a link among words: Show all, Rename, Try again.",
+      "html": "<button class=\"ds-text-button\">Show all 17</button>",
+      "css": ".ds-text-button { padding: 0; font: 500 13px/20px 'Inter Variable', Inter, sans-serif; color: #C02A55; background: none; border: 0; cursor: pointer; } .ds-text-button:hover { text-decoration: underline; text-underline-offset: 3px; } .ds-text-button:focus-visible { outline: 2px solid #C02A55; outline-offset: 2px; }"
+    },
+    {
+      "name": "Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "A text field or select, as tall as a button beside it.",
+      "html": "<input class=\"ds-input\" placeholder=\"e.g. S05E07\">",
+      "css": ".ds-input { min-height: 44px; padding: 0 10px; font: 400 14px/22px 'Inter Variable', Inter, sans-serif; color: #141414; background: #FFFFFF; border: 1px solid #E6E6E6; border-radius: 6px; } .ds-input::placeholder { color: #6B6B6B; } .ds-input:hover { border-color: #A3A3A3; } .ds-input:focus-visible { outline: 2px solid #C02A55; outline-offset: -1px; border-color: transparent; }"
+    },
+    {
+      "name": "Chips",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "One of a few choices, each with its count; the chosen one pressed.",
+      "html": "<div class=\"ds-chips\"><button class=\"ds-chip\" aria-pressed=\"true\">All <span>6</span></button><button class=\"ds-chip\" aria-pressed=\"false\">Done <span>6</span></button></div>",
+      "css": ".ds-chips { display: flex; gap: 6px; } .ds-chip { display: inline-flex; gap: 6px; padding: 3px 10px; font: 400 13px/20px 'Inter Variable', Inter, sans-serif; color: #525252; background: #FFFFFF; border: 1px solid #E6E6E6; border-radius: 999px; cursor: pointer; } .ds-chip span { color: #6B6B6B; } .ds-chip:hover { border-color: #A3A3A3; } .ds-chip[aria-pressed='true'] { color: #FFFFFF; background: #141414; border-color: #141414; } .ds-chip[aria-pressed='true'] span { color: rgba(255, 255, 255, .7); }"
+    },
+    {
+      "name": "Tabs",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "The header's pages, the current one underlined in the logo's pink.",
+      "html": "<nav class=\"ds-tabs\"><a class=\"ds-tab ds-current\">Home</a><a class=\"ds-tab\">Episodes</a><a class=\"ds-tab\">People</a></nav>",
+      "css": ".ds-tabs { display: flex; border-bottom: 1px solid #E6E6E6; } .ds-tab { padding: 12px 10px; font: 400 14px/20px 'Inter Variable', Inter, sans-serif; color: #525252; cursor: pointer; } .ds-tab:hover { color: #C02A55; } .ds-current { color: #141414; font-weight: 500; box-shadow: inset 0 -2px 0 #EC4870; }"
+    },
+    {
+      "name": "Row",
+      "kind": "custom",
+      "refersTo": "list-row",
+      "description": "An episode in a list: code, title, what it's about, its stage.",
+      "html": "<div class=\"ds-row\"><span class=\"ds-code\">S05E12</span><span class=\"ds-title\">Luka Kladarić</span><span class=\"ds-status\"><i></i>In production</span></div>",
+      "css": ".ds-row { display: flex; align-items: baseline; gap: 16px; padding: 12px 0; border-top: 1px solid #EEEEEE; font: 400 13px/20px 'Inter Variable', Inter, sans-serif; } .ds-code { width: 72px; font: 400 12px/18px ui-monospace, Menlo, monospace; color: #6B6B6B; } .ds-title { flex: 1; font-size: 14px; font-weight: 500; color: #141414; } .ds-status { display: inline-flex; align-items: center; gap: 8px; color: #525252; } .ds-status i { width: 7px; height: 7px; border-radius: 50%; background: #EC4870; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Production Desk",
+    "overview": "MetaOS is where Ogrodje's team sees what's being recorded, made and released, and does something about it; anyone else gets a window into the same desk. It's a tool, used often and for short tasks, so the interface stays out of the way: greys, one typeface, hairlines rather than boxes, and the logo's pink only where something needs a look or is chosen. Ogrodje's own brand, black, pink braces and faces, lives in the episodes' thumbnails and covers, which carry the colour of the page; the interface around them is neutral so they can.",
+    "keyCharacteristics": [
+      "A grey ramp and one accent; colour comes from the thumbnails, not the chrome.",
+      "One type family (Inter) on a scale of seven sizes; monospace only for codes like S05E07.",
+      "Rows under hairlines, not cards; a card only where a thing stands alone (a person, a session, a release).",
+      "Every list says how many, what's shown of how many, and what to do when nothing is.",
+      "Built for the keyboard and screen readers as much as for the mouse."
+    ],
+    "rules": [
+      { "name": "The Thumbnails Carry the Colour Rule", "body": "The interface is grey and pink; Ogrodje's branding, faces and colours come in through episodes' pictures, never through the chrome around them.", "section": "colors" },
+      { "name": "The Pink Means Look Rule", "body": "Pink marks what needs attention, what's chosen or what acts. Anything else pink, a decoration, a heading, a background, dilutes it.", "section": "colors" },
+      { "name": "The Seven Sizes Rule", "body": "A size that isn't one of the seven tokens doesn't ship: 12.5 or 15 px is a scale that drifted.", "section": "typography" },
+      { "name": "The Codes Are Mono Rule", "body": "Monospace is for what's typed and matched, S05E07 or a file's name in Dropbox, never for a \"technical\" look.", "section": "typography" },
+      { "name": "The Flat Page Rule", "body": "Nothing on the page casts a shadow; a shadow means it floats and will go away.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do take every colour, size, radius and shadow from base.scss's tokens; add a token, with what it's for, before a second component needs a new value.",
+      "Do use .button, .button.primary, .text-button and .input rather than styling a button or field in a component.",
+      "Do say what something is under its name (.title .meta: S05E07 · its show · Published), not above it.",
+      "Do give every list a count, a filtered count, a loading state (LoadingRows), an error with Try again (LoadError) and an empty state.",
+      "Do keep text at 4.5:1 or more: Muted (#6B6B6B) is the lightest grey for words, placeholders too."
+    ],
+    "donts": [
+      "Don't bring Ogrodje's branding (black, pink braces, faces) into the interface; it's in the pictures.",
+      "Don't put a label or eyebrow above a heading, e.g. \"Recording session\" over a session's name.",
+      "Don't box what can be a section: a form or a list sits on the page under its heading, not in a bordered card.",
+      "Don't use a size off the scale (12.5, 13.5, 15 px), a radius off it (6.4, 10 px) or a grey off the ramp.",
+      "Don't shadow anything that doesn't float, or make a big number with a small label stand in for a fact."
+    ]
+  }
+}

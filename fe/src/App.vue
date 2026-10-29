@@ -111,23 +111,24 @@ function reload() {
 <template>
   <a class="skip" href="#page">Skip to content</a>
 
-  <!-- The logo, and at the right search and you; under them the pages, as tabs -->
+  <!-- One row: the logo, the pages as tabs, and at the right search and you; on narrower screens the tabs under them -->
   <header>
-    <div class="top">
+    <div class="bar">
       <RouterLink class="logo" to="/" aria-label="Ogrodje MetaOS, home"><img src="/favicon.png" alt=""/></RouterLink>
+
+      <nav class="pages" aria-label="Main">
+        <RouterLink v-for="page in pages" :key="page.path" :to="page.path" :class="{ current: current(page.path) }"
+                    :aria-current="current(page.path) ? 'page' : undefined">
+          <FontAwesomeIcon :icon="page.icon"/>{{ page.title }}
+        </RouterLink>
+      </nav>
+
       <div v-if="auth.ready" class="actions">
         <!-- Search is the team's, as most of what it finds is -->
         <SearchPalette v-if="auth.team"/>
         <UserMenu :name="name" :person="person" :can-link-accounts="canLinkAccounts"/>
       </div>
     </div>
-
-    <nav class="pages" aria-label="Main">
-      <RouterLink v-for="page in pages" :key="page.path" :to="page.path" :class="{ current: current(page.path) }"
-                  :aria-current="current(page.path) ? 'page' : undefined">
-        <FontAwesomeIcon :icon="page.icon"/>{{ page.title }}
-      </RouterLink>
-    </nav>
   </header>
 
   <!-- Signed in, but not approved yet: why they see what everyone does -->
@@ -140,7 +141,7 @@ function reload() {
     <p v-if="auth.checkingSlowly">Checking your sign-in…</p>
     <p v-else>
       Couldn't confirm your sign-in, as the sign-in service didn't answer, so you see what everyone sees.
-      <button type="button" @click="reload">Try again</button>
+      <button type="button" class="text-button" @click="reload">Try again</button>
     </p>
   </div>
 
@@ -179,10 +180,10 @@ function reload() {
   left: 8px;
   z-index: 30;
   padding: 10px 14px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: var(--ink);
   color: #FFFFFF;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   font-weight: 500;
   transform: translateY(-200%);
@@ -197,39 +198,43 @@ header {
   border-bottom: 1px solid var(--hairline);
 }
 
-// The page's column: the logo lines up with what's under it
-.top {
+// The page's column, in one row: the logo lines up with what's under it, the tabs follow it, search and you at the
+// right. The tabs keep their place while the right side waits for the sign-in check.
+.bar {
   max-width: var(--content-width);
-  height: 64px;
   margin: 0 auto;
   padding: 0 24px;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: 'logo pages actions';
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  column-gap: 28px;
+  min-height: 60px;
 }
 
 .logo {
+  grid-area: logo;
   display: flex;
+  align-items: center;
 
   img {
     display: block;
-    height: 34px;
+    height: 40px;
   }
 }
 
 .actions {
+  grid-area: actions;
   display: flex;
   gap: 12px;
   align-items: center;
 }
 
-// Tabs whose first label, not its padding, lines up with the logo. When they don't fit, they scroll sideways and fade
+// Tabs as tall as the bar, the current one underlined at its edge. When they don't fit, they scroll sideways and fade
 // out at the edge.
 .pages {
-  max-width: var(--content-width);
-  margin: 0 auto;
-  padding: 0 14px;
+  grid-area: pages;
+  align-self: stretch;
   display: flex;
   overflow-x: auto;
   scrollbar-width: none;
@@ -244,26 +249,31 @@ header {
     flex: none;
     align-items: center;
     gap: 8px;
-    padding: 12px 10px;
-    font-size: 14px;
+    padding: 0 12px;
+    font-size: var(--text-body);
     line-height: 20px;
+    font-weight: 500;
     color: var(--secondary);
     white-space: nowrap;
 
+    // Each after its icon, quieter than its name
     svg {
       font-size: 13px;
       color: var(--muted);
     }
 
+    &:hover {
+      color: var(--ink);
+    }
+
     // Inside the tab, as the strip clips anything outside it
     &:focus-visible {
-      outline-offset: -4px;
-      border-radius: 8px;
+      outline-offset: -8px;
+      border-radius: var(--radius);
     }
 
     &.current {
       color: var(--ink);
-      font-weight: 500;
       box-shadow: inset 0 -2px 0 var(--accent);
 
       svg {
@@ -273,15 +283,32 @@ header {
   }
 }
 
-// Phones: the page's narrower gutter, and the tabs closer together, without their icons
-@media (max-width: 640px) {
-  .top {
-    height: 56px;
-    padding: 0 16px;
+// Narrower: the logo and the right side in a row, the tabs under them, their first label lined up with the logo
+@media (max-width: 800px) {
+  .bar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'logo actions' 'pages pages';
+    min-height: 0;
   }
 
-  .logo img {
-    height: 30px;
+  .logo,
+  .actions {
+    height: 56px;
+  }
+
+  .pages {
+    margin: 0 -12px;
+
+    a {
+      padding: 12px;
+    }
+  }
+}
+
+// Phones: the page's narrower gutter, and the tabs closer together, without their icons
+@media (max-width: 640px) {
+  .bar {
+    padding: 0 16px;
   }
 
   .actions {
@@ -289,7 +316,7 @@ header {
   }
 
   .pages {
-    padding: 0 8px;
+    margin: 0 -8px;
 
     a {
       padding: 10px 8px;
@@ -316,24 +343,13 @@ header {
     max-width: var(--content-width);
     margin: 0 auto;
     padding: 12px 24px;
-    font-size: 13px;
+    font-size: var(--text-small);
     line-height: 20px;
     color: var(--secondary);
   }
 
   button {
     margin-left: 4px;
-    padding: 0;
-    font-weight: 500;
-    color: var(--accent-text);
-    background: none;
-    border: 0;
-    cursor: pointer;
-
-    &:hover {
-      text-decoration: underline;
-      text-underline-offset: 3px;
-    }
   }
 
   @media (max-width: 640px) {
@@ -369,7 +385,7 @@ footer {
   }
 
   .name {
-    font-size: 13px;
+    font-size: var(--text-small);
     line-height: 20px;
     color: var(--muted);
     white-space: nowrap;
@@ -388,8 +404,8 @@ footer {
     align-items: center;
     min-height: var(--icon-link);
     padding: 0 8px;
-    border-radius: 8px;
-    font-size: 13px;
+    border-radius: var(--radius);
+    font-size: var(--text-small);
     line-height: 20px;
     color: var(--secondary);
     white-space: nowrap;

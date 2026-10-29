@@ -15,7 +15,7 @@ defineProps<{ name: string, color: string | null }>()
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--text-caption);
   line-height: 16px;
   font-weight: 500;
   color: var(--secondary);

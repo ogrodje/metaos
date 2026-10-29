@@ -28,7 +28,7 @@ const html = computed(() => renderMarkdown(props.source))
   // As the page's section headings, whatever their level in the text
   :deep(h1), :deep(h2), :deep(h3), :deep(h4), :deep(h5), :deep(h6) {
     margin: 20px 0 8px;
-    font-size: 15px;
+    font-size: var(--text-lead);
     line-height: 24px;
     font-weight: 600;
     color: var(--ink);
@@ -64,14 +64,14 @@ const html = computed(() => renderMarkdown(props.source))
 
   :deep(code) {
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: var(--text-small);
   }
 
   :deep(pre) {
     padding: 12px;
     overflow-x: auto;
-    background: #FAFAFA;
-    border-radius: 8px;
+    background: var(--surface);
+    border-radius: var(--radius);
   }
 
   :deep(blockquote) {

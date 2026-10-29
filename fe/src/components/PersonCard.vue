@@ -49,7 +49,7 @@ const latest = computed(() => props.person.episodes[0]?.episode)
 .name {
   display: block;
   overflow: hidden;
-  font-size: 14px;
+  font-size: var(--text-body);
   line-height: 20px;
   font-weight: 600;
   white-space: nowrap;
@@ -60,19 +60,18 @@ const latest = computed(() => props.person.episodes[0]?.episode)
   min-width: 0;
 }
 
-// The team: a card each, the picture beside who they are
+// The team: the picture large beside who they are, under a rule, as the guests' lines are
 .team-card {
   display: grid;
   grid-template-columns: 72px minmax(0, 1fr);
   align-items: center;
   gap: 16px;
   min-width: 0;
-  padding: 16px;
-  border: 1px solid var(--hairline);
-  border-radius: 12px;
+  padding: 16px 0;
+  border-top: 1px solid var(--rule);
 
   .name {
-    font-size: 15px;
+    font-size: var(--text-lead);
     line-height: 22px;
   }
 }
@@ -82,7 +81,7 @@ const latest = computed(() => props.person.episodes[0]?.episode)
   display: -webkit-box;
   overflow: hidden;
   margin-top: 2px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 19px;
   color: var(--secondary);
   -webkit-box-orient: vertical;
@@ -91,7 +90,7 @@ const latest = computed(() => props.person.episodes[0]?.episode)
 
 .roles {
   margin-top: 4px;
-  font-size: 12.5px;
+  font-size: var(--text-caption);
   line-height: 18px;
   color: var(--muted);
   text-wrap: pretty;
@@ -115,13 +114,13 @@ const latest = computed(() => props.person.episodes[0]?.episode)
 }
 
 .bio {
-  font-size: 12.5px;
+  font-size: var(--text-caption);
   line-height: 18px;
   color: var(--secondary);
 }
 
 .episodes {
-  font-size: 12px;
+  font-size: var(--text-caption);
   line-height: 18px;
   color: var(--muted);
 }

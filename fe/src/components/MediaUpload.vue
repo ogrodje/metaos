@@ -466,7 +466,7 @@ defineExpose({ open })
   height: 36px;
   color: var(--secondary);
   background: var(--hover);
-  border-radius: 8px;
+  border-radius: var(--radius);
 
   svg {
     width: 16px;
@@ -480,7 +480,7 @@ defineExpose({ open })
 
   &.refused {
     color: var(--accent-text);
-    background: #FDF0F3;
+    background: var(--accent-wash);
   }
 }
 
@@ -506,16 +506,16 @@ defineExpose({ open })
   min-height: 32px;
   padding: 0 8px;
   font: inherit;
-  font-size: 12.5px;
+  font-size: var(--text-caption);
   color: var(--ink);
   background: #FFFFFF;
   border: 1px solid var(--hairline);
-  border-radius: 6.4px;
+  border-radius: var(--radius-sm);
 }
 
 .warn {
   gap: 6px;
-  color: #8A5A00;
+  color: var(--warning);
 
   svg {
     width: 12px;

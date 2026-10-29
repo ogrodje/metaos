@@ -3,9 +3,9 @@
 // for a picture that isn't there. Sizes come from one scale: 24, 32, 40, 56, 72 and 96 px, and the grids' widths.
 
 // Up to 56 px across, e.g. a list's row, Home's releases, the panel's title card
-$small-radius: 6px;
+$small-radius: var(--radius-sm);
 // Anything larger, e.g. cards, Media, photos
-$radius: 8px;
+$radius: var(--radius);
 // A picture that isn't there
 $empty: #F1F1F1;
 

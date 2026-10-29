@@ -457,14 +457,14 @@ h1, h2, h3 {
 
 code {
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: var(--text-small);
 }
 
 // Inline, in text
 p code, dd code {
   padding: 1px 5px;
   background: var(--hover);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   overflow-wrap: anywhere;
 }
 
@@ -481,11 +481,6 @@ strong {
   }
 }
 
-a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, .panel:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
 // A section's link lands it a little below the top, as does a step's
 section, .step {
   scroll-margin-top: 24px;
@@ -494,7 +489,7 @@ section, .step {
 .intro {
   max-width: 68ch;
   padding-bottom: 16px;
-  font-size: 14px;
+  font-size: var(--text-body);
   line-height: 22px;
   color: var(--secondary);
 }
@@ -521,14 +516,14 @@ section, .step {
   align-content: start;
   padding: 20px;
   border: 1px solid var(--hairline);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
 
   &:hover {
-    border-color: #A3A3A3;
+    border-color: var(--hairline-strong);
   }
 
   &:has(.way-link:focus-visible) {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--accent-text);
     outline-offset: 2px;
   }
 
@@ -543,14 +538,14 @@ section, .step {
   place-items: center;
   width: 40px;
   height: 40px;
-  font-size: 17px;
+  font-size: var(--text-section);
   color: var(--ink);
   background: var(--hover);
-  border-radius: 10px;
+  border-radius: var(--radius);
 }
 
 .way-name {
-  font-size: 15px;
+  font-size: var(--text-lead);
   line-height: 22px;
   font-weight: 600;
 }
@@ -562,12 +557,12 @@ section, .step {
 
 .way-meta {
   margin-top: 8px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--muted);
 
   code {
-    font-size: 12px;
+    font-size: var(--text-caption);
   }
 }
 
@@ -576,13 +571,13 @@ section, .step {
   align-items: center;
   gap: 6px;
   margin-top: 12px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   font-weight: 500;
   color: var(--accent-text);
 
   svg {
-    font-size: 11px;
+    font-size: var(--text-micro);
   }
 
   // The whole card
@@ -590,7 +585,7 @@ section, .step {
     content: '';
     position: absolute;
     inset: 0;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
   }
 
   &:focus-visible {
@@ -607,19 +602,19 @@ section, .step {
   padding: 3px;
   margin-bottom: 24px;
   background: var(--hover);
-  border-radius: 8px;
+  border-radius: var(--radius);
   scrollbar-width: none;
 
   button {
     flex: none;
     padding: 6px 14px;
     font: inherit;
-    font-size: 13px;
+    font-size: var(--text-small);
     line-height: 20px;
     color: var(--secondary);
     background: none;
     border: 0;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
 
     &:hover {
@@ -640,7 +635,7 @@ section, .step {
 }
 
 .panel {
-  border-radius: 8px;
+  border-radius: var(--radius);
 }
 
 // The steps on a rail through their numbers, as the history's dates
@@ -685,10 +680,10 @@ section, .step {
   width: 28px;
   height: 28px;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--text-caption);
   color: var(--secondary);
   background: #FFFFFF;
-  border: 1px solid #A3A3A3;
+  border: 1px solid var(--hairline-strong);
   border-radius: 50%;
 }
 
@@ -699,7 +694,7 @@ section, .step {
 }
 
 .step-title {
-  font-size: 15px;
+  font-size: var(--text-lead);
   line-height: 28px;
   font-weight: 500;
 }
@@ -707,7 +702,7 @@ section, .step {
 .step-details {
   margin-top: 2px;
   max-width: 640px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--secondary);
 }
@@ -736,14 +731,14 @@ section, .step {
   border-top: 1px solid var(--rule);
 
   h3 {
-    font-size: 14px;
+    font-size: var(--text-body);
     line-height: 22px;
     font-weight: 600;
   }
 
   .explain > p {
     margin-top: 4px;
-    font-size: 13px;
+    font-size: var(--text-small);
     line-height: 20px;
     color: var(--secondary);
   }
@@ -759,11 +754,11 @@ section, .step {
   margin-top: 16px;
   padding: 14px 16px 16px;
   border: 1px solid var(--hairline);
-  border-radius: 10px;
+  border-radius: var(--radius);
 
   > p {
     margin-top: 6px;
-    font-size: 13px;
+    font-size: var(--text-small);
     line-height: 20px;
     color: var(--secondary);
   }
@@ -782,7 +777,7 @@ section, .step {
   }
 
   b {
-    font-size: 14px;
+    font-size: var(--text-body);
     font-weight: 600;
     color: var(--ink);
   }
@@ -794,11 +789,11 @@ section, .step {
 
 .lasts {
   padding: 0 8px;
-  font-size: 11.5px;
+  font-size: var(--text-micro);
   line-height: 20px;
   color: var(--secondary);
   border: 1px solid var(--hairline);
-  border-radius: 10px;
+  border-radius: var(--radius);
 }
 
 .token-actions {
@@ -815,7 +810,7 @@ section, .step {
 }
 
 .token-status {
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--muted);
 }
@@ -827,19 +822,19 @@ section, .step {
   margin-top: 8px;
   padding: 8px 12px;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--text-caption);
   line-height: 18px;
   color: var(--ink);
   word-break: break-all;
-  background: #FAFAFA;
+  background: var(--surface);
   border: 1px solid var(--hairline);
-  border-radius: 8px;
+  border-radius: var(--radius);
   resize: vertical;
 }
 
 .error {
   margin-top: 8px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--accent-text);
 }
@@ -867,14 +862,14 @@ section, .step {
     color: var(--ink);
     background: #FFFFFF;
     border: 1px solid var(--hairline);
-    border-radius: 8px;
+    border-radius: var(--radius);
 
     &::placeholder {
       color: var(--muted);
     }
 
     &:hover {
-      border-color: #A3A3A3;
+      border-color: var(--hairline-strong);
     }
 
     &:focus-visible {
@@ -887,7 +882,7 @@ section, .step {
 .matches {
   min-height: 20px;
   margin: 8px 0 4px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--muted);
 
@@ -913,7 +908,7 @@ section, .step {
   align-items: baseline;
   column-gap: 8px;
   padding-bottom: 8px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   font-weight: 600;
   border-bottom: 1px solid var(--rule);
@@ -933,7 +928,7 @@ section, .step {
   border-bottom: 1px solid var(--rule);
 
   dt code {
-    font-size: 12.5px;
+    font-size: var(--text-caption);
     line-height: 20px;
     font-weight: 500;
     color: var(--ink);
@@ -942,7 +937,7 @@ section, .step {
 
   dd {
     margin: 2px 0 0;
-    font-size: 13px;
+    font-size: var(--text-small);
     line-height: 20px;
     color: var(--secondary);
   }

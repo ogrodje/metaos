@@ -6,7 +6,7 @@ import FileLinks from '@/components/FileLinks.vue'
 import { formatDate, relativeDate, sessionName, sessionPath, type SessionGroup, TIME_ZONE } from '@/episodes'
 
 // A recording session on the home page and its episodes: the day as on a calendar, where, how far away, its files, and
-// its episodes a line each. Episodes without a session are a card of their own, without the head.
+// its episodes a line each. Episodes without a session are rows of their own, without the head.
 const props = defineProps<{
   group: SessionGroup
   // A date that passed while it's still to be recorded: what needs attention says why
@@ -23,7 +23,7 @@ const day = computed(() => {
 </script>
 
 <template>
-  <div class="session-card">
+  <div class="session-card" :class="{ loose: !group.session }">
     <h3 v-if="group.session" class="head">
       <span class="calendar" aria-hidden="true"><span class="month">{{ day?.month }}</span><span class="day">{{ day?.day }}</span></span>
       <span class="where">
@@ -41,49 +41,50 @@ const day = computed(() => {
 
 <style scoped lang="scss">
 
+// A part of its section under a hairline, as a row is, not a box: the head, then its episodes under its name
 .session-card {
-  overflow: hidden;
-  border: 1px solid var(--hairline);
-  border-radius: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--hairline);
 
   & + & {
-    margin-top: 14px;
+    margin-top: 10px;
+  }
+
+  // Episodes without a session: rows as any list's
+  &.loose {
+    padding-top: 0;
+    border-top: 0;
   }
 }
 
 .head {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) auto auto;
+  grid-template-columns: 44px minmax(0, 1fr) auto auto;
   align-items: center;
-  column-gap: 14px;
-  padding: 10px 14px;
+  column-gap: 16px;
   font-weight: 400;
-  background: #FAFAFA;
-  border-bottom: 1px solid var(--rule);
 }
 
-// The day, as on a calendar
+// The day, as on a calendar: the month over it, in the page's greys
 .calendar {
   display: grid;
-  overflow: hidden;
+  padding: 4px 0;
   text-align: center;
-  background: #FFFFFF;
   border: 1px solid var(--hairline);
-  border-radius: 8px;
+  border-radius: var(--radius);
 
   .month {
-    font-size: 10.5px;
-    line-height: 16px;
+    font-size: var(--text-micro);
+    line-height: 14px;
     font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: #FFFFFF;
-    background: var(--accent-text);
+    color: var(--muted);
   }
 
   .day {
-    font-size: 18px;
-    line-height: 26px;
+    font-size: var(--text-section);
+    line-height: 22px;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
@@ -94,26 +95,32 @@ const day = computed(() => {
   min-width: 0;
 
   a {
-    font-size: 14px;
-    line-height: 20px;
+    font-size: var(--text-lead);
+    line-height: 22px;
     font-weight: 600;
+    letter-spacing: -0.01em;
+
+    &:hover {
+      color: var(--accent-text);
+    }
   }
 }
 
 .date {
-  font-size: 12.5px;
+  font-size: var(--text-caption);
   line-height: 18px;
   color: var(--muted);
 }
 
 .when {
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--secondary);
   white-space: nowrap;
 
   &.overdue {
     color: var(--accent-text);
+    font-weight: 500;
   }
 }
 
@@ -121,8 +128,10 @@ const day = computed(() => {
   display: flex;
 }
 
+// Under the session's name, past its calendar
 .episodes {
-  padding: 0 14px;
+  margin-top: 6px;
+  padding-left: 60px;
   list-style: none;
 
   :deep(.episode:first-child) {
@@ -130,11 +139,19 @@ const day = computed(() => {
   }
 }
 
+.loose .episodes {
+  margin-top: 0;
+  padding-left: 0;
+
+  :deep(.episode:first-child) {
+    border-top: 1px solid var(--hairline);
+  }
+}
+
 @media (max-width: 640px) {
   .head {
     grid-template-columns: 44px minmax(0, 1fr) auto;
-    column-gap: 10px;
-    padding: 10px 12px;
+    column-gap: 12px;
   }
 
   .files {
@@ -142,7 +159,7 @@ const day = computed(() => {
   }
 
   .episodes {
-    padding: 0 12px;
+    padding-left: 0;
   }
 }
 </style>

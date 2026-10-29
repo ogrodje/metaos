@@ -52,10 +52,10 @@ const places = [
   gap: 8px;
 
   h1 {
-    font-size: 24px;
-    line-height: 32px;
+    font-size: var(--text-page);
+    line-height: 34px;
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
   }
 
   p {
