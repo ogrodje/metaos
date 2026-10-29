@@ -4,7 +4,9 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.springframework.boot.health.contributor.Status
+import java.io.InputStream
 import java.util.Base64
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
@@ -30,17 +32,19 @@ class FakeKoofr : Koofr {
     override fun search(text: String, place: String?, limit: Int) =
         files.values.map { it.first }.filter { (place == null || it.place == place) && text.lowercase() in it.name.lowercase() }.take(limit)
 
-    override fun read(place: String, path: String, maxBytes: Int) =
-        files.getValue(place to path).second!!.let { it.copyOf(minOf(it.size, maxBytes)) }
+    override fun read(place: String, path: String, offset: Long, maxBytes: Int) =
+        files.getValue(place to path).second!!.let { it.copyOfRange(offset.toInt(), minOf(it.size, offset.toInt() + maxBytes)) }
 
     // The image itself stands in for its thumbnail
     override fun thumbnail(place: String, path: String, size: String) =
         files.getValue(place to path).let { (file, content) -> KoofrImage(file.contentType ?: "image/jpeg", content!!) }
 
-    override fun upload(place: String, folder: String, name: String, contentType: String, content: ByteArray, overwrite: Boolean): KoofrFile {
+    override fun upload(place: String, folder: String, name: String, contentType: String, content: InputStream, size: Long, overwrite: Boolean): KoofrFile {
         val path = "${folder.trimEnd('/')}/$name"
         require(overwrite || file(place, path) == null) { "$path is already there" }
-        put(place, path, content, contentType)
+        val bytes = content.readAllBytes()
+        check(bytes.size.toLong() == size) { "$name came as ${bytes.size} bytes, not $size" }
+        put(place, path, bytes, contentType)
         return file(place, path)!!
     }
 
@@ -88,13 +92,31 @@ class KoofrTest {
         assertEquals(listOf("mount-media" to "/Epizode/S05E08", "mount-media" to "/Epizode/S05E08/notes.md").toSet(),
             mcp.search("S05E08", null).map { it.place to it.path }.toSet() + mcp.search("notes", "Ogrodje Media").map { it.place to it.path })
 
-        val notes = mcp.read("Ogrodje Media", "/Epizode/S05E08/notes.md")
+        val notes = mcp.read("Ogrodje Media", "/Epizode/S05E08/notes.md", null)
         assertEquals("# Zapiski\n\nČ, š in ž", notes.text)
-        assertEquals(false, notes.truncated)
-        assertEquals("Koofr", mcp.read("Arhiv", "S04E14.md").text)
-        assertFailsWith<IllegalArgumentException> { mcp.read("Ogrodje Media", "/Epizode/S05E08/raw.wav") }
-        assertFailsWith<IllegalArgumentException> { mcp.read("Ogrodje Media", "/Epizode/S05E08") }
-        assertFailsWith<IllegalArgumentException> { mcp.read("Ogrodje Media", "/nothing.md") }
+        assertNull(notes.next)
+        assertEquals("Koofr", mcp.read("Arhiv", "S04E14.md", null).text)
+        assertFailsWith<IllegalArgumentException> { mcp.read("Ogrodje Media", "/Epizode/S05E08/raw.wav", null) }
+        assertFailsWith<IllegalArgumentException> { mcp.read("Ogrodje Media", "/Epizode/S05E08", null) }
+        assertFailsWith<IllegalArgumentException> { mcp.read("Ogrodje Media", "/nothing.md", null) }
+    }
+
+    @Test
+    fun `reads a long text file in pieces that add up to all of it`() {
+        val text = longSloveneText()
+        koofr.put("mount-media", "/Epizode/S05E08/transcript.srt", text.toByteArray(), "application/x-subrip")
+        assertContentEquals(text.toByteArray(), readInPieces { mcp.read("Ogrodje Media", "/Epizode/S05E08/transcript.srt", it).let { r -> r.text to r.next } })
+        assertFailsWith<IllegalArgumentException> { mcp.read("Arhiv", "S04E14.md", 6) }
+    }
+
+    @Test
+    fun `streams an upload of up to 10 MB, refusing a bigger one before decoding it`() {
+        val big = ByteArray(MAX_UPLOAD) { it.toByte() }
+        mcp.upload("Ogrodje Media", "/", "big.bin", Base64.getMimeEncoder().encodeToString(big), base64 = true, overwrite = null)
+        assertContentEquals(big, koofr.read("mount-media", "/big.bin", 0, MAX_UPLOAD))
+        assertFailsWith<IllegalArgumentException> { mcp.upload("Ogrodje Media", "/", "bigger.bin", Base64.getEncoder().encodeToString(big + 0), true, null) }
+        assertFailsWith<IllegalArgumentException> { mcp.upload("Ogrodje Media", "/", "bigger.md", "a".repeat(MAX_UPLOAD + 1), null, null) }
+        assertNull(koofr.file("mount-media", "/bigger.bin"))
     }
 
     @Test
@@ -103,7 +125,7 @@ class KoofrTest {
         assertEquals("/Epizode/S05E08/shownotes.md", uploaded.path)
         assertFailsWith<IllegalArgumentException> { mcp.upload("Ogrodje Media", "/Epizode/S05E08", "shownotes.md", "Again", null, null) }
         mcp.upload("Ogrodje Media", "/Epizode/S05E08", "shownotes.md", "Shownotes v2", base64 = null, overwrite = true)
-        assertEquals("Shownotes v2", mcp.read("Ogrodje Media", "/Epizode/S05E08/shownotes.md").text)
+        assertEquals("Shownotes v2", mcp.read("Ogrodje Media", "/Epizode/S05E08/shownotes.md", null).text)
 
         val png = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47)
         mcp.upload("Ogrodje Media", "/Epizode/S05E08", "cover.png", Base64.getEncoder().encodeToString(png), base64 = true, overwrite = null)
@@ -138,7 +160,7 @@ class KoofrTest {
         places.firstOrNull()?.let { place ->
             assertNotNull(storage.file(place.id, "/"))
             val files = storage.list(place.id, "/")
-            files.firstOrNull { !it.folder }?.let { assertTrue(storage.read(place.id, it.path, 16).size <= 16) }
+            files.firstOrNull { !it.folder }?.let { assertTrue(storage.read(place.id, it.path, 0, 16).size <= 16) }
             storage.search(files.firstOrNull()?.name ?: "a", place.id, 5)
         }
 

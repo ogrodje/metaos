@@ -9,7 +9,7 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 data class DriveFileDto(val id: String, val name: String, val type: String, val url: String?, val modifiedAt: OffsetDateTime?)
-data class DocumentContentDto(val id: String, val name: String, val url: String?, val markdown: String)
+data class DocumentContentDto(val id: String, val name: String, val url: String?, val markdown: String, val offset: Long, val next: Long?)
 
 // An episode's docs are linked to the episode itself, or to the recording session it is in
 enum class LinkedTo { EPISODE, SESSION }
@@ -106,11 +106,17 @@ class DocumentsMCP(
             title = "Read Google Doc",
             readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
         ),
-        description = "Read a Google Doc in Ogrodje's Google Drive folder, as Markdown"
+        description = "Read a Google Doc in Ogrodje's Google Drive folder, as Markdown, ${MAX_READ / 1024} kB at a time: when " +
+            "next isn't null, read on from it"
     )
-    fun read(@McpToolParam(description = DOCUMENT_REF) document: String): DocumentContentDto {
+    fun read(
+        @McpToolParam(description = DOCUMENT_REF) document: String,
+        @McpToolParam(description = READ_OFFSET, required = false) offset: Long?,
+    ): DocumentContentDto {
         val file = document(document)
-        return DocumentContentDto(file.id, file.name, file.webViewLink, drive.markdown(file.id))
+        val from = requireOffset(offset, null)
+        val piece = textPiece(drive.markdown(file.id, from, MAX_READ + 1), from)
+        return DocumentContentDto(file.id, file.name, file.webViewLink, piece.text, piece.offset, piece.next)
     }
 
     @McpTool(
