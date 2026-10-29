@@ -1,6 +1,20 @@
 // A section's heading, and how many things are in it. In page.scss, and on its own for components that make a whole
 // section, e.g. PhotoStrip. The type steps up by at least a quarter from role to role: rows' and subheadings' 14 px,
-// sections' 18 px, a page's 24 px, so a heading stands out by its size, not only its weight.
+// sections' 18 px, a page's 28 px, so a heading stands out by its size, not only its weight.
+
+// A heading's count, e.g. Needs attention 4: a grey tag rather than a loose number, so it doesn't read as the heading's
+// last word. Also PageHeader's.
+@mixin count-tag {
+  align-self: center;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--hover);
+  font-size: var(--text-caption);
+  line-height: 20px;
+  font-weight: 500;
+  color: var(--secondary);
+  font-variant-numeric: tabular-nums;
+}
 
 .heading {
   display: flex;
@@ -9,7 +23,7 @@
   padding-bottom: 12px;
 
   h2 {
-    font-size: 18px;
+    font-size: var(--text-section);
     line-height: 26px;
     font-weight: 600;
     letter-spacing: -0.01em;
@@ -17,10 +31,15 @@
 
   // A list that's the whole page, e.g. Ideas: its heading is the page's
   h1 {
-    font-size: 24px;
-    line-height: 32px;
+    font-size: var(--text-page);
+    line-height: 34px;
     font-weight: 600;
-    letter-spacing: -0.015em;
+    letter-spacing: -0.02em;
+  }
+
+  // How many, as a quiet tag after the heading
+  .count {
+    @include count-tag;
   }
 }
 
@@ -33,7 +52,7 @@
   column-gap: 8px;
   min-height: var(--icon-link);
   padding: 28px 0 8px;
-  font-size: 14px;
+  font-size: var(--text-body);
   line-height: 20px;
   font-weight: 600;
 
@@ -53,7 +72,7 @@
 }
 
 .count, .note {
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--muted);
 }

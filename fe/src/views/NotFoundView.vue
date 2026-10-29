@@ -18,7 +18,7 @@ const route = useRoute()
 
 code {
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: var(--text-small);
   overflow-wrap: anywhere;
 }
 </style>

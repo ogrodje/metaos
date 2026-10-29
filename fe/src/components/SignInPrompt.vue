@@ -40,10 +40,10 @@ const auth = useAuthStore()
   gap: 8px;
   padding: 24px;
   border: 1px solid var(--hairline);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
 
   h2 {
-    font-size: 18px;
+    font-size: var(--text-section);
     line-height: 26px;
     font-weight: 600;
     letter-spacing: -0.01em;
@@ -62,7 +62,7 @@ const auth = useAuthStore()
   }
 
   .approval {
-    font-size: 13px;
+    font-size: var(--text-small);
     line-height: 20px;
     color: var(--muted);
   }
@@ -80,13 +80,13 @@ const auth = useAuthStore()
   border-radius: 0;
 
   h2 {
-    font-size: 14px;
+    font-size: var(--text-body);
     line-height: 20px;
   }
 
   p {
     grid-column: 1;
-    font-size: 13px;
+    font-size: var(--text-small);
     line-height: 20px;
   }
 

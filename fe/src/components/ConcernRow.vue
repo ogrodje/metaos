@@ -37,7 +37,7 @@ defineProps<{ concern: Concern }>()
 }
 
 .title {
-  font-size: 14px;
+  font-size: var(--text-body);
   line-height: 22px;
   font-weight: 500;
 
@@ -49,7 +49,7 @@ defineProps<{ concern: Concern }>()
 
 // What's wrong, in the accent's text colour: the one thing on the page that asks for something
 .reasons {
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--accent-text);
 
@@ -62,7 +62,7 @@ defineProps<{ concern: Concern }>()
 }
 
 .when {
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 22px;
   color: var(--muted);
   white-space: nowrap;
@@ -77,7 +77,7 @@ defineProps<{ concern: Concern }>()
 
   .when {
     grid-column: 2;
-    font-size: 12px;
+    font-size: var(--text-caption);
     line-height: 18px;
   }
 }

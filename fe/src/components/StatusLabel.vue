@@ -32,7 +32,7 @@ const stage = computed(() => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--secondary);
   white-space: nowrap;

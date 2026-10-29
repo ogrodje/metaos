@@ -26,7 +26,7 @@ export default defineNuxtConfig({
   modules: ['@pinia/nuxt'],
   // Inter, served with the app rather than from Google; Font Awesome's CSS comes with it too, rather than being added
   // at runtime (plugins/fontawesome.ts), so icons don't show unstyled first
-  css: ['@fontsource-variable/inter', '~/assets/main.scss', '@fortawesome/fontawesome-svg-core/styles.css'],
+  css: ['@fontsource-variable/inter/opsz.css', '~/assets/main.scss', '@fortawesome/fontawesome-svg-core/styles.css'],
   app: {
     head: {
       htmlAttrs: { lang: 'en' },

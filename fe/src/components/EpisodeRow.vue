@@ -87,7 +87,7 @@ const guestNames = computed(() => (released.value ? guests(props.episode).join('
 }
 
 .title {
-  font-size: 14px;
+  font-size: var(--text-body);
   line-height: 22px;
   font-weight: 500;
   text-wrap: pretty;
@@ -99,7 +99,7 @@ const guestNames = computed(() => (released.value ? guests(props.episode).join('
 
   .guests {
     margin-left: 10px;
-    font-size: 13px;
+    font-size: var(--text-small);
     font-weight: 400;
     color: var(--muted);
   }
@@ -124,7 +124,7 @@ const guestNames = computed(() => (released.value ? guests(props.episode).join('
 }
 
 .role {
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--secondary);
 }
@@ -132,7 +132,7 @@ const guestNames = computed(() => (released.value ? guests(props.episode).join('
 // Why a search found it
 .found {
   margin-top: 2px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--secondary);
 
@@ -150,7 +150,7 @@ const guestNames = computed(() => (released.value ? guests(props.episode).join('
 }
 
 .date {
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--muted);
   white-space: nowrap;
@@ -194,7 +194,7 @@ const guestNames = computed(() => (released.value ? guests(props.episode).join('
     height: auto;
 
     .status, .date {
-      font-size: 12px;
+      font-size: var(--text-caption);
       line-height: 18px;
     }
   }

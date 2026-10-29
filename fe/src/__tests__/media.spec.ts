@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  codecName, formatDuration, formatSize, infoLine, isMedia, type MediaInfo, mediaConcerns, namedBonus, type Picked, placeAll,
+  codecName, formatDuration, formatSize, infoLine, isMedia, type MediaInfo, type MediaKind, mediaConcerns, mediaParts, namedBonus, type Picked, placeAll,
   type Probe, probeOf, refusal, typeOf, warnings,
 } from '@/media'
 import { nextOffset, sendInChunks } from '@/resumable'
@@ -194,5 +194,17 @@ describe('sendInChunks', () => {
       .rejects.toThrow('The connection kept breaking while it was being sent')
     await expect(sendInChunks('session', file, () => {}, controller().signal, 4, async () => ({ status: 403, range: null }), async () => {}))
       .rejects.toThrow('Google Cloud Storage answered 403')
+  })
+})
+
+describe('mediaParts', () => {
+  const file = (kind: MediaKind, duration: number | null) => ({ kind, info: { duration } as MediaInfo })
+
+  it("says what's there, then what's missing once it's recorded", () => {
+    expect(mediaParts([file('FULL_AUDIO', 3314), file('BONUS_AUDIO', 772)], true)).toEqual([
+      { text: 'Full audio, 55:14' }, { text: 'a bonus, 12:52' }, { text: 'no video', missing: true },
+    ])
+    expect(mediaParts([file('BONUS_VIDEO', null), file('BONUS_AUDIO', null)], false)).toEqual([{ text: '2 bonuses' }])
+    expect(mediaParts([], false)).toEqual([])
   })
 })

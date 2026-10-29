@@ -131,7 +131,7 @@ h3 {
   align-items: baseline;
   gap: 6px;
   margin-bottom: 6px;
-  font-size: 12px;
+  font-size: var(--text-caption);
   line-height: 16px;
   font-weight: 600;
   color: var(--muted);
@@ -145,7 +145,7 @@ h3 {
   padding: 0;
   list-style: none;
   border: 1px solid var(--hairline);
-  border-radius: 10px;
+  border-radius: var(--radius);
 }
 
 .file {
@@ -167,7 +167,7 @@ h3 {
   height: 36px;
   color: var(--secondary);
   background: var(--hover);
-  border-radius: 8px;
+  border-radius: var(--radius);
 
   svg {
     width: 16px;
@@ -179,19 +179,19 @@ h3 {
   display: grid;
   gap: 2px;
   min-width: 0;
-  font-size: 12.5px;
+  font-size: var(--text-caption);
   line-height: 18px;
 }
 
 .title {
-  font-size: 13.5px;
+  font-size: var(--text-body);
   line-height: 20px;
   font-weight: 600;
 }
 
 .name {
   font-family: var(--font-mono);
-  font-size: 12.5px;
+  font-size: var(--text-caption);
   font-weight: 500;
   overflow-wrap: anywhere;
 }
@@ -219,18 +219,8 @@ h3 {
 }
 
 .question {
-  font-size: 12.5px;
+  font-size: var(--text-caption);
   font-weight: 500;
-}
-
-.button.small {
-  min-height: 32px;
-  padding: 0 10px;
-  font-size: 12.5px;
-}
-
-.button.quiet {
-  color: var(--secondary);
 }
 
 .button.delete {
@@ -252,16 +242,16 @@ h3 {
   min-height: 60px;
   padding: 12px;
   font: inherit;
-  font-size: 12.5px;
+  font-size: var(--text-caption);
   color: var(--muted);
-  background: #FCFCFC;
-  border: 1px dashed #D4D4D4;
-  border-radius: 10px;
+  background: var(--surface);
+  border: 1px dashed var(--faint);
+  border-radius: var(--radius);
   cursor: pointer;
 
   &:hover {
     color: var(--ink);
-    border-color: #BDBDBD;
+    border-color: var(--hairline-strong);
   }
 }
 

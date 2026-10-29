@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { errorMessage, graphql } from '@/graphql'
 import { kindOf, type MediaKind } from '@/media'
 import {
@@ -15,6 +15,10 @@ const props = defineProps<{ providers: SpeechProvider[] }>()
 const emit = defineEmits<{ started: [transcription: Transcription] }>()
 
 const typed = ref('')
+
+// Opened from the page's heading, it's for typing the episode in
+const field = ref<HTMLInputElement>()
+onMounted(() => field.value?.focus())
 const episode = ref<EpisodeFiles | null>()
 const finding = ref(false)
 const media = ref('')
@@ -79,19 +83,18 @@ async function transcribe() {
 </script>
 
 <template>
-  <section class="transcribe" aria-labelledby="transcribe-heading">
-    <h2 id="transcribe-heading" class="heading">Transcribe an episode</h2>
+  <section class="transcribe" aria-label="Transcribe an episode">
     <form class="fields" @submit.prevent="episode ? transcribe() : find()">
       <label class="field episode">
         <span class="label">Episode</span>
-        <input v-model="typed" type="text" placeholder="e.g. S05E07" autocomplete="off" spellcheck="false"
+        <input ref="field" v-model="typed" class="input" type="text" placeholder="e.g. S05E07" autocomplete="off" spellcheck="false"
                @change="find" @input="episode = undefined">
       </label>
 
       <template v-if="episode && episode.media.length">
         <label class="field">
           <span class="label">File</span>
-          <select v-model="media">
+          <select v-model="media" class="input">
             <option v-for="file in episode.media" :key="file.id" :value="file.id">
               {{ kindOf(file.kind as MediaKind).label }} · {{ file.name }}
             </option>
@@ -99,13 +102,13 @@ async function transcribe() {
         </label>
         <label class="field">
           <span class="label">Provider</span>
-          <select v-model="provider">
+          <select v-model="provider" class="input">
             <option v-for="p in providers" :key="p.name" :value="p.name">{{ providerName(p.name) }}</option>
           </select>
         </label>
         <label class="field">
           <span class="label">Language</span>
-          <select v-model="language">
+          <select v-model="language" class="input">
             <option v-for="l in LANGUAGES" :key="l.value" :value="l.value">{{ l.title }}</option>
           </select>
         </label>
@@ -135,20 +138,11 @@ async function transcribe() {
 </template>
 
 <style scoped lang="scss">
+// Under the page's heading, which opens it: a row of fields, not a box
 .transcribe {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 16px;
-  border: 1px solid var(--hairline);
-  border-radius: 8px;
-}
-
-.heading {
-  margin: 0;
-  font-size: 14px;
-  line-height: 20px;
-  font-weight: 600;
 }
 
 .fields {
@@ -170,22 +164,10 @@ async function transcribe() {
 }
 
 .label {
-  font-size: 12px;
+  font-size: var(--text-caption);
   line-height: 16px;
   font-weight: 600;
   color: var(--muted);
-}
-
-input[type='text'], select {
-  min-height: 44px;
-  max-width: 100%;
-  padding: 0 10px;
-  font: inherit;
-  font-size: 14px;
-  color: var(--ink);
-  background: #FFFFFF;
-  border: 1px solid var(--hairline);
-  border-radius: 6.4px;
 }
 
 select {
@@ -202,34 +184,22 @@ select {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
 }
 
 .hint {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--muted);
 }
 
 .error {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--accent-text);
-}
-
-.button.primary {
-  color: #FFFFFF;
-  background: var(--ink);
-  border-color: var(--ink);
-
-  &:hover {
-    color: #FFFFFF;
-    background: #2B2B2B;
-    border-color: #2B2B2B;
-  }
 }
 
 .button[aria-disabled='true'] {

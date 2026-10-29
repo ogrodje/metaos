@@ -5,7 +5,7 @@
 // A link among words that aren't, underlined lightly, and in the accent when pointed at
 @mixin link {
   text-decoration: underline;
-  text-decoration-color: #C4C4C4;
+  text-decoration-color: var(--faint);
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
 
@@ -79,22 +79,9 @@
   }
 }
 
-// A section's or a part's link or button at its heading's end, e.g. Show all 17
+// A section's or a part's link or button at its heading's end (a .text-button), e.g. Show all 17
 .heading .more, .subheading .more {
   margin-left: auto;
-  padding: 0;
-  font-size: 13px;
-  line-height: 20px;
-  font-weight: 500;
-  color: var(--accent-text);
-  background: none;
-  border: 0;
-  cursor: pointer;
-
-  &:hover {
-    text-decoration: underline;
-    text-underline-offset: 3px;
-  }
 }
 
 // An episode's or session's page: what it is, above everything about it
@@ -105,17 +92,19 @@
   gap: 4px;
 
   h1 {
-    font-size: 24px;
-    line-height: 32px;
+    font-size: var(--text-page);
+    line-height: 34px;
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
   }
 
-  .kicker {
+  // What kind of thing it is and where it's at, under its name, e.g. S05E07, its show and Published
+  .meta {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
-    font-size: 13px;
+    column-gap: 8px;
+    font-size: var(--text-small);
     line-height: 20px;
     color: var(--muted);
   }
@@ -129,37 +118,55 @@
   }
 }
 
-// A thing's page, e.g. an episode's: what it is in the main column, and the facts about it in a FactPanel at the right,
-// which comes first in the page, so on narrower screens it's above what it's about
+// A thing's page, e.g. an episode's, a person's or a session's: what it is (its lead: its name, and its picture) and the
+// rest about it in the main column, and the facts about it in a FactPanel at the right, beside them from the top, which
+// stays in view. On narrower screens one column: what it is, the panel, the rest. The panel comes before the main column
+// in the page, after the lead.
 .workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
+  grid-template-columns: minmax(0, 1fr) 336px;
+  grid-template-rows: auto 1fr;
+  grid-template-areas: 'lead side' 'main side';
   column-gap: 64px;
   align-items: start;
 
+  > .lead {
+    grid-area: lead;
+    display: grid;
+    gap: 28px;
+    min-width: 0;
+  }
+
+  > .fact-panel {
+    grid-area: side;
+  }
+
   > .main {
-    grid-column: 1;
-    grid-row: 1;
+    grid-area: main;
     display: flex;
     flex-direction: column;
     gap: 48px;
     min-width: 0;
   }
 
-  > .fact-panel {
-    grid-column: 2;
-    grid-row: 1;
+  > .lead ~ .main {
+    padding-top: 32px;
   }
 }
 
 @media (max-width: 960px) {
   .workspace {
     grid-template-columns: minmax(0, 1fr);
-    row-gap: 40px;
+    grid-template-rows: auto;
+    grid-template-areas: 'side' 'main';
+    row-gap: 32px;
 
-    > .main, > .fact-panel {
-      grid-column: 1;
-      grid-row: auto;
+    &:has(> .lead) {
+      grid-template-areas: 'lead' 'side' 'main';
+    }
+
+    > .lead ~ .main {
+      padding-top: 8px;
     }
   }
 }
@@ -175,7 +182,7 @@
   }
 
   dt {
-    font-size: 13px;
+    font-size: var(--text-small);
     line-height: 22px;
     color: var(--muted);
   }

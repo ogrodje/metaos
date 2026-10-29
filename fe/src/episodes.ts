@@ -3,6 +3,7 @@
 import type { Comment } from '@/comments'
 import { type Image, IMAGE_FIELDS } from '@/images'
 import type { MediaFile } from '@/media'
+import type { EpisodeTranscript } from '@/transcriptions'
 
 // A candidate could be the episode's guest, until they're confirmed as one; only signed-in users get them
 export type Role = 'HOST' | 'CO_HOST' | 'GUEST' | 'PRODUCER' | 'CONSULTANT' | 'DESIGNER' | 'CANDIDATE'
@@ -189,8 +190,11 @@ export interface EpisodeDetails extends Episode {
   dropboxFolders: DropboxFolderWithPictures[]
   history: Change[]
   comments: Comment[]
-  // Its video and audio; none for anyone not on the team
+  // Its video and audio, and their transcripts, the latest first; none for anyone not on the team
   media: MediaFile[]
+  transcripts: EpisodeTranscript[]
+  // What it's spoken in, BCP-47: its show's language, else Slovenian
+  language: string
 }
 
 /** A session with everything about it, for its page */
@@ -275,6 +279,43 @@ export function roleName(role: Role) {
 // IN_PRODUCTION -> In production
 export function statusName(status: EpisodeStatus) {
   return status.charAt(0) + status.slice(1).toLowerCase().replace('_', ' ')
+}
+
+const RECORDED: EpisodeStatus[] = ['RECORDED', 'IN_PRODUCTION', 'READY', 'EARLY_ACCESS', 'PUBLISHED']
+
+/** Whether an episode is recorded: its pictures, video and audio come then, and before, a missing one isn't missing yet */
+export function isRecorded(status: EpisodeStatus) {
+  return RECORDED.includes(status)
+}
+
+/** A part of a line that says what something has, e.g. cover; or what it's missing, e.g. no web picture */
+export interface LinePart {
+  text: string
+  missing?: boolean
+}
+
+type Pictured = Pick<EpisodeDetails, 'status' | 'title' | 'titleB' | 'titleC' | 'thumbnail' | 'thumbnailB' | 'thumbnailC' | 'web' | 'cover'>
+
+/**
+ * What an episode's pictures are, in a line, with what's missing once it's recorded, e.g. 3 titles tested · cover ·
+ * no web picture · 4 artwork files · 9 photos; its titles only when it has more than one, as they're tested
+ */
+export function pictureParts(episode: Pictured, artwork: number, photos: number): LinePart[] {
+  const recorded = isRecorded(episode.status)
+  const variants = [
+    { letter: 'A', title: episode.title, image: episode.thumbnail },
+    { letter: 'B', title: episode.titleB, image: episode.thumbnailB },
+    { letter: 'C', title: episode.titleC, image: episode.thumbnailC },
+  ].filter((variant) => variant.title)
+  const tested = variants.length > 1
+  return [
+    ...(tested ? [{ text: `${variants.length} titles tested` }] : episode.thumbnail ? [{ text: 'thumbnail' }] : []),
+    ...(recorded ? variants.filter((v) => !v.image).map((v) => ({ text: tested ? `no thumbnail ${v.letter}` : 'no thumbnail', missing: true })) : []),
+    ...(episode.cover ? [{ text: 'cover' }] : recorded ? [{ text: 'no cover', missing: true }] : []),
+    ...(episode.web ? [{ text: 'web picture' }] : recorded ? [{ text: 'no web picture', missing: true }] : []),
+    ...(artwork ? [{ text: `${artwork} artwork ${artwork === 1 ? 'file' : 'files'}` }] : []),
+    ...(photos ? [{ text: `${photos} ${photos === 1 ? 'photo' : 'photos'}` }] : []),
+  ]
 }
 
 function named(episode: Pick<Episode, 'people'>, role: Role) {

@@ -24,6 +24,14 @@ const auth = useAuthStore()
 // The latest transcriptions, and the providers to transcribe with; undefined while they load
 const transcriptions = ref<Transcription[]>()
 const providers = ref<SpeechProvider[]>([])
+
+// Whether the form to transcribe an episode is open; it closes once one's started, which the list then shows
+const transcribing = ref(false)
+
+function started() {
+  transcribing.value = false
+  void load(true)
+}
 const error = ref<string>()
 
 // Only the latest load counts: an earlier one may answer after it
@@ -111,15 +119,21 @@ const parts = computed(() => split(shown.value))
 
     <template v-else>
       <PageHeader title="Transcriptions" :count="transcriptions?.length" :shown="filtering && transcriptions ? shown.length : undefined">
-        What's said in episodes' video and audio, by Google's Speech-to-Text or Soniox. Each provider hears a few files at
-        once; the rest wait their turn.
+        Episodes' video and audio, as Google's Speech-to-Text or Soniox heard it.
+        <template v-if="auth.team && providers.length" #actions>
+          <button type="button" class="button" :class="{ primary: !transcribing }" :aria-expanded="transcribing"
+                  aria-controls="transcribe" @click="transcribing = !transcribing">
+            {{ transcribing ? 'Cancel' : 'Transcribe an episode' }}
+          </button>
+        </template>
       </PageHeader>
 
       <!-- Signed in, but not approved yet, as the note under the header says -->
       <p v-if="auth.ready && !auth.team" class="note">The transcriptions are here once an admin has approved your account.</p>
 
       <template v-else>
-        <TranscribeForm v-if="providers.length" :providers="providers" @started="load(true)"/>
+        <!-- Opened from the heading, as the page is a list like the others first -->
+        <TranscribeForm v-if="transcribing && providers.length" id="transcribe" :providers="providers" @started="started"/>
 
         <FilterBar v-model:find="find" placeholder="Find by episode or file">
           <ChipGroup v-model="status" label="Status" :options="statuses"/>
@@ -134,13 +148,13 @@ const parts = computed(() => split(shown.value))
         <NoMatch v-else-if="!shown.length" :find="find" @clear="clear(['status', 'provider', 'q'])">No transcriptions match</NoMatch>
         <div v-else class="parts">
           <section v-if="parts.on.length" aria-labelledby="on-heading">
-            <h2 id="on-heading" class="subheading">On now <span class="count">{{ parts.on.length }}</span></h2>
+            <div class="heading"><h2 id="on-heading">On now</h2><span class="count">{{ parts.on.length }}</span></div>
             <ul class="list">
               <TranscriptionRow v-for="t in parts.on" :key="t.id" :transcription="t" :now="now" @changed="load(true)"/>
             </ul>
           </section>
           <section v-if="parts.ended.length" aria-labelledby="ended-heading">
-            <h2 id="ended-heading" class="subheading">Earlier <span class="count">{{ parts.ended.length }}</span></h2>
+            <div class="heading"><h2 id="ended-heading">Earlier</h2><span class="count">{{ parts.ended.length }}</span></div>
             <ul class="list">
               <TranscriptionRow v-for="t in parts.ended" :key="t.id" :transcription="t" :now="now" @changed="load(true)"/>
             </ul>
@@ -154,24 +168,11 @@ const parts = computed(() => split(shown.value))
 <style scoped lang="scss">
 @use '../assets/page';
 
-// What's on, then what ended, closer to each other than the page's sections
+// What's on, then what ended, as far apart as the page's sections
 .parts {
   display: flex;
   flex-direction: column;
-  gap: 32px;
-}
-
-.subheading {
-  margin: 0 0 4px;
-  font-size: 14px;
-  line-height: 20px;
-  font-weight: 600;
-
-  .count {
-    margin-left: 4px;
-    font-weight: 400;
-    color: var(--muted);
-  }
+  gap: 56px;
 }
 
 .list {

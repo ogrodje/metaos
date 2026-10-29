@@ -144,7 +144,7 @@ onMounted(() => {
   overflow: hidden;
   background: #FFFFFF;
   border: 1px solid var(--hairline);
-  border-radius: 8px;
+  border-radius: var(--radius);
 
   &:focus-within {
     border-color: var(--muted);
@@ -156,21 +156,21 @@ onMounted(() => {
   display: flex;
   gap: 2px;
   padding: 6px 6px 0;
-  background: #FAFAFA;
+  background: var(--surface);
   border-bottom: 1px solid var(--hairline);
 
   button {
     min-height: var(--icon-link);
     margin-bottom: -1px;
     padding: 5px 12px 6px;
-    font-size: 13px;
+    font-size: var(--text-small);
     line-height: 20px;
     font-weight: 500;
     color: var(--muted);
     background: none;
     border: 1px solid transparent;
     border-bottom: 0;
-    border-radius: 6px 6px 0 0;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
     cursor: pointer;
 
     &:hover {
@@ -194,7 +194,7 @@ textarea {
   field-sizing: content;
   padding: 12px 14px;
   font: inherit;
-  font-size: 14px;
+  font-size: var(--text-body);
   line-height: 22px;
   color: var(--ink);
   background: #FFFFFF;
@@ -203,7 +203,7 @@ textarea {
   resize: vertical;
 
   &::placeholder {
-    color: #9A9A9A;
+    color: var(--muted);
   }
 }
 
@@ -212,7 +212,7 @@ textarea {
   padding: 12px 14px;
 
   &:focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--accent-text);
     outline-offset: -2px;
   }
 }
@@ -227,7 +227,7 @@ textarea {
   justify-content: space-between;
   gap: 2px 16px;
   padding: 6px 14px 8px;
-  font-size: 12px;
+  font-size: var(--text-caption);
   line-height: 18px;
   color: var(--muted);
   border-top: 1px solid var(--rule);
@@ -262,36 +262,6 @@ textarea {
   }
 }
 
-// The box's one action, filled; said to be unavailable while there's nothing to send, or it's being sent
-.button.primary {
-  color: #FFFFFF;
-  background: var(--ink);
-  border-color: var(--ink);
-
-  &:hover {
-    color: #FFFFFF;
-    background: #2B2B2B;
-    border-color: #2B2B2B;
-  }
-
-  &[aria-disabled='true'] {
-    color: var(--muted);
-    background: var(--hover);
-    border-color: var(--hairline);
-    cursor: default;
-  }
-}
-
-.button:disabled {
-  color: var(--muted);
-  cursor: default;
-}
-
-button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
 // Without a keyboard, there are no shortcuts to tell of
 @media (hover: none) {
   .keys {
@@ -302,7 +272,7 @@ button:focus-visible {
 // Phones zoom into text under 16 px when it's focused
 @media (max-width: 640px) {
   textarea {
-    font-size: 16px;
+    font-size: var(--text-lead);
     line-height: 24px;
   }
 }

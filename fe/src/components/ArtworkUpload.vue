@@ -533,13 +533,13 @@ defineExpose({ open })
   &.empty {
     outline: 0;
     background: #FFFFFF;
-    border: 1.5px dashed #CFCFCF;
+    border: 1.5px dashed var(--faint);
   }
 
   .ratio {
     font-family: var(--font-mono);
-    font-size: 11px;
-    color: #9A9A9A;
+    font-size: var(--text-micro);
+    color: var(--muted);
   }
 
   &.new::after {
@@ -548,10 +548,10 @@ defineExpose({ open })
     left: 6px;
     top: 6px;
     padding: 0 5px;
-    font: 500 10.5px/16px var(--font-mono);
+    font: 500 var(--text-micro)/16px var(--font-mono);
     color: var(--ink);
     background: rgba(255, 255, 255, .92);
-    border-radius: 4px;
+    border-radius: var(--radius-xs);
   }
 
   &.refused img {
@@ -564,7 +564,7 @@ defineExpose({ open })
     position: absolute;
     inset: 0;
     border: 1.5px solid var(--accent-text);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
   }
 }
 
@@ -573,7 +573,7 @@ defineExpose({ open })
   width: 32px;
   height: 18px;
   object-fit: cover;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
 }
 
 .pair {
@@ -597,7 +597,7 @@ defineExpose({ open })
     max-width: 100%;
     aspect-ratio: 16 / 9;
     object-fit: cover;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
   }
 
   // Covers side by side as big as thumbnails are high, not as wide
@@ -611,7 +611,7 @@ defineExpose({ open })
 
   figcaption {
     display: grid;
-    font-size: 12px;
+    font-size: var(--text-caption);
     line-height: 18px;
     color: var(--muted);
   }

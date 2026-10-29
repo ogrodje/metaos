@@ -59,14 +59,14 @@ onMounted(load)
     grid-template-columns: 64px 1fr;
     gap: 12px;
     padding: 4px 0;
-    font-size: 14px;
+    font-size: var(--text-body);
     line-height: 22px;
   }
 }
 
 .at {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--text-caption);
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -77,7 +77,7 @@ onMounted(load)
 }
 
 .none {
-  font-size: 13px;
+  font-size: var(--text-small);
   color: var(--muted);
 }
 </style>

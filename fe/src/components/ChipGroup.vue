@@ -33,7 +33,7 @@ const model = defineModel<T>({ required: true })
   align-items: center;
   gap: 6px;
   padding: 3px 10px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--secondary);
   white-space: nowrap;
@@ -43,7 +43,7 @@ const model = defineModel<T>({ required: true })
   cursor: pointer;
 
   &:hover {
-    border-color: #A3A3A3;
+    border-color: var(--hairline-strong);
   }
 
   &[aria-pressed="true"] {

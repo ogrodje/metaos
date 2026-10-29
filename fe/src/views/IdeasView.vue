@@ -135,23 +135,19 @@ const GROUPINGS = [
         <LoadingRows v-else-if="!ideas" :rows="6" tall label="Loading the ideas"/>
         <p v-else-if="!ideas.length" class="note">No ideas yet.</p>
         <NoMatch v-else-if="!shown.length" :find="find" @clear="clear(['show', 'by', 'q'])">No ideas match</NoMatch>
-        <table v-else class="ideas">
-          <thead>
-            <tr>
-              <th>Idea</th>
-              <th class="by">Recommended by</th>
-              <th class="date">Recording</th>
-              <th class="date">Added</th>
-              <th class="files"><span class="visually-hidden">Files</span></th>
-            </tr>
-          </thead>
-          <tbody v-for="g in groups" :key="g.key">
-            <tr v-if="g.title" class="group">
-              <th colspan="5" scope="rowgroup">{{ g.title }} <span class="count">{{ g.ideas.length }}</span></th>
-            </tr>
-            <IdeaRow v-for="idea in g.ideas" :key="idea.id" :idea="idea"/>
-          </tbody>
-        </table>
+        <!-- A section a group, as the Episodes page's seasons; newest first, one without a heading -->
+        <template v-else>
+          <section v-for="g in groups" :key="g.key" :aria-labelledby="g.title ? `group-${g.key}` : undefined"
+                   :aria-label="g.title ? undefined : 'Ideas'">
+            <div v-if="g.title" class="heading">
+              <h2 :id="`group-${g.key}`">{{ g.title }}</h2>
+              <span class="count">{{ g.ideas.length }}</span>
+            </div>
+            <ul class="ideas">
+              <IdeaRow v-for="idea in g.ideas" :key="idea.id" :idea="idea"/>
+            </ul>
+          </section>
+        </template>
       </template>
     </template>
   </main>
@@ -160,68 +156,9 @@ const GROUPINGS = [
 <style scoped lang="scss">
 @use '../assets/page';
 
-// One table, a group of rows each, under the group's name
 .ideas {
-  width: 100%;
-  border-collapse: collapse;
-
-  thead th {
-    padding: 0 16px 8px 0;
-    font-size: 12px;
-    line-height: 16px;
-    font-weight: 600;
-    color: var(--muted);
-    text-align: left;
-    white-space: nowrap;
-  }
-
-  .by {
-    width: 200px;
-  }
-
-  .date {
-    width: 120px;
-  }
-
-  .files {
-    width: 72px;
-  }
-
-  .group th {
-    padding: 24px 0 8px;
-    font-size: 14px;
-    line-height: 20px;
-    font-weight: 600;
-    text-align: left;
-
-    .count {
-      margin-left: 4px;
-      font-weight: 400;
-    }
-  }
-
-  tbody:first-of-type .group th {
-    padding-top: 8px;
-  }
-}
-
-// On phones, the rows as blocks, without the table's header
-@media (max-width: 640px) {
-  .ideas, .ideas tbody {
-    display: block;
-  }
-
-  .ideas thead {
-    display: none;
-  }
-
-  .ideas .group {
-    display: block;
-
-    th {
-      display: block;
-    }
-  }
+  padding: 0;
+  list-style: none;
 }
 
 // API and MCP usage, which is in the footer, from the sign-in prompt's words

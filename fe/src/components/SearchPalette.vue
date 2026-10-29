@@ -309,10 +309,10 @@ kbd {
   min-width: 20px;
   padding: 0 5px;
   border: 1px solid var(--hairline);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: var(--hover);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--text-micro);
   line-height: 18px;
   color: var(--muted);
   text-align: center;
@@ -332,10 +332,10 @@ kbd {
   margin: 72px auto auto;
   padding: 0;
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   background: #FFFFFF;
   color: var(--ink);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, .08), 0 24px 60px -12px rgba(0, 0, 0, .35);
+  box-shadow: var(--shadow-dialog);
   overflow: hidden;
 
   &::backdrop {
@@ -369,7 +369,7 @@ kbd {
     outline: 0;
     background: none;
     font: inherit;
-    font-size: 16px;
+    font-size: var(--text-lead);
     line-height: 24px;
     color: var(--ink);
 
@@ -388,13 +388,13 @@ kbd {
     align-items: center;
     padding: 6px;
     border: 0;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     background: none;
     cursor: pointer;
 
     .cancel {
       display: none;
-      font-size: 15px;
+      font-size: var(--text-lead);
       line-height: 20px;
       font-weight: 500;
       color: var(--accent-text);
@@ -416,7 +416,7 @@ kbd {
 
 .hints, .note {
   padding: 14px 18px 10px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--muted);
 }
@@ -429,7 +429,7 @@ kbd {
   display: flex;
   gap: 6px;
   padding: 10px 18px 4px;
-  font-size: 12px;
+  font-size: var(--text-caption);
   line-height: 16px;
   font-weight: 600;
   color: var(--muted);
@@ -447,7 +447,7 @@ kbd {
   align-items: center;
   margin: 0 6px;
   padding: 7px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius);
   cursor: pointer;
 
   &.selected {
@@ -455,7 +455,7 @@ kbd {
   }
 
   &.exact {
-    background: #FDF0F3;
+    background: var(--accent-wash);
 
     &.selected {
       box-shadow: inset 0 0 0 1.5px var(--accent);
@@ -468,7 +468,7 @@ kbd {
 }
 
 .lead {
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--muted);
   white-space: nowrap;
@@ -500,7 +500,7 @@ kbd {
 }
 
 .line {
-  font-size: 12.5px;
+  font-size: var(--text-caption);
   line-height: 18px;
   color: var(--secondary);
 
@@ -510,7 +510,7 @@ kbd {
 }
 
 .side {
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--muted);
   white-space: nowrap;
@@ -518,7 +518,7 @@ kbd {
 
 .enter {
   visibility: hidden;
-  font-size: 13px;
+  font-size: var(--text-small);
   color: var(--muted);
   text-align: right;
 }
@@ -534,17 +534,17 @@ kbd {
   flex: none;
   padding: 9px 18px;
   border-top: 1px solid var(--hairline);
-  font-size: 12px;
+  font-size: var(--text-caption);
   line-height: 20px;
   color: var(--muted);
-  background: #FCFCFC;
+  background: var(--surface);
 
   .all {
     margin-left: auto;
     padding: 0;
     border: 0;
     background: none;
-    font-size: 13px;
+    font-size: var(--text-small);
     font-weight: 500;
     color: var(--accent-text);
     cursor: pointer;

@@ -2,7 +2,7 @@
 // GitHub. One person's changes made close together read as one entry, e.g. creating an episode and adding its people.
 
 import type { Comment } from '@/comments'
-import type { Change, ChangeSubject, FieldChange } from '@/episodes'
+import { type Change, type ChangeSubject, DATE_LOCALE, type FieldChange, TIME_ZONE } from '@/episodes'
 
 /** How far apart one person's changes may be and still read as one entry */
 export const BURST_MINUTES = 15
@@ -191,6 +191,30 @@ function headlineOf(changes: Change[], others: string[]): string {
   const said = parts.length > 3 ? [...parts.slice(0, 2), `${parts.length - 2} more changes`] : parts
   const sentence = said.map((part, i) => (i ? part.charAt(0).toLowerCase() + part.slice(1) : part.charAt(0).toUpperCase() + part.slice(1)))
   return sentence.length > 1 ? `${sentence.slice(0, -1).join(', ')} and ${sentence.at(-1)}` : sentence[0] ?? `${changes.length} changes`
+}
+
+/**
+ * Whether [entry] is new to whoever's looking: made since they last opened the page ([seen], null the first time, when
+ * nothing is), and not by them ([me], their name as the history has it), as their own comments and changes aren't news
+ */
+export function isNew(entry: ActivityEntry, seen: number | null, me: string | null) {
+  if (seen === null || Date.parse(entry.type === 'changes' ? entry.until : entry.at) <= seen) return false
+  return entry.type === 'comment' ? !entry.comment.mine : entry.actor === null || entry.actor !== me
+}
+
+const dayOf = (at: Date) => at.toLocaleDateString(DATE_LOCALE, { dateStyle: 'medium', timeZone: TIME_ZONE })
+
+/** When an entry was, as short as a side panel has room for: today, 15:14; yesterday, 17:32; 23 Oct; 23 Oct 2025 */
+export function shortWhen(at: string, now = new Date()) {
+  const date = new Date(at)
+  const time = date.toLocaleTimeString(DATE_LOCALE, { hour: '2-digit', minute: '2-digit', timeZone: TIME_ZONE })
+  const day = dayOf(date)
+  if (day === dayOf(now)) return `today, ${time}`
+  if (day === dayOf(new Date(now.getTime() - 86_400_000))) return `yesterday, ${time}`
+  const year = (d: Date) => d.toLocaleDateString(DATE_LOCALE, { year: 'numeric', timeZone: TIME_ZONE })
+  return date.toLocaleDateString(DATE_LOCALE, {
+    day: 'numeric', month: 'short', ...(year(date) === year(now) ? {} : { year: 'numeric' }), timeZone: TIME_ZONE,
+  })
 }
 
 /** One person's changes made close together, to whatever they were to, for the home page */

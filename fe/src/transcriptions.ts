@@ -199,6 +199,68 @@ export function transcriptionText(transcription: Pick<Transcription, 'episode' |
   return [transcription.episode?.code, transcription.episode?.title, transcription.mediaName].filter(Boolean).join(' ')
 }
 
+/** A transcript of one of an episode's files, as its page lists them, without what it says */
+export interface EpisodeTranscript extends TranscriptSummary {
+  mediaId: string
+  mediaName: string
+  provider: string
+  model: string
+  language: string
+  createdAt: string
+}
+
+/** An episode's transcripts, the latest first, for its page */
+export const EPISODE_TRANSCRIPT_FIELDS =
+  'transcripts { id mediaId mediaName provider model language createdAt segments words duration speakers { label name } }'
+
+/** What was said by one speaker in a row, from where they started; without speakers (Google's), a line each */
+export interface TranscriptTurn {
+  speaker: string | null
+  start: number
+  text: string
+}
+
+/** A transcript's lines as a conversation reads: a speaker's lines one after another are one turn */
+export function turns(lines: TranscriptLine[]): TranscriptTurn[] {
+  const found: TranscriptTurn[] = []
+  for (const line of lines) {
+    const last = found.at(-1)
+    if (last && line.speaker != null && last.speaker === line.speaker) last.text = `${last.text} ${line.text}`
+    else found.push({ speaker: line.speaker, start: line.start, text: line.text })
+  }
+  return found
+}
+
+/** A YouTube video's address at [seconds] into it, e.g. where a line of its transcript was said */
+export function youtubeAt(url: string, seconds: number) {
+  const at = new URL(url)
+  at.searchParams.set('t', String(Math.floor(seconds)))
+  return at.toString()
+}
+
+/**
+ * The transcript an episode's page shows first: the latest that tells speakers apart (Soniox's, which also punctuates),
+ * else the latest
+ */
+export function firstTranscript<T extends Pick<TranscriptSummary, 'speakers'>>(transcripts: T[]): T | undefined {
+  return transcripts.find((transcript) => transcript.speakers.length) ?? transcripts[0]
+}
+
+/** What an episode's transcripts are, in a line, e.g. Soniox, 2 speakers, 8,445 words · also by Google Speech-to-Text */
+export function transcriptsLine(transcripts: EpisodeTranscript[]) {
+  const shown = firstTranscript(transcripts)
+  if (!shown) return 'None yet'
+  const others = [...new Set(transcripts.filter((t) => t.provider !== shown.provider).map((t) => providerName(t.provider)))]
+  return [
+    [
+      providerName(shown.provider),
+      shown.speakers.length ? `${shown.speakers.length} ${shown.speakers.length === 1 ? 'speaker' : 'speakers'}` : null,
+      `${shown.words.toLocaleString('en-GB')} ${shown.words === 1 ? 'word' : 'words'}`,
+    ].filter(Boolean).join(', '),
+    others.length ? `also by ${others.join(' and ')}` : null,
+  ].filter(Boolean).join(' · ')
+}
+
 /** When, as the page says it, in English and Ogrodje's time zone, e.g. 28 Oct, 14:02 */
 export function formatWhen(at: string) {
   return new Date(at).toLocaleString(DATE_LOCALE, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: TIME_ZONE })

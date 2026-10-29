@@ -31,7 +31,7 @@ defineEmits<{ retry: [] }>()
   p {
     flex: 1 1 320px;
     max-width: 70ch;
-    font-size: 13px;
+    font-size: var(--text-small);
     line-height: 20px;
     color: var(--secondary);
   }

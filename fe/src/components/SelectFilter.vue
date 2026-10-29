@@ -11,7 +11,7 @@ const model = defineModel<T>({ required: true })
 
 <template>
   <label class="select-filter">{{ label }}
-    <select v-model="model">
+    <select v-model="model" class="input small">
       <option v-for="option in options" :key="option.value" :value="option.value">
         {{ option.title }}{{ option.count !== undefined ? ` (${option.count})` : '' }}
       </option>
@@ -25,26 +25,13 @@ const model = defineModel<T>({ required: true })
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--muted);
   white-space: nowrap;
 
   select {
-    height: 32px;
     max-width: 220px;
-    padding: 0 8px;
-    font: inherit;
-    font-size: 13px;
-    color: var(--ink);
-    background: #FFFFFF;
-    border: 1px solid var(--hairline);
-    border-radius: 6.4px;
-    cursor: pointer;
-
-    &:hover {
-      border-color: #A3A3A3;
-    }
   }
 }
 </style>

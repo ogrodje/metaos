@@ -4,6 +4,7 @@
 // ffprobe once it's there, which is what's kept.
 
 import type { MediaInfoResult } from 'mediainfo.js'
+import type { LinePart } from '@/episodes'
 
 export type MediaKind = 'FULL_VIDEO' | 'FULL_AUDIO' | 'BONUS_VIDEO' | 'BONUS_AUDIO'
 
@@ -281,4 +282,22 @@ export function mediaConcerns(files: Pick<MediaFile, 'kind' | 'info'>[]): string
   const audio = files.find((file) => file.kind === 'FULL_AUDIO')?.info.duration
   if (!video || !audio || Math.abs(video - audio) <= LENGTHS_APART) return []
   return [`The full audio is ${formatDuration(Math.abs(video - audio))} ${audio < video ? 'shorter' : 'longer'} than the full video`]
+}
+
+/**
+ * What an episode's video and audio are, in a line, e.g. Full audio, 55:14 · a bonus, 12:52 · no video: what's there,
+ * then, once it's [recorded], what's missing
+ */
+export function mediaParts(files: Pick<MediaFile, 'kind' | 'info'>[], recorded: boolean): LinePart[] {
+  const long = (file: Pick<MediaFile, 'info'>) => (file.info.duration ? `, ${formatDuration(file.info.duration)}` : '')
+  const video = files.find((file) => file.kind === 'FULL_VIDEO')
+  const audio = files.find((file) => file.kind === 'FULL_AUDIO')
+  const bonuses = files.filter((file) => file.kind === 'BONUS_VIDEO' || file.kind === 'BONUS_AUDIO')
+  return [
+    ...(video ? [{ text: `Full video${long(video)}` }] : []),
+    ...(audio ? [{ text: `Full audio${long(audio)}` }] : []),
+    ...(bonuses.length === 1 ? [{ text: `a bonus${long(bonuses[0]!)}` }] : bonuses.length ? [{ text: `${bonuses.length} bonuses` }] : []),
+    ...(!video && recorded ? [{ text: 'no video', missing: true }] : []),
+    ...(!audio && recorded ? [{ text: 'no audio', missing: true }] : []),
+  ]
 }

@@ -191,14 +191,14 @@ h2:focus {
 
 // The signed-in user's own
 .you {
-  font-size: 11.5px;
+  font-size: var(--text-micro);
   line-height: 18px;
   font-weight: 600;
   color: var(--accent-text);
 }
 
 .how {
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--muted);
 }
@@ -209,12 +209,12 @@ h2:focus {
   min-height: var(--icon-link);
   padding: 0 8px;
   margin-right: -8px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--muted);
   background: none;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 
   &:hover {
@@ -232,9 +232,9 @@ h2:focus {
   gap: 8px 16px;
   margin-top: 8px;
   padding: 10px 14px;
-  background: #FAFAFA;
+  background: var(--surface);
   border: 1px solid var(--rule);
-  border-radius: 8px;
+  border-radius: var(--radius);
 
   .question {
     flex: 1 1 260px;
@@ -242,7 +242,7 @@ h2:focus {
 
     span {
       display: block;
-      font-size: 13px;
+      font-size: var(--text-small);
       line-height: 20px;
       font-weight: 400;
       color: var(--secondary);
@@ -278,7 +278,7 @@ h2:focus {
   gap: 12px 16px;
   padding: 14px 16px;
   border: 1px solid var(--hairline);
-  border-radius: 8px;
+  border-radius: var(--radius);
 
   p {
     flex: 1 1 320px;
@@ -292,14 +292,9 @@ h2:focus {
 
 .error {
   margin-top: 8px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--accent-text);
-}
-
-button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
 }
 
 </style>

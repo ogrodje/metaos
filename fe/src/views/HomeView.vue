@@ -198,7 +198,7 @@ usePageMeta(() => ({
         <section aria-labelledby="latest-releases">
           <div class="heading">
             <h2 id="latest-releases">Latest releases</h2>
-            <RouterLink class="more" to="/episodes">All episodes</RouterLink>
+            <RouterLink class="text-button more" to="/episodes">All episodes</RouterLink>
           </div>
           <LoadError v-if="releasedError" what="The latest releases" :error="releasedError" @retry="loadLists()"/>
           <LoadingRows v-else-if="!released" :rows="3" label="Loading the latest releases"/>
@@ -228,7 +228,7 @@ usePageMeta(() => ({
       <section aria-labelledby="latest-releases">
         <div class="heading">
           <h2 id="latest-releases">Latest releases</h2>
-          <RouterLink class="more" to="/episodes">All episodes</RouterLink>
+          <RouterLink class="text-button more" to="/episodes">All episodes</RouterLink>
         </div>
         <LoadError v-if="releasedError" what="The latest releases" :error="releasedError" @retry="loadLists()"/>
         <LoadingRows v-else-if="!released" :rows="3" tall label="Loading the latest releases"/>
@@ -294,14 +294,14 @@ usePageMeta(() => ({
 
   .title {
     display: block;
-    font-size: 13.5px;
+    font-size: var(--text-small);
     line-height: 19px;
     font-weight: 600;
   }
 
   .meta {
     margin-top: 2px;
-    font-size: 12px;
+    font-size: var(--text-caption);
     line-height: 18px;
     color: var(--muted);
   }

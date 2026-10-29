@@ -74,7 +74,7 @@ onMounted(() => input.value?.focus())
 <template>
   <div class="picker">
     <div class="field">
-      <input ref="input" v-model="text" type="text" role="combobox" autocomplete="off" spellcheck="false"
+      <input ref="input" v-model="text" class="input" type="text" role="combobox" autocomplete="off" spellcheck="false"
              :aria-label="label" :aria-expanded="expanded" :aria-controls="`${id}-options`" aria-autocomplete="list"
              :aria-activedescendant="expanded ? optionId(active) : undefined" :aria-describedby="`${id}-hint`"
              :readonly="busy" placeholder="Find a person by name" @keydown="onKeydown"/>
@@ -111,26 +111,9 @@ onMounted(() => input.value?.focus())
   display: flex;
   gap: 8px;
 
-  input {
+  .input {
     flex: 1;
-    min-width: 0;
-    min-height: 44px;
     padding: 0 12px;
-    font: inherit;
-    color: var(--ink);
-    background: #FFFFFF;
-    border: 1px solid #A3A3A3;
-    border-radius: 6.4px;
-
-    &::placeholder {
-      color: var(--muted);
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--accent);
-      outline-offset: -1px;
-      border-color: transparent;
-    }
   }
 
   .button:disabled {
@@ -139,14 +122,14 @@ onMounted(() => input.value?.focus())
   }
 
   .button:focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--accent-text);
     outline-offset: 2px;
   }
 }
 
 .hint {
   min-height: 20px;
-  font-size: 13px;
+  font-size: var(--text-small);
   line-height: 20px;
   color: var(--muted);
 
@@ -162,13 +145,13 @@ onMounted(() => input.value?.focus())
   padding: 4px;
   list-style: none;
   border: 1px solid var(--hairline);
-  border-radius: 8px;
+  border-radius: var(--radius);
 
   li {
     display: flex;
     flex-direction: column;
     padding: 6px 10px;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
 
     // ↑ and ↓ move it, as does the pointer
@@ -184,7 +167,7 @@ onMounted(() => input.value?.focus())
 
   .bio {
     overflow: hidden;
-    font-size: 12px;
+    font-size: var(--text-caption);
     line-height: 18px;
     color: var(--muted);
     text-overflow: ellipsis;

@@ -67,7 +67,7 @@ const hasLinks = computed(() => socialLinks(props.person).length > 0)
 
 // Among the details, in their size
 .code {
-  font-size: 12px;
+  font-size: var(--text-caption);
   line-height: 20px;
 }
 
