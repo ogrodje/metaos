@@ -15,6 +15,9 @@ resource "keycloak_realm" "metaos" {
   login_with_email_allowed = true
   duplicate_emails_allowed = false
   reset_password_allowed   = false
+  # Usernames come from Discord, or are Google's addresses. Without this, nobody renames a user, not even an admin in the
+  # admin console; with it, users also rename themselves in the Account Console. MetaOS knows them by their ID (`sub`)
+  edit_username_allowed = true
   # Wherever Keycloak can send mail: a user whose provider doesn't vouch for their address, as Discord doesn't, confirms it
   verify_email = var.smtp != null
 
