@@ -28,8 +28,9 @@ compose.yml's Keycloak as `admin` / `admin`.
 | `realm/registration.tf`       | What MCP clients registering themselves (DCR) may ask for, and from which hosts            |
 | `realm/identity_providers.tf` | Sign in with Google and Discord, each with its approval gate (the post-login flow that waits for `metaos-user`), which then remembers the sign-in (MetaOS's `metaos-remember-me`, which Keycloak has from `docker/keycloak.Dockerfile`'s image) |
 
-Not managed, and left as they are: users and who has `metaos-user` (granted by hand in the admin console), the
-clients MCP clients registered, Keycloak's built-in clients and scopes, its keys, and realm master.
+Not managed, and left as they are: users and who has `metaos-user` (granted by hand in the admin console, where users
+are renamed too, as `edit_username_allowed` lets them be), the clients MCP clients registered, Keycloak's built-in
+clients and scopes, its keys, and realm master.
 
 ## Secrets
 
