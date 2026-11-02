@@ -2,7 +2,7 @@
 // something else changes here too (CLAUDE.md); UsageToolsTest checks the names, but not the descriptions.
 
 /** The tools' version, as MetaOS gives it to assistants, which `just mcp-tools` writes (McpToolsTest) */
-export const TOOLS_VERSION = '1.0.0'
+export const TOOLS_VERSION = '1.0.1'
 
 export interface Tool {
   name: string

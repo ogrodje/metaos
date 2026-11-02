@@ -13,7 +13,8 @@ private const val ACCESS = "Who may see it: PUBLIC (anyone), PATRONS (every patr
 private const val TIERS = "For TIERS: the tiers' IDs (list_patreon_tiers)"
 private const val TEXT = "The post's text: paragraphs between blank lines; addresses become links"
 private const val JOB = "Changes in Patreon run as jobs, one at a time, which try again while Patreon turns them away: " +
-    "what's quick comes back done, else as a job to follow with get_patreon_job"
+    "what's done within seconds comes back done, else as a job to follow with get_patreon_job. The same change asked " +
+    "for again while its job is on answers with that job, so asking again after a timeout doesn't do it twice"
 
 /**
  * Ogrodje's Patreon, through patreon-gateway ([Patreon]): its tiers, members and posts, and drafts made, changed, given
@@ -35,9 +36,10 @@ class PatreonMCP(
 
     private fun changes() = changes.ifAvailable ?: throw IllegalStateException("MetaOS's workflows aren't set up (TEMPORAL_ADDRESS)")
 
-    // What's quick in Patreon's web app (not an upload) is waited for, so the caller gets the post itself, unless it has
-    // to wait its turn, or for Patreon
-    private fun quick(change: PatreonChange) = changes().let { it.await(it.start(change), Duration.ofSeconds(90)) }
+    // What's quick in Patreon's web app (not an upload) is waited for a little, so the caller gets the post itself, unless
+    // it has to wait its turn, or for Patreon: then it gets the job. Not longer, as changes take turns, each in a page of
+    // Patreon's, so a few asked for at once would keep their callers waiting for minutes, past their own timeouts
+    private fun quick(change: PatreonChange) = changes().let { it.await(it.start(change), QUICK) }
 
     @McpTool(
         name = "list_patreon_tiers",
@@ -289,6 +291,7 @@ class PatreonMCP(
 
     private companion object {
         val MEDIA_POSTS = setOf("podcast", "video_external_file")
+        val QUICK: Duration = Duration.ofSeconds(10)
     }
 }
 

@@ -822,7 +822,9 @@ found). MetaOS never publishes: a person does, in Patreon's editor.
   video (`get_patreon_post_media`: the MP3 as uploaded, or the best MP4 Patreon's video host, Mux, keeps, which needs
   Patreon as its referrer; signed for a day or more), whether a draft is ready for a person to publish
   (`prepare_patreon_post`: its title, and its media processed, with where to publish it), deleting, and the jobs.
-  Quick changes are waited for; an upload comes back as a job.
+  Quick changes are waited for 10 s, as they take turns: four at once kept their callers waiting past their timeouts;
+  else, and an upload, come back as a job. A job's ID is its change's (what it is, the post and a hash of the rest),
+  so the same change asked for again while it's on, e.g. after a client gave up waiting, is that job, not another turn.
 - The bot signs in once by hand (`patreon-gateway/login.sh`), and the gateway keeps the session and the refreshed
   creator tokens on its volume. A refresh ends the old tokens, so only one gateway may use a creator token. The `patreon` health check asks the gateway every hour, which says whether Patreon's
   API answers and the browser is still signed in, in `metaos_patreon_connected` and in the log.

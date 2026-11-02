@@ -16,6 +16,9 @@ import java.net.InetSocketAddress
 import java.time.Duration
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
@@ -33,6 +36,8 @@ class FakePatreonGateway : PatreonActivities {
     val media = CopyOnWriteArrayList<PatreonMediaRequest>()
     val images = CopyOnWriteArrayList<PatreonImageRequest>()
     val busy = ConcurrentHashMap<String, AtomicInteger>()
+    /** Posts whose picture the gateway is at until their latch is let go, as Patreon's page may take its time */
+    val holds = ConcurrentHashMap<String, CountDownLatch>()
 
     private fun post(id: String, title: String?) =
         mapOf("id" to id, "title" to title, "editUrl" to "https://www.patreon.com/posts/$id/edit", "draft" to true)
@@ -63,6 +68,7 @@ class FakePatreonGateway : PatreonActivities {
 
     override fun setImage(id: String, request: PatreonImageRequest): Map<String, Any?> {
         calls += "image $id"
+        holds[id]?.await(1, TimeUnit.MINUTES)
         images += request
         return mapOf("post" to post(id, null), "media" to mapOf("id" to "767881201", "state" to "ready"))
     }
@@ -236,6 +242,48 @@ class PatreonChangesTest @Autowired constructor(
         // The cover, named as asked
         done(mcp.setImage("173396086", "S09E80", EpisodeImage.COVER, "cover.png"))
         assertEquals(PatreonImageRequest(cover.image!!.url, "cover.png"), gateway.images.last())
+    }
+
+    @Test
+    fun `pictures for a few posts at once come back as jobs within seconds, while they take turns`() {
+        episodes.saveAndFlush(Episode(title = "Poletna vročica", code = "S09E81"))
+        dropbox.put("2001", "/S09E81", null)
+        dropbox.put("2001", "/S09E81/ogrodje-s09e81-thumb1.png", picture(1920, 1080, "png", color = java.awt.Color(81, 9, 5)))
+        dropbox.put("2001", "/S09E81/ogrodje-s09e81-podcast.png", picture(3000, 3000, "png", color = java.awt.Color(81, 9, 5)))
+        images.setEpisodeImage("S09E81", EpisodeImage.THUMBNAIL, ImageSource.DROPBOX, "Artwork", "/S09E81/ogrodje-s09e81-thumb1.png", null)
+        images.setEpisodeImage("S09E81", EpisodeImage.COVER, ImageSource.DROPBOX, "Artwork", "/S09E81/ogrodje-s09e81-podcast.png", null)
+        // The first is at it in Patreon's page till it's let go; the rest wait their turn behind it
+        val posts = listOf("172886456" to EpisodeImage.COVER, "172923224" to EpisodeImage.THUMBNAIL, "172886713" to EpisodeImage.THUMBNAIL, "172886590" to EpisodeImage.COVER)
+        val held = CountDownLatch(1)
+        posts.forEach { (post, _) -> gateway.holds[post] = held }
+
+        val pool = Executors.newFixedThreadPool(posts.size)
+        try {
+            val started = System.nanoTime()
+            val jobs = posts.map { (post, kind) -> pool.submit<PatreonJob> { mcp.setImage(post, "S09E81", kind, null) } }.map { it.get(1, TimeUnit.MINUTES) }
+            val took = Duration.ofNanos(System.nanoTime() - started)
+            assertTrue(took < Duration.ofSeconds(20), "Took $took")
+            assertTrue(jobs.none { it.done }, jobs.toString())
+            assertEquals(posts.map { "patreon-set-post-image-${it.first}-" }, jobs.map { it.id.substringBeforeLast('-') + "-" })
+
+            // Asked again, as after a client's timeout, a change that's on is the same job, not another turn
+            val again = mcp.setImage("172886590", "S09E81", EpisodeImage.COVER, null)
+            assertEquals(jobs.last().id, again.id)
+            assertFalse(again.done)
+
+            held.countDown()
+            jobs.map(::done).forEach { assertEquals("SUCCEEDED", it.status, it.toString()) }
+            posts.forEach { (post, _) -> assertEquals(1, gateway.calls.count { it == "image $post" }, gateway.calls.toString()) }
+        } finally {
+            held.countDown()
+            posts.forEach { (post, _) -> gateway.holds.remove(post) }
+            pool.shutdown()
+        }
+
+        // Once it's ended, the same change is done again, as the post may have changed in Patreon since
+        val later = done(mcp.setImage("172886590", "S09E81", EpisodeImage.COVER, null))
+        assertEquals("SUCCEEDED", later.status, later.toString())
+        assertEquals(2, gateway.calls.count { it == "image 172886590" })
     }
 
     @Test
