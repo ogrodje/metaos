@@ -6,7 +6,7 @@ import ListenLinks from '@/components/ListenLinks.vue'
 import MarkedText from '@/components/MarkedText.vue'
 import ShowBadge from '@/components/ShowBadge.vue'
 import StatusLabel from '@/components/StatusLabel.vue'
-import { type Episode, episodePath, formatDate, guests, listPicture } from '@/episodes'
+import { type Episode, episodePath, formatDate, guests, listPicture, sessionName, sessionPath } from '@/episodes'
 import { src, srcset } from '@/images'
 import type { EpisodeMatch } from '@/search'
 import { useAuthStore } from '@/stores/auth'
@@ -41,11 +41,20 @@ const date = computed(() => {
 
 // Released, who it's with, as the list doesn't have its summary
 const guestNames = computed(() => (released.value ? guests(props.episode).join(', ') : ''))
+
+// In the works, the session it's recorded in, for the team, so the episodes recorded together can be told at a glance;
+// by its name, else its date. Not under its session's heading, which says it already
+const session = computed(() => {
+  const { session } = props.episode
+  if (!session || released.value || props.underSession || !auth.team) return null
+  return { path: sessionPath(session), label: sessionName(session) ?? formatDate(session.date) }
+})
 </script>
 
 <!-- An episode on one line: the code, title and show, then its status (or what someone was on it), when it's recorded
-     and its files; released, its guests, when it aired and where to listen, and with its thumbnail where a list wants
-     it. Found by a search, under the title what it was found by. EpisodeItem is a fuller row, with the summary. -->
+     and its files, and in the works its session under the title; released, its guests, when it aired and where to
+     listen, and with its thumbnail where a list wants it. Found by a search, under the title what it was found by.
+     EpisodeItem is a fuller row, with the summary. -->
 <template>
   <li class="episode" :class="{ thumbnailed: thumbnail }">
     <span class="code" :aria-hidden="!episode.code">{{ episode.code ?? '—' }}</span>
@@ -59,6 +68,7 @@ const guestNames = computed(() => (released.value ? guests(props.episode).join('
         <ShowBadge v-if="episode.show" :name="episode.show" :color="episode.showColor"/>
         <span v-if="guestNames" class="guests" lang="sl">{{ guestNames }}</span>
       </p>
+      <p v-if="session" class="session"><span class="label">Session</span> <RouterLink :to="session.path">{{ session.label }}</RouterLink></p>
       <p v-if="match?.text" class="found"><span class="label">{{ match.label }}</span> <span lang="sl"><MarkedText :text="match.text" :words="match.words"/></span></p>
     </div>
     <span class="meta">
@@ -129,8 +139,8 @@ const guestNames = computed(() => (released.value ? guests(props.episode).join('
   color: var(--secondary);
 }
 
-// Why a search found it
-.found {
+// The session it's recorded in, and why a search found it
+.session, .found {
   margin-top: 2px;
   font-size: var(--text-small);
   line-height: 20px;
