@@ -5,6 +5,8 @@ import io.temporal.activity.ActivityMethod
 import io.temporal.activity.ActivityOptions
 import io.temporal.api.enums.v1.PendingActivityState
 import io.temporal.api.enums.v1.WorkflowExecutionStatus
+import io.temporal.api.enums.v1.WorkflowIdConflictPolicy
+import io.temporal.api.enums.v1.WorkflowIdReusePolicy
 import io.temporal.client.WorkflowClient
 import io.temporal.client.WorkflowFailedException
 import io.temporal.client.WorkflowNotFoundException
@@ -19,9 +21,11 @@ import io.temporal.spring.boot.WorkflowImpl
 import io.temporal.workflow.Workflow
 import io.temporal.workflow.WorkflowInterface
 import io.temporal.workflow.WorkflowMethod
+import org.slf4j.LoggerFactory
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Component
 import tools.jackson.databind.json.JsonMapper
+import java.security.MessageDigest
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
@@ -205,15 +209,33 @@ class PatreonMediaActivitiesImpl(private val storage: Storage, private val media
 @ConditionalOnTemporal
 class PatreonChanges(private val client: WorkflowClient, private val mapper: JsonMapper) {
 
-    /** Starts [change], and answers with its job as it is then */
+    private val log = LoggerFactory.getLogger(PatreonChanges::class.java)
+
+    /**
+     * Starts [change], and answers with its job as it is then. Its ID is the change's own (what it is, on which post, and
+     * a hash of the rest), so the same change asked for again while it's on, e.g. by a client that gave up waiting for
+     * the first answer, is the same job rather than another turn; once it's ended, it's a new one
+     */
     fun start(change: PatreonChange): PatreonJob {
-        val id = "patreon-${change.kind.id}-${UUID.randomUUID()}"
+        val id = jobId(change)
         val workflow = client.newWorkflowStub(
             PatreonChangeWorkflow::class.java,
-            WorkflowOptions.newBuilder().setTaskQueue(WORKFLOWS_QUEUE).setWorkflowId(id).build(),
+            WorkflowOptions.newBuilder()
+                .setTaskQueue(WORKFLOWS_QUEUE)
+                .setWorkflowId(id)
+                .setWorkflowIdReusePolicy(WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE)
+                .setWorkflowIdConflictPolicy(WorkflowIdConflictPolicy.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING)
+                .build(),
         )
-        WorkflowClient.start(workflow::change, change)
+        val run = WorkflowClient.start(workflow::change, change)
+        log.info("Patreon job {} ({} {}), run {}", id, change.kind.id, change.postId ?: "a new draft", run.runId)
         return job(id)
+    }
+
+    private fun jobId(change: PatreonChange): String {
+        val hash = MessageDigest.getInstance("SHA-256").digest(mapper.writeValueAsBytes(change))
+            .joinToString("") { "%02x".format(it) }.take(16)
+        return listOfNotNull("patreon", change.kind.id, change.postId, hash).joinToString("-")
     }
 
     /** Waits up to [timeout] for the job to end, and answers with it as it is then */
