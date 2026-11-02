@@ -77,6 +77,9 @@ export default defineNuxtConfig({
   // The dev server answers by the tailnet's names too (e.g. ziv.folk-decibel.ts.net:5173), not only localhost: Vite
   // turns away a Host it doesn't know
   vite: { server: { allowedHosts: ['.folk-decibel.ts.net'] } },
+  // On every interface, so by the tailnet's name too. NUXT_HOST=127.0.0.1 keeps it to this machine, e.g. behind
+  // `tailscale serve --https=5173 5173` (as on nuc8), which holds the tailnet's address on the same port
+  devServer: { port: 5173, host: '0.0.0.0' },
   telemetry: false,
   devtools: { enabled: true },
 })
