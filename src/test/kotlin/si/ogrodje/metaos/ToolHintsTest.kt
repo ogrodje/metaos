@@ -13,14 +13,16 @@ import kotlin.test.assertTrue
  * cautious ones (destructive, not idempotent, open world), and it sends all four hints, also those left out, so this
  * checks every tool's against what its name says it does.
  * - readOnlyHint: only reads. Those also say they're idempotent and not destructive, as ChatGPT wants them explicit.
+ *   So do prepare_patreon_post, which checks a draft is ready for a person to publish, and publish_patreon_post, its
+ *   deprecated name, which publishes nothing since MetaOS stopped publishing.
  * - destructiveHint: changes or removes what's there. Adding isn't, a comment included, nor is restore_link, which only
  *   puts a removed link back as it was; the other restore_* can rename, recode or clear the email of what they bring back.
  * - idempotentHint: a second call changes nothing more. Only creating episodes, people, sessions and Patreon drafts,
  *   and commenting, isn't: the others find what's there (shows by name, folders and files by path, links) and fail or
- *   keep it; publishing a Patreon post refuses one that's published.
+ *   keep it.
  * - openWorldHint: reaches out to anyone. Only setting a picture is: it may fetch it from Hygraph and publishes it at
- *   the public bucket; and publishing a Patreon post, which its patrons see and may be emailed about. Drive, Dropbox
- *   and Koofr aren't, as MetaOS works only in the folders shared with its bot, nor are Patreon's drafts.
+ *   the public bucket. Drive, Dropbox and Koofr aren't, as MetaOS works only in the folders shared with its bot, nor are
+ *   Patreon's drafts, which a person publishes, in Patreon.
  */
 class ToolHintsTest {
 
@@ -51,12 +53,12 @@ class ToolHintsTest {
             }
     }
 
-    private val reads = Regex("^(list_|get_|read_|search|view_)|^(whoami|my_episodes)$")
+    private val reads = Regex("^(list_|get_|read_|search|view_)|^(whoami|my_episodes|prepare_patreon_post|publish_patreon_post)$")
     private val adds = Regex("^(create_|link_|assign_|comment_on_)|^(match_episode_documents|restore_link)$")
     private val repeatsAdd = setOf(
         "create_episode", "create_person", "create_session", "comment_on_episode", "comment_on_session", "create_patreon_draft",
     )
-    private val openWorld = setOf("set_episode_image", "set_person_avatar", "publish_patreon_post")
+    private val openWorld = setOf("set_episode_image", "set_person_avatar")
 
     private fun List<Hints>.names() = map { it.name }.sorted()
 
@@ -87,7 +89,7 @@ class ToolHintsTest {
     }
 
     @Test
-    fun `only the tools that publish pictures or Patreon posts are open world`() {
+    fun `only the tools that publish pictures are open world`() {
         assertEquals(openWorld.sorted(), tools.filter { it.openWorld }.names())
     }
 }

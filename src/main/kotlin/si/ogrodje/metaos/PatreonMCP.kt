@@ -4,31 +4,37 @@ import org.springframework.ai.mcp.annotation.McpTool
 import org.springframework.ai.mcp.annotation.McpToolParam
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.stereotype.Component
-import org.springframework.transaction.support.TransactionTemplate
+import org.springframework.data.repository.findByIdOrNull
 import java.time.Duration
-import java.time.OffsetDateTime
+import java.util.UUID
 
 private const val POST_ID = "The Patreon post's ID, the number at the end of its URL, e.g. 171593625"
 private const val ACCESS = "Who may see it: PUBLIC (anyone), PATRONS (every patron, free ones too) or TIERS (only the tiers in tiers)"
 private const val TIERS = "For TIERS: the tiers' IDs (list_patreon_tiers)"
 private const val TEXT = "The post's text: paragraphs between blank lines; addresses become links"
-private const val JOB = "Changes in Patreon run as jobs: what's quick comes back done, else as a job to follow with get_patreon_job"
+private const val JOB = "Changes in Patreon run as jobs, one at a time, which try again while Patreon turns them away: " +
+    "what's quick comes back done, else as a job to follow with get_patreon_job"
 
 /**
- * Ogrodje's Patreon, through patreon-gateway ([Patreon]): its tiers and posts, and posts made as drafts, given an
- * episode's audio or video, and published, which is what patrons see and get emailed about, so it's its own step.
+ * Ogrodje's Patreon, through patreon-gateway ([Patreon]): its tiers, members and posts, and drafts made, changed, given
+ * an episode's audio or video and deleted, as workflows ([PatreonChanges]). Publishing is what patrons see and get
+ * emailed about, so a person does it, in Patreon's editor: MetaOS only checks a draft is ready for it.
  */
 @Component
 @ConditionalOnPatreon
 class PatreonMCP(
     private val patreon: Patreon,
-    private val episodes: EpisodesRepository,
+    private val changes: ObjectProvider<PatreonChanges>,
+    private val mediaFiles: MediaFilesRepository,
+    private val storage: ObjectProvider<Storage>,
     private val dropbox: ObjectProvider<Dropbox>,
-    private val transactions: TransactionTemplate,
 ) {
 
-    // What's quick in Patreon's web app (not an upload) is waited for, so the caller gets the post itself
-    private fun quick(job: PatreonJob) = patreon.await(job, Duration.ofSeconds(90))
+    private fun changes() = changes.ifAvailable ?: throw IllegalStateException("MetaOS's workflows aren't set up (TEMPORAL_ADDRESS)")
+
+    // What's quick in Patreon's web app (not an upload) is waited for, so the caller gets the post itself, unless it has
+    // to wait its turn, or for Patreon
+    private fun quick(change: PatreonChange) = changes().let { it.await(it.start(change), Duration.ofSeconds(90)) }
 
     @McpTool(
         name = "list_patreon_tiers",
@@ -119,15 +125,16 @@ class PatreonMCP(
             title = "Create Patreon draft",
             readOnlyHint = false, destructiveHint = false, idempotentHint = false, openWorldHint = false
         ),
-        description = "Make a draft post on Ogrodje's Patreon, which only the team sees until it's published " +
-            "(publish_patreon_post); give it the episode's audio or video with set_patreon_post_media. $JOB"
+        description = "Make a draft post on Ogrodje's Patreon, which only the team sees until a person publishes it in " +
+            "Patreon's editor; give it the episode's audio or video with set_patreon_post_media, and check it with " +
+            "prepare_patreon_post. $JOB"
     )
     fun createDraft(
         @McpToolParam(description = "Its title, e.g. S05E08 Miha Zidar: Pametnejši razvoj v dobi umetne inteligence") title: String,
         @McpToolParam(description = TEXT, required = false) text: String?,
         @McpToolParam(description = "$ACCESS; PATRONS when omitted", required = false) access: PatreonAccess?,
         @McpToolParam(description = TIERS, required = false) tiers: List<String>?,
-    ): PatreonJob = quick(patreon.createDraft(title, text, access ?: PatreonAccess.PATRONS, tiers.orEmpty()))
+    ): PatreonJob = quick(PatreonChange(PatreonChangeKind.CREATE_DRAFT, spec = spec(title, text, access ?: PatreonAccess.PATRONS, tiers)))
 
     @McpTool(
         name = "update_patreon_post",
@@ -144,7 +151,7 @@ class PatreonMCP(
         @McpToolParam(description = "$TEXT; replaces all of it", required = false) text: String?,
         @McpToolParam(description = ACCESS, required = false) access: PatreonAccess?,
         @McpToolParam(description = TIERS, required = false) tiers: List<String>?,
-    ): PatreonJob = quick(patreon.update(id, title, text, access, tiers.orEmpty()))
+    ): PatreonJob = quick(PatreonChange(PatreonChangeKind.UPDATE_POST, patreonPostId(id), spec(title, text, access, tiers)))
 
     @McpTool(
         name = "set_patreon_post_media",
@@ -152,61 +159,75 @@ class PatreonMCP(
             title = "Set Patreon post media",
             readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
         ),
-        description = "Upload an episode's audio or video, from Dropbox or an https URL, to a Patreon draft: with AUDIO it " +
-            "becomes a podcast post, in the campaign's podcast feed, with VIDEO a video post. The gateway downloads the " +
-            "file itself and Patreon processes it, which takes minutes for an episode: this returns a job to follow " +
-            "with get_patreon_job"
+        description = "Upload one of an episode's video and audio files in MetaOS (media, from list_episode_media) to a " +
+            "Patreon draft: with AUDIO it becomes a podcast post, in the campaign's podcast feed, with VIDEO a video " +
+            "post. The gateway downloads the file itself and Patreon processes it, which takes minutes for an episode, " +
+            "or longer while Patreon turns the gateway away: this returns a job to follow with get_patreon_job"
     )
     fun setMedia(
         @McpToolParam(description = POST_ID) id: String,
-        @McpToolParam(description = "AUDIO or VIDEO") kind: PatreonMediaKind,
-        @McpToolParam(description = "For a file in Dropbox: a folder shared with the bot, by name or ID (list_dropbox_places)", required = false) place: String?,
-        @McpToolParam(description = "For a file in Dropbox: its path in the place, e.g. /S05E08/ogrodje-s05e08.mp3", required = false) path: String?,
-        @McpToolParam(description = "Else an https URL the file can be downloaded from", required = false) url: String?,
-        @McpToolParam(description = "The file's name on Patreon; the path's or URL's last part when omitted", required = false) name: String?,
+        @McpToolParam(description = "AUDIO or VIDEO, as the file is") kind: PatreonMediaKind,
+        @McpToolParam(description = "The file's ID in MetaOS (list_episode_media)", required = false) media: String?,
+        @McpToolParam(description = "Deprecated: use media. For a file in Dropbox: a folder shared with the bot, by name or ID", required = false) place: String?,
+        @McpToolParam(description = "Deprecated: use media. For a file in Dropbox: its path in the place", required = false) path: String?,
+        @McpToolParam(description = "Deprecated: use media. Else an https URL the file can be downloaded from", required = false) url: String?,
+        @McpToolParam(description = "The file's name on Patreon; its own when omitted", required = false) name: String?,
     ): PatreonJob {
-        val fileUrl = when {
-            !place.isNullOrBlank() || !path.isNullOrBlank() -> {
-                val box = dropbox.ifAvailable ?: throw IllegalStateException("Dropbox isn't set up in MetaOS")
-                val shared = box.sharedPlace(requireNotNull(place?.trim()?.ifEmpty { null }) { "A file in Dropbox needs its place" })
-                box.temporaryLink(shared.id, dropboxPath(requireNotNull(path?.trim()?.ifEmpty { null }) { "A file in Dropbox needs its path" }))
+        val post = patreonPostId(id)
+        val fileName = name?.trim()?.ifEmpty { null }
+        val mediaId = media?.trim()?.ifEmpty { null }
+        val change = if (mediaId != null) {
+            val file = requireNotNull(runCatching { UUID.fromString(mediaId) }.getOrNull()?.let { mediaFiles.findByIdOrNull(it) }) {
+                "No file $mediaId: list_episode_media lists an episode's"
             }
-            else -> requireNotNull(url?.trim()?.ifEmpty { null }) { "Say where the file is: place and path in Dropbox, or url" }
-                .also { require(it.startsWith("https://")) { "The file's URL has to be https" } }
+            require(file.kind.video == (kind == PatreonMediaKind.VIDEO)) { "${file.name} is the episode's ${file.kind.label}, not ${kind.name}" }
+            checkNotNull(storage.ifAvailable) { "MetaOS's bucket isn't set up" }
+            PatreonChange(PatreonChangeKind.ATTACH_MEDIA, post, mediaId = file.id, fileName = fileName)
+        } else {
+            // Till the deprecated ways go: a file in Dropbox, or a URL
+            val fileUrl = when {
+                !place.isNullOrBlank() || !path.isNullOrBlank() -> {
+                    val box = dropbox.ifAvailable ?: throw IllegalStateException("Dropbox isn't set up in MetaOS")
+                    val shared = box.sharedPlace(requireNotNull(place?.trim()?.ifEmpty { null }) { "A file in Dropbox needs its place" })
+                    box.temporaryLink(shared.id, dropboxPath(requireNotNull(path?.trim()?.ifEmpty { null }) { "A file in Dropbox needs its path" }))
+                }
+                else -> requireNotNull(url?.trim()?.ifEmpty { null }) { "Say which file: media, from list_episode_media" }
+                    .also { require(it.startsWith("https://")) { "The file's URL has to be https" } }
+            }
+            PatreonChange(PatreonChangeKind.ATTACH_MEDIA, post, media = PatreonMediaRequest(fileUrl, kind, fileName ?: path?.substringAfterLast('/')?.ifEmpty { null }))
         }
-        val fileName = name?.trim()?.ifEmpty { null } ?: path?.substringAfterLast('/')?.ifEmpty { null }
-        return patreon.attachMedia(id, fileUrl, kind, fileName)
+        return changes().start(change)
     }
+
+    @McpTool(
+        name = "prepare_patreon_post",
+        annotations = McpTool.McpAnnotations(
+            title = "Prepare Patreon post",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
+        description = "Check that a Patreon draft is ready for a person to publish: its title, and its audio or video, " +
+            "which Patreon has processed. Says what's missing, and where to publish it: in Patreon's editor (editUrl), " +
+            "by a person, as MetaOS doesn't publish. Once it's out, set the episode's link with set_episode_link"
+    )
+    fun prepare(@McpToolParam(description = POST_ID) id: String): PatreonPostReadiness = readiness(id)
 
     @McpTool(
         name = "publish_patreon_post",
         annotations = McpTool.McpAnnotations(
             title = "Publish Patreon post",
-            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = true
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
         ),
-        description = "Publish a Patreon draft, now or at a set time: who it's for see it, and are emailed when notify is " +
-            "set. Refused for a post that's already published. With an episode, the post becomes that episode's Patreon " +
-            "link (link: PATREON, PATREON_AUDIO, PATREON_BONUS or PATREON_BONUS_AUDIO) when the job is done in this " +
-            "call; when it comes back still to finish, set the link with set_episode_link to its result's url once " +
-            "get_patreon_job says SUCCEEDED. Check the draft with get_patreon_post first; ask before publishing. $JOB"
+        description = "Deprecated: use `prepare_patreon_post`. MetaOS no longer publishes Patreon posts: a person " +
+            "publishes them in Patreon's editor. This checks the draft is ready for them, as prepare_patreon_post does, " +
+            "and publishes nothing; at, notify, episode and link are ignored"
     )
     fun publish(
         @McpToolParam(description = POST_ID) id: String,
-        @McpToolParam(description = "When to publish it, e.g. 2026-11-03T06:00:00+01:00; now when omitted", required = false) at: String?,
-        @McpToolParam(description = "Email the patrons who may see it; false when omitted", required = false) notify: Boolean?,
-        @McpToolParam(description = "$EPISODE_REF, whose Patreon link the post becomes", required = false) episode: String?,
-        @McpToolParam(description = "Which of the episode's Patreon links; PATREON when omitted", required = false) link: Platform?,
-    ): PatreonJob {
-        val platform = link ?: Platform.PATREON
-        require(platform.name.startsWith("PATREON")) { "$platform isn't one of the episode's Patreon links" }
-        episode?.let { ref -> requireNotNull(episodes.findByRef(ref)) { "Episode $ref not found" } }
-        val job = quick(patreon.publish(id, at?.trim()?.ifEmpty { null }?.let(OffsetDateTime::parse), notify ?: false))
-        val url = job.result?.get("url")?.asString()
-        if (episode != null && job.status == "SUCCEEDED" && url != null) {
-            transactions.executeWithoutResult { requireNotNull(episodes.findByRef(episode)).setLink(platform, url) }
-        }
-        return job
-    }
+        @McpToolParam(description = "Ignored", required = false) at: String?,
+        @McpToolParam(description = "Ignored", required = false) notify: Boolean?,
+        @McpToolParam(description = "Ignored", required = false) episode: String?,
+        @McpToolParam(description = "Ignored", required = false) link: Platform?,
+    ): PatreonPostReadiness = readiness(id)
 
     @McpTool(
         name = "delete_patreon_post",
@@ -216,7 +237,7 @@ class PatreonMCP(
         ),
         description = "Delete a post from Ogrodje's Patreon, e.g. a draft that isn't needed; Patreon can't bring it back. $JOB"
     )
-    fun delete(@McpToolParam(description = POST_ID) id: String): PatreonJob = quick(patreon.delete(id))
+    fun delete(@McpToolParam(description = POST_ID) id: String): PatreonJob = quick(PatreonChange(PatreonChangeKind.DELETE_POST, patreonPostId(id)))
 
     @McpTool(
         name = "get_patreon_job",
@@ -224,8 +245,46 @@ class PatreonMCP(
             title = "Get Patreon job",
             readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
         ),
-        description = "How a change in Patreon is going: QUEUED, RUNNING, SUCCEEDED with what it made, or FAILED and why. " +
-            "A job Patreon turned away for now waits and tries again by itself (retryAt)"
+        description = "How a change in Patreon is going: QUEUED (waiting its turn, or to try again after Patreon turned " +
+            "it away: why, in error, and when, retryAt), RUNNING, SUCCEEDED with what it made, or FAILED and why"
     )
-    fun job(@McpToolParam(description = "The job's ID") id: String): PatreonJob = patreon.job(id)
+    fun job(@McpToolParam(description = "The job's ID") id: String): PatreonJob = changes().job(id.trim())
+
+    private fun spec(title: String?, text: String?, access: PatreonAccess?, tiers: List<String>?): PatreonPostSpec {
+        require(access != PatreonAccess.TIERS || !tiers.isNullOrEmpty()) { "TIERS needs the tiers' IDs (list_patreon_tiers)" }
+        return PatreonPostSpec(title, text, access?.let { PatreonPostAccess(it, tiers.orEmpty()) })
+    }
+
+    // A draft is ready once it has a title and its audio or video, which Patreon has processed: it gives the links to
+    // download them only then
+    private fun readiness(id: String): PatreonPostReadiness {
+        val post = patreon.draft(id)
+        val media = if (post.type in MEDIA_POSTS) patreon.downloads(id) else emptyList()
+        val missing = buildList {
+            if (!post.draft) add("Nothing: it's published already, ${post.publishedAt}")
+            if (post.title.isNullOrBlank()) add("Its title")
+            when (post.type) {
+                "podcast" -> if (media.none { it.kind == "AUDIO" }) add("Its audio, which Patreon may still be processing")
+                "video_external_file" -> if (media.none { it.kind == "VIDEO" }) add("Its video, which Patreon may still be processing")
+                else -> add("Its audio or video (set_patreon_post_media)")
+            }
+        }
+        return PatreonPostReadiness(post, post.draft && missing.isEmpty(), missing, media)
+    }
+
+    private companion object {
+        val MEDIA_POSTS = setOf("podcast", "video_external_file")
+    }
 }
+
+/**
+ * Whether a Patreon draft is ready for a person to publish, in Patreon's editor ([PatreonDraft.editUrl]), and what's
+ * [missing] if it isn't; its [media] as Patreon has them
+ */
+data class PatreonPostReadiness(
+    val post: PatreonDraft,
+    val ready: Boolean,
+    val missing: List<String>,
+    val media: List<PatreonMediaDownload>,
+    val publishedBy: String = "A person, in Patreon's editor (post.editUrl): MetaOS doesn't publish",
+)

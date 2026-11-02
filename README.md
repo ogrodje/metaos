@@ -18,18 +18,20 @@ thumbnails from Dropbox and people's avatars from Hygraph, MetaOS copies to its 
 from which browsers load them at media.ogrodje.si, cached by Cloudflare; the team uploads an episode's artwork from
 its page straight to MetaOS's private bucket, and MetaOS publishes it from there. Its video and audio go there the
 same way, and stay there, the team's only, with what ffprobe read of them. Ogrodje's Patreon MetaOS reaches through
-patreon-gateway, a pod of its own beside it, which reads through Patreon's API and makes, changes and publishes posts,
-with an episode's audio or video, in Patreon's web app, signed in as the bot, in a headless Chromium in a container of
-its own. Patreon's bot check turns away the cluster's address, so that browser goes out through the pod's Tailscale
-container and low, a VM whose address it lets through; the API and the uploads go straight to Patreon. What takes
-long, like transcribing an episode, MetaOS does in durable workflows on Temporal, a server of its own in the cluster
-with its databases in the same Postgres and its UI on the tailnet only; MetaOS's pods are its workers, and hear
-episodes with Google's Speech-to-Text or Soniox, a few at a time, keeping each transcript in Postgres and the bucket.
-Everything runs on Ogrodje's Kubernetes cluster, behind Cloudflare. New Relic, in its EU region, gets MetaOS's and
-patreon-gateway's requests, errors and logs from its Java agent in each, and the pages' errors and load times from its
-agent in the browser, and checks from outside that the pages, MetaOS and Keycloak answer. The cluster's Prometheus
-scrapes MetaOS, patreon-gateway, Keycloak and Temporal, and passes a few of their metrics on to New Relic: MetaOS's
-outside connections, Keycloak's sign-ins, their pods' memory, restarts and readiness, and the node's memory and disk.
+patreon-gateway, a pod of its own beside it, which reads through Patreon's API and makes and changes drafts, with an
+episode's audio or video from MetaOS's bucket, in Patreon's web app, signed in as the bot, in a headless Chromium in a
+container of its own, as the activities of MetaOS's workflows, which it works on as Temporal's worker, one at a time,
+trying again while Patreon turns it away; a person publishes them. Patreon's bot check turns away the cluster's
+address, so that browser goes out through the pod's Tailscale container and low, a VM whose address it lets through; the
+API and the uploads go straight to Patreon. What takes long, like transcribing an episode, MetaOS does in durable
+workflows on Temporal, a server of its own in the cluster with its databases in the same Postgres and its UI on the
+tailnet only; MetaOS's pods are its workers, and hear episodes with Google's Speech-to-Text or Soniox, a few at a time,
+keeping each transcript in Postgres and the bucket. Everything runs on Ogrodje's Kubernetes cluster, behind Cloudflare.
+New Relic, in its EU region, gets MetaOS's and patreon-gateway's requests, errors and logs from its Java agent in each,
+and the pages' errors and load times from its agent in the browser, and checks from outside that the pages, MetaOS and
+Keycloak answer. The cluster's Prometheus scrapes MetaOS, patreon-gateway, Keycloak and Temporal, and passes a few of
+their metrics on to New Relic: MetaOS's outside connections, Keycloak's sign-ins, their pods' memory, restarts and
+readiness, and the node's memory and disk.
 
 The diagram is drawn in [`architecture.svg`](architecture.svg); `just architecture` renders `architecture.png` from it.
 

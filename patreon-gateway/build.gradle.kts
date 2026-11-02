@@ -19,6 +19,9 @@ repositories {
 // Playwright's version is also the browsers' in its image (k8s/base/deployment-patreon-gateway.yaml): keep them alike
 val playwrightVersion = "1.64.0"
 
+// MetaOS's (../build.gradle.kts), whose workflows call the gateway's activities
+val temporalVersion = "1.40.0"
+
 // Playwright's driver-bundle is Node.js for five platforms, 200 MB of the boot jar's 240; the image runs on linux/amd64
 // only, so the boot jar gets a copy with Linux's alone (driver/linux, which DriverJar picks on x86_64). Runs from
 // Gradle (tests, login) keep the whole bundle, for the Mac they run on.
@@ -59,6 +62,13 @@ dependencies {
 
     // Patreon's web app, signed in as the bot, for what its API can't do (Browser.kt)
     implementation("com.microsoft.playwright:playwright:$playwrightVersion")
+
+    // Changes in Patreon are MetaOS's workflows' activities, which the gateway works on (Activities.kt); as MetaOS's,
+    // whose version this has to stay at
+    implementation("io.temporal:temporal-spring-boot-starter:$temporalVersion")
+    implementation("io.temporal:temporal-sdk:$temporalVersion")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    testImplementation("io.temporal:temporal-testing:$temporalVersion")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")

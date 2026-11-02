@@ -12,8 +12,8 @@ import java.time.Duration
 
 /**
  * Ogrodje's Patreon behind a small HTTP API, for MetaOS: Patreon's own API where it can, and its web app, signed in as
- * the bot, where it can't (creating, changing and publishing posts, uploading media). Callers see posts, tiers and
- * jobs, not how each is done.
+ * the bot, where it can't (creating and changing posts, uploading media), as the activities of MetaOS's workflows
+ * (Activities.kt). Callers see posts, tiers and changes, not how each is done; nothing publishes.
  */
 @SpringBootApplication
 @ConfigurationPropertiesScan
@@ -42,6 +42,6 @@ data class PatreonProperties(
     val browserProxy: String = "",
     // Where files are downloaded on their way to Patreon; the state directory's downloads when blank
     val downloadsDir: String = "",
-    // How long what failed jobs' pages showed is kept (Browser.forgetFailures)
+    // How long what failed changes' pages showed is kept (Browser.forgetFailures)
     val failuresKept: Duration = Duration.ofDays(14),
 )

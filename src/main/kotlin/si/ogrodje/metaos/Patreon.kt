@@ -82,7 +82,11 @@ data class PatreonMediaDownload(
     val referer: String?,
 )
 
-/** Something the gateway does in Patreon's web app; [result] is what it made once it [status] SUCCEEDED. */
+/**
+ * A change in Patreon's web app, as a workflow (PatreonPosts.kt), by its ID: QUEUED, RUNNING, SUCCEEDED with what it
+ * made ([result]), or FAILED and why ([error]); while it waits to try again after Patreon turned it away, why, and
+ * when ([retryAt]), on its [attempts]th try.
+ */
 data class PatreonJob(
     val id: String,
     val kind: String,
@@ -103,8 +107,9 @@ class PatreonGatewayException(message: String) : RuntimeException(message)
 
 /**
  * Ogrodje's Patreon, through patreon-gateway (patreon-gateway/README.md), a service of its own that MetaOS alone may
- * call, with its token: it reads through Patreon's API and makes and changes posts in Patreon's web app, signed in as the
- * bot, which takes from seconds to minutes, so those are jobs. `metaos.patreon.gateway-url` and `-token` turn it on.
+ * call, with its token: it reads through Patreon's API, and drafts and download links through Patreon's web app, signed
+ * in as the bot. Changes aren't asked for here: they're workflows, whose activities the gateway works on
+ * (PatreonPosts.kt). `metaos.patreon.gateway-url` and `-token` turn it on.
  */
 @Component
 @ConditionalOnPatreon
@@ -146,33 +151,6 @@ class Patreon(
     /** A post, drafts too, through Patreon's web app. */
     fun draft(id: String): PatreonDraft = read("/posts/${postId(id)}/web")
 
-    fun createDraft(title: String, text: String?, access: PatreonAccess, tiers: List<String>): PatreonJob =
-        job("POST", "/posts", spec(title, text, access, tiers))
-
-    fun update(id: String, title: String?, text: String?, access: PatreonAccess?, tiers: List<String>): PatreonJob =
-        job("PATCH", "/posts/${postId(id)}", spec(title, text, access, tiers))
-
-    fun attachMedia(id: String, fileUrl: String, kind: PatreonMediaKind, fileName: String?): PatreonJob =
-        job("POST", "/posts/${postId(id)}/media", mapOf("url" to fileUrl, "kind" to kind.name, "fileName" to fileName))
-
-    fun publish(id: String, at: OffsetDateTime?, notify: Boolean): PatreonJob =
-        job("POST", "/posts/${postId(id)}/publish", mapOf("at" to at?.toString(), "notify" to notify))
-
-    fun delete(id: String): PatreonJob = job("DELETE", "/posts/${postId(id)}", null)
-
-    fun job(id: String): PatreonJob = read("/jobs/${URLEncoder.encode(id, Charsets.UTF_8)}")
-
-    /** Waits up to [timeout] for [job] to finish, and gives it back as it is then. */
-    fun await(job: PatreonJob, timeout: Duration): PatreonJob {
-        val deadline = System.nanoTime() + timeout.toNanos()
-        var current = job
-        while (!current.done && System.nanoTime() < deadline) {
-            Thread.sleep(1000)
-            current = job(job.id)
-        }
-        return current
-    }
-
     /** Whom the gateway's browser is signed in as; throws when it, or Patreon's API, doesn't work. */
     fun health(): String {
         val health = call("GET", "/health", null, okOnly = false)
@@ -185,18 +163,7 @@ class Patreon(
         return health["signedInAs"].asString()
     }
 
-    private fun spec(title: String?, text: String?, access: PatreonAccess?, tiers: List<String>): Map<String, Any?> {
-        require(access != PatreonAccess.TIERS || tiers.isNotEmpty()) { "TIERS needs the tiers' IDs (list_patreon_tiers)" }
-        return mapOf(
-            "title" to title,
-            "text" to text,
-            "access" to access?.let { mapOf("kind" to it.name, "tiers" to tiers) },
-        )
-    }
-
     private inline fun <reified T> read(path: String): T = mapper.treeToValue(call("GET", path, null), mapper.typeFactory.constructType(object : tools.jackson.core.type.TypeReference<T>() {}))
-
-    private fun job(method: String, path: String, body: Any?): PatreonJob = mapper.treeToValue(call(method, path, body), PatreonJob::class.java)
 
     private fun call(method: String, path: String, body: Any?, okOnly: Boolean = true): JsonNode {
         val request = HttpRequest.newBuilder(URI.create(url.trimEnd('/') + path))
@@ -219,8 +186,11 @@ class Patreon(
         return tree
     }
 
-    private fun postId(id: String) = id.trim().also { require(it.isNotEmpty() && it.all(Char::isDigit)) { "A Patreon post's ID is a number, e.g. 171593625" } }
+    private fun postId(id: String) = patreonPostId(id)
 }
+
+/** A Patreon post's ID, as given, which is a number */
+fun patreonPostId(id: String) = id.trim().also { require(it.isNotEmpty() && it.all(Char::isDigit)) { "A Patreon post's ID is a number, e.g. 171593625" } }
 
 @Component
 @ConditionalOnPatreon

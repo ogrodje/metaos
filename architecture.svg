@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1130" viewBox="0 0 1240 1130" role="img" aria-label="MetaOS's architecture: the browser and MCP clients reach MetaOS and Keycloak through Cloudflare and ingress-nginx. The browser gets its pages from the front-end, metaos-web, which renders those anyone may see from MetaOS's GraphQL API, and Cloudflare caches them; then it asks MetaOS itself. MetaOS checks tokens with Keycloak's keys, keeps its data in the shared Postgres, which tells it what changed for the browser's pages to show right away, and calls Cloud Storage, Google Drive, Gmail, Koofr and Dropbox, and fetches pictures from Hygraph. Its workflows run on Temporal, a server of its own in the cluster, whose databases are in the shared Postgres and whose UI is on the tailnet only; MetaOS's pods are its workers, and transcribe episodes with Google's Speech-to-Text or Soniox. It reaches Ogrodje's Patreon through patreon-gateway, a pod of its own in the cluster with three containers: the gateway, which reads the campaign, its tiers, posts and members through Patreon's API with the creator token it keeps and refreshes, and uploads episodes' audio and video, from Dropbox links MetaOS gives it, straight to Patreon; a headless Chromium, in Playwright's own image, in which the gateway makes, changes and publishes posts in Patreon's web app, signed in as the bot, Iva; and Tailscale, through which only the browser goes out, by low, a VM that is the tailnet's exit node, as Patreon's bot check turns away the cluster's address. Prometheus scrapes MetaOS, patreon-gateway, Keycloak and Temporal, and passes a few of their metrics on to New Relic: the outside connections, the sign-ins, the pods' memory and restarts, and the node's memory. New Relic gets their requests, errors and logs from its Java agent in each, the browser's errors and page loads from its agent there, and checks from outside that the pages, MetaOS and Keycloak answer. It copies pictures to its public bucket in Cloud Storage, from which the browser loads them at media.ogrodje.si, cached by Cloudflare. The team's artwork, and an episode's video and audio, go from the browser straight to MetaOS's private bucket, with a URL MetaOS signs, and MetaOS takes them from there.">
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1130" viewBox="0 0 1240 1130" role="img" aria-label="MetaOS's architecture: the browser and MCP clients reach MetaOS and Keycloak through Cloudflare and ingress-nginx. The browser gets its pages from the front-end, metaos-web, which renders those anyone may see from MetaOS's GraphQL API, and Cloudflare caches them; then it asks MetaOS itself. MetaOS checks tokens with Keycloak's keys, keeps its data in the shared Postgres, which tells it what changed for the browser's pages to show right away, and calls Cloud Storage, Google Drive, Gmail, Koofr and Dropbox, and fetches pictures from Hygraph. Its workflows run on Temporal, a server of its own in the cluster, whose databases are in the shared Postgres and whose UI is on the tailnet only; MetaOS's pods are its workers, and transcribe episodes with Google's Speech-to-Text or Soniox. It reaches Ogrodje's Patreon through patreon-gateway, a pod of its own in the cluster with three containers: the gateway, which reads the campaign, its tiers, posts and members through Patreon's API with the creator token it keeps and refreshes, and uploads episodes' audio and video, from links to MetaOS's bucket that MetaOS signs, straight to Patreon; a headless Chromium, in Playwright's own image, in which the gateway makes and changes drafts in Patreon's web app, signed in as the bot, Iva, as the activities of MetaOS's workflows, which it works on as Temporal's worker, one at a time, trying again while Patreon turns it away (a person publishes them, in Patreon); and Tailscale, through which only the browser goes out, by low, a VM that is the tailnet's exit node, as Patreon's bot check turns away the cluster's address. Prometheus scrapes MetaOS, patreon-gateway, Keycloak and Temporal, and passes a few of their metrics on to New Relic: the outside connections, the sign-ins, the pods' memory and restarts, and the node's memory. New Relic gets their requests, errors and logs from its Java agent in each, the browser's errors and page loads from its agent there, and checks from outside that the pages, MetaOS and Keycloak answer. It copies pictures to its public bucket in Cloud Storage, from which the browser loads them at media.ogrodje.si, cached by Cloudflare. The team's artwork, and an episode's video and audio, go from the browser straight to MetaOS's private bucket, with a URL MetaOS signs, and MetaOS takes them from there.">
   <!--
     MetaOS's architecture, the source of architecture.png (`just architecture` renders it). Keep it in step with the
     system: CLAUDE.md says when.
@@ -136,8 +136,8 @@
   <text class="m" x="724" y="678">Ogrodje's Patreon, for MetaOS alone</text>
   <rect class="row" x="720" y="690" width="256" height="48" rx="5"/>
   <text class="mono" x="732" y="710">gateway</text>
-  <text class="m" x="806" y="710">Spring Boot: API, jobs;</text>
-  <text class="m" x="806" y="726">tokens, Iva's session</text>
+  <text class="m" x="806" y="710">Spring Boot: API, and</text>
+  <text class="m" x="806" y="726">Temporal's worker</text>
   <rect class="row" x="720" y="760" width="256" height="48" rx="5"/>
   <text class="mono" x="732" y="780">browser</text>
   <text class="m" x="806" y="780">Chromium, headless,</text>
@@ -151,8 +151,8 @@
   <path class="edge" d="M744 808 V828" marker-end="url(#arrow)"/>
   <text class="m" x="754" y="823">SOCKS5, :1055</text>
   <path class="edge" d="M898 594 V634" marker-end="url(#arrow)"/>
-  <text class="m" x="890" y="610" text-anchor="end">posts, members, jobs;</text>
-  <text class="m" x="890" y="626" text-anchor="end">files as Dropbox links</text>
+  <text class="m" x="890" y="610" text-anchor="end">reads: posts, members,</text>
+  <text class="m" x="890" y="626" text-anchor="end">drafts, download links</text>
   <!-- The gateway reads through Patreon's API and uploads files to it straight from the cluster -->
   <path class="edge" d="M976 704 H1058" marker-end="url(#arrow)"/>
   <text class="m" x="1017" y="698" text-anchor="middle">API, uploads</text>
@@ -182,6 +182,8 @@
   <text class="m" x="662" y="612" text-anchor="end">workflows, as</text>
   <text class="m" x="662" y="627" text-anchor="end">its workers</text>
   <path class="edge" d="M670 790 V922" marker-end="url(#arrow)"/>
+  <!-- patreon-gateway polls Temporal's task queue patreon: the changes MetaOS's workflows make in Patreon -->
+  <path class="edge" d="M720 714 H678" marker-end="url(#arrow)"/>
 
   <!-- Prometheus, the cluster's: scrapes MetaOS, patreon-gateway and Keycloak, passes a few metrics on to New Relic -->
   <rect class="box" x="410" y="924" width="180" height="108" rx="8"/>
@@ -221,7 +223,7 @@
   <text class="m" x="1076" y="680">API: tiers, posts,</text>
   <text class="m" x="1076" y="696">members · creator token</text>
   <text class="m" x="1076" y="714">web app, as Iva: drafts,</text>
-  <text class="m" x="1076" y="730">audio, video, publishing</text>
+  <text class="m" x="1076" y="730">audio, video (not published)</text>
   <!-- New Relic, EU: Java agents in MetaOS and patreon-gateway, the browser's agent, uptime checks from outside -->
   <rect class="box" x="1060" y="564" width="160" height="64" rx="8"/>
   <text class="t" x="1076" y="584">New Relic</text>

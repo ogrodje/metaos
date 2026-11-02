@@ -6,17 +6,14 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import tools.jackson.databind.json.JsonMapper
 import java.net.InetSocketAddress
-import java.time.Duration
-import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/** MetaOS's client of patreon-gateway, against a gateway that answers as the real one does */
+/** MetaOS's client of patreon-gateway, for what it reads, against a gateway that answers as the real one does */
 class PatreonTest {
 
     private val asked = mutableListOf<String>()
-    private val jobPolls = AtomicInteger()
     private val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
         createContext("/") { exchange ->
             val path = exchange.requestURI.toString()
@@ -29,10 +26,6 @@ class PatreonTest {
                 path == "/posts/172923221/media" -> 200 to """[{"kind":"VIDEO","fileName":"S05E08 Poletna vročica VIDEO.mp4","sizeBytes":2749623806,"durationSeconds":5837,"url":"https://stream.mux.com/abc/highest.mp4?token=t","expiresAt":"2026-10-27T02:00:00Z","referer":"https://www.patreon.com/"}]"""
                 path == "/posts/404" -> 404 to """{"error":"No published post 404"}"""
                 path.startsWith("/members?") -> 200 to """{"items":[{"id":"m-1","name":"Ana","email":"ana@example.com","status":"active_patron","tiers":["Engineer"],"pledgeCents":1000,"lifetimeSupportCents":12000,"since":"2024-10-11T09:30:23.301Z","lastChargeDate":"2026-10-11T00:35:23Z","lastChargeStatus":"Paid","freeTrial":false,"gifted":false}],"total":30}"""
-                path == "/posts" -> 202 to job("QUEUED", null)
-                path.startsWith("/jobs/") -> 200 to if (jobPolls.incrementAndGet() < 2) job("RUNNING", null) else
-                    job("SUCCEEDED", """{"id":"173396086","title":"S05E08","url":"https://www.patreon.com/ogrodje/posts/s05e08-173396086","editUrl":"https://www.patreon.com/posts/173396086/edit","publishedAt":null,"scheduledFor":null,"draft":true}""")
-                path == "/posts/1/publish" -> 400 to """{"error":"Post 1 is already published (2026-10-13T06:35:26Z)"}"""
                 path == "/health" -> 503 to """{"api":true,"apiError":null,"signedIn":false,"signedInAs":null,"browserError":"The bot isn't signed in to Patreon: run patreon-gateway/login.sh","ok":false}"""
                 else -> 404 to """{"error":"No $path"}"""
             }
@@ -43,9 +36,6 @@ class PatreonTest {
         }
         start()
     }
-
-    private fun job(status: String, result: String?) =
-        """{"id":"job-1","kind":"create-draft","status":"$status","result":$result,"error":null,"attempts":1,"retryAt":null}"""
 
     private val patreon = Patreon("http://127.0.0.1:${server.address.port}", "secret", JsonMapper.builder().build())
 
@@ -94,20 +84,6 @@ class PatreonTest {
     }
 
     @Test
-    fun `a draft's job is waited for until it's done`() {
-        val job = patreon.await(patreon.createDraft("S05E08", "Text", PatreonAccess.TIERS, listOf("9650087")), Duration.ofSeconds(10))
-        assertEquals("SUCCEEDED", job.status)
-        assertEquals("173396086", job.result!!["id"].asString())
-        assertTrue(asked.first().startsWith("POST /posts"), asked.toString())
-    }
-
-    @Test
-    fun `the gateway's refusal comes back with its reason`() {
-        val e = assertThrows<PatreonGatewayException> { patreon.publish("1", null, false) }
-        assertEquals("400: Post 1 is already published (2026-10-13T06:35:26Z)", e.message)
-    }
-
-    @Test
     fun `health says why the gateway can't work`() {
         val e = assertThrows<PatreonGatewayException> { patreon.health() }
         assertEquals("The bot isn't signed in to Patreon: run patreon-gateway/login.sh", e.message)
@@ -117,12 +93,6 @@ class PatreonTest {
     fun `health says when the gateway turns MetaOS away`() {
         val e = assertThrows<PatreonGatewayException> { Patreon("http://127.0.0.1:${server.address.port}", "wrong", JsonMapper.builder().build()).health() }
         assertEquals("A bearer token is needed", e.message)
-    }
-
-    @Test
-    fun `a draft for some tiers needs them`() {
-        assertThrows<IllegalArgumentException> { patreon.createDraft("S05E08", null, PatreonAccess.TIERS, emptyList()) }
-        assertTrue(asked.isEmpty())
     }
 
     @Test

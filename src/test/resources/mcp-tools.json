@@ -233,7 +233,7 @@
       "readOnlyHint" : false,
       "title" : "Create Patreon draft"
     },
-    "description" : "Make a draft post on Ogrodje's Patreon, which only the team sees until it's published (publish_patreon_post); give it the episode's audio or video with set_patreon_post_media. Changes in Patreon run as jobs: what's quick comes back done, else as a job to follow with get_patreon_job",
+    "description" : "Make a draft post on Ogrodje's Patreon, which only the team sees until a person publishes it in Patreon's editor; give it the episode's audio or video with set_patreon_post_media, and check it with prepare_patreon_post. Changes in Patreon run as jobs, one at a time, which try again while Patreon turns them away: what's quick comes back done, else as a job to follow with get_patreon_job",
     "inputSchema" : {
       "$schema" : "https://json-schema.org/draft/2020-12/schema",
       "properties" : {
@@ -407,7 +407,7 @@
       "readOnlyHint" : false,
       "title" : "Delete Patreon post"
     },
-    "description" : "Delete a post from Ogrodje's Patreon, e.g. a draft that isn't needed; Patreon can't bring it back. Changes in Patreon run as jobs: what's quick comes back done, else as a job to follow with get_patreon_job",
+    "description" : "Delete a post from Ogrodje's Patreon, e.g. a draft that isn't needed; Patreon can't bring it back. Changes in Patreon run as jobs, one at a time, which try again while Patreon turns them away: what's quick comes back done, else as a job to follow with get_patreon_job",
     "inputSchema" : {
       "$schema" : "https://json-schema.org/draft/2020-12/schema",
       "properties" : {
@@ -600,7 +600,7 @@
       "readOnlyHint" : true,
       "title" : "Get Patreon job"
     },
-    "description" : "How a change in Patreon is going: QUEUED, RUNNING, SUCCEEDED with what it made, or FAILED and why. A job Patreon turned away for now waits and tries again by itself (retryAt)",
+    "description" : "How a change in Patreon is going: QUEUED (waiting its turn, or to try again after Patreon turned it away: why, in error, and when, retryAt), RUNNING, SUCCEEDED with what it made, or FAILED and why",
     "inputSchema" : {
       "$schema" : "https://json-schema.org/draft/2020-12/schema",
       "properties" : {
@@ -1741,24 +1741,46 @@
     },
     "title" : "My episodes"
   },
+  "prepare_patreon_post" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "Prepare Patreon post"
+    },
+    "description" : "Check that a Patreon draft is ready for a person to publish: its title, and its audio or video, which Patreon has processed. Says what's missing, and where to publish it: in Patreon's editor (editUrl), by a person, as MetaOS doesn't publish. Once it's out, set the episode's link with set_episode_link",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "id" : {
+          "description" : "The Patreon post's ID, the number at the end of its URL, e.g. 171593625",
+          "type" : "string"
+        }
+      },
+      "required" : [ "id" ],
+      "type" : "object"
+    },
+    "title" : "Prepare Patreon post"
+  },
   "publish_patreon_post" : {
     "annotations" : {
-      "destructiveHint" : true,
+      "destructiveHint" : false,
       "idempotentHint" : true,
-      "openWorldHint" : true,
-      "readOnlyHint" : false,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
       "title" : "Publish Patreon post"
     },
-    "description" : "Publish a Patreon draft, now or at a set time: who it's for see it, and are emailed when notify is set. Refused for a post that's already published. With an episode, the post becomes that episode's Patreon link (link: PATREON, PATREON_AUDIO, PATREON_BONUS or PATREON_BONUS_AUDIO) when the job is done in this call; when it comes back still to finish, set the link with set_episode_link to its result's url once get_patreon_job says SUCCEEDED. Check the draft with get_patreon_post first; ask before publishing. Changes in Patreon run as jobs: what's quick comes back done, else as a job to follow with get_patreon_job",
+    "description" : "Deprecated: use `prepare_patreon_post`. MetaOS no longer publishes Patreon posts: a person publishes them in Patreon's editor. This checks the draft is ready for them, as prepare_patreon_post does, and publishes nothing; at, notify, episode and link are ignored",
     "inputSchema" : {
       "$schema" : "https://json-schema.org/draft/2020-12/schema",
       "properties" : {
         "at" : {
-          "description" : "When to publish it, e.g. 2026-11-03T06:00:00+01:00; now when omitted",
+          "description" : "Ignored",
           "type" : "string"
         },
         "episode" : {
-          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet), whose Patreon link the post becomes",
+          "description" : "Ignored",
           "type" : "string"
         },
         "id" : {
@@ -1766,12 +1788,12 @@
           "type" : "string"
         },
         "link" : {
-          "description" : "Which of the episode's Patreon links; PATREON when omitted",
+          "description" : "Ignored",
           "enum" : [ "YOUTUBE", "SPOTIFY", "APPLE_PODCASTS", "PATREON", "PATREON_AUDIO", "PATREON_BONUS", "PATREON_BONUS_AUDIO" ],
           "type" : "string"
         },
         "notify" : {
-          "description" : "Email the patrons who may see it; false when omitted",
+          "description" : "Ignored",
           "type" : "boolean"
         }
       },
@@ -2406,7 +2428,7 @@
       "readOnlyHint" : false,
       "title" : "Set Patreon post media"
     },
-    "description" : "Upload an episode's audio or video, from Dropbox or an https URL, to a Patreon draft: with AUDIO it becomes a podcast post, in the campaign's podcast feed, with VIDEO a video post. The gateway downloads the file itself and Patreon processes it, which takes minutes for an episode: this returns a job to follow with get_patreon_job",
+    "description" : "Upload one of an episode's video and audio files in MetaOS (media, from list_episode_media) to a Patreon draft: with AUDIO it becomes a podcast post, in the campaign's podcast feed, with VIDEO a video post. The gateway downloads the file itself and Patreon processes it, which takes minutes for an episode, or longer while Patreon turns the gateway away: this returns a job to follow with get_patreon_job",
     "inputSchema" : {
       "$schema" : "https://json-schema.org/draft/2020-12/schema",
       "properties" : {
@@ -2415,24 +2437,28 @@
           "type" : "string"
         },
         "kind" : {
-          "description" : "AUDIO or VIDEO",
+          "description" : "AUDIO or VIDEO, as the file is",
           "enum" : [ "AUDIO", "VIDEO" ],
           "type" : "string"
         },
+        "media" : {
+          "description" : "The file's ID in MetaOS (list_episode_media)",
+          "type" : "string"
+        },
         "name" : {
-          "description" : "The file's name on Patreon; the path's or URL's last part when omitted",
+          "description" : "The file's name on Patreon; its own when omitted",
           "type" : "string"
         },
         "path" : {
-          "description" : "For a file in Dropbox: its path in the place, e.g. /S05E08/ogrodje-s05e08.mp3",
+          "description" : "Deprecated: use media. For a file in Dropbox: its path in the place",
           "type" : "string"
         },
         "place" : {
-          "description" : "For a file in Dropbox: a folder shared with the bot, by name or ID (list_dropbox_places)",
+          "description" : "Deprecated: use media. For a file in Dropbox: a folder shared with the bot, by name or ID",
           "type" : "string"
         },
         "url" : {
-          "description" : "Else an https URL the file can be downloaded from",
+          "description" : "Deprecated: use media. Else an https URL the file can be downloaded from",
           "type" : "string"
         }
       },
@@ -2917,7 +2943,7 @@
       "readOnlyHint" : false,
       "title" : "Update Patreon post"
     },
-    "description" : "Change a Patreon post's title, text or who may see it, a draft's or a published one's; what's omitted stays. Changes in Patreon run as jobs: what's quick comes back done, else as a job to follow with get_patreon_job",
+    "description" : "Change a Patreon post's title, text or who may see it, a draft's or a published one's; what's omitted stays. Changes in Patreon run as jobs, one at a time, which try again while Patreon turns them away: what's quick comes back done, else as a job to follow with get_patreon_job",
     "inputSchema" : {
       "$schema" : "https://json-schema.org/draft/2020-12/schema",
       "properties" : {

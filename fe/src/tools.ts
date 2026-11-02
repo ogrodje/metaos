@@ -2,7 +2,7 @@
 // something else changes here too (CLAUDE.md); UsageToolsTest checks the names, but not the descriptions.
 
 /** The tools' version, as MetaOS gives it to assistants, which `just mcp-tools` writes (McpToolsTest) */
-export const TOOLS_VERSION = '0.2.0'
+export const TOOLS_VERSION = '0.3.0'
 
 export interface Tool {
   name: string
@@ -168,7 +168,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
   {
     id: 'patreon',
     title: 'Patreon',
-    about: "Ogrodje's Patreon: drafts, an episode's audio or video, and publishing",
+    about: "Ogrodje's Patreon: drafts and an episode's audio or video, which a person publishes in Patreon",
     tools: [
       { name: 'list_patreon_tiers', description: 'The tiers, cheapest first, with their prices and patrons' },
       { name: 'list_patreon_members', description: 'The members, patrons first: their status, tiers, pledge, what they gave in all and their last charge' },
@@ -178,10 +178,11 @@ export const TOOL_GROUPS: ToolGroup[] = [
       { name: 'get_patreon_post_media', description: "Download links for a post's audio (the MP3 as uploaded) or video (its best MP4), for a day or so" },
       { name: 'create_patreon_draft', description: 'Make a draft post, for everyone, every patron or some tiers; only the team sees it' },
       { name: 'update_patreon_post', description: "Change a post's title, text or who may see it" },
-      { name: 'set_patreon_post_media', description: "Upload an episode's audio or video from Dropbox or a URL to a draft, as a podcast or video post" },
-      { name: 'publish_patreon_post', description: "Publish a draft, now or later, emailing patrons only if asked; it can become the episode's Patreon link" },
+      { name: 'set_patreon_post_media', description: "Upload one of an episode's files in MetaOS to a draft, as a podcast or video post" },
+      { name: 'prepare_patreon_post', description: 'Check a draft is ready for a person to publish in Patreon: its title, and its audio or video processed' },
+      { name: 'publish_patreon_post', description: 'Deprecated, publishes nothing: use prepare_patreon_post' },
       { name: 'delete_patreon_post', description: "Delete a post, e.g. a draft that isn't needed" },
-      { name: 'get_patreon_job', description: 'How a change in Patreon is going, e.g. an upload: done, failed and why, or waiting to try again' },
+      { name: 'get_patreon_job', description: 'How a change in Patreon is going, e.g. an upload: done, failed and why, or waiting its turn or to try again' },
     ],
   },
   {
