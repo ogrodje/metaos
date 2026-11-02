@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "nuxt dev --port 5173 --host",
+    "dev": "nuxt dev",
     "build": "run-s type-check \"build-only {@}\" --",
     "preview": "node .output/server/index.mjs",
     "build-only": "nuxt build",
