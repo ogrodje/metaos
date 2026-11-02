@@ -44,18 +44,22 @@ data class PatreonPostSpec(val title: String? = null, val text: String? = null, 
 /** A file for the gateway to download from [url] and put on a post as its audio or video, named [fileName] */
 data class PatreonMediaRequest(val url: String, val kind: PatreonMediaKind, val fileName: String? = null)
 
+/** A picture for the gateway to download from [url] and make a post's image, its thumbnail, named [fileName] */
+data class PatreonImageRequest(val url: String, val fileName: String? = null)
+
 /** What a change does in Patreon; [id] is how its jobs are named, as patreon-gateway named them */
 enum class PatreonChangeKind(val id: String) {
     CREATE_DRAFT("create-draft"),
     UPDATE_POST("update-post"),
     ATTACH_MEDIA("attach-media"),
+    SET_IMAGE("set-post-image"),
     DELETE_POST("delete-post"),
 }
 
 /**
- * A change in Patreon: a new draft as [spec] says, a post changed or deleted, or a file put on it, from [media] or, of
+ * A change in Patreon: a new draft as [spec] says, a post changed or deleted, a file put on it, from [media] or, of
  * MetaOS's own video and audio, the file [mediaId], which the workflow signs a link to when it's its turn, named on
- * Patreon [fileName] or else as it is
+ * Patreon [fileName] or else as it is, or its [image]
  */
 data class PatreonChange(
     val kind: PatreonChangeKind,
@@ -64,6 +68,7 @@ data class PatreonChange(
     val media: PatreonMediaRequest? = null,
     val mediaId: UUID? = null,
     val fileName: String? = null,
+    val image: PatreonImageRequest? = null,
 )
 
 /**
@@ -82,6 +87,9 @@ interface PatreonActivities {
     @ActivityMethod(name = "PatreonAttachMedia")
     fun attachMedia(id: String, request: PatreonMediaRequest): Map<String, Any?>
 
+    @ActivityMethod(name = "PatreonSetImage")
+    fun setImage(id: String, request: PatreonImageRequest): Map<String, Any?>
+
     @ActivityMethod(name = "PatreonDeletePost")
     fun delete(id: String): Map<String, Any?>
 }
@@ -94,7 +102,7 @@ interface PatreonMediaActivities {
 }
 
 /**
- * A change in Patreon (a draft made, changed, deleted, or given its audio or video), which Temporal keeps and runs to
+ * A change in Patreon (a draft made, changed, deleted, or given its audio or video or its thumbnail), which Temporal keeps and runs to
  * its end through restarts of MetaOS and the gateway. Changes take turns ([PATREON_SLOT], one at a time), so they're
  * made in the order they were asked for and Patreon is asked one thing at a time; waiting holds nothing. Patreon turns
  * the gateway away when it's asked often (a rate limit, Cloudflare's bot check): the change waits and tries again,
@@ -165,6 +173,8 @@ class PatreonChangeWorkflowImpl : PatreonChangeWorkflow {
                 post(),
                 change.media ?: links.mediaLink(checkNotNull(change.mediaId)).let { it.copy(fileName = change.fileName ?: it.fileName) },
             )
+            // A picture, a few MB: as quick as the rest
+            PatreonChangeKind.SET_IMAGE -> changes.setImage(post(), checkNotNull(change.image))
             PatreonChangeKind.DELETE_POST -> changes.delete(post())
         }
     }

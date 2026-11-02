@@ -29,6 +29,9 @@ enum class MediaKind(val relationship: String, val postType: String) {
  */
 data class MediaRequest(val url: String, val kind: MediaKind, val fileName: String? = null)
 
+/** A picture to make a post's image, from where the gateway downloads it: an https [url]; named [fileName], else its last part. */
+data class ImageRequest(val url: String, val fileName: String? = null)
+
 data class UploadedMedia(val id: String, val kind: MediaKind, val fileName: String, val sizeBytes: Long, val state: String)
 
 /**
@@ -73,10 +76,13 @@ class Media(private val properties: PatreonProperties) {
     }
 
     /** Downloads [request]'s file to [downloads], from the internet only, for [use]; it's deleted after. */
-    fun <T> downloaded(request: MediaRequest, use: (Path, String) -> T): T {
-        val uri = URI.create(request.url)
+    fun <T> downloaded(request: MediaRequest, use: (Path, String) -> T): T = downloaded(request.url, request.fileName, "episode", use)
+
+    /** Downloads the file at [url] to [downloads], from the internet only, for [use]; it's deleted after. */
+    fun <T> downloaded(url: String, fileName: String?, fallbackName: String, use: (Path, String) -> T): T {
+        val uri = URI.create(url)
         onTheInternet(uri)
-        val name = (request.fileName ?: uri.path.substringAfterLast('/')).ifBlank { "episode" }
+        val name = (fileName ?: uri.path.substringAfterLast('/')).ifBlank { fallbackName }
         require(name.none { it == '/' || it == '\\' || it == '\r' || it == '\n' }) { "A file's name can't have slashes or line breaks" }
         val dir = Files.createDirectories(downloads)
         val file = dir.resolve(UUID.randomUUID().toString())
@@ -128,7 +134,6 @@ class Media(private val properties: PatreonProperties) {
             (address is Inet6Address && (bytes[0].toInt() and 0xFE) == 0xFC)
     }
 
-    /** Sends [file], named [name], where Patreon's answer to creating the media ([created], its `data`) says. */
     /** How big the file at [url] is, as its host answers for its first byte; null when it doesn't say. */
     fun size(url: String, referer: String?): Long? = runCatching {
         val request = HttpRequest.newBuilder(URI.create(url)).header("Range", "bytes=0-0").timeout(Duration.ofSeconds(30))
@@ -137,6 +142,7 @@ class Media(private val properties: PatreonProperties) {
             ?.substringAfterLast('/')?.toLongOrNull()
     }.onFailure { log.warn("Couldn't ask how big a file is: {}", it.message) }.getOrNull()
 
+    /** Sends [file], named [name], where Patreon's answer to creating the media ([created], its `data`) says. */
     fun upload(created: JsonNode, file: Path, name: String, contentType: String) {
         val attributes = created["attributes"]
         val url = attributes["upload_url"]?.takeUnless { it.isNull }?.asString()
@@ -173,6 +179,21 @@ class Media(private val properties: PatreonProperties) {
         "webm" -> "video/webm"
         "mkv" -> "video/x-matroska"
         else -> if (kind == MediaKind.AUDIO) "audio/mpeg" else "video/mp4"
+    }
+
+    /**
+     * A picture's type, by what its first bytes say rather than its name: PNG, JPEG or GIF, as Patreon's editor takes
+     * them. Anything else is refused, before Patreon has it.
+     */
+    fun imageType(file: Path): String {
+        val head = Files.newInputStream(file).use { it.readNBytes(8) }
+        fun starts(vararg bytes: Int) = head.size >= bytes.size && bytes.indices.all { head[it] == bytes[it].toByte() }
+        return when {
+            starts(0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A) -> "image/png"
+            starts(0xFF, 0xD8, 0xFF) -> "image/jpeg"
+            starts(0x47, 0x49, 0x46, 0x38) -> "image/gif"
+            else -> throw IllegalArgumentException("The file isn't a PNG, JPEG or GIF picture")
+        }
     }
 
     /** multipart/form-data with [fields] first and the file last, as S3 wants it, streamed from disk. */

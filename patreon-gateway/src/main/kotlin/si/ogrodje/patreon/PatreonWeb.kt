@@ -202,6 +202,54 @@ class PatreonWeb(private val browser: Browser, private val api: PatreonApi, priv
         }
     }
 
+    /**
+     * Makes a picture a post's image, a draft's or a published one's: its thumbnail in the feed and at its top, also an
+     * audio or video post's. As the editor's Thumbnail does it: a media the post owns as its `custom-thumbnail`, which
+     * the post then has as its `custom_thumbnail_media`, with no change to the post itself. The one it had goes first,
+     * as in the editor. The picture goes to Patreon from here, as audio does (S3's signed form). [uploaded] is the
+     * media an earlier try uploaded, so one Patreon turned away later doesn't upload it again; [onUploaded] hears of it
+     * once Patreon has it.
+     */
+    fun setImage(job: String, id: String, request: ImageRequest, uploaded: String? = null, onUploaded: (String) -> Unit = {}): Map<String, Any?> {
+        val post = postId(id)
+        val mediaId = uploaded ?: media.downloaded(request.url, request.fileName, "thumbnail") { file, name ->
+            val type = media.imageType(file)
+            val created = session(job) { session ->
+                thumbnails(session, post).forEach { old -> session.call("DELETE", "/api/media/$old", null) }
+                session.call("POST", "/api/media", jsonApi("media") {
+                    it.put("state", "pending_upload").put("file_name", name).put("size_bytes", Files.size(file))
+                        .put("owner_id", post).put("owner_type", "post")
+                        .put("owner_relationship", THUMBNAIL).put("media_type", "image")
+                })["data"]
+            }
+            val createdId = created["id"].asString()
+            try {
+                media.upload(created, file, name, type)
+            } catch (e: Exception) {
+                runCatching { session("$job-undo") { it.call("DELETE", "/api/media/$createdId", null) } }
+                    .onFailure { log.warn("Couldn't remove media {} after its upload failed: {}", createdId, it.message) }
+                throw e
+            }
+            createdId.also(onUploaded)
+        }
+        return session(job) { session ->
+            val state = waitUntilReady(session, mediaId, Duration.ofSeconds(30))
+            val saved = session.call("GET", "/api/posts/$post?fields%5Bpost%5D=$WEB_POST_FIELDS,has_custom_thumbnail&include=$THUMBNAIL_MEDIA&fields%5Bmedia%5D=state", null)["data"]
+            // Until it's processed, the post may not show it yet
+            if (state == "ready" && saved["attributes"]?.get("has_custom_thumbnail")?.asBoolean() == false) {
+                throw PatreonException("Patreon took the picture (media $mediaId) but the post has no thumbnail")
+            }
+            mapOf("post" to webPost(saved), "media" to mapOf("id" to mediaId, "state" to state))
+        }
+    }
+
+    // The post's own thumbnails, its custom_thumbnail_media
+    private fun thumbnails(session: Session, post: String): List<String> =
+        session.call("GET", "/api/posts/$post?fields%5Bpost%5D=title&include=$THUMBNAIL_MEDIA&fields%5Bmedia%5D=state", null)["data"]
+            ?.get("relationships")?.get(THUMBNAIL_MEDIA)?.get("data")
+            ?.let { data -> if (data.isArray) data.toList() else listOf(data) }.orEmpty()
+            .filterNot { it.isNull }.mapNotNull { it.text("id") }
+
     // Asks less and less often, as each ask counts against Patreon's rate limit: a long video isn't ready in minutes
     private fun waitUntilReady(session: Session, mediaId: String, ready: Duration): String {
         val deadline = System.nanoTime() + ready.toNanos()
@@ -418,6 +466,9 @@ class PatreonWeb(private val browser: Browser, private val api: PatreonApi, priv
         val CSRF = Regex("\"csrf_signature\"\\s*:\\s*\"([^\"]+)\"")
         val URL = Regex("https?://[^\\s<>\"]+[^\\s<>\".,;:!?)]")
         const val WEB_POST_FIELDS = "title,url,published_at,scheduled_for,edit_url,post_type,edited_at"
+        // A post's own picture, its thumbnail: the media's relationship, and the post's to it
+        const val THUMBNAIL = "custom-thumbnail"
+        const val THUMBNAIL_MEDIA = "custom_thumbnail_media"
         const val MEDIA_FIELDS = "file_name,size_bytes,media_type,owner_relationship,download_url,state"
 
         // Patreon's video host gives its files only to Patreon's pages, which a download says it's from
