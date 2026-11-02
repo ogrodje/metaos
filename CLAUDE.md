@@ -207,10 +207,11 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   `update_session` does over MCP; both through `Sessions` in `Sessions.kt`). `createSession` creates one, as
   `create_session` does; no page uses it yet.
 - The Episodes page lists what's in the works (the team's) by stage, in the order episodes go through them (`byStage`
-  in `lists.ts`), with those on hold or cancelled folded at the end, then the released episodes by season, as a list
-  (`EpisodeRow`, with its cover, square, or else its thumbnail: `listPicture`) or a grid of `EpisodeCard`s
-  (`?view=grid`), by show and season; seasons older than the two latest show their first row until opened. `?status=`
-  shows one stage, as Home's stages do, as a chip that turns it off (`FilterChip.vue`).
+  in `lists.ts`), each with its recording session under its title, by its name, else its date, leading to its page
+  (`EpisodeRow`, not under its session's own heading), with those on hold or cancelled folded at the end, then the
+  released episodes by season, as a list (`EpisodeRow`, with its cover, square, or else its thumbnail: `listPicture`)
+  or a grid of `EpisodeCard`s (`?view=grid`), by show and season; seasons older than the two latest show their first
+  row until opened. `?status=` shows one stage, as Home's stages do, as a chip that turns it off (`FilterChip.vue`).
 - Episode ideas (`IDEA`) have a page of their own, `/ideas`, from the `ideas` query, which needs `metaos:read`, as does
   its link in the header; the `episodes` query, and so the Episodes page, leaves them out. It lists them as the Episodes
   page lists what's in the works (`IdeaRow.vue`: the title, who it's with, who recommended it and when it was added in a
