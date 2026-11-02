@@ -245,24 +245,6 @@ class PatreonMCP(
     fun prepare(@McpToolParam(description = POST_ID) id: String): PatreonPostReadiness = readiness(id)
 
     @McpTool(
-        name = "publish_patreon_post",
-        annotations = McpTool.McpAnnotations(
-            title = "Publish Patreon post",
-            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
-        ),
-        description = "Deprecated: use `prepare_patreon_post`. MetaOS no longer publishes Patreon posts: a person " +
-            "publishes them in Patreon's editor. This checks the draft is ready for them, as prepare_patreon_post does, " +
-            "and publishes nothing; at, notify, episode and link are ignored"
-    )
-    fun publish(
-        @McpToolParam(description = POST_ID) id: String,
-        @McpToolParam(description = "Ignored", required = false) at: String?,
-        @McpToolParam(description = "Ignored", required = false) notify: Boolean?,
-        @McpToolParam(description = "Ignored", required = false) episode: String?,
-        @McpToolParam(description = "Ignored", required = false) link: Platform?,
-    ): PatreonPostReadiness = readiness(id)
-
-    @McpTool(
         name = "delete_patreon_post",
         annotations = McpTool.McpAnnotations(
             title = "Delete Patreon post",

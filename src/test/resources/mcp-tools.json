@@ -1763,45 +1763,6 @@
     },
     "title" : "Prepare Patreon post"
   },
-  "publish_patreon_post" : {
-    "annotations" : {
-      "destructiveHint" : false,
-      "idempotentHint" : true,
-      "openWorldHint" : false,
-      "readOnlyHint" : true,
-      "title" : "Publish Patreon post"
-    },
-    "description" : "Deprecated: use `prepare_patreon_post`. MetaOS no longer publishes Patreon posts: a person publishes them in Patreon's editor. This checks the draft is ready for them, as prepare_patreon_post does, and publishes nothing; at, notify, episode and link are ignored",
-    "inputSchema" : {
-      "$schema" : "https://json-schema.org/draft/2020-12/schema",
-      "properties" : {
-        "at" : {
-          "description" : "Ignored",
-          "type" : "string"
-        },
-        "episode" : {
-          "description" : "Ignored",
-          "type" : "string"
-        },
-        "id" : {
-          "description" : "The Patreon post's ID, the number at the end of its URL, e.g. 171593625",
-          "type" : "string"
-        },
-        "link" : {
-          "description" : "Ignored",
-          "enum" : [ "YOUTUBE", "SPOTIFY", "APPLE_PODCASTS", "PATREON", "PATREON_AUDIO", "PATREON_BONUS", "PATREON_BONUS_AUDIO" ],
-          "type" : "string"
-        },
-        "notify" : {
-          "description" : "Ignored",
-          "type" : "boolean"
-        }
-      },
-      "required" : [ "id" ],
-      "type" : "object"
-    },
-    "title" : "Publish Patreon post"
-  },
   "read_document" : {
     "annotations" : {
       "destructiveHint" : false,

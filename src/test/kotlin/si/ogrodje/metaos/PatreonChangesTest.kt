@@ -21,7 +21,6 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -280,13 +279,5 @@ class PatreonChangesTest @Autowired constructor(
         assertEquals("VIDEO", ready.media.single().kind)
 
         assertEquals(listOf("Its title", "Its audio or video (set_patreon_post_media)"), mcp.prepare("172923223").missing)
-    }
-
-    @Test
-    fun `publishing publishes nothing, it says what prepare_patreon_post does`() {
-        val calls = gateway.calls.size
-        assertEquals(mcp.prepare("172923222"), mcp.publish("172923222", null, true, "S05E08", Platform.PATREON))
-        assertEquals(calls, gateway.calls.size)
-        assertNull(gateway.calls.firstOrNull { it.startsWith("publish") })
     }
 }

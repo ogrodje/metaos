@@ -2,7 +2,7 @@
 // something else changes here too (CLAUDE.md); UsageToolsTest checks the names, but not the descriptions.
 
 /** The tools' version, as MetaOS gives it to assistants, which `just mcp-tools` writes (McpToolsTest) */
-export const TOOLS_VERSION = '0.4.0'
+export const TOOLS_VERSION = '1.0.0'
 
 export interface Tool {
   name: string
@@ -181,7 +181,6 @@ export const TOOL_GROUPS: ToolGroup[] = [
       { name: 'set_patreon_post_media', description: "Upload one of an episode's files in MetaOS to a draft, as a podcast or video post" },
       { name: 'set_patreon_post_image', description: "Set a post's thumbnail, one of the episode's pictures in MetaOS" },
       { name: 'prepare_patreon_post', description: 'Check a draft is ready for a person to publish in Patreon: its title, and its audio or video processed' },
-      { name: 'publish_patreon_post', description: 'Deprecated, publishes nothing: use prepare_patreon_post' },
       { name: 'delete_patreon_post', description: "Delete a post, e.g. a draft that isn't needed" },
       { name: 'get_patreon_job', description: 'How a change in Patreon is going, e.g. an upload: done, failed and why, or waiting its turn or to try again' },
     ],
