@@ -31,8 +31,9 @@ module "realm" {
   metaos_mcp_url = "http://localhost:8080/mcp"
   metaos_api_url = "http://localhost:8080/graphql"
   metaos_ui_url  = "http://localhost:5173"
-  # A second front-end, e.g. a worktree's, on the next ports Nuxt's dev server takes (as the dev bucket's CORS, ../../gcp)
-  metaos_ui_other_urls = ["http://localhost:5174", "http://localhost:5175"]
+  # A second front-end, e.g. a worktree's, on the next ports Nuxt's dev server takes (as the dev bucket's CORS, ../../gcp),
+  # and this developer's own others, e.g. by a tailnet name
+  metaos_ui_other_urls = concat(["http://localhost:5174", "http://localhost:5175"], var.metaos_ui_other_urls)
 
   # The same OAuth client as production's, which has localhost's redirect URI too. Its secret only to create the
   # provider or change it: `TF_VAR_google_client_secret=$GOOGLE_IDP_CLIENT_SECRET just keycloak apply dev`.
@@ -49,6 +50,12 @@ variable "google_client_secret" {
   type        = string
   sensitive   = true
   default     = null
+}
+
+variable "metaos_ui_other_urls" {
+  description = "Where else this developer's front-end is, e.g. http://ziv.folk-decibel.ts.net:5173 (TF_VAR_metaos_ui_other_urls)"
+  type        = list(string)
+  default     = []
 }
 
 # For agents/ in development: `terraform -chdir=infra/keycloak/dev output -raw agents_client_secret`

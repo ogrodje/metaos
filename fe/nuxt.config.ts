@@ -74,6 +74,9 @@ export default defineNuxtConfig({
   // made-up ?x= would be one more page held for good, until the pod runs out of memory. At most this many, the least
   // used going first (unstorage's lru-cache driver, whose lru-cache comes with unstorage)
   nitro: DEV ? {} : { storage: { cache: { driver: 'lru-cache', max: 300 } } },
+  // The dev server answers by the tailnet's names too (e.g. ziv.folk-decibel.ts.net:5173), not only localhost: Vite
+  // turns away a Host it doesn't know
+  vite: { server: { allowedHosts: ['.folk-decibel.ts.net'] } },
   telemetry: false,
   devtools: { enabled: true },
 })

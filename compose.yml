@@ -54,8 +54,13 @@ services:
       # Not .envrc's KEYCLOAK_ADMIN_*, which are production's: infra/keycloak/dev signs in as admin / admin
       - KC_BOOTSTRAP_ADMIN_USERNAME=admin
       - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
-      # Pin the public URL so the token issuer is stable no matter how Keycloak is reached
-      - KC_HOSTNAME=http://localhost:8180
+      # Pin the public URL so the token issuer is stable no matter how Keycloak is reached. Another one, e.g.
+      # https://ziv.folk-decibel.ts.net:8443 to sign in from another machine on the tailnet: KEYCLOAK_URL
+      - KC_HOSTNAME=${KEYCLOAK_URL:-http://localhost:8180}
+      # Behind tailscale serve, which says the request came over https: Keycloak's cookies are then Secure and
+      # SameSite=None, which the front-end's sign-in iframe needs from another site (http://…:5173). Only the proxy and
+      # this machine reach Keycloak's port, so only they can say it
+      - KC_PROXY_HEADERS=xforwarded
       - KC_HEALTH_ENABLED=true
     ports:
       - '127.0.0.1:8180:8080'
