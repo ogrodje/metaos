@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { faCalendar } from '@fortawesome/free-regular-svg-icons'
 import { faLock } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { keepUnchanged, useLiveRefresh } from '@/changes'
@@ -249,6 +250,7 @@ const pastTitle = useScrolledPast(titleBlock)
             </Fact>
             <!-- A session's page is the team's -->
             <Fact v-if="episode.session" label="Session">
+              <FontAwesomeIcon class="session-icon" :icon="faCalendar" aria-hidden="true"/>
               <RouterLink v-if="team" :to="sessionPath(episode.session)">{{ sessionTitle(episode.session) }}</RouterLink>
               <template v-else>{{ sessionTitle(episode.session) }}</template>
             </Fact>
@@ -386,6 +388,15 @@ const pastTitle = useScrolledPast(titleBlock)
 
 dd .lock {
   margin-left: 6px;
+  vertical-align: -1px;
+}
+
+// A calendar in front of the session's name, as in the Episodes page's rows
+.session-icon {
+  width: 11px;
+  height: 11px;
+  margin-right: 6px;
+  color: var(--muted);
   vertical-align: -1px;
 }
 

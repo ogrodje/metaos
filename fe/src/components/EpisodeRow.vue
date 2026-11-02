@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { faCalendar } from '@fortawesome/free-regular-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import FileLinks from '@/components/FileLinks.vue'
@@ -68,7 +70,7 @@ const session = computed(() => {
         <ShowBadge v-if="episode.show" :name="episode.show" :color="episode.showColor"/>
         <span v-if="guestNames" class="guests" lang="sl">{{ guestNames }}</span>
       </p>
-      <p v-if="session" class="session"><span class="label">Session</span> <RouterLink :to="session.path">{{ session.label }}</RouterLink></p>
+      <p v-if="session" class="session"><FontAwesomeIcon class="icon" :icon="faCalendar" title="Recording session"/> <RouterLink :to="session.path">{{ session.label }}</RouterLink></p>
       <p v-if="match?.text" class="found"><span class="label">{{ match.label }}</span> <span lang="sl"><MarkedText :text="match.text" :words="match.words"/></span></p>
     </div>
     <span class="meta">
@@ -148,6 +150,15 @@ const session = computed(() => {
 
   .label {
     color: var(--muted);
+  }
+
+  // A calendar in front of the session's name, where the word Session was
+  .icon {
+    width: 11px;
+    height: 11px;
+    margin-right: 2px;
+    color: var(--muted);
+    vertical-align: -1px;
   }
 }
 
