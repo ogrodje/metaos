@@ -17,9 +17,12 @@ import org.springframework.web.server.ResponseStatusException
 
 data class Page<T>(val items: List<T>, val total: Int)
 
-/** Reading Ogrodje's Patreon (its API), the jobs, and the browser's session. Posts are changed in [PostsApi]. */
+/**
+ * Reading Ogrodje's Patreon (its API), what failed changes' pages showed, and the browser's session. Posts are changed by
+ * MetaOS's workflows' activities (Activities.kt).
+ */
 @RestController
-class Api(private val api: PatreonApi, private val browser: Browser, private val jobs: Jobs, private val health: Health) {
+class Api(private val api: PatreonApi, private val browser: Browser, private val health: Health) {
     @GetMapping("/health")
     fun health(@RequestParam(defaultValue = "false") check: Boolean): ResponseEntity<GatewayHealth> {
         // Checked now also before the first scheduled check is done, so a caller right after a restart isn't told it's down
@@ -77,16 +80,10 @@ class Api(private val api: PatreonApi, private val browser: Browser, private val
         return api.tokenInfo()
     }
 
-    @GetMapping("/jobs")
-    fun jobs(@RequestParam(defaultValue = "20") limit: Int) = jobs.list().take(limit.coerceIn(1, 500))
-
-    @GetMapping("/jobs/{id}")
-    fun job(@PathVariable id: String) = jobs.get(id) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "No job $id")
-
-    /** What the page showed when the job failed. */
-    @GetMapping("/jobs/{id}/screenshot", produces = [MediaType.IMAGE_PNG_VALUE])
-    fun screenshot(@PathVariable id: String) = FileSystemResource(
-        browser.failure(id, "png") ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "No screenshot for job $id"),
+    /** What the page showed when a try of a change failed, by its workflow's ID and the try, e.g. patreon-...-1. */
+    @GetMapping("/failures/{name}/screenshot", produces = [MediaType.IMAGE_PNG_VALUE])
+    fun screenshot(@PathVariable name: String) = FileSystemResource(
+        browser.failure(name, "png") ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "No screenshot of $name"),
     )
 
     /** Takes the bot's browser session from login.sh (Playwright's storage state), once it's signed in. */

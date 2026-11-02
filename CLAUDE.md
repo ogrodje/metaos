@@ -795,26 +795,36 @@ folders and moves or renames, but never deletes or replaces anything unasked.
 
 MetaOS reaches Ogrodje's Patreon through [patreon-gateway](patreon-gateway/README.md), a service of its own in
 [`patreon-gateway/`](patreon-gateway) (Kotlin, Spring Boot and Playwright; a Gradle build of its own,
-`./gradlew -p patreon-gateway test`), which MetaOS alone calls, with its token. It reads through Patreon's API, as the
-campaign's creator, and makes, changes, publishes and deletes posts and uploads an episode's audio or video in Patreon's
-web app, signed in as the bot, `iva.ogrodje@gmail.com`, acting as the creator, by calling Patreon's own web API from a
-page of the campaign, as its editor does (not a public API: the README says how it was found). Changes are jobs, one at
-a time; one Patreon turns away (a rate limit) tries again by itself.
+`./gradlew -p patreon-gateway test`), which MetaOS alone uses. It reads through Patreon's API, as the campaign's
+creator, over an HTTP API MetaOS calls with its token; and it makes, changes and deletes posts and uploads an episode's
+audio or video in Patreon's web app, signed in as the bot, `iva.ogrodje@gmail.com`, acting as the creator, by calling
+Patreon's own web API from a page of the campaign, as its editor does (not a public API: the README says how it was
+found). MetaOS never publishes: a person does, in Patreon's editor.
 
-- [`Patreon.kt`](src/main/kotlin/si/ogrodje/metaos/Patreon.kt) is MetaOS's client: `PATREON_GATEWAY_URL` and
-  `PATREON_GATEWAY_TOKEN` turn it on (`metaos.patreon.*`); it's off without the token. `PatreonMCP` has the tools:
-  tiers, members (`list_patreon_members`: status, tiers, pledges and charges, with names and emails), posts and drafts
-  (`list_patreon_drafts`, through Patreon's web app, as its API lists only what's published), new drafts
-  (`create_patreon_draft`), their audio or video from Dropbox, as a temporary link the gateway downloads, or any https
-  URL (`set_patreon_post_media`), download links for a post's audio or video (`get_patreon_post_media`: the MP3 as
-  uploaded, or the best MP4 Patreon's video host, Mux, keeps, which needs Patreon as its referrer; signed for a day or
-  more), publishing, which can set the episode's Patreon link (`publish_patreon_post`, the only one patrons see, so the
-  only open-world one), deleting, and the jobs. Quick changes are waited for; an upload comes back as a job
-  (`get_patreon_job`).
+- Changes are workflows ([`PatreonPosts.kt`](src/main/kotlin/si/ogrodje/metaos/PatreonPosts.kt),
+  `PatreonChangeWorkflow`, one a change, `patreon-<kind>-<uuid>`), whose activities the gateway works on as Temporal's
+  worker, on task queue `patreon` (its `Activities.kt`; MetaOS has the same interface by the same names, so changing one
+  is changing both). They take turns (`metaos.slots.patreon`, one), and the gateway takes one at a time, at most one
+  every 20 s, as Patreon's bot check turns it away when it's asked often; one turned away, or that finds the gateway,
+  its browser or its session down, is tried again by Temporal, 2 minutes later, then ever later, for half a day (a day
+  for an upload), and what a try did (a draft made, a file uploaded) is in its heartbeat, so the next goes on from it.
+  A change's job (`get_patreon_job`) is its workflow, as Temporal has it (`PatreonChanges`).
+- [`Patreon.kt`](src/main/kotlin/si/ogrodje/metaos/Patreon.kt) is MetaOS's client for what it reads:
+  `PATREON_GATEWAY_URL` and `PATREON_GATEWAY_TOKEN` turn it on (`metaos.patreon.*`); it's off without the token, and
+  changes also need Temporal. `PatreonMCP` has the tools: tiers, members (`list_patreon_members`: status, tiers, pledges
+  and charges, with names and emails), posts and drafts (`list_patreon_drafts`, through Patreon's web app, as its API
+  lists only what's published), new drafts (`create_patreon_draft`), their audio or video, one of the episode's files in
+  MetaOS (`set_patreon_post_media`'s `media`, a link to the private bucket the workflow signs for a day once it's its
+  turn; Dropbox and URLs are deprecated), download links for a post's audio or video (`get_patreon_post_media`: the MP3
+  as uploaded, or the best MP4 Patreon's video host, Mux, keeps, which needs Patreon as its referrer; signed for a day
+  or more), whether a draft is ready for a person to publish (`prepare_patreon_post`: its title, and its media
+  processed, with where to publish it; `publish_patreon_post` is its deprecated name, and publishes nothing), deleting,
+  and the jobs. Quick changes are waited for; an upload comes back as a job.
 - The bot signs in once by hand (`patreon-gateway/login.sh`), and the gateway keeps the session and the refreshed
   creator tokens on its volume. A refresh ends the old tokens, so only one gateway may use a creator token. The `patreon` health check asks the gateway every hour, which says whether Patreon's
   API answers and the browser is still signed in, in `metaos_patreon_connected` and in the log.
-- `PatreonTest` runs the client against a stand-in gateway; the gateway's own tests need no browser.
+- `PatreonTest` runs the client against a stand-in gateway, and `PatreonChangesTest` the workflows in Temporal's test
+  server against a stand-in worker; the gateway's own tests need no browser (`ActivitiesTest`, `WorkerTest`).
 
 ### New Relic
 
@@ -890,7 +900,8 @@ decisions behind it and what is left to do.
   needs a session and the bearer token says who's calling; every pod listens for changes (Live updates) and checks its
   connections; caches like `DropboxFolderIndex` are each pod's own. Flyway takes a lock, so both may start at once.
 - patreon-gateway is one pod (`deployment-patreon-gateway.yaml`), with its state on a volume, and no Ingress: MetaOS
-  calls it at `http://patreon-gateway`, with the token from `patreon-gateway-secret` (`k8s/set_secrets.sh`). CI tests,
+  calls it at `http://patreon-gateway`, with the token from `patreon-gateway-secret` (`k8s/set_secrets.sh`), and it
+  works on Temporal's task queue `patreon` (`TEMPORAL_ADDRESS=temporal:7233`). CI tests,
   builds and rolls it out with the rest. Its Chromium is a container of its own in the pod, Microsoft's Playwright
   image, which the node pulls from Microsoft, so the browsers never go through our registry over the tailnet; its
   version has to be the gateway's Playwright's (`BrowserVersionTest`). Cloudflare turns away Patreon's pages from the

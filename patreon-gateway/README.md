@@ -1,8 +1,10 @@
 # patreon-gateway
 
-Ogrodje's Patreon behind a small HTTP API, for MetaOS (`Patreon.kt`, `PatreonMCP.kt`), which is the only caller. A
-service of its own, so Chromium, the bot's Patreon session and Patreon's changing web app stay out of MetaOS: one pod,
-one browser session, one job at a time.
+Ogrodje's Patreon for MetaOS (`Patreon.kt`, `PatreonPosts.kt`, `PatreonMCP.kt`), which is the only caller: it reads
+through a small HTTP API, and changes posts as the activities of MetaOS's workflows, on Temporal, which the gateway works
+on (`Activities.kt`). A service of its own, so Chromium, the bot's Patreon session and Patreon's changing web app stay
+out of MetaOS: one pod, one browser session, one change at a time. Nothing publishes: a person does, in Patreon's
+editor.
 
 Kotlin and Spring Boot like MetaOS, with Playwright for Java; a Gradle build of its own, apart from MetaOS's
 (`./gradlew -p patreon-gateway ...`).
@@ -29,19 +31,18 @@ Kotlin and Spring Boot like MetaOS, with Playwright for Java; a Gradle build of 
   - `POST /api/posts/new`, then `PATCH /api/posts/{id}` with the title, the text as HTML and as the editor's own
     document (`content_json_string`, ProseMirror's JSON), the post type and its access rules (the campaign's `public`
     rule, its `patrons` rule, or a `tier` rule per tier) and collections. `meta.auto_save` for drafts.
-  - Publishing is the same `PATCH` with `tags: {publish: true}`, or `scheduled_for` (UTC) for later, and
-    `meta.send_notifications` to email the patrons; a post whose video is still processing gets
-    `auto_publish_when_media_ready` instead, as the editor's Publish does then. The gateway refuses a post that's
-    published or scheduled already.
+  - Publishing would be the same `PATCH` with `tags: {publish: true}`; the gateway never sends it, and saves posts with
+    `meta.auto_save` and no `send_notifications`, as the editor saves a draft as it's written.
   - `DELETE /api/posts/{id}`.
   - Media: `POST /api/media` with the file's name and size, the post as its owner and `audio` or `video` as its
     relationship, which answers where to put the file: S3 with a signed form for audio, Mux with a `PUT` for video. The
     gateway sends it from the JVM (`Media.kt`), not through the browser, whose one thread would otherwise be held for
     the hours an episode's video can take: the media is made in one visit to the campaign's page and the post saved in
-    another, after `GET /api/media/{id}` says it's `ready`, or a minute (a long video then publishes once it is). A
-    file whose upload failed is deleted from Patreon again, as it would keep another from the post. Audio makes the
-    post a `podcast` post, in the campaign's show (its podcast feed), as the editor does; video a
-    `video_external_file` one. A retried job doesn't upload a file again, nor make a second draft.
+    another, after `GET /api/media/{id}` says it's `ready`, or a minute (a long video's post is saved anyway, and
+    Patreon's Publish waits for it). A file whose upload failed is deleted from Patreon again, as it would keep another
+    from the post. Audio makes the post a `podcast` post, in the campaign's show (its podcast feed), as the editor does;
+    video a `video_external_file` one. A retried change doesn't upload a file again, nor make a second draft: what a try
+    made is in its activity's heartbeat, which the next try, on this gateway or after a restart, goes on from.
   - Downloading: `GET /api/posts/{id}?include=media` gives the creator each media's `download_url`, signed: for audio
     the MP3 as it was uploaded (`token-time`, some days), for video Mux's `highest.mp4` (a JWT, a day), which isn't the
     file uploaded. Mux gives it only to Patreon's pages (the token's `playback_restriction_id`), so a download sends
@@ -50,18 +51,38 @@ Kotlin and Spring Boot like MetaOS, with Playwright for Java; a Gradle build of 
     the editor; only a new draft gets the editor's defaults.
 
   These were found by recording what the editor sends (headless Chrome is stopped by Cloudflare on its page; Chrome
-  you can see isn't) and reading its scripts. They aren't a public API: Patreon may change them. When it does, a job
-  fails with Patreon's answer, and keeps a screenshot of the page (`GET /jobs/{id}/screenshot`).
+  you can see isn't) and reading its scripts. They aren't a public API: Patreon may change them. When it does, a change
+  fails with Patreon's answer, and keeps a screenshot of the page, by its workflow's ID and try
+  (`GET /failures/{name}/screenshot`).
+
+## Changes, on Temporal
+
+Making, changing and deleting posts and putting a file on one are activities on Temporal's task queue `patreon`
+(`Activities.kt`), which MetaOS's workflows call (`PatreonChangeWorkflow` in `PatreonPosts.kt`) and the gateway works on
+as Temporal's worker, with `TEMPORAL_ADDRESS` (`temporal:7233` in k8s; without it, it changes nothing). Temporal keeps
+them, so a change outlives a restart of either, and MetaOS's job for it (`get_patreon_job`) is its workflow:
+
+| Activity             | What                                                                                   |
+|----------------------|----------------------------------------------------------------------------------------|
+| `PatreonCreateDraft` | a draft: `{title, text, access: {kind: PUBLIC, PATRONS or TIERS, tiers}}`              |
+| `PatreonUpdatePost`  | changes a post; what's left out stays                                                  |
+| `PatreonAttachMedia` | `{url, kind: AUDIO or VIDEO, fileName}`: downloads the file and puts it on the draft; heartbeats while it does |
+| `PatreonDeletePost`  | deletes a post                                                                         |
+
+MetaOS has the same interface by the same names, with its own types of the same shape: changing one is changing both.
 
 ## Rate limits
 
-Cloudflare answers 429 when Patreon is asked too often, after some 15–20 page loads and calls within a few minutes.
-A job Patreon turns away waits and tries again, 5, 10 and 20 minutes later, before it fails (`Jobs.kt`); the job says
-so (`error`, `retryAt`). The jobs after it wait with it, so they keep their order: an update sent before a publish is
-in the post before it's published. Each job loads one page (two for an upload) and makes a few calls. A page's own
-calls (its feed, every post's comments, chat, tracking), some twenty a page, are blocked, as are its pictures and
-fonts: they'd count against the limit too, and the gateway needs only the page's HTML (`Browser.quiet`). Its own calls
-carry `x-patreon-gateway`, which lets them through.
+Cloudflare answers 429 when Patreon is asked too often, after some 15-20 page loads and calls within a few minutes.
+The gateway takes one activity at a time, and at most one every 20 s whoever asks (`PATREON_ACTIVITIES_PER_SECOND`,
+0.05), and MetaOS's changes take turns (`metaos.slots.patreon`, one), so they're made in the order they were asked for.
+One Patreon turns away fails as one to try again (as do a browser that isn't there, a session that ran out and
+Patreon's 5xx), which Temporal does 2 minutes later, then ever later, up to every half hour, for half a day (a day for
+an upload), holding its turn, and nothing else: no thread sleeps in the gateway. What trying again won't change (a
+request that's wrong, Patreon refusing it) fails at once. Each change loads one page (two for an upload) and makes a
+few calls. A page's own calls (its feed, every post's comments, chat, tracking), some twenty a page, are blocked, as are
+its pictures and fonts: they'd count against the limit too, and the gateway needs only the page's HTML
+(`Browser.quiet`). Its own calls carry `x-patreon-gateway`, which lets them through.
 
 ## API
 
@@ -78,17 +99,10 @@ Every call but the actuator's (probes, metrics) needs `Authorization: Bearer $PA
 | `GET /drafts`                 | drafts, scheduled ones too, last edited first (Patreon's web app; its API lists none) |
 | `GET /posts/{id}/media`       | where to download a post's audio (the MP3 as uploaded) or video (the best MP4 Mux keeps), drafts' too: signed links, until `expiresAt`; a video's needs `referer` as its Referer |
 | `GET /posts/{id}/web`         | a post, drafts too (Patreon's web app)                                                     |
-| `POST /posts`                 | a draft: `{title, text, access: {kind: PUBLIC, PATRONS or TIERS, tiers}}`                  |
-| `PATCH /posts/{id}`           | changes a post; what's left out stays                                                      |
-| `POST /posts/{id}/media`      | `{url, kind: AUDIO or VIDEO, fileName}`: downloads the file and puts it on the post        |
-| `POST /posts/{id}/publish`    | `{at, notify}`: now, or later; patrons are emailed only with `notify`                      |
-| `DELETE /posts/{id}`          | deletes a post                                                                             |
-| `GET /jobs`, `GET /jobs/{id}` | the jobs, latest first; one                                                                |
+| `GET /failures/{name}/screenshot` | what the page showed when a change's try failed, by its workflow's ID and try          |
 | `PUT /session`                | the bot's browser session, from `login.sh`                                                 |
 
-Changes answer 202 with a job, to follow at `/jobs/{id}`: QUEUED, RUNNING, SUCCEEDED with what it made, or FAILED
-and why. An `Idempotency-Key` header gives back the job it was first sent with. Jobs are kept in memory: one lost to a
-restart is one its caller sees not finish.
+It only reads: changes are Temporal's activities (above).
 
 `text` is plain text: paragraphs between blank lines, and addresses made links. A file to upload comes from an https
 URL the gateway downloads, e.g. a Dropbox temporary link (MetaOS makes them) or a signed Cloud Storage URL: only from
@@ -98,12 +112,12 @@ the internet, also after redirects, never from the cluster, the node or the tail
 
 ```bash
 # PATREON_CLIENT_ID, PATREON_CLIENT_SECRET, PATREON_ACCESS_TOKEN, PATREON_REFRESH_TOKEN, PATREON_GATEWAY_TOKEN set
-./gradlew -p patreon-gateway bootRun     # http://localhost:8090
+TEMPORAL_ADDRESS=localhost:7233 ./gradlew -p patreon-gateway bootRun   # http://localhost:8090, compose's Temporal
 ./gradlew -p patreon-gateway test
 ```
 
-`PATREON_HEADED=true` runs the browser where you can see it. State (tokens, the session, what failed jobs saw) is in
-`state/`, which git ignores: it's secret. What failed jobs' pages showed (`state/failures`, a screenshot and the HTML
+`PATREON_HEADED=true` runs the browser where you can see it. State (tokens, the session, what failed changes saw) is in
+`state/`, which git ignores: it's secret. What failed changes' pages showed (`state/failures`, a screenshot and the HTML
 each) is deleted after 14 days (`PATREON_FAILURES_KEPT`), as it may show who's signed in. Downloads go to
 `state/downloads` (`PATREON_DOWNLOADS_DIR`), and what a restart cut short is deleted when it starts. MetaOS finds a gateway at `PATREON_GATEWAY_URL` (`http://localhost:8090` by
 default) with `PATREON_GATEWAY_TOKEN`; it's off without the token.
@@ -153,7 +167,7 @@ out directly. It needs:
 - low up, signed in to the tailnet (with key expiry off, or it drops off after 180 days) and offering itself as an
   exit node (`tailscale set --advertise-exit-node`, allowed in the admin console), with IP forwarding on and its
   firewall (Shorewall) passing the tailnet's traffic to the internet, masqueraded. While it isn't, the browser can't
-  reach Patreon: jobs wait and try again, and the health check says so.
+  reach Patreon: changes wait and try again, and the health check says so.
 
 The first time, `k8s/set_secrets.sh` with `PATREON_CLIENT_ID`, `PATREON_CLIENT_SECRET`, `PATREON_ACCESS_TOKEN`,
 `PATREON_REFRESH_TOKEN` and `PROD_PATREON_GATEWAY_TOKEN` makes `patreon-gateway-secret` (MetaOS reads the gateway token

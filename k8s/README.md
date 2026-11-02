@@ -134,6 +134,7 @@ kubectl -n metaos-prod logs deploy/temporal -c schema               # its schema
 kubectl -n metaos-prod get job temporal-namespace                    # namespace default made
 kubectl -n metaos-prod run temporal-cli --rm -it --restart=Never --image=temporalio/admin-tools:1.32.1 \
   --env TEMPORAL_ADDRESS=temporal:7233 -- temporal task-queue describe --task-queue metaos   # MetaOS's pods poll it
+# and patreon-gateway the patreon one, likewise (--task-queue patreon)
 ```
 
 Then point an MCP client at `https://metaos.ogrodje.si/mcp`, e.g.

@@ -108,8 +108,8 @@ class Browser(private val properties: PatreonProperties, private val mapper: Jso
         failures.resolve("$name.$extension").takeIf { name.matches(SAFE_NAME) && Files.exists(it) }
 
     /**
-     * Deletes what failed jobs' pages showed once it's older than [PatreonProperties.failuresKept], every hour: it's
-     * for finding out why a job failed, while that's asked, and it may show who's signed in. Returns how many it deleted.
+     * Deletes what failed changes' pages showed once it's older than [PatreonProperties.failuresKept], every hour: it's
+     * for finding out why a change failed, while that's asked, and it may show who's signed in. Returns how many it deleted.
      */
     @Scheduled(initialDelay = 60_000, fixedDelay = 60 * 60 * 1000)
     fun forgetFailures(): Int {
@@ -119,7 +119,7 @@ class Browser(private val properties: PatreonProperties, private val mapper: Jso
             files.filter { Files.isRegularFile(it) && Files.getLastModifiedTime(it).toInstant().isBefore(before) }.toList()
         }
         old.forEach { runCatching { Files.deleteIfExists(it) }.onFailure { e -> log.warn("Couldn't delete {}: {}", it.fileName, e.message) } }
-        if (old.isNotEmpty()) log.info("Deleted {} files of failed jobs older than {}", old.size, properties.failuresKept)
+        if (old.isNotEmpty()) log.info("Deleted {} files of failed changes older than {}", old.size, properties.failuresKept)
         return old.size
     }
 
@@ -179,7 +179,7 @@ class Browser(private val properties: PatreonProperties, private val mapper: Jso
                     .setHeaders(mapOf("x-playwright-launch-options" to mapper.writeValueAsString(options))),
             ).also { browser = it }
         } catch (e: PlaywrightException) {
-            // Its container may be (re)starting: the job tries again later, as when Patreon turns it away
+            // Its container may be (re)starting: the change tries again later, as when Patreon turns it away
             throw PatreonBusyException("The browser at $url isn't there: ${e.message?.lineSequence()?.firstOrNull()}")
         }
     }
@@ -214,7 +214,7 @@ private val ACTOR = Regex("\"actor\"\\s*:\\s*(\\{[^{}]*\\})")
  * page's own data, which Patreon has only while someone acts as another; else `/api/current_user` says.
  */
 fun whoIsSignedIn(context: BrowserContext): CurrentUser? {
-    // From a page of Patreon's, as Chromium, as the jobs do: Cloudflare turns away Patreon's API asked from elsewhere,
+    // From a page of Patreon's, as Chromium, as the changes do: Cloudflare turns away Patreon's API asked from elsewhere,
     // e.g. by Playwright's own requests from a server's address
     val page = context.newPage()
     try {

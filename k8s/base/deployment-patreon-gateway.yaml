@@ -58,6 +58,9 @@ spec:
               valueFrom: { secretKeyRef: { name: patreon-gateway-secret, key: gateway_token, optional: true } }
             - name: PATREON_DOWNLOADS_DIR
               value: /downloads
+            # Temporal, whose task queue patreon it works on: MetaOS's workflows' changes in Patreon (Activities.kt)
+            - name: TEMPORAL_ADDRESS
+              value: "temporal:7233"
             # Playwright's browser server in the container beside it, in the pod only
             - name: PATREON_BROWSER_URL
               value: ws://127.0.0.1:3000/

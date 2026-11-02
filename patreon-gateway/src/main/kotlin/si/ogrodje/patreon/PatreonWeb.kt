@@ -13,13 +13,11 @@ import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.time.Instant
-import java.time.format.DateTimeFormatter
 import java.util.Base64
-import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.roundToLong
 
 /**
- * Patreon turned the gateway away for now (rate limit, bot check), or its browser isn't there yet: a job to send again
+ * Patreon turned the gateway away for now (rate limit, bot check), or its browser isn't there yet: a change to try again
  * in a few minutes.
  */
 class PatreonBusyException(message: String) : RuntimeException(message)
@@ -56,7 +54,7 @@ data class WebPost(
 )
 
 /**
- * Posts made, changed, published and deleted as Patreon's own post editor does it: through Patreon's web API, from a
+ * Posts made, changed and deleted as Patreon's own post editor does it: through Patreon's web API, from a
  * page of the campaign, signed in as the bot acting as the creator (team members switch to the creator's account,
  * `/api/session/acting-as`), with the page's CSRF signature. Not through the editor itself: Cloudflare checks headless
  * browsers on its page, and the calls are what it makes anyway (patreon-gateway/README.md says how they were found).
@@ -66,35 +64,20 @@ class PatreonWeb(private val browser: Browser, private val api: PatreonApi, priv
     private val log = LoggerFactory.getLogger(javaClass)
 
     /**
-     * A new draft: nobody but the team sees it until it's published. [created] keeps its ID across the job's tries, so
-     * one Patreon turned away after the draft was made goes on with that one, not another.
+     * A new draft: nobody but the team sees it until a person publishes it, in Patreon's editor. [created] is the draft
+     * an earlier try made, which goes on with that one, not another; [onCreated] hears of a new one as soon as Patreon
+     * has it, so the next try knows it (Activities.kt keeps it in the activity's heartbeat).
      */
-    fun createDraft(job: String, spec: PostSpec, created: AtomicReference<String> = AtomicReference()): WebPost = session(job) { session ->
+    fun createDraft(job: String, spec: PostSpec, created: String? = null, onCreated: (String) -> Unit = {}): WebPost = session(job) { session ->
         // Who may see it first, so a tier the campaign hasn't fails before Patreon has an empty draft
         val rules = spec.access?.let { accessRules(session, it) }
-        val id = created.get() ?: session.call("POST", "/api/posts/new?fields%5Bpost%5D=edit_url", jsonApi("post") { it.put("post_type", "text_only") })
-            .let { it["data"]["id"].asString() }.also { created.set(it) }
-        save(session, id, spec, publish = false, fresh = true, givenRules = rules)
+        val id = created ?: session.call("POST", "/api/posts/new?fields%5Bpost%5D=edit_url", jsonApi("post") { it.put("post_type", "text_only") })
+            .let { it["data"]["id"].asString() }.also(onCreated)
+        save(session, id, spec, fresh = true, givenRules = rules)
     }
 
     /** Changes a draft, or a published post, as [spec] says; what it leaves null stays. */
-    fun update(job: String, id: String, spec: PostSpec): WebPost = session(job) { save(it, postId(id), spec, publish = false) }
-
-    /**
-     * Publishes a draft, now or at [at], and emails the patrons who may see it only when [notify]. Patreon does this
-     * with the same save as the editor's Publish, which sends the whole post.
-     */
-    fun publish(job: String, id: String, at: OffsetDateTime?, notify: Boolean): WebPost = session(job) { session ->
-        // Once is enough: publishing again could email the patrons again
-        val response = session.call("GET", "/api/posts/${postId(id)}?fields%5Bpost%5D=$WEB_POST_FIELDS&include=media&fields%5Bmedia%5D=state", null)
-        val post = webPost(response["data"])
-        if (!post.draft) throw IllegalArgumentException("Post $id is already published (${post.publishedAt})")
-        if (post.scheduledFor != null && at == null) throw IllegalArgumentException("Post $id is already scheduled for ${post.scheduledFor}")
-        require(at == null || at.isAfter(OffsetDateTime.now())) { "A post can only be scheduled for later" }
-        // A video Patreon is still processing: it publishes the post once it's done, as its editor's Publish does
-        val whenReady = at == null && !mediaReady(response["included"])
-        save(session, postId(id), PostSpec(), publish = true, at = at, notify = notify, whenMediaReady = whenReady)
-    }
+    fun update(job: String, id: String, spec: PostSpec): WebPost = session(job) { save(it, postId(id), spec) }
 
     fun delete(job: String, id: String) = session(job) { session ->
         session.call("DELETE", "/api/posts/${postId(id)}", null)
@@ -173,18 +156,20 @@ class PatreonWeb(private val browser: Browser, private val api: PatreonApi, priv
      * editor, goes into the campaign's show, its podcast feed) or a video post. The file goes to Patreon from here, not
      * in the browser, whose one thread would otherwise be held for the hours an episode's video can take: Patreon is told
      * about it in one visit to the campaign's page and the post saved in another. That waits up to [ready] for Patreon to
-     * process the file; a long video takes longer, and the post is saved anyway (publishing then waits for it).
-     * [progress] keeps an uploaded file across the job's tries, so one Patreon turned away later doesn't upload it again.
+     * process the file; a long video takes longer, and the post is saved anyway (Patreon's Publish then waits for it).
+     * [uploaded] is the file an earlier try uploaded, so one Patreon turned away later doesn't upload it again;
+     * [onUploaded] hears of it once Patreon has it.
      */
     fun attachMedia(
         job: String,
         id: String,
         request: MediaRequest,
-        progress: AtomicReference<UploadedMedia> = AtomicReference(),
+        uploaded: UploadedMedia? = null,
+        onUploaded: (UploadedMedia) -> Unit = {},
         ready: Duration = Duration.ofMinutes(1),
     ): Map<String, Any?> {
         val post = postId(id)
-        val uploaded = progress.get() ?: media.downloaded(request) { file, name ->
+        val done = uploaded ?: media.downloaded(request) { file, name ->
             val created = session(job) { session ->
                 if (request.kind == MediaKind.VIDEO) {
                     session.call("PATCH", "/api/posts/$post?fields%5Bpost%5D=post_type", mapper.createObjectNode().also {
@@ -207,13 +192,13 @@ class PatreonWeb(private val browser: Browser, private val api: PatreonApi, priv
                     .onFailure { log.warn("Couldn't remove media {} after its upload failed: {}", mediaId, it.message) }
                 throw e
             }
-            UploadedMedia(mediaId, request.kind, name, Files.size(file), "uploaded").also(progress::set)
+            UploadedMedia(mediaId, request.kind, name, Files.size(file), "uploaded").also(onUploaded)
         }
         return session(job) { session ->
-            val state = waitUntilReady(session, uploaded.id, ready)
+            val state = waitUntilReady(session, done.id, ready)
             val show = if (request.kind == MediaKind.AUDIO) show(session) else null
-            val saved = save(session, post, PostSpec(), publish = false, postType = request.kind.postType, addCollection = show)
-            mapOf("post" to saved, "media" to uploaded.copy(state = state))
+            val saved = save(session, post, PostSpec(), postType = request.kind.postType, addCollection = show)
+            mapOf("post" to saved, "media" to done.copy(state = state))
         }
     }
 
@@ -230,10 +215,6 @@ class PatreonWeb(private val browser: Browser, private val api: PatreonApi, priv
         return state
     }
 
-    // Whether all of a post's media are processed; publishing waits for them otherwise
-    private fun mediaReady(included: JsonNode?): Boolean =
-        included?.toList().orEmpty().filter { it["type"].asString() == "media" }.all { it["attributes"]?.text("state") == "ready" }
-
     // The campaign's show: its podcast feed, which the editor puts every audio post in
     private fun show(session: Session): String? = session.call(
         "GET",
@@ -245,12 +226,8 @@ class PatreonWeb(private val browser: Browser, private val api: PatreonApi, priv
         session: Session,
         id: String,
         spec: PostSpec,
-        publish: Boolean,
-        at: OffsetDateTime? = null,
-        notify: Boolean = false,
         postType: String? = null,
         addCollection: String? = null,
-        whenMediaReady: Boolean = false,
         fresh: Boolean = false,
         givenRules: List<String>? = null,
     ): WebPost {
@@ -279,13 +256,6 @@ class PatreonWeb(private val browser: Browser, private val api: PatreonApi, priv
                 it.put("preview_asset_type", "default")
                 it.put("allow_preview_in_rss", true)
             }
-            when {
-                publish && whenMediaReady -> it.put("auto_publish_when_media_ready", true)
-                publish -> {
-                    it.putObject("tags").put("publish", true)
-                    if (at != null) it.put("scheduled_for", at.withOffsetSameInstant(ZoneOffset.UTC).format(PATREON_TIME))
-                }
-            }
         }
         val kept = post["relationships"]?.get("access_rules")?.get("data")?.toList().orEmpty().map { it["id"].asString() }
         val rules: List<String> = givenRules ?: spec.access?.let { accessRules(session, it) } ?: kept
@@ -304,10 +274,10 @@ class PatreonWeb(private val browser: Browser, private val api: PatreonApi, priv
                 included.addObject().put("type", "access-rule").put("id", rule).putObject("attributes")
             }
         }
-        body.putObject("meta").put("auto_save", !publish).put("send_notifications", publish && notify)
-        val saved = session.call("PATCH", "/api/posts/$id?fields%5Bpost%5D=$WEB_POST_FIELDS", body)
-        if (publish) api.forgetPosts()
-        return webPost(saved["data"])
+        // Saved as the editor saves a draft as it's written: never published, no one emailed. Publishing is a person's,
+        // in Patreon's editor
+        body.putObject("meta").put("auto_save", true).put("send_notifications", false)
+        return webPost(session.call("PATCH", "/api/posts/$id?fields%5Bpost%5D=$WEB_POST_FIELDS", body)["data"])
     }
 
     private fun current(session: Session, id: String): JsonNode =
@@ -447,7 +417,6 @@ class PatreonWeb(private val browser: Browser, private val api: PatreonApi, priv
     private companion object {
         val CSRF = Regex("\"csrf_signature\"\\s*:\\s*\"([^\"]+)\"")
         val URL = Regex("https?://[^\\s<>\"]+[^\\s<>\".,;:!?)]")
-        val PATREON_TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
         const val WEB_POST_FIELDS = "title,url,published_at,scheduled_for,edit_url,post_type,edited_at"
         const val MEDIA_FIELDS = "file_name,size_bytes,media_type,owner_relationship,download_url,state"
 
