@@ -53,6 +53,13 @@ class ActivitiesTest {
             failing?.let { throw it }
             return mapOf("media" to media.copy(state = "ready"))
         }
+
+        override fun setImage(job: String, id: String, request: ImageRequest, uploaded: String?, onUploaded: (String) -> Unit): Map<String, Any?> {
+            calls += "image $id ${uploaded ?: "upload"}"
+            val media = uploaded ?: "767881201".also(onUploaded)
+            failing?.let { throw it }
+            return mapOf("media" to mapOf("id" to media, "state" to "ready"))
+        }
     }
 
     private val environment = TestActivityEnvironment.newInstance(
@@ -93,6 +100,23 @@ class ActivitiesTest {
         val result = activities.attachMedia("173396086", MediaRequest("https://example.com/S05E08.mp3", MediaKind.AUDIO))
         assertEquals("attach 173396086 767881200", calls.single())
         assertEquals("ready", (result["media"] as Map<*, *>)["state"])
+    }
+
+    @Test
+    fun `a post's picture is uploaded once, its media in the heartbeat for the next try`() {
+        val beats = CopyOnWriteArrayList<String>()
+        environment.setActivityHeartbeatListener(String::class.java) { beats += it }
+        activities.setImage("173396086", ImageRequest("https://media.ogrodje.si/images/abc/original.png", "s05e08-thumb1.png"))
+        assertEquals(listOf("image 173396086 upload"), calls)
+        assertEquals(listOf("767881201"), beats)
+    }
+
+    @Test
+    fun `a picture a try before uploaded isn't uploaded again`() {
+        environment.setHeartbeatDetails("767881201")
+        val result = activities.setImage("173396086", ImageRequest("https://media.ogrodje.si/images/abc/original.png"))
+        assertEquals("image 173396086 767881201", calls.single())
+        assertEquals("767881201", (result["media"] as Map<*, *>)["id"])
     }
 
     @Test

@@ -17,7 +17,7 @@ private const val JOB = "Changes in Patreon run as jobs, one at a time, which tr
 
 /**
  * Ogrodje's Patreon, through patreon-gateway ([Patreon]): its tiers, members and posts, and drafts made, changed, given
- * an episode's audio or video and deleted, as workflows ([PatreonChanges]). Publishing is what patrons see and get
+ * an episode's audio or video and its thumbnail, and deleted, as workflows ([PatreonChanges]). Publishing is what patrons see and get
  * emailed about, so a person does it, in Patreon's editor: MetaOS only checks a draft is ready for it.
  */
 @Component
@@ -28,6 +28,9 @@ class PatreonMCP(
     private val mediaFiles: MediaFilesRepository,
     private val storage: ObjectProvider<Storage>,
     private val dropbox: ObjectProvider<Dropbox>,
+    private val episodes: EpisodesRepository,
+    private val images: ObjectProvider<Images>,
+    private val imagesRepository: ImagesRepository,
 ) {
 
     private fun changes() = changes.ifAvailable ?: throw IllegalStateException("MetaOS's workflows aren't set up (TEMPORAL_ADDRESS)")
@@ -126,8 +129,8 @@ class PatreonMCP(
             readOnlyHint = false, destructiveHint = false, idempotentHint = false, openWorldHint = false
         ),
         description = "Make a draft post on Ogrodje's Patreon, which only the team sees until a person publishes it in " +
-            "Patreon's editor; give it the episode's audio or video with set_patreon_post_media, and check it with " +
-            "prepare_patreon_post. $JOB"
+            "Patreon's editor; give it the episode's audio or video with set_patreon_post_media, its thumbnail with " +
+            "set_patreon_post_image, and check it with prepare_patreon_post. $JOB"
     )
     fun createDraft(
         @McpToolParam(description = "Its title, e.g. S05E08 Miha Zidar: Pametnejši razvoj v dobi umetne inteligence") title: String,
@@ -200,6 +203,36 @@ class PatreonMCP(
     }
 
     @McpTool(
+        name = "set_patreon_post_image",
+        annotations = McpTool.McpAnnotations(
+            title = "Set Patreon post image",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
+        ),
+        description = "Set the picture a Patreon post shows in the feed and at its top, its thumbnail, a draft's or a " +
+            "published one's, replacing the one it had: one of an episode's pictures in MetaOS (list_episode_images), " +
+            "its THUMBNAIL unless kind says otherwise; one that isn't in MetaOS yet goes there first with " +
+            "set_episode_image. Patreon wants 1920 × 1080, as an episode's thumbnail is, for a video or text post; an " +
+            "audio post shows it square, so give it the episode's COVER. $JOB"
+    )
+    fun setImage(
+        @McpToolParam(description = POST_ID) id: String,
+        @McpToolParam(description = "$EPISODE_REF, whose picture it is") episode: String,
+        @McpToolParam(description = "Which of the episode's pictures; THUMBNAIL when omitted", required = false) kind: EpisodeImage?,
+        @McpToolParam(description = "The picture's file name on Patreon; the one it was made from when omitted", required = false) name: String?,
+    ): PatreonJob {
+        val post = patreonPostId(id)
+        val ref = episode.trim()
+        val which = kind ?: EpisodeImage.THUMBNAIL
+        val found = requireNotNull(episodes.findByRef(ref)) { "Episode $ref not found" }
+        val image = requireNotNull(found.imageId(which)?.let(imagesRepository::findByIdOrNull)) {
+            "Episode $ref has no ${which.label} in MetaOS: set it with set_episode_image"
+        }
+        // Its public URL, which never changes, so it's good however long the change waits
+        val picture = checkNotNull(images.ifAvailable) { "MetaOS has no public bucket for pictures" }.toDto(image)
+        return quick(PatreonChange(PatreonChangeKind.SET_IMAGE, post, image = PatreonImageRequest(picture.url, name?.trim()?.ifEmpty { null } ?: picture.name)))
+    }
+
+    @McpTool(
         name = "prepare_patreon_post",
         annotations = McpTool.McpAnnotations(
             title = "Prepare Patreon post",
@@ -210,24 +243,6 @@ class PatreonMCP(
             "by a person, as MetaOS doesn't publish. Once it's out, set the episode's link with set_episode_link"
     )
     fun prepare(@McpToolParam(description = POST_ID) id: String): PatreonPostReadiness = readiness(id)
-
-    @McpTool(
-        name = "publish_patreon_post",
-        annotations = McpTool.McpAnnotations(
-            title = "Publish Patreon post",
-            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
-        ),
-        description = "Deprecated: use `prepare_patreon_post`. MetaOS no longer publishes Patreon posts: a person " +
-            "publishes them in Patreon's editor. This checks the draft is ready for them, as prepare_patreon_post does, " +
-            "and publishes nothing; at, notify, episode and link are ignored"
-    )
-    fun publish(
-        @McpToolParam(description = POST_ID) id: String,
-        @McpToolParam(description = "Ignored", required = false) at: String?,
-        @McpToolParam(description = "Ignored", required = false) notify: Boolean?,
-        @McpToolParam(description = "Ignored", required = false) episode: String?,
-        @McpToolParam(description = "Ignored", required = false) link: Platform?,
-    ): PatreonPostReadiness = readiness(id)
 
     @McpTool(
         name = "delete_patreon_post",

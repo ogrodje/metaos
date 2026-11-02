@@ -43,6 +43,13 @@ Kotlin and Spring Boot like MetaOS, with Playwright for Java; a Gradle build of 
     from the post. Audio makes the post a `podcast` post, in the campaign's show (its podcast feed), as the editor does;
     video a `video_external_file` one. A retried change doesn't upload a file again, nor make a second draft: what a try
     made is in its activity's heartbeat, which the next try, on this gateway or after a restart, goes on from.
+  - A post's image, its thumbnail in the feed and at its top (a video's and an audio post's too): `POST /api/media` as
+    for audio, but `image`, with `custom-thumbnail` as its relationship, then S3's signed form. That's all the editor's
+    Thumbnail does: the post has it as its `custom_thumbnail_media` (and `has_custom_thumbnail`), with no change to the
+    post. The one it had is deleted first (`DELETE /api/media/{id}`), as in the editor. The picture (PNG, JPEG or GIF,
+    by its first bytes) is one of an episode's in MetaOS, by its public URL (`PatreonSetImage`). Found in the editor's
+    scripts (its `ThumbnailPreview`, November 2026), not recorded; the change fails when the post doesn't show it once
+    it's ready.
   - Downloading: `GET /api/posts/{id}?include=media` gives the creator each media's `download_url`, signed: for audio
     the MP3 as it was uploaded (`token-time`, some days), for video Mux's `highest.mp4` (a JWT, a day), which isn't the
     file uploaded. Mux gives it only to Patreon's pages (the token's `playback_restriction_id`), so a download sends
@@ -67,6 +74,7 @@ them, so a change outlives a restart of either, and MetaOS's job for it (`get_pa
 | `PatreonCreateDraft` | a draft: `{title, text, access: {kind: PUBLIC, PATRONS or TIERS, tiers}}`              |
 | `PatreonUpdatePost`  | changes a post; what's left out stays                                                  |
 | `PatreonAttachMedia` | `{url, kind: AUDIO or VIDEO, fileName}`: downloads the file and puts it on the draft; heartbeats while it does |
+| `PatreonSetImage`    | `{url, fileName}`: downloads a PNG, JPEG or GIF and makes it the post's image, replacing its own |
 | `PatreonDeletePost`  | deletes a post                                                                         |
 
 MetaOS has the same interface by the same names, with its own types of the same shape: changing one is changing both.

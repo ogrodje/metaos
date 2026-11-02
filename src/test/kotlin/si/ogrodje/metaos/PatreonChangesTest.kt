@@ -21,17 +21,17 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
  * patreon-gateway as its worker of MetaOS's workflows' activities: makes drafts, changes and deletes them, and puts
- * files on them, as it's told to, failing [busy] times first as Patreon turning it away does
+ * files and pictures on them, as it's told to, failing [busy] times first as Patreon turning it away does
  */
 @ActivityImpl(taskQueues = [PATREON_QUEUE])
 class FakePatreonGateway : PatreonActivities {
     val calls = CopyOnWriteArrayList<String>()
     val media = CopyOnWriteArrayList<PatreonMediaRequest>()
+    val images = CopyOnWriteArrayList<PatreonImageRequest>()
     val busy = ConcurrentHashMap<String, AtomicInteger>()
 
     private fun post(id: String, title: String?) =
@@ -61,6 +61,12 @@ class FakePatreonGateway : PatreonActivities {
         return mapOf("post" to post(id, null), "media" to mapOf("id" to "767881200", "fileName" to request.fileName, "state" to "ready"))
     }
 
+    override fun setImage(id: String, request: PatreonImageRequest): Map<String, Any?> {
+        calls += "image $id"
+        images += request
+        return mapOf("post" to post(id, null), "media" to mapOf("id" to "767881201", "state" to "ready"))
+    }
+
     override fun delete(id: String): Map<String, Any?> {
         calls += "delete $id"
         return mapOf("deleted" to id)
@@ -69,7 +75,8 @@ class FakePatreonGateway : PatreonActivities {
 
 @SpringBootTest(
     properties = [
-        "metaos.storage.bucket=ogrodje-metaos-test",
+        "metaos.storage.bucket=ogrodje-metaos-test", "metaos.media.bucket=ogrodje-metaos-public-test",
+        "metaos.dropbox.app-key=key", "metaos.dropbox.app-secret=secret", "metaos.dropbox.refresh-token=test",
         "spring.temporal.test-server.enabled=true",
         "metaos.patreon.gateway-token=secret",
         "metaos.slots.patreon=1",
@@ -82,6 +89,8 @@ class PatreonChangesTest @Autowired constructor(
     private val changes: PatreonChanges,
     private val episodes: EpisodesRepository,
     private val mediaFiles: MediaFilesRepository,
+    private val images: ImagesMCP,
+    private val dropbox: FakeDropbox,
 ) {
 
     @TestConfiguration
@@ -210,6 +219,40 @@ class PatreonChangesTest @Autowired constructor(
     }
 
     @Test
+    fun `an episode's picture in MetaOS becomes a post's thumbnail, by its public URL`() {
+        episodes.saveAndFlush(Episode(title = "Thumbnail", code = "S09E80"))
+        dropbox.put("2001", "/S09E80", null)
+        dropbox.put("2001", "/S09E80/ogrodje-s09e80-thumb1.png", picture(1920, 1080, "png"))
+        dropbox.put("2001", "/S09E80/ogrodje-s09e80-podcast.png", picture(3000, 3000, "png"))
+        val thumbnail = images.setEpisodeImage("S09E80", EpisodeImage.THUMBNAIL, ImageSource.DROPBOX, "Artwork", "/S09E80/ogrodje-s09e80-thumb1.png", null)
+        val cover = images.setEpisodeImage("S09E80", EpisodeImage.COVER, ImageSource.DROPBOX, "Artwork", "/S09E80/ogrodje-s09e80-podcast.png", null)
+
+        val job = mcp.setImage("173396086", "S09E80", null, null)
+        assertEquals("SUCCEEDED", job.status, job.toString())
+        assertEquals("set-post-image", job.kind)
+        assertEquals("767881201", job.result!!["media"]["id"].asString())
+        assertEquals(PatreonImageRequest(thumbnail.image!!.url, "ogrodje-s09e80-thumb1.png"), gateway.images.last())
+
+        // The cover, named as asked
+        done(mcp.setImage("173396086", "S09E80", EpisodeImage.COVER, "cover.png"))
+        assertEquals(PatreonImageRequest(cover.image!!.url, "cover.png"), gateway.images.last())
+    }
+
+    @Test
+    fun `a post's thumbnail needs the episode to have the picture, before anything starts`() {
+        episodes.saveAndFlush(Episode(title = "No pictures", code = "S09E82"))
+        val calls = gateway.calls.size
+
+        fun refused(call: () -> Unit) = assertFailsWith<IllegalArgumentException> { call() }.message.orEmpty()
+
+        assertTrue("has no thumbnail" in refused { mcp.setImage("173396086", "S09E82", null, null) })
+        assertTrue("has no cover" in refused { mcp.setImage("173396086", "S09E82", EpisodeImage.COVER, null) })
+        assertTrue("not found" in refused { mcp.setImage("173396086", "S09E99", null, null) })
+        refused { mcp.setImage("../jobs", "S09E82", null, null) }
+        assertEquals(calls, gateway.calls.size)
+    }
+
+    @Test
     fun `a draft is deleted`() {
         val job = mcp.delete("172000002")
         assertEquals("SUCCEEDED", job.status, job.toString())
@@ -236,13 +279,5 @@ class PatreonChangesTest @Autowired constructor(
         assertEquals("VIDEO", ready.media.single().kind)
 
         assertEquals(listOf("Its title", "Its audio or video (set_patreon_post_media)"), mcp.prepare("172923223").missing)
-    }
-
-    @Test
-    fun `publishing publishes nothing, it says what prepare_patreon_post does`() {
-        val calls = gateway.calls.size
-        assertEquals(mcp.prepare("172923222"), mcp.publish("172923222", null, true, "S05E08", Platform.PATREON))
-        assertEquals(calls, gateway.calls.size)
-        assertNull(gateway.calls.firstOrNull { it.startsWith("publish") })
     }
 }

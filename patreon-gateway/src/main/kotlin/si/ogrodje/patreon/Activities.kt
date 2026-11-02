@@ -41,6 +41,10 @@ interface PatreonActivities {
     @ActivityMethod(name = "PatreonAttachMedia")
     fun attachMedia(id: String, request: MediaRequest): Map<String, Any?>
 
+    /** Downloads [request]'s picture and makes it the post's image, its thumbnail: the post, and its media */
+    @ActivityMethod(name = "PatreonSetImage")
+    fun setImage(id: String, request: ImageRequest): Map<String, Any?>
+
     @ActivityMethod(name = "PatreonDeletePost")
     fun delete(id: String): Map<String, Any?>
 }
@@ -50,7 +54,7 @@ interface PatreonActivities {
  * browser and Patreon turns the gateway away when it's asked too often. What Patreon turned away for now
  * ([PatreonBusyException]), a browser that isn't there or signed out, and Patreon's own errors (5xx) fail so the
  * workflow tries again, later and later; what trying again won't change (a request that's wrong, Patreon refusing it)
- * fails for good. What a try did in Patreon, a draft made or a file uploaded, is in its heartbeat, so the next try goes
+ * fails for good. What a try did in Patreon, a draft made or a file or picture uploaded, is in its heartbeat, so the next try goes
  * on from there instead of doing it again, also after a restart.
  */
 @Component("patreonActivities")
@@ -76,6 +80,11 @@ class PatreonActivitiesImpl(private val web: PatreonWeb) : PatreonActivities {
         } finally {
             beat.shutdownNow()
         }
+    }
+
+    override fun setImage(id: String, request: ImageRequest): Map<String, Any?> = activity { context, name ->
+        val uploaded = context.getHeartbeatDetails(String::class.java).orElse(null)
+        web.setImage(name, id, request, uploaded) { context.heartbeat(it) }
     }
 
     override fun delete(id: String): Map<String, Any?> = activity { _, name -> web.delete(name, id) }

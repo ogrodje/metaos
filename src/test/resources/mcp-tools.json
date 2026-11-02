@@ -233,7 +233,7 @@
       "readOnlyHint" : false,
       "title" : "Create Patreon draft"
     },
-    "description" : "Make a draft post on Ogrodje's Patreon, which only the team sees until a person publishes it in Patreon's editor; give it the episode's audio or video with set_patreon_post_media, and check it with prepare_patreon_post. Changes in Patreon run as jobs, one at a time, which try again while Patreon turns them away: what's quick comes back done, else as a job to follow with get_patreon_job",
+    "description" : "Make a draft post on Ogrodje's Patreon, which only the team sees until a person publishes it in Patreon's editor; give it the episode's audio or video with set_patreon_post_media, its thumbnail with set_patreon_post_image, and check it with prepare_patreon_post. Changes in Patreon run as jobs, one at a time, which try again while Patreon turns them away: what's quick comes back done, else as a job to follow with get_patreon_job",
     "inputSchema" : {
       "$schema" : "https://json-schema.org/draft/2020-12/schema",
       "properties" : {
@@ -1763,45 +1763,6 @@
     },
     "title" : "Prepare Patreon post"
   },
-  "publish_patreon_post" : {
-    "annotations" : {
-      "destructiveHint" : false,
-      "idempotentHint" : true,
-      "openWorldHint" : false,
-      "readOnlyHint" : true,
-      "title" : "Publish Patreon post"
-    },
-    "description" : "Deprecated: use `prepare_patreon_post`. MetaOS no longer publishes Patreon posts: a person publishes them in Patreon's editor. This checks the draft is ready for them, as prepare_patreon_post does, and publishes nothing; at, notify, episode and link are ignored",
-    "inputSchema" : {
-      "$schema" : "https://json-schema.org/draft/2020-12/schema",
-      "properties" : {
-        "at" : {
-          "description" : "Ignored",
-          "type" : "string"
-        },
-        "episode" : {
-          "description" : "Ignored",
-          "type" : "string"
-        },
-        "id" : {
-          "description" : "The Patreon post's ID, the number at the end of its URL, e.g. 171593625",
-          "type" : "string"
-        },
-        "link" : {
-          "description" : "Ignored",
-          "enum" : [ "YOUTUBE", "SPOTIFY", "APPLE_PODCASTS", "PATREON", "PATREON_AUDIO", "PATREON_BONUS", "PATREON_BONUS_AUDIO" ],
-          "type" : "string"
-        },
-        "notify" : {
-          "description" : "Ignored",
-          "type" : "boolean"
-        }
-      },
-      "required" : [ "id" ],
-      "type" : "object"
-    },
-    "title" : "Publish Patreon post"
-  },
   "read_document" : {
     "annotations" : {
       "destructiveHint" : false,
@@ -2419,6 +2380,41 @@
       "type" : "object"
     },
     "title" : "Set episode status"
+  },
+  "set_patreon_post_image" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Set Patreon post image"
+    },
+    "description" : "Set the picture a Patreon post shows in the feed and at its top, its thumbnail, a draft's or a published one's, replacing the one it had: one of an episode's pictures in MetaOS (list_episode_images), its THUMBNAIL unless kind says otherwise; one that isn't in MetaOS yet goes there first with set_episode_image. Patreon wants 1920 × 1080, as an episode's thumbnail is, for a video or text post; an audio post shows it square, so give it the episode's COVER. Changes in Patreon run as jobs, one at a time, which try again while Patreon turns them away: what's quick comes back done, else as a job to follow with get_patreon_job",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "episode" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet), whose picture it is",
+          "type" : "string"
+        },
+        "id" : {
+          "description" : "The Patreon post's ID, the number at the end of its URL, e.g. 171593625",
+          "type" : "string"
+        },
+        "kind" : {
+          "description" : "Which of the episode's pictures; THUMBNAIL when omitted",
+          "enum" : [ "THUMBNAIL", "THUMBNAIL_B", "THUMBNAIL_C", "WEB", "COVER" ],
+          "type" : "string"
+        },
+        "name" : {
+          "description" : "The picture's file name on Patreon; the one it was made from when omitted",
+          "type" : "string"
+        }
+      },
+      "required" : [ "id", "episode" ],
+      "type" : "object"
+    },
+    "title" : "Set Patreon post image"
   },
   "set_patreon_post_media" : {
     "annotations" : {

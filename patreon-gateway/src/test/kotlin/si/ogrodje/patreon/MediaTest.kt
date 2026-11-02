@@ -50,6 +50,17 @@ class MediaTest {
     }
 
     @Test
+    fun `a post's image is a PNG, JPEG or GIF by what's in it, whatever its name`() {
+        fun type(name: String, vararg bytes: Int) =
+            media.imageType(Files.write(state.resolve(name), ByteArray(bytes.size) { bytes[it].toByte() } + ByteArray(16)))
+        assertEquals("image/png", type("thumb.jpg", 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A))
+        assertEquals("image/jpeg", type("thumb", 0xFF, 0xD8, 0xFF, 0xE0))
+        assertEquals("image/gif", type("thumb.gif", 0x47, 0x49, 0x46, 0x38, 0x39, 0x61))
+        val e = assertThrows<IllegalArgumentException> { type("thumb.png", 0x3C, 0x68, 0x74, 0x6D, 0x6C) }
+        assertEquals("The file isn't a PNG, JPEG or GIF picture", e.message)
+    }
+
+    @Test
     fun `a file's name can't break out of its form`() {
         val e = assertThrows<IllegalArgumentException> {
             media.downloaded(MediaRequest("https://8.8.8.8/x", MediaKind.AUDIO, "a\r\nb.mp3")) { _, _ -> error("downloaded") }

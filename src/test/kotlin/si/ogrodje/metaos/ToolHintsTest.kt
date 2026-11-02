@@ -13,8 +13,7 @@ import kotlin.test.assertTrue
  * cautious ones (destructive, not idempotent, open world), and it sends all four hints, also those left out, so this
  * checks every tool's against what its name says it does.
  * - readOnlyHint: only reads. Those also say they're idempotent and not destructive, as ChatGPT wants them explicit.
- *   So do prepare_patreon_post, which checks a draft is ready for a person to publish, and publish_patreon_post, its
- *   deprecated name, which publishes nothing since MetaOS stopped publishing.
+ *   So does prepare_patreon_post, which checks a draft is ready for a person to publish.
  * - destructiveHint: changes or removes what's there. Adding isn't, a comment included, nor is restore_link, which only
  *   puts a removed link back as it was; the other restore_* can rename, recode or clear the email of what they bring back.
  * - idempotentHint: a second call changes nothing more. Only creating episodes, people, sessions and Patreon drafts,
@@ -53,7 +52,7 @@ class ToolHintsTest {
             }
     }
 
-    private val reads = Regex("^(list_|get_|read_|search|view_)|^(whoami|my_episodes|prepare_patreon_post|publish_patreon_post)$")
+    private val reads = Regex("^(list_|get_|read_|search|view_)|^(whoami|my_episodes|prepare_patreon_post)$")
     private val adds = Regex("^(create_|link_|assign_|comment_on_)|^(match_episode_documents|restore_link)$")
     private val repeatsAdd = setOf(
         "create_episode", "create_person", "create_session", "comment_on_episode", "comment_on_session", "create_patreon_draft",
