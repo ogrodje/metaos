@@ -53,7 +53,7 @@ variable "google_client_secret" {
 }
 
 variable "metaos_ui_other_urls" {
-  description = "Where else this developer's front-end is, e.g. http://ziv.folk-decibel.ts.net:5173 (TF_VAR_metaos_ui_other_urls)"
+  description = "Where else this developer's front-end is, e.g. https://nuc8.folk-decibel.ts.net:5173 (TF_VAR_metaos_ui_other_urls)"
   type        = list(string)
   default     = []
 }
