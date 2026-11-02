@@ -4,6 +4,12 @@
 # Google only hands out addresses it has verified, so its emails are trusted, and an approved user's account is linked to
 # their person by email right away (Accounts.kt). Discord also returns unverified ones, so its aren't: approving someone
 # from Discord = granting the role and turning on "Email verified" once the address is known to be theirs.
+#
+# "Email verified" decides who a user is in MetaOS: their account is linked to the person with that address, and the
+# address ACCOUNT_LINKER (Accounts.kt) is the one that links accounts by hand. So it's on only for an address the user
+# has shown is theirs, e.g. by writing from it, or by signing in with Google as it; not because the address looks right
+# or the name matches. An admin who changes a user's email (user_profile.tf: only admins can) turns it off, as Keycloak
+# keeps it on, unless the new address is known to be theirs too.
 
 resource "keycloak_oidc_google_identity_provider" "google" {
   count = var.google == null ? 0 : 1
