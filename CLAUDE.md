@@ -314,7 +314,9 @@ Discord, ...) to one user, so they're one account; a person may have several, e.
 - `AccountsFilter` writes an approved user's account down as their token says it (username, name, email), once the token
   says something new or a few minutes on, so most requests write nothing; each pod keeps what it last wrote.
 - An account is linked by its verified email: when it signs in, or when a person gets that email (`create_person`,
-  `set_person_email`), unless someone unlinked it. Or by hand, only by `otobrglez@gmail.com` (`ACCOUNT_LINKER`,
+  `set_person_email`), unless someone unlinked it. Users can't change their email in Keycloak, only admins
+  (`infra/keycloak/realm/user_profile.tf`), and an admin turns on "Email verified" only for an address known to be
+  theirs (`infra/keycloak/README.md`, Approving a user). Or by hand, only by `otobrglez@gmail.com` (`ACCOUNT_LINKER`,
   hardcoded; `CurrentUser.canLinkAccounts`): `link_account` and `unlink_account` (MCP), `linkAccount` and
   `unlinkAccount` (GraphQL); one linked to someone else has to be unlinked first. Links stay when emails change, and
   each link and unlink is in the person's history.
