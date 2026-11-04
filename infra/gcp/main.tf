@@ -52,10 +52,11 @@ module "storage_dev" {
 
   env          = "dev"
   media_bucket = "ogrodje-metaos-public-dev"
-  # Nuxt's dev server, the app serving the built front-end, a second front-end, e.g. a worktree's, and nuc8's, behind
-  # tailscale serve (as infra/keycloak/dev's TF_VAR_metaos_ui_other_urls there)
+  # Nuxt's dev server, the app serving the built front-end, others, e.g. a worktree's, on the next ports Nuxt takes (as
+  # infra/keycloak/dev), and nuc8's, behind tailscale serve (its TF_VAR_metaos_ui_other_urls there). In code, not a
+  # variable, as the dev bucket is everyone's: the next apply from elsewhere would take a developer's own out again
   origins = [
-    "http://localhost:5173", "http://localhost:8080", "http://localhost:5175",
+    "http://localhost:5173", "http://localhost:8080", "http://localhost:5174", "http://localhost:5175",
     "https://nuc8.folk-decibel.ts.net:5173",
   ]
   production = false
