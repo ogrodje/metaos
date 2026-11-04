@@ -287,7 +287,7 @@ const pastTitle = useScrolledPast(titleBlock)
           </section>
           <section v-if="links(episode).length" aria-labelledby="listen">
             <h2 id="listen">Listen</h2>
-            <div class="listen"><ListenLinks :episode="episode" labelled/></div>
+            <div class="listen" :class="{ copyable: team }"><ListenLinks :episode="episode" labelled :copyable="team"/></div>
           </section>
         </div>
 
@@ -493,6 +493,11 @@ dd .lock {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
+
+  // With the icons that copy the links, a little more room between the columns, so each icon is its button's
+  &.copyable {
+    column-gap: 10px;
+  }
 }
 
 .aside {
@@ -516,6 +521,13 @@ dd a {
   .tested {
     left: 8px;
     bottom: 8px;
+  }
+}
+
+// On phones, one under another, as two with their icons would cut Apple Podcasts short
+@media (max-width: 480px) {
+  .listen.copyable {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 </style>

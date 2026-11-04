@@ -179,7 +179,8 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   episodes, photos and activity (`ActivityFeed.vue`, see Discussions).
 - An episode's page ([`EpisodeView.vue`](fe/src/views/EpisodeView.vue)) is the episode as anyone sees it, with what's
   the team's on top of it, quietly: its title, and its thumbnail large (the team switches it to B and C, which it's A/B
-  tested with); then who's on it (`PersonLine.vue`) and where to listen, its summaries, folded when long
+  tested with); then who's on it (`PersonLine.vue`) and where to listen (the team copies each link with the quiet icon right of its
+  button, `ListenLinks`' `copyable`), its summaries, folded when long
   (`FoldedText.vue`), and for anyone not signed in, a line to sign in. The panel at the right, which stays in view
   however tall it is (`FactPanel`'s `tall`, `useStickySide` in `scroll.ts`: without a scrollbar of its own, it scrolls
   along with the page till its end is in view and sticks there, and back up the same with its top), has the facts (when
