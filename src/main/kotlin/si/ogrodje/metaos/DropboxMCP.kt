@@ -6,14 +6,11 @@ import org.springframework.ai.mcp.annotation.McpToolParam
 import org.springframework.stereotype.Component
 import java.util.Base64
 
-data class DropboxContentDto(val file: DropboxFile, val text: String, val truncated: Boolean)
+data class DropboxContentDto(val file: DropboxFile, val text: String, val offset: Long, val next: Long?)
 
 const val DROPBOX_PLACE = "A folder shared with Ogrodje's bot in Dropbox, by name or ID (list_dropbox_places)"
 const val DROPBOX_PATH = "Path in the place, e.g. /S05E08/cover.png; / is the shared folder itself"
 
-// What read_dropbox_file returns, and what upload_dropbox_file takes
-private const val MAX_READ = 200 * 1024
-private const val MAX_UPLOAD = 10 * 1024 * 1024
 private const val SEARCH_RESULTS = 25
 
 // What view_dropbox_image shows: big enough to judge artwork by, small enough for a model to take in
@@ -88,17 +85,22 @@ class DropboxMCP(private val dropbox: Dropbox) {
             title = "Read Dropbox file",
             readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
         ),
-        description = "Read a text file (txt, md, csv, json, srt, ...) from Dropbox, at most ${MAX_READ / 1024} kB of it. " +
-            "view_dropbox_image shows pictures; for other files, list_dropbox_folder tells their size and type"
+        description = "Read a text file (txt, md, csv, json, srt, ...) from Dropbox, ${MAX_READ / 1024} kB at a time: when " +
+            "next isn't null, read on from it. view_dropbox_image shows pictures; for other files, list_dropbox_folder tells " +
+            "their size and type"
     )
     fun read(
         @McpToolParam(description = DROPBOX_PLACE) place: String,
         @McpToolParam(description = DROPBOX_PATH) path: String,
+        @McpToolParam(description = READ_OFFSET, required = false) offset: Long?,
     ): DropboxContentDto {
         val file = existingFile(place(place).id, path)
         require(isTextFile(file.name, file.contentType)) { "$path isn't a text file (${file.contentType}, ${file.size} bytes)" }
-        val bytes = dropbox.read(file.place, file.path, MAX_READ + 1)
-        return DropboxContentDto(file, bytes.copyOf(minOf(bytes.size, MAX_READ)).toString(Charsets.UTF_8), bytes.size > MAX_READ)
+        val from = requireOffset(offset, file.size)
+        // Dropbox refuses a range that starts at the end, so the end of a file is read without asking it
+        val bytes = if (from == file.size) ByteArray(0) else dropbox.read(file.place, file.path, from, MAX_READ + 1)
+        val piece = textPiece(bytes, from)
+        return DropboxContentDto(file, piece.text, piece.offset, piece.next)
     }
 
     // An image, as MCP clients show them to their model, rather than JSON
@@ -142,9 +144,8 @@ class DropboxMCP(private val dropbox: Dropbox) {
     ): DropboxFile {
         val placeId = writablePlace(place).id
         require(name.isNotBlank() && '/' !in name) { "A file name, without folders: $name" }
-        val bytes = if (base64 == true) Base64.getMimeDecoder().decode(content) else content.toByteArray()
-        require(bytes.size <= MAX_UPLOAD) { "$name is ${bytes.size} bytes; at most $MAX_UPLOAD" }
-        return dropbox.upload(placeId, dropboxPath(folder), name, bytes, overwrite == true)
+        val upload = uploadContent(name, content, base64 == true)
+        return dropbox.upload(placeId, dropboxPath(folder), name, upload.stream, upload.size, overwrite == true)
     }
 
     @McpTool(

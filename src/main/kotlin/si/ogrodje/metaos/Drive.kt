@@ -6,6 +6,7 @@ import io.micrometer.core.instrument.MeterRegistry
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression
 import org.springframework.stereotype.Component
+import java.io.EOFException
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
@@ -35,7 +36,7 @@ interface Drive {
     fun children(folderId: String): List<DriveFile>
 
     /** A Google Doc as Markdown */
-    fun markdown(documentId: String): String
+    fun markdown(documentId: String, offset: Long, maxBytes: Int): ByteArray
 
     /** The Google Docs with the words in their title or text, wherever they are, most relevant first; read page by page */
     fun searchDocuments(text: String): Sequence<DriveFile>
@@ -107,10 +108,17 @@ class GoogleDrive(
         }
     }
 
-    // Drive leaves the charset out of text/markdown; it's UTF-8
-    override fun markdown(documentId: String): String = account.call {
-        drive.files().export(requireId(documentId), "text/markdown").executeMediaAsInputStream()
-            .use { it.readAllBytes().toString(Charsets.UTF_8) }
+    // UTF-8, though Drive leaves the charset out of text/markdown. An export has no ranges, so the bytes before offset
+    // are read past, not kept
+    override fun markdown(documentId: String, offset: Long, maxBytes: Int): ByteArray = account.call {
+        drive.files().export(requireId(documentId), "text/markdown").executeMediaAsInputStream().use {
+            try {
+                it.skipNBytes(offset)
+            } catch (_: EOFException) {
+                throw IllegalArgumentException("Offset $offset is past the end of the document")
+            }
+            it.readNBytes(maxBytes)
+        }
     }
 
     // fullText results come most relevant first; Drive doesn't sort them any other way

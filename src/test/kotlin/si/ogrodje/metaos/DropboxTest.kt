@@ -5,6 +5,7 @@ import io.modelcontextprotocol.spec.McpSchema
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.springframework.boot.health.contributor.Status
+import java.io.InputStream
 import java.net.URLConnection
 import java.util.Base64
 import kotlin.test.assertContentEquals
@@ -50,8 +51,8 @@ class FakeDropbox : Dropbox {
     override fun search(text: String, place: String?, limit: Int) =
         files.values.map { it.first }.filter { (place == null || it.place == place) && text.lowercase() in it.name.lowercase() }.take(limit)
 
-    override fun read(place: String, path: String, maxBytes: Int) =
-        files.getValue(place to path).second!!.let { it.copyOf(minOf(it.size, maxBytes)) }
+    override fun read(place: String, path: String, offset: Long, maxBytes: Int) =
+        files.getValue(place to path).second!!.let { it.copyOfRange(offset.toInt(), minOf(it.size, offset.toInt() + maxBytes)) }
 
     override fun temporaryLink(place: String, path: String): String {
         requireNotNull(files[place to path]) { "$path: path not found" }
@@ -63,14 +64,16 @@ class FakeDropbox : Dropbox {
         DropboxImage("image/jpeg", requireNotNull(files[place to path]?.second) { "Dropbox can't make a picture of $path: path not found" })
 
     // Renamed as Dropbox does, with a number after the name
-    override fun upload(place: String, folder: String, name: String, content: ByteArray, overwrite: Boolean, rename: Boolean): DropboxFile {
+    override fun upload(place: String, folder: String, name: String, content: InputStream, size: Long, overwrite: Boolean, rename: Boolean): DropboxFile {
         fun at(name: String) = "${folder.trimEnd('/')}/$name"
         val (base, extension) = name.substringBeforeLast('.') to name.substringAfterLast('.', "").let { if (it.isEmpty()) "" else ".$it" }
         val path = if (rename && !overwrite && file(place, at(name)) != null)
             generateSequence(1) { it + 1 }.map { at("$base ($it)$extension") }.first { file(place, it) == null }
         else at(name)
         require(overwrite || file(place, path) == null) { "$path is already there" }
-        put(place, path, content)
+        val bytes = content.readAllBytes()
+        check(bytes.size.toLong() == size) { "$name came as ${bytes.size} bytes, not $size" }
+        put(place, path, bytes)
         return file(place, path)!!
     }
 
@@ -115,13 +118,13 @@ class DropboxTest {
         assertEquals(listOf("/S05E08/cover.jpg"), mcp.search("cover", "Artwork").map { it.path })
         assertFailsWith<IllegalArgumentException> { mcp.search(" ", null) }
 
-        val brief = mcp.read("Artwork", "/S05E08/brief.md")
+        val brief = mcp.read("Artwork", "/S05E08/brief.md", null)
         assertEquals("# Naslovnica\n\nČ, š in ž", brief.text)
-        assertEquals(false, brief.truncated)
-        assertEquals("Ogrodje", mcp.read("Brand", "logo.txt").text)
-        assertFailsWith<IllegalArgumentException> { mcp.read("Artwork", "/S05E08/cover.jpg") }
-        assertFailsWith<IllegalArgumentException> { mcp.read("Artwork", "/S05E08") }
-        assertFailsWith<IllegalArgumentException> { mcp.read("Artwork", "/nothing.md") }
+        assertNull(brief.next)
+        assertEquals("Ogrodje", mcp.read("Brand", "logo.txt", null).text)
+        assertFailsWith<IllegalArgumentException> { mcp.read("Artwork", "/S05E08/cover.jpg", null) }
+        assertFailsWith<IllegalArgumentException> { mcp.read("Artwork", "/S05E08", null) }
+        assertFailsWith<IllegalArgumentException> { mcp.read("Artwork", "/nothing.md", null) }
 
         val view = mcp.view("Artwork", "/S05E08/cover.jpg")
         val image = view.content().filterIsInstance<McpSchema.ImageContent>().single()
@@ -132,12 +135,33 @@ class DropboxTest {
     }
 
     @Test
+    fun `reads a long text file in pieces that add up to all of it`() {
+        val text = longSloveneText()
+        dropbox.put("1001", "/S05E08/transcript.srt", text.toByteArray())
+        assertContentEquals(text.toByteArray(), readInPieces { mcp.read("Artwork", "/S05E08/transcript.srt", it).let { r -> r.text to r.next } })
+        assertEquals("", mcp.read("Brand", "logo.txt", 7).text)
+        assertFailsWith<IllegalArgumentException> { mcp.read("Brand", "logo.txt", 8) }
+        assertFailsWith<IllegalArgumentException> { mcp.read("Brand", "logo.txt", -1) }
+    }
+
+    @Test
+    fun `streams an upload of up to 10 MB, refusing a bigger one before decoding it`() {
+        val big = ByteArray(MAX_UPLOAD) { it.toByte() }
+        mcp.upload("Artwork", "/", "big.bin", Base64.getMimeEncoder().encodeToString(big), base64 = true, overwrite = null)
+        assertContentEquals(big, dropbox.read("1001", "/big.bin", 0, MAX_UPLOAD))
+        assertFailsWith<IllegalArgumentException> { mcp.upload("Artwork", "/", "bigger.bin", Base64.getEncoder().encodeToString(big + 0), true, null) }
+        assertFailsWith<IllegalArgumentException> { mcp.upload("Artwork", "/", "bigger.md", "a".repeat(MAX_UPLOAD + 1), null, null) }
+        assertFailsWith<IllegalArgumentException> { mcp.upload("Artwork", "/", "broken.bin", "QUJDR", true, null) }
+        assertNull(dropbox.file("1001", "/bigger.bin"))
+    }
+
+    @Test
     fun `uploads, creates folders and moves without replacing anything unasked`() {
         val uploaded = mcp.upload("Artwork", "/S05E08", "notes.md", "Notes", base64 = null, overwrite = null)
         assertEquals("/S05E08/notes.md", uploaded.path)
         assertFailsWith<IllegalArgumentException> { mcp.upload("Artwork", "/S05E08", "notes.md", "Again", null, null) }
         mcp.upload("Artwork", "/S05E08", "notes.md", "Notes v2", base64 = null, overwrite = true)
-        assertEquals("Notes v2", mcp.read("Artwork", "/S05E08/notes.md").text)
+        assertEquals("Notes v2", mcp.read("Artwork", "/S05E08/notes.md", null).text)
 
         mcp.upload("Artwork", "/S05E08", "cover v2.jpg", Base64.getEncoder().encodeToString(jpeg), base64 = true, overwrite = null)
         assertEquals("image/jpeg", dropbox.file("1001", "/S05E08/cover v2.jpg")?.contentType)
@@ -175,7 +199,7 @@ class DropboxTest {
             files.firstOrNull()?.let { assertEquals(it, storage.file(place.id, it.path)?.copy(modified = it.modified)) }
             files.firstOrNull { it.id != null }?.let { assertEquals(it.path, storage.fileById(place.id, it.id!!)?.path) }
             files.firstOrNull { it.folder }?.let { assertEquals(it.path, storage.folders(place.id)[it.id]) }
-            files.firstOrNull { !it.folder }?.let { assertTrue(storage.read(place.id, it.path, 16).size <= 16) }
+            files.firstOrNull { !it.folder }?.let { assertTrue(storage.read(place.id, it.path, 0, 16).size <= 16) }
             if (place.path != null) files.firstOrNull()?.let { file ->
                 assertTrue(storage.search(file.name, place.id, 5).all { it.place == place.id })
             }

@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Import
 import org.springframework.context.annotation.Primary
 import java.time.LocalDate
 import java.util.UUID
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
@@ -34,7 +35,9 @@ class FakeDrive : Drive {
 
     override fun file(id: String) = failure?.let { throw it } ?: files[id]
     override fun children(folderId: String) = files.values.filter { folderId in it.parents }.sortedBy { it.name }
-    override fun markdown(documentId: String) = markdown.getValue(documentId)
+    override fun markdown(documentId: String, offset: Long, maxBytes: Int) = markdown.getValue(documentId).toByteArray()
+        .also { require(offset <= it.size) { "Offset $offset is past the end of the document" } }
+        .let { it.copyOfRange(offset.toInt(), minOf(it.size, offset.toInt() + maxBytes)) }
     override fun searchDocuments(text: String) = files.values.asSequence()
         .filter { it.mimeType == DOCUMENT_TYPE && "${it.name}\n${markdown[it.id]}".contains(text, ignoreCase = true) }
 }
@@ -94,12 +97,17 @@ class DocumentsTest @Autowired constructor(
             listOf(DriveFileDto("doc-ideas", "Ogrodje Epizode Ideje", "document", "https://docs.google.com/document/d/doc-ideas/edit", null)),
             documentsMCP.listFolder("https://drive.google.com/drive/folders/folder-ideas"),
         )
-        assertEquals("# Ideje\n\n- Č, š in ž", documentsMCP.read("https://docs.google.com/document/d/doc-ideas/edit").markdown)
+        assertEquals("# Ideje\n\n- Č, š in ž", documentsMCP.read("https://docs.google.com/document/d/doc-ideas/edit", null).markdown)
 
-        assertFailsWith<IllegalArgumentException> { documentsMCP.read("doc-elsewhere") }
+        val text = longSloveneText()
+        drive.doc("doc-transcript", "Prepis", parent = "folder-ideas", content = text)
+        assertContentEquals(text.toByteArray(), readInPieces { documentsMCP.read("https://docs.google.com/document/d/doc-transcript/edit", it).let { r -> r.markdown to r.next } })
+        assertFailsWith<IllegalArgumentException> { documentsMCP.read("https://docs.google.com/document/d/doc-ideas/edit", 1_000_000) }
+
+        assertFailsWith<IllegalArgumentException> { documentsMCP.read("doc-elsewhere", null) }
         assertFailsWith<IllegalArgumentException> { documentsMCP.listFolder("folder-elsewhere") }
-        assertFailsWith<IllegalArgumentException> { documentsMCP.read("folder-episodes") }
-        assertFailsWith<IllegalArgumentException> { documentsMCP.read("doc-that-isnt-there") }
+        assertFailsWith<IllegalArgumentException> { documentsMCP.read("folder-episodes", null) }
+        assertFailsWith<IllegalArgumentException> { documentsMCP.read("doc-that-isnt-there", null) }
     }
 
     @Test

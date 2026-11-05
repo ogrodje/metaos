@@ -108,7 +108,7 @@ class Artwork(
                 there != null -> DropboxCopyDto(there.path, copied = false)
                 dropbox.places().none { it.id == link.place && it.writable } ->
                     DropboxCopyDto(null, false, "The bot may only read the episode's Dropbox folder")
-                else -> DropboxCopyDto(dropbox.upload(link.place, folder.path, name, content, overwrite = false, rename = true).path, copied = true)
+                else -> DropboxCopyDto(dropbox.upload(link.place, folder.path, name, content.inputStream(), content.size.toLong(), overwrite = false, rename = true).path, copied = true)
             }
         } catch (e: Exception) {
             logger.warn("{} of episode {} didn't go to Dropbox", name, episode.id, e)
