@@ -324,7 +324,7 @@ const candidatesOpen = ref(false)
     margin: 0 -16px 8px;
     padding: 0 12px;
     overflow-x: auto;
-    background: var(--page);
+    background: #FFFFFF;
     border-bottom: 1px solid var(--rule);
     scrollbar-width: none;
 
