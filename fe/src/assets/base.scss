@@ -24,8 +24,6 @@
   // Behind the words a search found, and what's chosen in a list
   --mark: #FCE1E9;
   --accent-wash: #FDF0F3;
-  // The page itself, behind everything that isn't a control, a card or a dialog, which stay white on it
-  --page: #FDECF1;
   // What went well or needs a look, for words only, as the accent says what went wrong
   --success: #1F7A4D;
   --warning: #8A5A00;
@@ -80,7 +78,7 @@
 
 body {
   min-height: 100vh;
-  background: var(--page);
+  background: #FFFFFF;
   color: var(--ink);
 
   font-family: var(--font-sans);
