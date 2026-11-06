@@ -18,6 +18,7 @@ colors:
   accent-hover: "#A3244A"
   mark: "#FCE1E9"
   accent-wash: "#FDF0F3"
+  page: "#FDECF1"
   success: "#1F7A4D"
   warning: "#8A5A00"
 typography:
@@ -164,7 +165,8 @@ line.
 
 ## Colors
 
-A neutral ramp from near-black ink to white, and the logo's pink in two strengths, for marks and for text.
+A neutral ramp from near-black ink to white, and the logo's pink in two strengths, for marks and for text, on a page
+of pale pink.
 
 ### Primary
 - **Logo Pink** (#EC4870): marks, not text (3.7:1 on white): the current tab's underline, the dot of an episode being
@@ -173,6 +175,8 @@ A neutral ramp from near-black ink to white, and the logo's pink in two strength
   rings, the danger button. Hover goes deeper still (#A3244A).
 - **Search Blush** (#FCE1E9): behind the words a search found, and text selection.
 - **Chosen Wash** (#FDF0F3): behind what's chosen in a list, e.g. the palette's highlighted result.
+- **Page Pink** (#FDECF1): the page itself (`--page`), and what sticks to it, e.g. the People page's row of letters.
+  Controls, cards and dialogs stay Paper (#FFFFFF) on it. Muted text keeps 4.7:1 on it, Deep Pink 5.0:1.
 
 ### Neutral
 - **Ink** (#141414): text and the filled button; **Ink Hover** (#2B2B2B) when pointed at.
@@ -195,7 +199,8 @@ A neutral ramp from near-black ink to white, and the logo's pink in two strength
 through episodes' pictures, never through the chrome around them.
 
 **The Pink Means Look Rule.** Pink marks what needs attention, what's chosen or what acts. Anything else pink, a
-decoration, a heading, a background, dilutes it.
+decoration, a heading, a background, dilutes it; the page's own pale pink is the one exception, the ground everything
+else stands on.
 
 ## Typography
 
