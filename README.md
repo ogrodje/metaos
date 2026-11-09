@@ -12,8 +12,9 @@ People use MetaOS through its web front-end or from an AI assistant over MCP. Th
 own, which renders the pages anyone may see from MetaOS's API, so search engines and link previews get them whole, and
 Cloudflare caches them; the browser then carries on as a single-page app. Both sign in with [Keycloak], and MetaOS
 checks their tokens with Keycloak's keys. MetaOS keeps its data in Postgres, where every change is logged, and works
-with Google Drive, Koofr and Dropbox as Ogrodje's bot account. Postgres also tells MetaOS what changed, which it
-passes on to the open pages, so they show it without being reloaded. Pictures everyone may see, like episodes'
+with Google Drive, Koofr and Dropbox as Ogrodje's bot account. It also lists Slovenia's tech, developer and startup events,
+which it gets from [Goo](https://goo.ogrodje.si)'s public timeline, as ogrodje.si's Dogodki page did. Postgres also
+tells MetaOS what changed, which it passes on to the open pages, so they show it without being reloaded. Pictures everyone may see, like episodes'
 thumbnails from Dropbox and people's avatars from Hygraph, MetaOS copies to its public bucket in Google Cloud Storage,
 from which browsers load them at media.ogrodje.si, cached by Cloudflare; the team uploads an episode's artwork from
 its page straight to MetaOS's private bucket, and MetaOS publishes it from there. Its video and audio go there the

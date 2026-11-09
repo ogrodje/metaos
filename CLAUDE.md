@@ -125,7 +125,7 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   (`UserMenu.vue`: your initials, which open your name, your page, your sign-ins (see Accounts) and Sign out; or
   Sign in, which asks Discord or Google); on narrower screens the tabs go to a row of their own under them. The tabs
   are in the order they're used (`pages`), and scroll sideways when they don't fit: Home, Episodes, Ideas (the team's),
-  People and Transcriptions (the team's). A
+  People, Events and Transcriptions (the team's). A
   new section, e.g. Partners or Analytics, is another tab there. A tab is
   underlined on its own pages too, Episodes on an episode's. "API and MCP usage" isn't a tab: the footer links to it,
   as do the sign-in prompts. The user menu is a button that shows and hides its links, not an ARIA menu.
@@ -220,6 +220,20 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   (`readiness`: in a session, with a guest, with candidates, no one yet), by who recommended it, or not at all, and
   filtered by show and recommender (by their whole names, in a select, as two may share a first name). It loads for an
   approved user only; one who isn't yet gets a note.
+- The Events page, `/dogodki` (ogrodje.si's address of it, which links keep; `/events` is the live updates'), lists
+  Slovenia's tech, developer and startup events as ogrodje.si's Dogodki page did, for anyone, in Slovenian, as the
+  events are: by week, Monday to Sunday ("Teden / 9. 11. – 15. 11. 2026"), then by day, each event with its title,
+  which opens where it's announced in a new tab, when it is (`eventTime` in [`fe/src/events.ts`](fe/src/events.ts):
+  its times only where Goo says it has them, in Ljubljana's time, where ogrodje.si took every time for summer time's),
+  its meetup as a badge in its colours with its logo (a colour from its name where it has none), and where it is when
+  Goo has both the place and its address (`EventRow.vue`); promoted ones, Ogrodje's picks, stand out in the accent.
+  Under them, ogrodje.si's note that Goo gathers them from public sources. They come from [Goo](https://goo.ogrodje.si)
+  (github.com/ogrodje/goo), which gathers them from organizers' calendars, Meetup, Eventbrite and others, through
+  MetaOS's `events` query ([`Goo.kt`](src/main/kotlin/si/ogrodje/metaos/Goo.kt)): its public timeline,
+  `${metaos.goo.url}/timeline` (`GOO_URL`, by default `https://goo.ogrodje.si`), those that haven't ended, or started
+  when they have no end, which each pod keeps a minute, and keeps while Goo doesn't answer. Goo's logo URLs come with
+  Hygraph's transformations encoded, which Hygraph refuses, so MetaOS decodes them. MetaOS only shows them: Goo's own
+  admin edits, hides and promotes them.
 - The People page, `/people`, lists everyone by name (Slovenian order, past a "dr."), from the `people` query: who they
   are, and links to their website and social profiles (`PersonCard.vue`). The team first, under rules as the rest, with
   their pictures large, their bios, and how many episodes they're on as what (`teamSummary`, e.g. 37 episodes as
