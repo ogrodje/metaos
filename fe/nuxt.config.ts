@@ -55,6 +55,11 @@ export default defineNuxtConfig({
     // MetaOS's API, which the server renders pages from; in development the browser's requests to it go there too
     // (server/middleware/api.ts). In the cluster, its Service: http://metaos
     metaosUrl: 'http://localhost:8080',
+    // Unleash's frontend API and the front-end's token for it, which stays on the server (server/unleash.ts): the
+    // feature flags are their defaults without it. compose.yml's makes default:development.metaos-dev-frontend; in the
+    // cluster it's unleash-secret's, at http://unleash:4242/api/frontend
+    unleashUrl: 'http://localhost:4242/api/frontend',
+    unleashToken: '',
     public: {
       // Where users sign in, and as which Keycloak client (stores/auth.ts)
       issuer: 'http://localhost:8180/realms/metaos',

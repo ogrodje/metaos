@@ -25,9 +25,10 @@ import SignInPrompt from '@/components/SignInPrompt.vue'
 import StatusLabel from '@/components/StatusLabel.vue'
 import {
   ARTWORK_FIELDS, artworkOf, DROPBOX_FIELDS, type DropboxPicture, EPISODE_FIELDS, type EpisodeDetails, episodePath,
-  formatDate, HISTORY_FIELDS, KOOFR_FIELDS, type KoofrPhoto, links, listPicture, photosOf, PICTURE_FIELDS, relativeDate,
-  roleName, sessionPath, sessionTitle,
+  formatDate, HISTORY_FIELDS, KOOFR_FIELDS, type KoofrPhoto, links, listPicture, PATREON_FIELDS, photosOf, PICTURE_FIELDS,
+  relativeDate, roleName, sessionPath, sessionTitle,
 } from '@/episodes'
+import { useFlag } from '@/flagState'
 import { errorMessage, graphql } from '@/graphql'
 import { IMAGE_FIELDS, src, srcset } from '@/images'
 import { MEDIA_FIELDS, mediaConcerns } from '@/media'
@@ -60,7 +61,7 @@ function names(episode: EpisodeDetails, episodeRef: unknown) {
 async function fetchEpisode(ref: string) {
   return (await graphql<{ episode: EpisodeDetails | null }>(`query ($ref: String!) {
     episode(ref: $ref) {
-      ${EPISODE_FIELDS} titleB titleC summary machineSummary addedDate language recommendedBy { id name } ${KOOFR_FIELDS}
+      ${EPISODE_FIELDS} ${PATREON_FIELDS} titleB titleC summary machineSummary addedDate language recommendedBy { id name } ${KOOFR_FIELDS}
       ${DROPBOX_FIELDS} ${ARTWORK_FIELDS} ${PICTURE_FIELDS} ${HISTORY_FIELDS} ${COMMENT_FIELDS} ${MEDIA_FIELDS}
       ${EPISODE_TRANSCRIPT_FIELDS} people { avatar { ${IMAGE_FIELDS} } }
     }
@@ -128,6 +129,8 @@ function reloadQuietly(id: string) {
 const asPublic = ref(false)
 const released = computed(() => episode.value?.status === 'PUBLISHED')
 const team = computed(() => auth.team && !asPublic.value)
+// Its audio and bonus on Patreon too, while that's being tried out (flags.ts)
+const allPatreon = useFlag('patreon-links')
 
 // The pictures in its Dropbox folders, which open in the folder of the first; and its photos, in its first Koofr folder.
 // The same lists while they're the same, as the photos page through them from the first again when they change.
@@ -277,7 +280,7 @@ const pastTitle = useScrolledPast(titleBlock)
       </FactPanel>
 
       <div class="main">
-        <div v-if="episode.people.length || links(episode).length" class="credits">
+        <div v-if="episode.people.length || links(episode, allPatreon).length" class="credits">
           <section v-if="episode.people.length" aria-labelledby="people">
             <h2 id="people">People</h2>
             <div class="people">
@@ -285,9 +288,9 @@ const pastTitle = useScrolledPast(titleBlock)
                           :avatar="person.avatar" :role="person.roles.map(roleName).join(', ')"/>
             </div>
           </section>
-          <section v-if="links(episode).length" aria-labelledby="listen">
+          <section v-if="links(episode, allPatreon).length" aria-labelledby="listen">
             <h2 id="listen">Listen</h2>
-            <div class="listen" :class="{ copyable: team }"><ListenLinks :episode="episode" labelled :copyable="team"/></div>
+            <div class="listen" :class="{ copyable: team }"><ListenLinks :episode="episode" labelled :copyable="team" :all-patreon="allPatreon"/></div>
           </section>
         </div>
 

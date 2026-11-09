@@ -8,6 +8,13 @@
 #   PROD_KEYCLOAK_DB_PASSWORD     Keycloak's Postgres password
 #   PROD_KEYCLOAK_ADMIN_PASSWORD  Keycloak's bootstrap admin ("admin")
 #   PROD_TEMPORAL_DB_PASSWORD     Temporal's Postgres password (deployment-temporal.yaml)
+#   PROD_UNLEASH_DB_PASSWORD      Unleash's Postgres password (deployment-unleash.yaml)
+#   PROD_UNLEASH_ADMIN_PASSWORD   its first user's ("admin"), on its first start only
+#   PROD_UNLEASH_SESSION_SECRET   what it signs its sessions' cookies with
+#   PROD_UNLEASH_BACKEND_TOKEN, PROD_UNLEASH_FRONTEND_TOKEN
+#                                 the secret parts of the tokens the app and the front-end ask it with, for environment
+#                                 production; it makes them on its first start only, so after that they're its UI's
+#                                 (CLAUDE.md, "Feature flags")
 #   DOCKER_REGISTRY_USERNAME, DOCKER_REGISTRY_PASSWORD
 #   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_DRIVE_REFRESH_TOKEN  the Google bot account's, as locally
 #   GOOGLE_GMAIL_REFRESH_TOKEN    optional, Gmail stays off without it (google/refresh_token.sh)
@@ -36,7 +43,9 @@ set -euo pipefail
 NS=metaos-prod
 REGISTRY=registry.folk-decibel.ts.net
 
-: "${PROD_METAOS_DB_PASSWORD:?}" "${PROD_KEYCLOAK_DB_PASSWORD:?}" "${PROD_TEMPORAL_DB_PASSWORD:?}"
+: "${PROD_METAOS_DB_PASSWORD:?}" "${PROD_KEYCLOAK_DB_PASSWORD:?}" "${PROD_TEMPORAL_DB_PASSWORD:?}" "${PROD_UNLEASH_DB_PASSWORD:?}"
+: "${PROD_UNLEASH_ADMIN_PASSWORD:?}" "${PROD_UNLEASH_SESSION_SECRET:?}"
+: "${PROD_UNLEASH_BACKEND_TOKEN:?}" "${PROD_UNLEASH_FRONTEND_TOKEN:?}"
 : "${PROD_KEYCLOAK_ADMIN_PASSWORD:?}"
 : "${DOCKER_REGISTRY_USERNAME:?}" "${DOCKER_REGISTRY_PASSWORD:?}"
 : "${GOOGLE_CLIENT_ID:?}" "${GOOGLE_CLIENT_SECRET:?}" "${GOOGLE_DRIVE_REFRESH_TOKEN:?}"
@@ -46,18 +55,21 @@ kubectl apply -f "$(dirname "$0")/base/namespace.yaml"
 
 # Roles and databases - names as in base/deployment-*.yaml. Each role owns its database(s), so the app's
 # `CREATE EXTENSION citext` (V1__init.sql) and Temporal's `CREATE EXTENSION btree_gin` (its visibility schema) work:
-# both are trusted extensions. Temporal has two, its own and its visibility's, whose schemas it sets up itself.
+# both are trusted extensions. Temporal has two, its own and its visibility's, whose schemas it sets up itself; Unleash
+# one, which it migrates itself.
 PRIMARY=$(kubectl get pod -n pg -l cnpg.io/cluster=main-cluster,cnpg.io/instanceRole=primary -o name)
 kubectl exec -n pg -i "$PRIMARY" -- psql -U postgres -v ON_ERROR_STOP=1 -q postgres <<SQL
 \set metaos_password '$PROD_METAOS_DB_PASSWORD'
 \set keycloak_password '$PROD_KEYCLOAK_DB_PASSWORD'
 \set temporal_password '$PROD_TEMPORAL_DB_PASSWORD'
-SELECT format('CREATE ROLE %I LOGIN', r) FROM unnest(ARRAY['metaos', 'metaos_keycloak', 'metaos_temporal']) r
+\set unleash_password '$PROD_UNLEASH_DB_PASSWORD'
+SELECT format('CREATE ROLE %I LOGIN', r) FROM unnest(ARRAY['metaos', 'metaos_keycloak', 'metaos_temporal', 'metaos_unleash']) r
   WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r) \gexec
 ALTER ROLE metaos PASSWORD :'metaos_password';
 ALTER ROLE metaos_keycloak PASSWORD :'keycloak_password';
 ALTER ROLE metaos_temporal PASSWORD :'temporal_password';
-SELECT format('CREATE DATABASE %I OWNER %I', d, d) FROM unnest(ARRAY['metaos', 'metaos_keycloak']) d
+ALTER ROLE metaos_unleash PASSWORD :'unleash_password';
+SELECT format('CREATE DATABASE %I OWNER %I', d, d) FROM unnest(ARRAY['metaos', 'metaos_keycloak', 'metaos_unleash']) d
   WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = d) \gexec
 SELECT format('CREATE DATABASE %I OWNER metaos_temporal', d) FROM unnest(ARRAY['metaos_temporal', 'metaos_temporal_visibility']) d
   WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = d) \gexec
@@ -80,6 +92,15 @@ kubectl create secret generic metaos-secret -n "$NS" \
 
 kubectl create secret generic temporal-secret -n "$NS" \
   --from-literal=postgres_password="$PROD_TEMPORAL_DB_PASSWORD" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+# The tokens as Unleash has them, <project>:<environment>.<secret>; the app and the front-end read them from here too
+kubectl create secret generic unleash-secret -n "$NS" \
+  --from-literal=postgres_password="$PROD_UNLEASH_DB_PASSWORD" \
+  --from-literal=admin_password="$PROD_UNLEASH_ADMIN_PASSWORD" \
+  --from-literal=session_secret="$PROD_UNLEASH_SESSION_SECRET" \
+  --from-literal=backend_token="default:production.$PROD_UNLEASH_BACKEND_TOKEN" \
+  --from-literal=frontend_token="default:production.$PROD_UNLEASH_FRONTEND_TOKEN" \
   --dry-run=client -o yaml | kubectl apply -f -
 
 kubectl create secret generic keycloak-secret -n "$NS" \

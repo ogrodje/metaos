@@ -27,6 +27,7 @@
     "mediainfo.js": "0.3.8",
     "nuxt": "^4.6.2",
     "pinia": "^4.1.0",
+    "unleash-proxy-client": "3.8.2",
     "vue": "^3.5.44",
     "vue-router": "^5.4.0"
   },

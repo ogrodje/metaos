@@ -121,6 +121,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-security-oauth2-client")
     // Speech-to-Text, which transcribes episodes' audio from the bucket (Transcription.kt)
     implementation("com.google.cloud:google-cloud-speech:4.94.0")
+    // Feature flags, from Unleash (Flags.kt): its SDK evaluates them in MetaOS, with Unleash's engine (Yggdrasil, native)
+    implementation("io.getunleash:unleash-client-java:12.3.2")
 }
 
 // Without Mockito, which no test uses and the test starters bring: Spring's MockitoResetTestExecutionListener would
