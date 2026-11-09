@@ -40,6 +40,7 @@ export default defineNuxtConfig({
     '/episodes/**': PUBLIC,
     '/people': PUBLIC,
     '/people/**': PUBLIC,
+    '/dogodki': PUBLIC,
     '/usage': PUBLIC,
     '/ideas': TEAM,
     '/transcriptions': TEAM,

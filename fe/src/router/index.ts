@@ -41,6 +41,13 @@ export const routes: RouteRecordRaw[] = [
     meta: { title: 'Person' },
     component: () => import('../views/PersonView.vue'),
   },
+  // Slovenia's tech, developer and startup events that haven't ended yet, from Goo, at ogrodje.si's old address of them
+  {
+    path: '/dogodki',
+    name: 'events',
+    meta: { title: 'Dogodki in konference' },
+    component: () => import('../views/EventsView.vue'),
+  },
   // Everything a search finds, behind sign-in: where the header's search leads for all of it
   {
     path: '/search',

@@ -85,6 +85,41 @@ type Query {
 
     "The speech-to-text providers MetaOS has, to transcribe with. Needs a signed-in user."
     speechProviders: [SpeechProvider!]!
+
+    """
+    Slovenia's tech, developer and startup events, from Goo (goo.ogrodje.si), that haven't ended yet (or started, when
+    they have no end), the soonest first
+    """
+    events: [Event!]!
+}
+
+"""
+An event, as Goo gathers it from public sources. Its start and end are instants (ISO 8601, UTC), with a time of day only
+where hasStartTime and hasEndTime say; one without an end has none, or the same as its start.
+"""
+type Event {
+    id: ID!
+    title: String!
+    "Where it's announced, e.g. on Meetup or Eventbrite"
+    url: String
+    start: String!
+    end: String
+    hasStartTime: Boolean!
+    hasEndTime: Boolean!
+    locationName: String
+    locationAddress: String
+    "Ogrodje's picks, which stand out"
+    promoted: Boolean!
+    "Who it's by"
+    meetup: Meetup
+}
+
+"Who an event is by, with its logo and colours: its text's (mainColor) and its badge's (backgroundColor), as #rrggbb"
+type Meetup {
+    name: String!
+    logo: String
+    mainColor: String
+    backgroundColor: String
 }
 
 """
