@@ -28,6 +28,7 @@ const places = [
   { path: '/', title: 'Home' },
   { path: '/episodes', title: 'Episodes' },
   { path: '/people', title: 'People' },
+  { path: '/dogodki', title: 'Events' },
 ]
 </script>
 
