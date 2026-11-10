@@ -97,6 +97,8 @@ export const useAuthStore = defineStore('auth', () => {
   // Signed in as an approved user, who gets the team's data
   const team = ref(false)
   const username = ref<string>()
+  // Their Keycloak ID (the token's sub), e.g. for Unleash's gradual rollouts (plugins/flags.ts)
+  const userId = ref<string>()
   // The realm, e.g. https://metaos-auth.ogrodje.si/realms/metaos
   const issuer = ref<string>()
   // The identity provider this sign-in came through, e.g. google, when Keycloak puts it in the token (a User Session
@@ -123,6 +125,7 @@ export const useAuthStore = defineStore('auth', () => {
     authenticated.value = !!client.authenticated
     team.value = !!client.authenticated && client.hasRealmRole(TEAM_ROLE)
     username.value = client.tokenParsed?.preferred_username
+    userId.value = client.authenticated ? client.tokenParsed?.sub : undefined
     const provider = client.tokenParsed?.identity_provider
     identityProvider.value = typeof provider === 'string' && provider ? provider : undefined
     rememberSignedIn(team.value)
@@ -254,7 +257,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   return {
-    ready, authenticated, team, likelyMember, checkingSlowly, unconfirmed, username, identityProvider, accountConsole,
+    ready, authenticated, team, likelyMember, checkingSlowly, unconfirmed, username, userId, identityProvider, accountConsole,
     linked,
     init, login, logout, linkProvider, signInProviders, dismissLinked, token,
   }

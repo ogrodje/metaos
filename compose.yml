@@ -15,7 +15,7 @@ services:
     labels:
       org.springframework.boot.jdbc.parameters: '' # ssl=true&sslmode=require'
 
-  # One-shot: creates the "keycloak" database in the postgres service if missing
+  # One-shot: creates the "keycloak" and "unleash" databases in the postgres service if missing
   # (initdb scripts would only run on an empty data directory).
   keycloak-db-init:
     image: 'postgres:18-alpine'
@@ -31,6 +31,7 @@ services:
       - |
         until pg_isready -q; do sleep 1; done
         psql -tAc "SELECT 1 FROM pg_database WHERE datname = 'keycloak'" | grep -q 1 || createdb keycloak
+        psql -tAc "SELECT 1 FROM pg_database WHERE datname = 'unleash'" | grep -q 1 || createdb unleash
 
   # Identity provider / OAuth2 authorization server for the MCP endpoint, persisted in the "keycloak" database.
   # Realm "metaos" is imported from ./keycloak on first start only (existing realms are left untouched).
@@ -81,6 +82,26 @@ services:
     volumes:
       # Its home, which the image has as its user's, so the volume is theirs too
       - temporal-data:/home/temporal
+
+  # Unleash, MetaOS's feature flags (Flags.kt, fe/src/flags.ts), its open-source edition as in production, in the
+  # "unleash" database: its UI at http://localhost:4242 (admin / unleash4all). It makes these tokens the first time, for
+  # environment development, which MetaOS asks it with: UNLEASH_API_TOKEN and NUXT_UNLEASH_TOKEN (CLAUDE.md)
+  unleash:
+    image: 'unleashorg/unleash-server:8.3.1'
+    depends_on:
+      keycloak-db-init:
+        condition: service_completed_successfully
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_NAME=unleash
+      - DATABASE_USERNAME=${POSTGRES_USER}
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD}
+      - DATABASE_SSL=false
+      - INIT_BACKEND_API_TOKENS=default:development.metaos-dev-backend
+      - INIT_FRONTEND_API_TOKENS=default:development.metaos-dev-frontend
+      - SEND_TELEMETRY=false
+    ports:
+      - '127.0.0.1:4242:4242'
 
 volumes:
   temporal-data:

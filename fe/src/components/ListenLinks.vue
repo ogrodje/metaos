@@ -4,15 +4,17 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faCopy } from '@fortawesome/free-regular-svg-icons'
 import { faCheck } from '@fortawesome/free-solid-svg-icons'
 import { brands } from '@/brands'
-import { type Episode, type Platform, links } from '@/episodes'
+import { type Linked, type Platform, links } from '@/episodes'
 import { withTimeout } from '@/usage'
 
 // Where to listen to an episode, each in its brand's colour when pointed at: icons in a list, or buttons that also say
-// where, e.g. on its page, where the team also copies each link with the icon beside it (copyable)
+// where, e.g. on its page, where the team also copies each link with the icon beside it (copyable); on Patreon its
+// video only, unless allPatreon (flag patreon-links)
 defineProps<{
-  episode: Pick<Episode, 'youtubeUrl' | 'spotifyUrl' | 'applePodcastsUrl' | 'patreonUrl'>
+  episode: Linked
   labelled?: boolean
   copyable?: boolean
+  allPatreon?: boolean
 }>()
 
 // The link just copied, for its check, and what was done, for screen readers
@@ -41,7 +43,7 @@ async function copy(platform: Platform, url: string) {
 
 <template>
   <template v-if="labelled">
-    <div v-for="link in links(episode)" :key="link.platform" :class="{ cell: copyable }">
+    <div v-for="link in links(episode, allPatreon)" :key="link.platform" :class="{ cell: copyable }">
       <a class="button listen-button" :href="link.url" :style="{ '--brand': brands[link.platform].color }">
         <FontAwesomeIcon :icon="brands[link.platform].icon"/>{{ link.platform }}
       </a>
@@ -54,7 +56,7 @@ async function copy(platform: Platform, url: string) {
     <span v-if="copyable" class="visually-hidden" role="status">{{ status }}</span>
   </template>
   <template v-else>
-    <a v-for="link in links(episode)" :key="link.platform" class="icon-link brand-link" :href="link.url"
+    <a v-for="link in links(episode, allPatreon)" :key="link.platform" class="icon-link brand-link" :href="link.url"
        :title="link.platform" :aria-label="link.platform" :style="{ '--brand': brands[link.platform].color }">
       <FontAwesomeIcon :icon="brands[link.platform].icon"/>
     </a>

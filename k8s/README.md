@@ -1,6 +1,6 @@
 # Deploying MetaOS
 
-The app, its front-end, its Keycloak and its Temporal in namespace `metaos-prod` on the ogrodje-one cluster, the way goo, boo-run and bongbong
+The app, its front-end, its Keycloak, its Temporal and its Unleash in namespace `metaos-prod` on the ogrodje-one cluster, the way goo, boo-run and bongbong
 deploy there: images in the tailnet registry, `kustomize` picks the tags, Postgres is the shared CNPG `main-cluster`,
 ingress-nginx routes and Cloudflare terminates TLS.
 
@@ -13,6 +13,7 @@ k8s/base/
   deployment-patreon-gateway.yaml  patreon-gateway: its volume, Deployment, Service (no Ingress: MetaOS's only)
   deployment-temporal.yaml   Temporal: its server (schema set up before it starts), Service, ServiceMonitor,
                              NetworkPolicy; the Job that makes its namespace; its UI, on the tailnet only
+  deployment-unleash.yaml    Unleash, the feature flags: its server, Service, ServiceMonitor, its UI on the tailnet only
   kustomization.yaml         the resources, the public URLs and the image tags
 k8s/set_secrets.sh           Postgres roles + databases, secrets, registry pull secret
 k8s/prometheus/              what the cluster's Prometheus passes on to New Relic (newrelic.sh applies it)
@@ -28,6 +29,7 @@ docker/patreon-gateway.Dockerfile  patreon-gateway's boot jar on distroless java
 | `metaos.ogrodje.si`      | the front-end's pages; the app's `/graphql`, `/events`, `/mcp`, ...        |
 | `metaos-auth.ogrodje.si` | Keycloak; realm `metaos` issues the tokens, `/admin` is the admin console |
 | `metaos-temporal.folk-decibel.ts.net` | Temporal's UI, on the tailnet only (nothing signs in to it): workflows and their histories |
+| `metaos-unleash.folk-decibel.ts.net` | Unleash's UI, on the tailnet only, with its own sign-in: the feature flags |
 
 Actuator (`/actuator/health/*`, `/actuator/prometheus`) is on port 9090, which no Ingress routes - Prometheus reaches
 it, the internet doesn't. The app's probes use `/livez` and `/readyz` on port 8080 instead, so they check the port that
@@ -73,6 +75,8 @@ just gateway-logs  # follow patreon-gateway
    export PROD_KEYCLOAK_DB_PASSWORD=...
    export PROD_KEYCLOAK_ADMIN_PASSWORD=...
    export PROD_TEMPORAL_DB_PASSWORD=...
+   export PROD_UNLEASH_DB_PASSWORD=... PROD_UNLEASH_ADMIN_PASSWORD=... PROD_UNLEASH_SESSION_SECRET=...
+   export PROD_UNLEASH_BACKEND_TOKEN=... PROD_UNLEASH_FRONTEND_TOKEN=...
    export DOCKER_REGISTRY_USERNAME=... DOCKER_REGISTRY_PASSWORD=...
    ./k8s/set_secrets.sh
    ```
@@ -120,6 +124,14 @@ just gateway-logs  # follow patreon-gateway
    and MetaOS's pods connect as its workers (`TEMPORAL_ADDRESS`). What MetaOS's workflows use needs its keys too:
    `SONIOX_API_KEY` (Soniox), and the Speech-to-Text API on in project `ogrodje-metaos` (infra/gcp).
 
+9. **Unleash** (CLAUDE.md, "Feature flags"): the five `PROD_UNLEASH_*` in `.envrc` (`openssl rand -hex 24` each), then
+   `./k8s/set_secrets.sh` for its role, database and `unleash-secret`, before the deploy that brings
+   `deployment-unleash.yaml`. On its first start Unleash migrates its database, makes user `admin` with
+   `PROD_UNLEASH_ADMIN_PASSWORD` and the app's and the front-end's tokens; MetaOS and metaos-web read the same tokens
+   from `unleash-secret`. Then sign in at https://metaos-unleash.folk-decibel.ts.net, change `admin`'s password, add the
+   team, and make flag `patreon-links` (and context field `team`). Re-running the script with new tokens doesn't change
+   Unleash's: those are its UI's after the first start.
+
 ## Checking it
 
 ```bash
@@ -135,6 +147,9 @@ kubectl -n metaos-prod get job temporal-namespace                    # namespace
 kubectl -n metaos-prod run temporal-cli --rm -it --restart=Never --image=temporalio/admin-tools:1.32.1 \
   --env TEMPORAL_ADDRESS=temporal:7233 -- temporal task-queue describe --task-queue metaos   # MetaOS's pods poll it
 # and patreon-gateway the patreon one, likewise (--task-queue patreon)
+curl -s localhost:9090/actuator/health/unleash                       # MetaOS has its flags from Unleash (port-forward above)
+kubectl -n metaos-prod port-forward deploy/metaos-web 3000 &
+curl -s 'localhost:3000/flags?appName=check'                         # the flags on, as the front-end has them
 ```
 
 Then point an MCP client at `https://metaos.ogrodje.si/mcp`, e.g.

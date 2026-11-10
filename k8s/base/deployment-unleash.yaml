@@ -1,0 +1,127 @@
+# Unleash (https://getunleash.io), the open-source edition: MetaOS's feature flags (CLAUDE.md, "Feature flags"). One
+# server on the shared CNPG cluster, in a database of its own (metaos_unleash, owned by role metaos_unleash, which
+# k8s/set_secrets.sh makes, as Temporal's); it migrates it itself on start, under a lock. The app asks it as a backend
+# SDK (Flags.kt) and the front-end's server as a frontend one (fe/server/routes/flags), both at http://unleash:4242, with
+# the tokens it made the first time it started (INIT_*_API_TOKENS). Its admin UI is on the tailnet only,
+# https://metaos-unleash.folk-decibel.ts.net, and needs a sign-in on top: Unleash's own users, as the open-source
+# edition signs in no other way (Keycloak would take Enterprise).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unleash
+  namespace: metaos-prod
+  labels: { app: unleash }
+spec:
+  replicas: 1
+  # The new server beside the old one till it's ready: its migrations take a lock, and MetaOS keeps what it last had
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector: { matchLabels: { app: unleash } }
+  template:
+    metadata: { labels: { app: unleash } }
+    spec:
+      automountServiceAccountToken: false
+      # Without the Services' addresses as variables, as for Temporal's UI: UNLEASH_* would get this one's Service's
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000    # the image's node
+        runAsGroup: 1000
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: unleash
+          image: unleashorg/unleash-server:8.3.1
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ ALL ] }
+          ports:
+            - { containerPort: 4242, name: http }
+          env:
+            - { name: DATABASE_HOST, value: main-cluster-rw.pg.svc.cluster.local }
+            - { name: DATABASE_PORT, value: "5432" }
+            - { name: DATABASE_NAME, value: metaos_unleash }
+            - { name: DATABASE_USERNAME, value: metaos_unleash }
+            - name: DATABASE_PASSWORD
+              valueFrom: { secretKeyRef: { name: unleash-secret, key: postgres_password } }
+            # DATABASE_SSL left out: over CNPG's TLS, unverified, as Unleash does by default
+            # 4 of the shared cluster's 100 connections at most (its default)
+            - { name: DATABASE_POOL_MAX, value: "4" }
+            # Its sessions' cookies are signed with it
+            - name: UNLEASH_SECRET
+              valueFrom: { secretKeyRef: { name: unleash-secret, key: session_secret } }
+            # Its first user, made on the first start only (and its password logged then): change it once signed in
+            - { name: UNLEASH_DEFAULT_ADMIN_USERNAME, value: admin }
+            - name: UNLEASH_DEFAULT_ADMIN_PASSWORD
+              valueFrom: { secretKeyRef: { name: unleash-secret, key: admin_password } }
+            # The tokens MetaOS asks it with, made on the first start, while it has none: the app's (backend) and the
+            # front-end's (frontend), each for environment production. Later ones are made in its UI (CLAUDE.md)
+            - name: INIT_BACKEND_API_TOKENS
+              valueFrom: { secretKeyRef: { name: unleash-secret, key: backend_token } }
+            - name: INIT_FRONTEND_API_TOKENS
+              valueFrom: { secretKeyRef: { name: unleash-secret, key: frontend_token } }
+            # Where its links point, e.g. in its UI
+            - { name: UNLEASH_URL, value: "https://metaos-unleash.folk-decibel.ts.net" }
+            - { name: SEND_TELEMETRY, value: "false" }
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            # Its migrations, on the first start or after an upgrade
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          # Node; ~200 MB idle
+          resources:
+            requests: { cpu: 50m, memory: 256Mi }
+            limits: { memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: unleash
+  namespace: metaos-prod
+  labels: { app: unleash }
+spec:
+  type: ClusterIP
+  selector: { app: unleash }
+  ports:
+    # Its API (/api/client for the app, /api/frontend for the front-end's server), its UI and its metrics
+    - { name: http, port: 4242, targetPort: http }
+---
+# Its metrics (requests, flags, the database's pool, Node's), in Prometheus; whether it answers (`up`) also in New Relic
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: unleash
+  namespace: metaos-prod
+  labels: { release: prom }
+spec:
+  endpoints:
+    - { interval: 30s, path: /internal-backstage/prometheus, port: http }
+  namespaceSelector:
+    matchNames: [ metaos-prod ]
+  selector:
+    matchLabels: { app: unleash }
+---
+# https://metaos-unleash.folk-decibel.ts.net, through the Tailscale operator (ogrodje-one-infra), as Temporal's UI is
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: unleash
+  namespace: metaos-prod
+  labels:
+    tailscale.com/proxy-class: tailnet-ingress
+  annotations:
+    tailscale.com/hostname: metaos-unleash
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: unleash
+      port: { number: 4242 }
+  tls:
+    - hosts: [ metaos-unleash ]

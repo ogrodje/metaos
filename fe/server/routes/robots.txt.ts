@@ -17,6 +17,7 @@ export default defineEventHandler((event) => {
     'Disallow: /mcp',
     'Disallow: /koofr/',
     'Disallow: /dropbox/',
+    'Disallow: /flags',
     '',
     `Sitemap: ${siteUrl}/sitemap.xml`,
     '',

@@ -12,6 +12,9 @@ export const brands: Record<Platform, { icon: IconDefinition, color: string }> =
   Spotify: { icon: faSpotify, color: '#1DB954' },
   'Apple Podcasts': { icon: faPodcast, color: '#9933CC' },
   Patreon: { icon: faPatreon, color: '#FF424D' },
+  'Patreon audio': { icon: faPatreon, color: '#FF424D' },
+  'Patreon bonus': { icon: faPatreon, color: '#FF424D' },
+  'Patreon bonus audio': { icon: faPatreon, color: '#FF424D' },
 }
 
 /** Where people are online, in their brand colours; a website, which has none, in the accent links turn when pointed at */

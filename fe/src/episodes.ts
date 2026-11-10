@@ -61,6 +61,10 @@ export interface Episode {
   spotifyUrl: string | null
   applePodcastsUrl: string | null
   patreonUrl: string | null
+  // Its audio and its bonus on Patreon, where a page asks for them (PATREON_FIELDS)
+  patreonAudioUrl?: string | null
+  patreonBonusUrl?: string | null
+  patreonBonusAudioUrl?: string | null
   // Markdown, e.g. a sentence
   tinySummary: string | null
   // 16:9, and square, e.g. for podcast apps: where a list asks for them (LIST_PICTURE_FIELDS)
@@ -255,19 +259,31 @@ export const EPISODE_FIELDS = `
   dropboxFolders { path url }
 `
 
+// The rest of an episode's links on Patreon, beside its video (patreonUrl), while flag patreon-links is on (flags.ts)
+export const PATREON_FIELDS = 'patreonAudioUrl patreonBonusUrl patreonBonusAudioUrl'
+
 const platforms = {
   YouTube: 'youtubeUrl',
   Spotify: 'spotifyUrl',
   'Apple Podcasts': 'applePodcastsUrl',
   Patreon: 'patreonUrl',
+  'Patreon audio': 'patreonAudioUrl',
+  'Patreon bonus': 'patreonBonusUrl',
+  'Patreon bonus audio': 'patreonBonusAudioUrl',
 } as const
 
 export type Platform = keyof typeof platforms
 
-export function links(episode: Pick<Episode, (typeof platforms)[Platform]>) {
+// Patreon's but the full episode's video, which are listed only while flag patreon-links is on
+const MORE_PATREON: Platform[] = ['Patreon audio', 'Patreon bonus', 'Patreon bonus audio']
+
+export type Linked = Partial<Pick<Episode, (typeof platforms)[Platform]>>
+
+/** Where to watch or listen to an episode; on Patreon its video only, unless [allPatreon] */
+export function links(episode: Linked, allPatreon = false) {
   return (Object.keys(platforms) as Platform[]).flatMap((platform) => {
     const url = episode[platforms[platform]]
-    return url ? [{ platform, url }] : []
+    return url && (allPatreon || !MORE_PATREON.includes(platform)) ? [{ platform, url }] : []
   })
 }
 
