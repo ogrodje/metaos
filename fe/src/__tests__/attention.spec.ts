@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { concerns, episodeConcerns, LONG_IN_PRODUCTION_DAYS, SOON_DAYS } from '@/attention'
+import { concerns, DISTRIBUTED_DAYS, episodeConcerns, LONG_IN_PRODUCTION_DAYS, SOON_DAYS } from '@/attention'
 import type { Episode, EpisodePerson, EpisodeStatus, Session } from '@/episodes'
 
 const today = new Date(2026, 9, 23)
@@ -82,3 +82,23 @@ describe('episodeConcerns', () => {
   })
 })
 
+describe('released episodes', () => {
+  it(`flags one released ${DISTRIBUTED_DAYS} days ago or more that isn't on YouTube or Patreon`, () => {
+    const out = episode('S5E1', 'PUBLISHED', { airedDate: '2026-10-20', spotifyUrl: 'https://open.spotify.com/episode/1' })
+    expect(concerns([], [], today, [out])[0]?.reasons).toEqual(['Released 3 days ago, not on YouTube or Patreon'])
+    expect(episodeConcerns(out, today)).toEqual(['Released 3 days ago, not on YouTube or Patreon'])
+  })
+
+  it("doesn't flag one that's on YouTube or Patreon, by its links or its distribution, or released lately", () => {
+    const aired = { airedDate: '2026-10-01' }
+    expect(concerns([], [], today, [
+      episode('S5E2', 'PUBLISHED', { ...aired, youtubeUrl: 'https://youtu.be/a' }),
+      episode('S5E3', 'PUBLISHED', { ...aired, patreonUrl: 'https://www.patreon.com/posts/1' }),
+      { ...episode('S5E4', 'PUBLISHED', aired), distributions: [{ channel: 'PATREON' }] },
+      episode('S5E5', 'PUBLISHED', { airedDate: '2026-10-21' }),
+      episode('S5E6', 'PUBLISHED'),
+    ])).toEqual([])
+    // Early access took a Patreon link
+    expect(episodeConcerns(episode('S5E7', 'EARLY_ACCESS', { ...aired, recordingDate: '2026-10-01' }), today)).toEqual([])
+  })
+})

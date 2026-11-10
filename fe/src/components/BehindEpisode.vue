@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { faArrowUpFromBracket, faChevronRight, faLock } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import DistributionList from '@/components/DistributionList.vue'
 import DocLinks from '@/components/DocLinks.vue'
 import DropboxFolderList from '@/components/DropboxFolderList.vue'
 import EpisodePictures from '@/components/EpisodePictures.vue'
@@ -11,6 +12,7 @@ import Fact from '@/components/Fact.vue'
 import KoofrFolderList from '@/components/KoofrFolderList.vue'
 import MediaList from '@/components/MediaList.vue'
 import MediaUpload from '@/components/MediaUpload.vue'
+import { distributionLine } from '@/distribution'
 import { type DropboxPicture, type EpisodeDetails, isRecorded, type KoofrPhoto, type LinePart, pictureParts } from '@/episodes'
 import { type MediaKind, mediaParts } from '@/media'
 import { transcriptsLine } from '@/transcriptions'
@@ -18,9 +20,10 @@ import { transcriptsLine } from '@/transcriptions'
 // What the episode is made of, at the end of its page and the team's only: its transcript, its pictures, and its video
 // and audio, each folded to a line that says what there is and what's missing, until it's wanted. Each once there's
 // something to it: the pictures once it's recorded or has some, or titles to test; the video and audio once it's
-// recorded; the transcript once there's a file to transcribe; none of it, e.g. for an idea, until then. While it's in
+// recorded; the transcript once there's a file to transcribe; where it went out (its links and the posts that promote
+// it) once it's out, in early access or released; none of it, e.g. for an idea, until then. While it's in
 // the works, what's missing is the work left, so a part that misses something is open. A part loads what it shows once
-// it's opened, e.g. the transcript's text; a link to one (#transcript, #pictures, #media) opens it. Last, its files: its
+// it's opened, e.g. the transcript's text; a link to one (#transcript, #pictures, #media, #distribution) opens it. Last, its files: its
 // docs and its Koofr and Dropbox folders, not folded, as their links are what they're for.
 const props = defineProps<{
   episode: EpisodeDetails
@@ -33,7 +36,7 @@ const emit = defineEmits<{
   changed: []
 }>()
 
-type Part = 'transcript' | 'pictures' | 'media'
+type Part = 'transcript' | 'pictures' | 'media' | 'distribution'
 
 // Those opened so far, which stay as they are while they're closed again
 const opened = ref<Partial<Record<Part, boolean>>>({})
@@ -51,12 +54,14 @@ function openLinked(hash: string) {
 
 const recorded = computed(() => isRecorded(props.episode.status))
 const released = computed(() => props.episode.status === 'PUBLISHED')
+const out = computed(() => released.value || props.episode.status === 'EARLY_ACCESS')
 const transcribed = computed(() => props.episode.transcripts.length > 0)
 
 const lines = computed<Record<Part, LinePart[]>>(() => ({
   transcript: [{ text: transcriptsLine(props.episode.transcripts) }],
   pictures: pictureParts(props.episode, props.artwork.length, props.photos.length),
   media: mediaParts(props.episode.media, recorded.value),
+  distribution: [{ text: distributionLine(props.episode.distributions) }],
 }))
 
 const shown = computed<Record<Part | 'files', boolean>>(() => {
@@ -66,6 +71,7 @@ const shown = computed<Record<Part | 'files', boolean>>(() => {
     transcript: transcribed.value || episode.media.length > 0,
     pictures: recorded.value || lines.value.pictures.length > 0,
     media: recorded.value || episode.media.length > 0,
+    distribution: out.value || episode.distributions.length > 0,
   }
 })
 
@@ -142,6 +148,20 @@ function upload(kind?: MediaKind) {
         <button type="button" class="button" aria-haspopup="dialog" @click="upload()">
           <FontAwesomeIcon :icon="faArrowUpFromBracket"/>Upload video and audio
         </button>
+      </div>
+    </details>
+
+    <details v-if="shown.distribution" id="distribution" :ref="(el) => { parts.distribution = el as HTMLDetailsElement }"
+             @toggle="toggled('distribution')">
+      <summary>
+        <span class="part">Distribution</span>
+        <span class="line">{{ lines.distribution[0]!.text }}</span>
+        <FontAwesomeIcon class="chevron" :icon="faChevronRight"/>
+      </summary>
+      <div class="inside">
+        <DistributionList v-if="opened.distribution" :episode-id="episode.id" :aired-date="episode.airedDate"
+                          :distributions="episode.distributions"
+                          @changed="emit('changed')"/>
       </div>
     </details>
 

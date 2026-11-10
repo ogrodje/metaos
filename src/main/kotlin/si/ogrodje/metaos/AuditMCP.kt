@@ -50,6 +50,20 @@ fun AuditRow.diff(): Map<String, ColumnChange> =
 
 private fun AuditRow.toDto() = ChangeDto(id, at, table, rowId, operation, diff(), actor, actorId, client, tool)
 
+/**
+ * Where an episode went out, as its history tells it: its posts, not its links, whose changes are the episode's, nor
+ * their previews, which MetaOS fetches
+ */
+private val TOLD_DISTRIBUTIONS = """
+    table_name = 'distributions'
+    and coalesce(new_row ->> 'platform', old_row ->> 'platform') is null
+    and (operation <> 'UPDATE' or (old_row - $DISTRIBUTION_PREVIEW_COLUMNS) is distinct from (new_row - $DISTRIBUTION_PREVIEW_COLUMNS))
+""".trimIndent()
+
+private const val DISTRIBUTION_PREVIEW_COLUMNS =
+    "array['preview_status', 'preview_title', 'preview_description', 'preview_site', 'preview_published_at', " +
+        "'preview_image_id', 'preview_error', 'previewed_at', 'updated_at']"
+
 /** The audit trail (V6__audit_log.sql), for get_history and for the front-end's history (History.kt) */
 @Component
 class AuditLog(
@@ -77,7 +91,7 @@ class AuditLog(
     /**
      * Every change to an episode, person, session or show, oldest first, with people's roles on an episode, the
      * documents, Koofr and Dropbox folders linked to an episode or session, the comments in an episode's or session's
-     * discussion, an episode's video and audio, the accounts linked to a person, and episodes moving in and out of a
+     * discussion, an episode's video and audio and where it went out (its posts), the accounts linked to a person, and episodes moving in and out of a
      * session or show
      */
     fun history(id: UUID): List<AuditRow> =
@@ -92,6 +106,7 @@ class AuditLog(
                    and ? in (old_row ->> 'session_id', new_row ->> 'session_id'))
                or (table_name = 'comments'
                    and ? in (old_row ->> 'episode_id', new_row ->> 'episode_id', old_row ->> 'session_id', new_row ->> 'session_id'))
+               or ($TOLD_DISTRIBUTIONS and ? in (old_row ->> 'episode_id', new_row ->> 'episode_id'))
                or (table_name = 'accounts'
                    and old_row ->> 'person_id' is distinct from new_row ->> 'person_id'
                    and ? in (old_row ->> 'person_id', new_row ->> 'person_id'))
@@ -105,6 +120,7 @@ class AuditLog(
             order by id
             """.trimIndent(),
             toRow, id, id.toString(), id.toString(), id.toString(), id.toString(), id.toString(), id.toString(), id.toString(),
+            id.toString(),
         )
 
     fun recent(limit: Int): List<AuditRow> =
@@ -122,6 +138,7 @@ class AuditLog(
                                  'episode_koofr_folders', 'session_koofr_folders', 'episode_dropbox_folders',
                                  'session_dropbox_folders', 'comments', 'episode_media', 'transcripts')
                or (table_name = 'accounts' and old_row ->> 'person_id' is distinct from new_row ->> 'person_id')
+               or ($TOLD_DISTRIBUTIONS)
             order by id desc
             limit ?
             """.trimIndent(),

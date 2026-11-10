@@ -1,5 +1,6 @@
 // What on the home page needs the team's attention: episodes whose recording date passed while they're still to be
-// recorded, recordings coming up without what they need, and episodes long in production
+// recorded, recordings coming up without what they need, episodes long in production, and released episodes that
+// aren't on YouTube or Patreon a few days on
 
 import { candidates, daysFrom, type Episode, type EpisodeStatus, guests, statusName } from '@/episodes'
 
@@ -7,6 +8,8 @@ import { candidates, daysFrom, type Episode, type EpisodeStatus, guests, statusN
 export const SOON_DAYS = 14
 // How long after its recording an episode that isn't out yet is worth asking about
 export const LONG_IN_PRODUCTION_DAYS = 60
+// How long after it's released an episode should be on YouTube or Patreon
+export const DISTRIBUTED_DAYS = 3
 
 export interface Concern {
   episode: Episode
@@ -27,8 +30,23 @@ function hasDoc(episode: Episode) {
   return episode.documents.length > 0 || (episode.session?.documents.length ?? 0) > 0
 }
 
-/** What needs attention of [upcoming] (upcomingRecordings) and [inProduction], as of [today] */
-export function concerns(upcoming: Episode[], inProduction: Episode[], today = new Date()): Concern[] {
+// Where it went out, where the query asked for it (DISTRIBUTION_FIELDS): only the channels
+type Distributed = Episode & { distributions?: { channel: string }[] }
+
+/**
+ * Whether a released episode is on YouTube or Patreon: by its links, or what its distribution says. One in early access
+ * is, as it took a Patreon link to get there (EpisodesMCP).
+ */
+export function onYouTubeOrPatreon(episode: Distributed) {
+  return episode.status === 'EARLY_ACCESS' || !!episode.youtubeUrl || !!episode.patreonUrl ||
+    !!episode.distributions?.some((entry) => entry.channel === 'YOUTUBE' || entry.channel === 'PATREON')
+}
+
+/**
+ * What needs attention of [upcoming] (upcomingRecordings), [inProduction] and [released] (e.g. the latest releases), as
+ * of [today]
+ */
+export function concerns(upcoming: Episode[], inProduction: Episode[], today = new Date(), released: Distributed[] = []): Concern[] {
   const found: Concern[] = []
 
   for (const episode of upcoming) {
@@ -55,6 +73,14 @@ export function concerns(upcoming: Episode[], inProduction: Episode[], today = n
     }
   }
 
+  for (const episode of released) {
+    if (episode.status !== 'PUBLISHED' || !episode.airedDate || onYouTubeOrPatreon(episode)) continue
+    const days = -daysFrom(today, episode.airedDate)
+    if (days >= DISTRIBUTED_DAYS) {
+      found.push({ episode, reasons: [`Released ${days} days ago, not on YouTube or Patreon`], date: episode.airedDate, rank: 50_000 - days })
+    }
+  }
+
   return found.sort((a, b) => a.rank - b.rank)
 }
 
@@ -63,8 +89,9 @@ const TO_RECORD: EpisodeStatus[] = ['IDEA', 'PLANNED', 'SCHEDULED']
 const BEING_MADE: EpisodeStatus[] = ['RECORDED', 'IN_PRODUCTION', 'READY', 'EARLY_ACCESS']
 
 /** What needs attention of one [episode], e.g. on its page, by the same rules as the home page's */
-export function episodeConcerns(episode: Episode, today = new Date()): string[] {
+export function episodeConcerns(episode: Distributed, today = new Date()): string[] {
   const upcoming = TO_RECORD.includes(episode.status) ? [episode] : []
   const inProduction = BEING_MADE.includes(episode.status) ? [episode] : []
-  return concerns(upcoming, inProduction, today).flatMap((concern) => concern.reasons)
+  const released = episode.status === 'PUBLISHED' ? [episode] : []
+  return concerns(upcoming, inProduction, today, released).flatMap((concern) => concern.reasons)
 }

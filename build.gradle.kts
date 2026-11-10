@@ -99,6 +99,8 @@ dependencies {
     implementation("net.coobird:thumbnailator:0.4.21")
     implementation("com.twelvemonkeys.imageio:imageio-jpeg:3.15.3")
     implementation("com.twelvemonkeys.imageio:imageio-webp:3.15.3")
+    // Posts' OpenGraph tags, for their previews (DistributionPreview.kt)
+    implementation("org.jsoup:jsoup:1.21.2")
 
     // Koofr, as Ogrodje's bot account (Koofr.kt)
     implementation("com.github.koofr:java-koofr:3.8.10")

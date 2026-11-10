@@ -27,7 +27,9 @@ address, so that browser goes out through the pod's Tailscale container and low,
 API and the uploads go straight to Patreon. What takes long, like transcribing an episode, MetaOS does in durable
 workflows on Temporal, a server of its own in the cluster with its databases in the same Postgres and its UI on the
 tailnet only; MetaOS's pods are its workers, and hear episodes with Google's Speech-to-Text or Soniox, a few at a time,
-keeping each transcript in Postgres and the bucket. Everything runs on Ogrodje's Kubernetes cluster, behind Cloudflare.
+keeping each transcript in Postgres and the bucket; and fetch the previews of the posts that promote an episode, from
+the pages they're on, anywhere on the web but the cluster's own addresses, copying their pictures to the public bucket.
+Everything runs on Ogrodje's Kubernetes cluster, behind Cloudflare.
 New Relic, in its EU region, gets MetaOS's and patreon-gateway's requests, errors and logs from its Java agent in each,
 and the pages' errors and load times from its agent in the browser, and checks from outside that the pages, MetaOS and
 Keycloak answer. The cluster's Prometheus scrapes MetaOS, patreon-gateway, Keycloak and Temporal, and passes a few of

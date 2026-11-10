@@ -23,6 +23,7 @@ import PersonLine from '@/components/PersonLine.vue'
 import ShowBadge from '@/components/ShowBadge.vue'
 import SignInPrompt from '@/components/SignInPrompt.vue'
 import StatusLabel from '@/components/StatusLabel.vue'
+import { DISTRIBUTION_FIELDS } from '@/distribution'
 import {
   ARTWORK_FIELDS, artworkOf, DROPBOX_FIELDS, type DropboxPicture, EPISODE_FIELDS, type EpisodeDetails, episodePath,
   formatDate, HISTORY_FIELDS, KOOFR_FIELDS, type KoofrPhoto, links, listPicture, photosOf, PICTURE_FIELDS, relativeDate,
@@ -62,7 +63,7 @@ async function fetchEpisode(ref: string) {
     episode(ref: $ref) {
       ${EPISODE_FIELDS} titleB titleC summary machineSummary addedDate language recommendedBy { id name } ${KOOFR_FIELDS}
       ${DROPBOX_FIELDS} ${ARTWORK_FIELDS} ${PICTURE_FIELDS} ${HISTORY_FIELDS} ${COMMENT_FIELDS} ${MEDIA_FIELDS}
-      ${EPISODE_TRANSCRIPT_FIELDS} people { avatar { ${IMAGE_FIELDS} } }
+      ${EPISODE_TRANSCRIPT_FIELDS} ${DISTRIBUTION_FIELDS} people { avatar { ${IMAGE_FIELDS} } }
     }
   }`, { ref })).episode
 }

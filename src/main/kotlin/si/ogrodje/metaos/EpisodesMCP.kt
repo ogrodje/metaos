@@ -96,6 +96,7 @@ class EpisodesMCP(
     private val people: PeopleRepository,
     private val episodePeople: EpisodePeopleRepository,
     private val accounts: Accounts,
+    private val distributions: Distributions,
 ) {
 
     private fun findEpisode(ref: String) = requireNotNull(episodes.findByRef(ref)) { "Episode $ref not found" }
@@ -277,11 +278,12 @@ class EpisodesMCP(
         name = "set_episode_link",
         annotations = McpTool.McpAnnotations(
             title = "Set episode link",
-            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = true
         ),
         description = "Set or clear where an episode can be watched or listened to: YouTube, Spotify, Apple Podcasts or " +
             "Patreon. Patreon has four links, each set or cleared on its own: the full episode as video (PATREON) or " +
-            "audio only (PATREON_AUDIO), and its bonus as video (PATREON_BONUS) or audio only (PATREON_BONUS_AUDIO)"
+            "audio only (PATREON_AUDIO), and its bonus as video (PATREON_BONUS) or audio only (PATREON_BONUS_AUDIO). " +
+            "Each link is also in the episode's distribution (list_episode_distributions), with its page's preview"
     )
     fun setLink(
         @McpToolParam(description = EPISODE_REF) code: String,
@@ -293,7 +295,7 @@ class EpisodesMCP(
         @McpToolParam(description = "https URL of the episode on that platform; omit to clear", required = false) url: String?,
     ): EpisodeDto {
         val episode = findEpisode(code)
-        episode.setLink(platform, url)
+        distributions.setLink(episode, platform, url)
         return episode.toDto()
     }
 

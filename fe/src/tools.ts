@@ -2,7 +2,7 @@
 // something else changes here too (CLAUDE.md); UsageToolsTest checks the names, but not the descriptions.
 
 /** The tools' version, as MetaOS gives it to assistants, which `just mcp-tools` writes (McpToolsTest) */
-export const TOOLS_VERSION = '1.0.1'
+export const TOOLS_VERSION = '1.1.0'
 
 export interface Tool {
   name: string
@@ -36,9 +36,22 @@ export const TOOL_GROUPS: ToolGroup[] = [
       { name: 'set_episode_recommended_by', description: 'Set or clear who recommended an episode' },
       { name: 'update_episode', description: "Change an episode's code, title, alternative titles for A/B tests, summaries or dates" },
       { name: 'set_episode_status', description: 'Move an episode through its lifecycle, from idea to published, one step at a time' },
-      { name: 'set_episode_link', description: 'Set or clear its YouTube, Spotify or Apple Podcasts link, or one of its four on Patreon: the full episode or its bonus, as video or audio only' },
+      { name: 'set_episode_link', description: 'Set or clear its YouTube, Spotify or Apple Podcasts link, or one of its four on Patreon: the full episode or its bonus, as video or audio only; each is in its distribution too' },
       { name: 'delete_episode', description: 'Delete an episode; it can be restored' },
       { name: 'restore_episode', description: 'Bring back a deleted episode, with its people, links, session and show; under a new code if its own is taken' },
+    ],
+  },
+  {
+    id: 'distribution',
+    title: 'Distribution',
+    about: 'where an episode went out once it was released: its links, and posts that promote it',
+    tools: [
+      { name: 'list_episode_distributions', description: "Where an episode went out: its links, then its posts, each with its page's preview" },
+      { name: 'list_distributions', description: 'Where every episode went out, the latest first, e.g. this week, or on LinkedIn' },
+      { name: 'add_episode_distribution', description: 'Log a post that promotes an episode, by its URL, e.g. on Discord, LinkedIn or Reddit; MetaOS fetches its preview' },
+      { name: 'update_episode_distribution', description: "Change a post's URL, channel, note, title or when it went out" },
+      { name: 'remove_episode_distribution', description: "Take a post off an episode; one of its links is cleared on the episode too" },
+      { name: 'refresh_distribution_preview', description: "Fetch a post's preview again, e.g. after it changed" },
     ],
   },
   {
