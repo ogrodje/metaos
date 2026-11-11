@@ -79,8 +79,9 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   and where its server finds MetaOS (`NUXT_METAOS_URL`), so one build works in every environment.
 - The pages anyone may see (Home, Episodes, People, an episode's and a person's page, Usage) render on the server, as
   someone who isn't signed in sees them: the server asks the API without a token (`graphql.ts`), so every visitor gets
-  the same page, which Nitro and Cloudflare keep for a minute and serve stale for ten while it's rendered again
-  (`routeRules`); not in development, where Nitro's cache (`.nuxt/cache`) would outlive a restart of the dev server. A page's data comes in it (`useFirstLoad` in [`fe/src/ssr.ts`](fe/src/ssr.ts), over `useAsyncData`;
+  the same page, which Cloudflare keeps for a minute and serves stale for ten while it's rendered again
+  (`routeRules`'s `Cache-Control`; not in development). Not Nitro too: its swr serves what it kept however old, and
+  renders it again behind it, so under Cloudflare a page was the one rendered at Cloudflare's previous ask. A page's data comes in it (`useFirstLoad` in [`fe/src/ssr.ts`](fe/src/ssr.ts), over `useAsyncData`;
   not in a `_payload.json` of its own, which a cache could keep apart from its page), and the browser hydrates it
   rather than loading it again. Going to a page in the browser, it loads there, as the signed-in user.
 - keycloak-js starts once the page is hydrated ([`fe/src/plugins/auth.client.ts`](fe/src/plugins/auth.client.ts)), and
@@ -872,7 +873,7 @@ some users or a share of them, without a deploy. The flags are [Unleash]'s, its 
   compose's `default:development.metaos-dev-frontend`): so the browser never gets a token, and Unleash isn't reachable
   from the internet. The server renders a page with the flags as they are for someone not signed in, which the page
   comes with and the browser starts from, so it hydrates as rendered; then it asks for whoever's signed in (`userId`,
-  and a context field `team`, `true` or `false`) every 30 s. A page that's kept (Nitro, Cloudflare) has the flags it
+  and a context field `team`, `true` or `false`) every 30 s. A page that's kept (Cloudflare) has the flags it
   was rendered with until it's rendered again, a minute or so.
 - When Unleash is down or off (no token), MetaOS works as ever: each flag is what Unleash last said (the app's SDK
   keeps it in a file, for the next start too; the browser in memory), else its default, the app's `default` and the
