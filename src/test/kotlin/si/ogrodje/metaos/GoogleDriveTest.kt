@@ -37,7 +37,7 @@ class GoogleDriveTest {
         val root = assertNotNull(drive.file(drive.rootFolderId))
         assertEquals(FOLDER_TYPE, root.mimeType)
 
-        val markdown = drive.markdown(firstDoc(drive).id)
+        val markdown = drive.markdown(firstDoc(drive).id, 0, MAX_READ).decodeToString()
         assertTrue(markdown.isNotBlank())
         // What UTF-8 read as ISO-8859-1 looks like
         assertTrue("Ä" !in markdown && "Å" !in markdown, "Markdown decoded as UTF-8")

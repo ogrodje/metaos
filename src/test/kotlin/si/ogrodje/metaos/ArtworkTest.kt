@@ -162,8 +162,8 @@ class ArtworkTest @Autowired constructor(
         set("S09E82", EpisodeImage.THUMBNAIL_B, upload("S09E82", thumbnailB), "ogrodje-dropbox-thumb2.png")
             .andExpect(jsonPath("$.data.setEpisodeImage.dropbox.path").value("/Season 9/S09E82/ogrodje-dropbox-thumb2 (1).png"))
             .andExpect(jsonPath("$.data.setEpisodeImage.dropbox.copied").value(true))
-        assertContentEquals("an older one".toByteArray(), dropbox.read("2001", "/Season 9/S09E82/ogrodje-dropbox-thumb2.png", 100))
-        assertContentEquals(thumbnailB, dropbox.read("2001", "/Season 9/S09E82/ogrodje-dropbox-thumb2 (1).png", MAX_IMAGE_BYTES))
+        assertContentEquals("an older one".toByteArray(), dropbox.read("2001", "/Season 9/S09E82/ogrodje-dropbox-thumb2.png", 0, 100))
+        assertContentEquals(thumbnailB, dropbox.read("2001", "/Season 9/S09E82/ogrodje-dropbox-thumb2 (1).png", 0, MAX_IMAGE_BYTES))
 
         // Wherever the folder is now
         dropbox.move("2001", "/Season 9/S09E82", "2001", "/Season 9/S09E82 - dropbox")
