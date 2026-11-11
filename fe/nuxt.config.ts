@@ -8,8 +8,11 @@ import { defineNuxtConfig } from 'nuxt/config'
 const DEV = process.env.NODE_ENV === 'development'
 
 // Pages anyone may see: rendered as someone who isn't signed in sees them, so the same for everyone, and kept for a
-// minute by Nitro and Cloudflare, then served while they're rendered again for up to ten
-const PUBLIC = DEV ? {} : { cache: { swr: true, maxAge: 60, staleMaxAge: 600 } }
+// minute by Cloudflare, then served while it has them rendered again for up to ten. Only by Cloudflare: Nitro's swr
+// serves what it kept however old it is (staleMaxAge only goes in the header) and renders it again behind it, so with
+// it under Cloudflare, which asks once a minute or so, a page was the one rendered at the previous ask, minutes before,
+// and Cloudflare kept that again (its 304 said nothing newer)
+const PUBLIC = DEV ? {} : { headers: { 'cache-control': 'public, s-maxage=60, stale-while-revalidate=600' } }
 
 // The team's pages: about who's asking, so rendered in the browser only, and never kept or indexed
 const TEAM = { ssr: false, headers: { 'cache-control': 'no-store', 'x-robots-tag': 'noindex' } }
@@ -76,8 +79,8 @@ export default defineNuxtConfig({
   // The data a page was rendered with stays in it, rather than in a _payload.json of its own, which Nitro and Cloudflare
   // would keep apart from it: the browser could get a page and data rendered at different times, which don't hydrate
   experimental: { payloadExtraction: false },
-  // Nitro keeps the pages it renders in memory, by their whole URL, query included, and with swr never lets one go: any
-  // made-up ?x= would be one more page held for good, until the pod runs out of memory. At most this many, the least
+  // Nitro keeps what it caches (the sitemap) in memory, by its whole URL, query included, and with swr never lets one
+  // go: any made-up ?x= would be one more held for good, until the pod runs out of memory. At most this many, the least
   // used going first (unstorage's lru-cache driver, whose lru-cache comes with unstorage)
   nitro: DEV ? {} : { storage: { cache: { driver: 'lru-cache', max: 300 } } },
   // The dev server answers by the tailnet's names too (e.g. ziv.folk-decibel.ts.net:5173), not only localhost: Vite

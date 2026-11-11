@@ -239,8 +239,8 @@ server and hydrates them into the same single-page app (CLAUDE.md, Front-end).
   token, so a page is the same for every visitor, and caching it can't leak what's the team's. The team's part loads
   in the browser, after sign-in, with the token, as before. The API's `episode` and `person` queries answer anyone for
   a released episode and the people on it.
-- **Caching.** Pages anyone may see say `Cache-Control: s-maxage=60, stale-while-revalidate=600`; Nitro keeps them in
-  each pod's memory, and Cloudflare too once a Cache Rule allows HTML (`k8s/README.md`, one-time setup). A page that's
+- **Caching.** Pages anyone may see say `Cache-Control: public, s-maxage=60, stale-while-revalidate=600`, which
+  Cloudflare keeps them by, once a Cache Rule allows HTML; not Nitro too, whose swr served pages minutes old under it (`k8s/README.md`, one-time setup). A page that's
   over 30 s old loads its data again once it's shown. The team's pages (`/ideas`, `/sessions`, `/search`) say
   `no-store` and `noindex`, and render in the browser only.
 - **Rollout.** One deploy brings both: the app stops serving pages as the front-end starts. For the seconds between
