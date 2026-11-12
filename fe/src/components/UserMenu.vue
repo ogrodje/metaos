@@ -221,7 +221,7 @@ watch(() => route.fullPath, () => { open.value = false })
   border: 0;
   border-radius: 50%;
   background: var(--ink);
-  color: #FFFFFF;
+  color: var(--on-ink);
   font-size: var(--text-micro);
   line-height: 32px;
   font-weight: 600;
@@ -229,7 +229,7 @@ watch(() => route.fullPath, () => { open.value = false })
   cursor: pointer;
 
   &[aria-expanded='true'] {
-    box-shadow: 0 0 0 3px #FFFFFF, 0 0 0 4.5px var(--accent);
+    box-shadow: 0 0 0 3px var(--page), 0 0 0 4.5px var(--accent);
   }
 }
 
@@ -240,7 +240,7 @@ watch(() => route.fullPath, () => { open.value = false })
   right: 0;
   z-index: 20;
   max-width: calc(100vw - 32px);
-  background: #FFFFFF;
+  background: var(--paper);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-menu);
 }
@@ -399,7 +399,7 @@ watch(() => route.fullPath, () => { open.value = false })
   line-height: 18px;
   font-weight: 500;
   color: var(--ink);
-  background: #FFFFFF;
+  background: var(--paper);
   border: 1px solid var(--hairline);
   border-radius: var(--radius-sm);
   cursor: pointer;

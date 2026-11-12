@@ -193,7 +193,7 @@ const folder = computed(() => props.artwork[0]?.url)
 
     &[aria-pressed="true"] {
       color: var(--ink);
-      background: #FFFFFF;
+      background: var(--paper);
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
     }
 
@@ -266,7 +266,7 @@ const folder = computed(() => props.artwork[0]?.url)
   font-size: var(--text-micro);
   line-height: 18px;
   font-weight: 500;
-  color: var(--ink);
+  color: #141414;
   background: rgba(255, 255, 255, 0.94);
   border-radius: var(--radius-xs);
 }

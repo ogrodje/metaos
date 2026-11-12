@@ -373,7 +373,7 @@ const pastTitle = useScrolledPast(titleBlock)
 
     &[aria-pressed="true"] {
       font-weight: 600;
-      color: var(--ink);
+      color: #141414;
       background: #FFFFFF;
     }
 

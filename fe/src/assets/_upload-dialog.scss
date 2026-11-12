@@ -23,7 +23,7 @@ kbd {
   padding: 0;
   border: 0;
   border-radius: var(--radius-lg);
-  background: #FFFFFF;
+  background: var(--paper);
   color: var(--ink);
   box-shadow: var(--shadow-dialog);
   overflow: hidden;
@@ -355,7 +355,7 @@ select {
   font: inherit;
   font-size: var(--text-caption);
   color: var(--ink);
-  background: #FFFFFF;
+  background: var(--paper);
   border: 1px solid var(--hairline);
   border-radius: var(--radius-sm);
 }
@@ -441,7 +441,7 @@ select {
   align-items: start;
   gap: 10px;
   padding: 12px;
-  background: #FFFFFF;
+  background: var(--paper);
   border: 1px solid var(--hairline);
   border-radius: var(--radius);
   cursor: pointer;

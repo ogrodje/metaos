@@ -337,7 +337,7 @@ const hasLinks = computed(() => (person.value ? socialLinks(person.value).length
   }
 
   &[aria-pressed="true"] {
-    color: #FFFFFF;
+    color: var(--on-ink);
     background: var(--ink);
   }
 }

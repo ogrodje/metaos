@@ -508,7 +508,7 @@ defineExpose({ open })
   font: inherit;
   font-size: var(--text-caption);
   color: var(--ink);
-  background: #FFFFFF;
+  background: var(--paper);
   border: 1px solid var(--hairline);
   border-radius: var(--radius-sm);
 }

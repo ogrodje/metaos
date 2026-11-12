@@ -27,7 +27,7 @@ defineEmits<{ clear: [] }>()
   padding: 3px 10px;
   font-size: var(--text-small);
   line-height: 20px;
-  color: #FFFFFF;
+  color: var(--on-ink);
   white-space: nowrap;
   background: var(--ink);
   border: 1px solid var(--ink);
@@ -35,16 +35,16 @@ defineEmits<{ clear: [] }>()
   cursor: pointer;
 
   &:hover .icon {
-    color: #FFFFFF;
+    color: var(--on-ink);
   }
 }
 
 .label {
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--on-ink-quiet);
 }
 
 .icon {
   font-size: var(--text-micro);
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--on-ink-quiet);
 }
 </style>

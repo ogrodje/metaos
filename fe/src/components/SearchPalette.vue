@@ -333,7 +333,7 @@ kbd {
   padding: 0;
   border: 0;
   border-radius: var(--radius-lg);
-  background: #FFFFFF;
+  background: var(--paper);
   color: var(--ink);
   box-shadow: var(--shadow-dialog);
   overflow: hidden;

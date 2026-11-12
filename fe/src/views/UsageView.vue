@@ -624,7 +624,7 @@ section, .step {
     &[aria-selected='true'] {
       font-weight: 500;
       color: var(--ink);
-      background: #FFFFFF;
+      background: var(--paper);
       box-shadow: 0 0 0 1px var(--hairline), 0 1px 2px rgba(0, 0, 0, .06);
     }
 
@@ -682,7 +682,7 @@ section, .step {
   font-family: var(--font-mono);
   font-size: var(--text-caption);
   color: var(--secondary);
-  background: #FFFFFF;
+  background: var(--paper);
   border: 1px solid var(--hairline-strong);
   border-radius: 50%;
 }
@@ -860,7 +860,7 @@ section, .step {
     padding: 0 12px 0 38px;
     font: inherit;
     color: var(--ink);
-    background: #FFFFFF;
+    background: var(--paper);
     border: 1px solid var(--hairline);
     border-radius: var(--radius);
 

@@ -183,7 +183,7 @@ function reload() {
   padding: 10px 14px;
   border-radius: var(--radius-sm);
   background: var(--ink);
-  color: #FFFFFF;
+  color: var(--on-ink);
   font-size: var(--text-small);
   line-height: 20px;
   font-weight: 500;
@@ -191,7 +191,7 @@ function reload() {
 
   &:focus-visible {
     transform: none;
-    color: #FFFFFF;
+    color: var(--on-ink);
   }
 }
 

@@ -157,7 +157,7 @@ onBeforeUnmount(release)
     height: var(--icon-link);
     font-size: var(--text-small);
     color: var(--ink);
-    background: #FFFFFF;
+    background: var(--paper);
     border: 1px solid var(--hairline);
     border-radius: var(--radius);
     cursor: pointer;

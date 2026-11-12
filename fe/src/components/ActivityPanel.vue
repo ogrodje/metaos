@@ -262,7 +262,7 @@ function onDeleted(id: string) {
   font: inherit;
   color: var(--muted);
   text-align: left;
-  background: #FFFFFF;
+  background: var(--paper);
   border: 1px solid var(--hairline);
   border-radius: var(--radius-sm);
   cursor: text;

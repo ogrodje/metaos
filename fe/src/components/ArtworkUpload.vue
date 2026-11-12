@@ -532,7 +532,7 @@ defineExpose({ open })
 
   &.empty {
     outline: 0;
-    background: #FFFFFF;
+    background: var(--paper);
     border: 1.5px dashed var(--faint);
   }
 
@@ -549,7 +549,7 @@ defineExpose({ open })
     top: 6px;
     padding: 0 5px;
     font: 500 var(--text-micro)/16px var(--font-mono);
-    color: var(--ink);
+    color: #141414;
     background: rgba(255, 255, 255, .92);
     border-radius: var(--radius-xs);
   }

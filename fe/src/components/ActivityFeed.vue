@@ -255,7 +255,7 @@ h2:focus {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: #FFFFFF;
+  background: var(--paper);
   border: 1px solid var(--hairline-strong);
 
   // Where it all began

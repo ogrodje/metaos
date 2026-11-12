@@ -3,30 +3,37 @@
 // writing their own; DESIGN.md says what each is for.
 
 :root {
-  // Greys, from text to the page: text that reads (ink, secondary, muted: 4.5:1 and up on white), then lines and fills
-  --ink: #141414;
-  --ink-hover: #2B2B2B;
-  --secondary: #525252;
-  --muted: #6B6B6B;
+  // Blood red, the page itself (OG-54); what stands on it is a deeper red, paper: cards, panels, dialogs, menus, fields
+  --page: #8A0303;
+  --paper: #7A0303;
+  // Text, from what reads most to least (ink, secondary, muted: 4.5:1 and up on the page, paper, surface and hover),
+  // then lines and fills, from the strongest to the faintest
+  --ink: #FFFFFF;
+  --ink-hover: #F6E4E4;
+  --secondary: #F6D5D5;
+  --muted: #EEB8B8;
+  // What's written on ink, e.g. a filled button's words, and quieter there (a chip's count)
+  --on-ink: #8A0303;
+  --on-ink-quiet: #B04848;
   // A control's edge while it's pointed at or open
-  --hairline-strong: #A3A3A3;
+  --hairline-strong: #D88A8A;
   // What mustn't read as text: a link's underline, a letter with nothing under it, an upload's dashed edge
-  --faint: #C4C4C4;
-  --hairline: #E6E6E6;
-  --rule: #EEEEEE;
-  --hover: #F5F5F5;
+  --faint: #BE5A5A;
+  --hairline: #A83030;
+  --rule: #9C2020;
+  --hover: #A01414;
   // A quieter panel: a comment's header, code, a place where something can go
-  --surface: #FAFAFA;
-  // The logo's pink, for marks: 3.7:1 on white is too little for text, for which there's --accent-text (5.7:1)
-  --accent: #EC4870;
-  --accent-text: #C02A55;
-  --accent-hover: #A3244A;
+  --surface: #6E0202;
+  // The logo's pink, lightened for the red: for marks (4.7:1 on the page), and for text and the danger button
+  --accent: #FF8FAB;
+  --accent-text: #FFC7D4;
+  --accent-hover: #FFE3EA;
   // Behind the words a search found, and what's chosen in a list
-  --mark: #FCE1E9;
-  --accent-wash: #FDF0F3;
+  --mark: #B0303F;
+  --accent-wash: #9A1020;
   // What went well or needs a look, for words only, as the accent says what went wrong
-  --success: #1F7A4D;
-  --warning: #8A5A00;
+  --success: #9BE8BA;
+  --warning: #FFD98A;
 
   --font-sans: 'Inter Variable', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -78,7 +85,7 @@
 
 body {
   min-height: 100vh;
-  background: #FFFFFF;
+  background: var(--page);
   color: var(--ink);
 
   font-family: var(--font-sans);
@@ -121,7 +128,7 @@ mark {
   line-height: 20px;
   font-weight: 500;
   color: var(--ink);
-  background: #FFFFFF;
+  background: var(--paper);
   border: 1px solid var(--hairline);
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -148,12 +155,12 @@ mark {
 
   // The one thing a form or dialog is for, filled, e.g. Comment, Save, Upload
   &.primary {
-    color: #FFFFFF;
+    color: var(--on-ink);
     background: var(--ink);
     border-color: var(--ink);
 
     &:hover {
-      color: #FFFFFF;
+      color: var(--on-ink);
       background: var(--ink-hover);
       border-color: var(--ink-hover);
     }
@@ -161,12 +168,12 @@ mark {
 
   // What can't be undone, once it's been asked, e.g. Remove
   &.danger {
-    color: #FFFFFF;
+    color: var(--on-ink);
     background: var(--accent-text);
     border-color: var(--accent-text);
 
     &:hover {
-      color: #FFFFFF;
+      color: var(--on-ink);
       background: var(--accent-hover);
       border-color: var(--accent-hover);
     }
@@ -191,7 +198,7 @@ mark {
   font: inherit;
   font-size: var(--text-body);
   color: var(--ink);
-  background: #FFFFFF;
+  background: var(--paper);
   border: 1px solid var(--hairline);
   border-radius: var(--radius-sm);
 

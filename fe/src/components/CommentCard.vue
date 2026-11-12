@@ -177,7 +177,7 @@ async function remove() {
 
 .card {
   overflow: hidden;
-  background: #FFFFFF;
+  background: var(--paper);
   border: 1px solid var(--hairline);
   border-radius: var(--radius);
 }
@@ -207,7 +207,7 @@ async function remove() {
   font-size: var(--text-micro);
   line-height: 18px;
   color: var(--secondary);
-  background: #FFFFFF;
+  background: var(--paper);
   border: 1px solid var(--hairline);
   border-radius: var(--radius);
 }

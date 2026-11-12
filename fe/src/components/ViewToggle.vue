@@ -34,7 +34,7 @@ const view = defineModel<ListView>({ required: true })
     height: var(--icon-link);
     font-size: var(--text-small);
     color: var(--muted);
-    background: #FFFFFF;
+    background: var(--paper);
     border: 0;
     cursor: pointer;
 

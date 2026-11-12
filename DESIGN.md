@@ -2,24 +2,27 @@
 name: Ogrodje MetaOS
 description: The team's workspace for making Ogrodje's podcast, and a window into it for everyone else
 colors:
-  ink: "#141414"
-  ink-hover: "#2B2B2B"
-  secondary: "#525252"
-  muted: "#6B6B6B"
-  hairline-strong: "#A3A3A3"
-  faint: "#C4C4C4"
-  hairline: "#E6E6E6"
-  rule: "#EEEEEE"
-  hover: "#F5F5F5"
-  surface: "#FAFAFA"
-  paper: "#FFFFFF"
-  accent: "#EC4870"
-  accent-text: "#C02A55"
-  accent-hover: "#A3244A"
-  mark: "#FCE1E9"
-  accent-wash: "#FDF0F3"
-  success: "#1F7A4D"
-  warning: "#8A5A00"
+  ink: "#FFFFFF"
+  ink-hover: "#F6E4E4"
+  secondary: "#F6D5D5"
+  muted: "#EEB8B8"
+  hairline-strong: "#D88A8A"
+  faint: "#BE5A5A"
+  hairline: "#A83030"
+  rule: "#9C2020"
+  hover: "#A01414"
+  surface: "#6E0202"
+  page: "#8A0303"
+  paper: "#7A0303"
+  on-ink: "#8A0303"
+  on-ink-quiet: "#B04848"
+  accent: "#FF8FAB"
+  accent-text: "#FFC7D4"
+  accent-hover: "#FFE3EA"
+  mark: "#B0303F"
+  accent-wash: "#9A1020"
+  success: "#9BE8BA"
+  warning: "#FFD98A"
 typography:
   page:
     fontFamily: "Inter Variable, Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif"
@@ -164,38 +167,46 @@ line.
 
 ## Colors
 
-A neutral ramp from near-black ink to white, and the logo's pink in two strengths, for marks and for text.
+Blood red, the page itself (OG-54), light text on it, and the logo's pink lightened for the red, in two strengths,
+for marks and for text. Every text colour keeps 4.5:1 or more on the page, on paper, on surface and on hover.
+
+### Ground
+- **Blood Red** (#8A0303): the page itself (`--page`), and what sticks to it, e.g. the People page's row of letters.
+- **Paper** (#7A0303): what stands on it: controls, cards, panels, menus and dialogs (`--paper`).
+- **Surface** (#6E0202): a quieter panel inside a box: a comment's header, code, a place where something can go.
+- **Hover** (#A01414): what's under the pointer, and the fill of what's unavailable.
 
 ### Primary
-- **Logo Pink** (#EC4870): marks, not text (3.7:1 on white): the current tab's underline, the dot of an episode being
-  made, a stage that needs work.
-- **Deep Pink** (#C02A55): the accent as text (5.7:1): links that act, Show all, errors and what needs attention, focus
-  rings, the danger button. Hover goes deeper still (#A3244A).
-- **Search Blush** (#FCE1E9): behind the words a search found, and text selection.
-- **Chosen Wash** (#FDF0F3): behind what's chosen in a list, e.g. the palette's highlighted result.
+- **Logo Pink** (#FF8FAB): marks, not text (4.7:1 on the page): the current tab's underline, the dot of an episode
+  being made, a stage that needs work.
+- **Light Pink** (#FFC7D4): the accent as text (6.9:1): links that act, Show all, errors and what needs attention,
+  focus rings, the danger button. Hover goes lighter still (#FFE3EA).
+- **Search Mark** (#B0303F): behind the words a search found, and text selection.
+- **Chosen Wash** (#9A1020): behind what's chosen in a list, e.g. the palette's highlighted result.
 
-### Neutral
-- **Ink** (#141414): text and the filled button; **Ink Hover** (#2B2B2B) when pointed at.
-- **Secondary** (#525252): text that supports, e.g. a tab that isn't current.
-- **Muted** (#6B6B6B): counts, meta lines, labels, placeholders; the lightest grey text may be (5.3:1).
-- **Strong Hairline** (#A3A3A3): a control's edge while it's pointed at or open.
-- **Faint** (#C4C4C4): what mustn't read as text: a link's underline, a letter with nothing under it, an upload's dashed
-  edge.
-- **Hairline** (#E6E6E6): the edges of controls and boxes, the header's line.
-- **Rule** (#EEEEEE): the line between rows.
-- **Hover** (#F5F5F5): what's under the pointer, and the fill of what's unavailable.
-- **Surface** (#FAFAFA): a quieter panel inside a box: a comment's header, code, a place where something can go.
+### Text and lines
+- **Ink** (#FFFFFF): text and the filled button (10:1); **Ink Hover** (#F6E4E4) when pointed at.
+- **On Ink** (#8A0303): what's written on ink, e.g. a filled button's words; **On Ink Quiet** (#B04848) a chip's count
+  there.
+- **Secondary** (#F6D5D5): text that supports, e.g. a tab that isn't current.
+- **Muted** (#EEB8B8): counts, meta lines, labels, placeholders; the faintest text may be (5.8:1, 4.7:1 on hover).
+- **Strong Hairline** (#D88A8A): a control's edge while it's pointed at or open.
+- **Faint** (#BE5A5A): what mustn't read as text: a link's underline, a letter with nothing under it, an upload's
+  dashed edge.
+- **Hairline** (#A83030): the edges of controls and boxes, the header's line.
+- **Rule** (#9C2020): the line between rows.
 
 ### Status
-- **Success** (#1F7A4D) and **Warning** (#8A5A00), for words only: an upload that went through, one that looks wrong.
-  What went wrong is Deep Pink.
+- **Success** (#9BE8BA) and **Warning** (#FFD98A), for words only: an upload that went through, one that looks wrong.
+  What went wrong is Light Pink.
 
 ### Named Rules
-**The Thumbnails Carry the Colour Rule.** The interface is grey and pink; Ogrodje's branding, faces and colours come in
-through episodes' pictures, never through the chrome around them.
+**The Thumbnails Carry the Colour Rule.** Ogrodje's branding, faces and colours come in through episodes' pictures,
+never through the chrome around them, which is the page's red and its light text. Labels over pictures stay dark on
+white, whatever the page.
 
 **The Pink Means Look Rule.** Pink marks what needs attention, what's chosen or what acts. Anything else pink, a
-decoration, a heading, a background, dilutes it.
+decoration, a heading, a background, dilutes it; the page's red is the ground, not a mark.
 
 ## Typography
 
@@ -324,7 +335,7 @@ transcript, pictures, and video and audio folded to a line each between Hairline
 - **Do** say what something is under its name (`.title .meta`: S05E07 · its show · Published), not above it.
 - **Do** give every list a count, a filtered count, a loading state (`LoadingRows`), an error with Try again
   (`LoadError`) and an empty state.
-- **Do** keep text at 4.5:1 or more: Muted (#6B6B6B) is the lightest grey for words, placeholders too.
+- **Do** keep text at 4.5:1 or more: Muted (#EEB8B8) is the lightest grey for words, placeholders too.
 
 ### Don't:
 - **Don't** bring Ogrodje's branding (black, pink braces, faces) into the interface; it's in the pictures.

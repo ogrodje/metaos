@@ -37,7 +37,7 @@ const model = defineModel<T>({ required: true })
   line-height: 20px;
   color: var(--secondary);
   white-space: nowrap;
-  background: #FFFFFF;
+  background: var(--paper);
   border: 1px solid var(--hairline);
   border-radius: 99px;
   cursor: pointer;
@@ -47,12 +47,12 @@ const model = defineModel<T>({ required: true })
   }
 
   &[aria-pressed="true"] {
-    color: #FFFFFF;
+    color: var(--on-ink);
     background: var(--ink);
     border-color: var(--ink);
 
     .count {
-      color: rgba(255, 255, 255, 0.7);
+      color: var(--on-ink-quiet);
     }
   }
 }

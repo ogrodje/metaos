@@ -142,7 +142,7 @@ onMounted(() => {
 
 .box {
   overflow: hidden;
-  background: #FFFFFF;
+  background: var(--paper);
   border: 1px solid var(--hairline);
   border-radius: var(--radius);
 
@@ -179,7 +179,7 @@ onMounted(() => {
 
     &[aria-selected='true'] {
       color: var(--ink);
-      background: #FFFFFF;
+      background: var(--paper);
       border-color: var(--hairline);
     }
   }
@@ -197,7 +197,7 @@ textarea {
   font-size: var(--text-body);
   line-height: 22px;
   color: var(--ink);
-  background: #FFFFFF;
+  background: var(--paper);
   border: 0;
   outline: 0;
   resize: vertical;

@@ -129,7 +129,7 @@ const unnamed = computed(() => transcript.value?.speakers.some((speaker) => !spe
 
     &[aria-pressed="true"] {
       color: var(--ink);
-      background: #FFFFFF;
+      background: var(--paper);
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
     }
   }
