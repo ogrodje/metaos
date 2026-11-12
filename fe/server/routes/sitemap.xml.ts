@@ -11,7 +11,7 @@ interface Listed {
   people: { id: string }[]
 }
 
-const LISTS = ['/', '/episodes', '/people', '/dogodki', '/usage']
+const LISTS = ['/', '/episodes', '/people', '/dogodki', '/usage', '/zasebnost']
 
 // Addresses are ours, but an & would still break the XML
 function escape(text: string) {
