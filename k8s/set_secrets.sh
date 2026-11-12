@@ -3,7 +3,8 @@
 # shared CNPG cluster, the secrets the Deployments read and the registry pull secret. Idempotent - re-running it with
 # new passwords rotates them (then `kubectl -n metaos-prod rollout restart deployment` to pick them up).
 #
-# From the environment (.envrc):
+# From the environment: secretspec.toml's secrets, from 1Password, which the devenv shell has (or run it as
+# `secretspec run -P default -- k8s/set_secrets.sh`). A new or rotated one: `secretspec set NAME`, then run this again.
 #   PROD_METAOS_DB_PASSWORD       the app's Postgres password
 #   PROD_KEYCLOAK_DB_PASSWORD     Keycloak's Postgres password
 #   PROD_KEYCLOAK_ADMIN_PASSWORD  Keycloak's bootstrap admin ("admin")

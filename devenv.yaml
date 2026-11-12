@@ -7,6 +7,11 @@ inputs:
 
 allowUnfree: true
 
+# secretspec.toml's secrets are loaded by devenv.nix's enterShell, at runtime, not by this integration, which would hand
+# them to Nix's evaluation (devenv.nix says why)
+secretspec:
+  enable: false
+
 # If you're willing to use a package that's vulnerable
 # permittedInsecurePackages:
 #  - "openssl-1.1.1w"

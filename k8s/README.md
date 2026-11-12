@@ -67,8 +67,9 @@ just gateway-logs  # follow patreon-gateway
    ([infra/cloudflare](../infra/cloudflare/dns.tf)). Proxied, because Cloudflare holds the certificate - the cluster
    has no cert-manager.
 
-2. **Database, secrets, pull secret.** Put the passwords into `.envrc` (`openssl rand -hex 24` for each) and run the
-   script; it's idempotent, and re-running it with new passwords rotates them:
+2. **Database, secrets, pull secret.** Put the passwords into 1Password with `secretspec set NAME` (`openssl rand -hex
+   24` for each; [`secretspec.toml`](../secretspec.toml) lists them) and run the script from the devenv shell, which
+   has them; it's idempotent, and re-running it with new passwords rotates them:
 
    ```bash
    export PROD_METAOS_DB_PASSWORD=...
