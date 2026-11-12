@@ -1,8 +1,8 @@
 import { defineNuxtPlugin, onNuxtReady, useState } from '#imports'
 import { resync } from '@/changes'
 
-// How old a page from the server may be before it loads its data again once it's shown: Nitro and Cloudflare keep the
-// pages anyone may see for a minute, and serve them for longer while they're rendered again (nuxt.config.ts)
+// How old a page from the server may be before it loads its data again once it's shown: Cloudflare keeps the pages
+// anyone may see for a minute, and serves them for longer while they're rendered again (nuxt.config.ts)
 const STALE_AFTER = 30_000
 
 export default defineNuxtPlugin((nuxtApp) => {

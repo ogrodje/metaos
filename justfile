@@ -62,6 +62,7 @@ deploy:
     kubectl rollout status deployment/metaos -n {{ns}} --timeout=5m
     kubectl rollout status deployment/metaos-web -n {{ns}} --timeout=5m
     kubectl rollout status deployment/patreon-gateway -n {{ns}} --timeout=5m
+    kubectl rollout status deployment/unleash -n {{ns}} --timeout=5m
 
 # What the cluster would apply, without applying it.
 manifests:

@@ -29,10 +29,13 @@ workflows on Temporal, a server of its own in the cluster with its databases in 
 tailnet only; MetaOS's pods are its workers, and hear episodes with Google's Speech-to-Text or Soniox, a few at a time,
 keeping each transcript in Postgres and the bucket; and fetch the previews of the posts that promote an episode, from
 the pages they're on, anywhere on the web but the cluster's own addresses, copying their pictures to the public bucket.
-Everything runs on Ogrodje's Kubernetes cluster, behind Cloudflare.
+Changes can ship turned off, behind feature flags in Unleash, a
+server of its own beside them with its database in the same Postgres and its UI on the tailnet only: MetaOS reads them
+with Unleash's SDK, and the front-end's server for the browser, which never gets a token; while Unleash is down, each
+flag is as it was last, else its default. Everything runs on Ogrodje's Kubernetes cluster, behind Cloudflare.
 New Relic, in its EU region, gets MetaOS's and patreon-gateway's requests, errors and logs from its Java agent in each,
 and the pages' errors and load times from its agent in the browser, and checks from outside that the pages, MetaOS and
-Keycloak answer. The cluster's Prometheus scrapes MetaOS, patreon-gateway, Keycloak and Temporal, and passes a few of
+Keycloak answer. The cluster's Prometheus scrapes MetaOS, patreon-gateway, Keycloak, Temporal and Unleash, and passes a few of
 their metrics on to New Relic: MetaOS's outside connections, Keycloak's sign-ins, their pods' memory, restarts and
 readiness, and the node's memory and disk.
 

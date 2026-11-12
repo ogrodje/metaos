@@ -28,6 +28,8 @@ data:
   NEW_RELIC_LABELS: "environment:production"
   # Temporal's frontend (deployment-temporal.yaml): MetaOS's pods are its workers, and start its workflows (Workflows.kt)
   TEMPORAL_ADDRESS: "temporal:7233"
+  # Unleash's API (deployment-unleash.yaml), which MetaOS reads its feature flags from (Flags.kt); its token is unleash-secret's
+  UNLEASH_URL: "http://unleash:4242/api"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -107,6 +109,9 @@ spec:
               value: http://patreon-gateway
             - name: PATREON_GATEWAY_TOKEN
               valueFrom: { secretKeyRef: { name: patreon-gateway-secret, key: gateway_token, optional: true } }
+            # Feature flags (Flags.kt): their defaults without it
+            - name: UNLEASH_API_TOKEN
+              valueFrom: { secretKeyRef: { name: unleash-secret, key: backend_token, optional: true } }
             # New Relic's Java agent doesn't start without it (docker/Dockerfile)
             - name: NEW_RELIC_LICENSE_KEY
               valueFrom: { secretKeyRef: { name: metaos-secret, key: new_relic_license_key, optional: true } }

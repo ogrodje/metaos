@@ -5,6 +5,7 @@ resources:
 - deployment-web.yaml
 - deployment-patreon-gateway.yaml
 - deployment-temporal.yaml
+- deployment-unleash.yaml
 
 # Public URLs, read by the Deployments: Keycloak stamps them into tokens and the app checks tokens against them, so
 # they have to agree; the front-end tells the browser and search engines about them. The name gets a content hash, so

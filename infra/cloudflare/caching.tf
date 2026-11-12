@@ -29,7 +29,7 @@ resource "cloudflare_ruleset" "cache" {
     },
     {
       # The pages, which Cloudflare doesn't cache without a rule, as they're HTML: as their Cache-Control says, and
-      # nothing without one. The pages anyone may see say s-maxage=60, stale-while-revalidate=600, so each is
+      # nothing without one. The pages anyone may see say public, s-maxage=60, stale-while-revalidate=600, so each is
       # rendered once a minute, not once a visit (routeRules, fe/nuxt.config.ts); the team's pages say no-store.
       ref         = "metaos-pages"
       description = "metaos: pages"

@@ -52,6 +52,12 @@ spec:
               valueFrom: { configMapKeyRef: { name: public-urls, key: METAOS_MCP_URL } }
             - name: NUXT_PUBLIC_SITE_URL
               valueFrom: { configMapKeyRef: { name: public-urls, key: METAOS_UI_URL } }
+            # Unleash's frontend API (deployment-unleash.yaml), which the server asks for the flags and passes on to the
+            # browser (server/routes/flags), with its token, which the browser never sees; their defaults without it
+            - name: NUXT_UNLEASH_URL
+              value: http://unleash:4242/api/frontend
+            - name: NUXT_UNLEASH_TOKEN
+              valueFrom: { secretKeyRef: { name: unleash-secret, key: frontend_token, optional: true } }
             # New Relic's browser app "MetaOS web" (fe/src/newrelic.ts), in account 8666724: all public, as the agent
             # sends them from every page; the license key is the account's browser key, for sending only
             - { name: NUXT_PUBLIC_NEW_RELIC_ACCOUNT_ID, value: "8666724" }
@@ -72,7 +78,7 @@ spec:
             timeoutSeconds: 5
             failureThreshold: 3
 
-          # Node and the cache of rendered pages, which Nitro keeps in memory; no CPU limit, as for the app
+          # Node and what Nitro caches in memory (the sitemap); no CPU limit, as for the app
           resources:
             requests: { cpu: 50m, memory: 128Mi }
             limits: { memory: 512Mi }
