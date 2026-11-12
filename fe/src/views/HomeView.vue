@@ -39,8 +39,10 @@ const recent = ref<Change[]>()
 const STAGES: EpisodeStatus[] = ['IDEA', 'PLANNED', 'SCHEDULED', 'RECORDED', 'IN_PRODUCTION', 'READY', 'EARLY_ACCESS', 'PUBLISHED']
 
 // What needs attention, the most pressing first: a recording date that passed, then what's coming up without what it
-// needs, then what's been in production long
-const attention = computed(() => (making.value ? concerns(making.value.upcoming, making.value.inProduction) : []))
+// needs, then the latest releases that aren't on YouTube or Patreon, then what's been in production long
+const attention = computed(() => (making.value
+  ? concerns(making.value.upcoming, making.value.inProduction, new Date(), released.value ?? [])
+  : []))
 
 interface Section {
   id: string

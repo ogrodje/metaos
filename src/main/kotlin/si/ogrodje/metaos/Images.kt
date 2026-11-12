@@ -183,6 +183,17 @@ class Images(
                 ?: images.save(make(sha256, source, fetched, artwork))
         }
 
+    /**
+     * A picture someone else fetched from [url], e.g. a post's preview picture (DistributionPreview.kt), which checks
+     * where it fetches from itself, as from anywhere on the web rather than Hygraph only
+     */
+    fun publish(url: String, name: String, bytes: ByteArray): Image = making.withLock {
+        require(bytes.size <= MAX_IMAGE_BYTES) { "$url is more than ${MAX_IMAGE_BYTES / 1024 / 1024} MB" }
+        val fetched = Fetched(name, bytes, null, url)
+        val sha256 = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes))
+        images.findBySha256(sha256) ?: images.save(make(sha256, ImageSource.URL, fetched, null))
+    }
+
     fun toDto(image: Image) = ImageDto(
         image.name, media.url(image.originalPath()), image.width, image.height,
         image.widths.map { ImageSizeDto(it, media.url(image.path(it))) }, image.source, image.sourcePlace, image.sourcePath,

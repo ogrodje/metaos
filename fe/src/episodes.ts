@@ -1,6 +1,7 @@
 // Episodes as MetaOS's GraphQL API has them (src/main/resources/graphql/schema.graphqls)
 
 import type { Comment } from '@/comments'
+import type { Distribution } from '@/distribution'
 import { type Image, IMAGE_FIELDS } from '@/images'
 import type { MediaFile } from '@/media'
 import type { EpisodeTranscript } from '@/transcriptions'
@@ -133,7 +134,8 @@ export interface FieldChange {
 
 /** What a change is to (ChangeKind in the schema) */
 export type ChangeKind =
-  | 'EPISODE' | 'SESSION' | 'PERSON' | 'DOCUMENT' | 'KOOFR_FOLDER' | 'DROPBOX_FOLDER' | 'COMMENT' | 'ACCOUNT' | 'MEDIA' | 'OTHER'
+  | 'EPISODE' | 'SESSION' | 'PERSON' | 'DOCUMENT' | 'KOOFR_FOLDER' | 'DROPBOX_FOLDER' | 'COMMENT' | 'ACCOUNT' | 'MEDIA' | 'DISTRIBUTION'
+  | 'OTHER'
 
 /** The episode, session or person a change is to, e.g. on the home page's recent activity */
 export interface ChangeSubject {
@@ -197,6 +199,8 @@ export interface EpisodeDetails extends Episode {
   // Its video and audio, and their transcripts, the latest first; none for anyone not on the team
   media: MediaFile[]
   transcripts: EpisodeTranscript[]
+  // Where it went out: its links, then the posts that promote it; none for anyone not on the team
+  distributions: Distribution[]
   // What it's spoken in, BCP-47: its show's language, else Slovenian
   language: string
 }

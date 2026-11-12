@@ -87,6 +87,12 @@ type Query {
     speechProviders: [SpeechProvider!]!
 
     """
+    Where episodes went out, of every episode, the latest first by when they went out: those on channel, where it's
+    given, since a day or a time (e.g. 2026-11-01), at most limit, up to 500. Needs a signed-in user.
+    """
+    distributions(channel: Channel, since: String, limit: Int! = 100): [Distribution!]!
+
+    """
     Slovenia's tech, developer and startup events, from Goo (goo.ogrodje.si), that haven't ended yet (or started, when
     they have no end), the soonest first
     """
@@ -124,7 +130,7 @@ type Meetup {
 
 """
 Changes, as the signed-in user: each needs an approved user's token with metaos:write (CommentsGraphQL.kt, Artwork.kt,
-MediaFiles.kt, GraphQL.kt, SessionsGraphQL.kt)
+MediaFiles.kt, GraphQL.kt, SessionsGraphQL.kt, DistributionsGraphQL.kt)
 """
 type Mutation {
     "Comment on an episode (ideas too) by its code or ID, in Markdown"
@@ -197,6 +203,90 @@ type Mutation {
     to clear it. Each of the four Patreon links is set or cleared on its own.
     """
     setEpisodeLink(ref: String!, platform: Platform!, url: String): Episode!
+    """
+    Log where an episode went out, by its URL, as add_episode_distribution does over MCP: its channel by the URL's
+    host, unless given; when it went out a day (2026-11-10) or a date and time. A URL the episode has already is that
+    entry, with what's given changed. With link, the URL becomes that one of the episode's links. MetaOS fetches its
+    preview once it's in.
+    """
+    addDistribution(ref: String!, url: String!, channel: Channel, postedAt: String, note: String, title: String, link: Platform): Distribution!
+    """
+    Change where an episode went out: what's left out stays as it is, and an empty note, title or postedAt clears it.
+    One of the episode's links changes the link too.
+    """
+    updateDistribution(id: ID!, url: String, channel: Channel, postedAt: String, note: String, title: String): Distribution!
+    "Take where an episode went out off it; one of its links is cleared on the episode too. Its ID."
+    removeDistribution(id: ID!): ID!
+    "Fetch the preview of where an episode went out again; it keeps the one it had until the new one is there"
+    refreshDistributionPreview(id: ID!): Distribution!
+}
+
+"Where an episode went out, by its URL's host, else as someone said: its own links' platforms, and social networks"
+enum Channel {
+    YOUTUBE
+    PATREON
+    SPOTIFY
+    APPLE_PODCASTS
+    DISCORD
+    LINKEDIN
+    FACEBOOK
+    INSTAGRAM
+    REDDIT
+    X
+    BLUESKY
+    MASTODON
+    THREADS
+    "monitor.si"
+    MONITOR
+    NEWSLETTER
+    "Anything else, which goes by its page's site name"
+    OTHER
+}
+
+"Whether a distribution has its preview: being fetched (or waiting to be), fetched, or not to be had, e.g. behind a login"
+enum PreviewStatus {
+    PENDING
+    OK
+    UNAVAILABLE
+}
+
+"""
+Somewhere an episode went out: one of its own links (platform, as the episode has it), or a post that promotes it, e.g.
+on Discord, LinkedIn or Reddit, with its page's preview
+"""
+type Distribution {
+    id: ID!
+    "Its episode; null once that's deleted"
+    episode: Episode
+    "The episode's link this is (youtubeUrl, ...); null for a post"
+    platform: Platform
+    channel: Channel!
+    url: String!
+    "What someone called it, e.g. as its page doesn't say; preview.title otherwise"
+    title: String
+    note: String
+    "When it went out, as someone said; preview.publishedAt otherwise"
+    postedAt: String
+    "Who added it: their person's name, or else their username; for a link, whoever set it"
+    addedBy: String
+    createdAt: String!
+    preview: DistributionPreview!
+}
+
+"What a distribution's page says about itself (OpenGraph), as MetaOS fetched it"
+type DistributionPreview {
+    status: PreviewStatus!
+    title: String
+    description: String
+    "e.g. LinkedIn, or the page's host"
+    site: String
+    "When the page says it was published"
+    publishedAt: String
+    "Its picture, copied to MetaOS's public bucket"
+    image: Image
+    "Why there's none, e.g. a page that needs signing in"
+    error: String
+    fetchedAt: String
 }
 
 "Where an episode can be watched or listened to: one of its links"
@@ -496,6 +586,11 @@ type Episode {
     media: [MediaFile!]!
     "Its files' transcripts, the latest first, without what they say (Transcript.lines). None without a signed-in user."
     transcripts: [Transcript!]!
+    """
+    Where it went out: its links, in Platform's order, then the posts that promote it, the latest first. None without a
+    signed-in user.
+    """
+    distributions: [Distribution!]!
 }
 
 """
@@ -757,6 +852,8 @@ enum ChangeKind {
     ACCOUNT
     "A video or audio file uploaded, changed or removed"
     MEDIA
+    "Where it went out: a post logged, changed or removed (its links are EPISODE's)"
+    DISTRIBUTION
     OTHER
 }
 

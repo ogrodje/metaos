@@ -45,7 +45,11 @@ private val byRecordingDate = compareBy<Episode, LocalDate?>(nullsLast()) { it.r
     .thenBy(nullsLast()) { it.code }
 
 @Controller
-class EpisodesGraphQL(private val episodes: EpisodesRepository, private val episodePeople: EpisodePeopleRepository) {
+class EpisodesGraphQL(
+    private val episodes: EpisodesRepository,
+    private val episodePeople: EpisodePeopleRepository,
+    private val distributions: Distributions,
+) {
 
     @QueryMapping
     fun releasedEpisodes(@Argument limit: Int): List<Episode> {
@@ -102,7 +106,7 @@ class EpisodesGraphQL(private val episodes: EpisodesRepository, private val epis
     @PreAuthorize(WRITES)
     @Transactional
     fun setEpisodeLink(@Argument ref: String, @Argument platform: Platform, @Argument url: String?): Episode =
-        requireNotNull(episodes.findByRef(ref)) { "Episode $ref not found" }.apply { setLink(platform, url) }
+        requireNotNull(episodes.findByRef(ref)) { "Episode $ref not found" }.apply { distributions.setLink(this, platform, url) }
 }
 
 /** A Google Doc linked to an episode or a session (Documents.kt); linking takes only Google Docs */

@@ -14,13 +14,15 @@ import kotlin.test.assertTrue
  * checks every tool's against what its name says it does.
  * - readOnlyHint: only reads. Those also say they're idempotent and not destructive, as ChatGPT wants them explicit.
  *   So does prepare_patreon_post, which checks a draft is ready for a person to publish.
- * - destructiveHint: changes or removes what's there. Adding isn't, a comment included, nor is restore_link, which only
+ * - destructiveHint: changes or removes what's there. Adding isn't, a comment included (add_episode_distribution is, as
+ *   it changes the entry a URL has, or one of the episode's links), nor is restore_link, which only
  *   puts a removed link back as it was; the other restore_* can rename, recode or clear the email of what they bring back.
  * - idempotentHint: a second call changes nothing more. Only creating episodes, people, sessions and Patreon drafts,
  *   and commenting, isn't: the others find what's there (shows by name, folders and files by path, links) and fail or
  *   keep it.
  * - openWorldHint: reaches out to anyone. Only setting a picture is: it may fetch it from Hygraph and publishes it at
- *   the public bucket. Drive, Dropbox and Koofr aren't, as MetaOS works only in the folders shared with its bot, nor are
+ *   the public bucket; and logging where an episode went out, or setting its link, changing one or fetching its preview
+ *   again, as MetaOS fetches its page, from anywhere on the web, and publishes its picture. Drive, Dropbox and Koofr aren't, as MetaOS works only in the folders shared with its bot, nor are
  *   Patreon's drafts, which a person publishes, in Patreon.
  */
 class ToolHintsTest {
@@ -57,7 +59,10 @@ class ToolHintsTest {
     private val repeatsAdd = setOf(
         "create_episode", "create_person", "create_session", "comment_on_episode", "comment_on_session", "create_patreon_draft",
     )
-    private val openWorld = setOf("set_episode_image", "set_person_avatar")
+    private val openWorld = setOf(
+        "set_episode_image", "set_person_avatar", "set_episode_link", "add_episode_distribution", "update_episode_distribution",
+        "refresh_distribution_preview",
+    )
 
     private fun List<Hints>.names() = map { it.name }.sorted()
 

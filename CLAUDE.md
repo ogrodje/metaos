@@ -141,7 +141,8 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
 - Home is what's being made for the team, and the latest releases for everyone (as a grid of `EpisodeCard`s, two rows
   of four, with a line under them for the team to sign in). Signed in, two columns: first what needs attention
   ([`fe/src/attention.ts`](fe/src/attention.ts): recording dates that passed, recordings in the next two weeks with no
-  confirmed guest or doc, and episodes recorded 60 days ago that aren't out), then the upcoming recordings and what's
+  confirmed guest or doc, episodes recorded 60 days ago that aren't out, and episodes released 3 days ago that aren't on
+  YouTube or Patreon), then the upcoming recordings and what's
   in production, a card a session with how far away it is (`SessionCard.vue`); at the side how many episodes are at
   each stage (`StageBar.vue`, a line each, which leads to Ideas or to Episodes with only that stage, `?status=`), the
   latest releases and what the team did lately (`RecentActivity.vue`), from `recentChanges`: the audit trail's latest
@@ -194,7 +195,7 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   a link to it (`#transcript`, `#pictures`, `#media`). Each comes once there's something to it: the pictures once it's
   recorded, has some or has titles to test, the video and audio once it's recorded, the transcript once there's a file;
   so an idea or a scheduled episode has none of it. While it's in the works, a part that misses something starts open,
-  as that's the work left; released, all are folded. Last come its files (docs, Koofr and Dropbox folders, `#files`),
+  as that's the work left; released, all are folded. Then where it went out, once it's out (Distribution, `#distribution`). Last come its files (docs, Koofr and Dropbox folders, `#files`),
   not folded, as their links are what they're for. Its pictures (`EpisodePictures.vue`) are its titles with the
   thumbnails they're A/B tested with, its cover and web picture, its artwork marked with what each file is used as, and
   its photos. A released episode's page is anyone's; any other episode is the team's, and not found for anyone else, as
@@ -498,7 +499,7 @@ Pictures everyone may see are copied to the public bucket ([`Images.kt`](src/mai
 an episode's thumbnail, thumbnails B and C, which go with its alternative titles as they're A/B tested together, and its
 web picture, the thumbnail without its words, for ogrodje.si, all 1920 × 1080; and its cover, 3000 × 3000, for podcast
 apps; a person's avatar. `ImagesMCP` sets them from Dropbox or Koofr (a place and a path), or from Hygraph (an https URL
-on `*.graphassets.com`, the only hosts MetaOS fetches pictures from).
+on `*.graphassets.com`, the only hosts MetaOS fetches pictures from, but for the previews of posts, see Distribution).
 
 - An episode's pictures are PNG or JPEG of exactly their size (`EpisodeImage`), as the Artwork folder in Dropbox has
   them, wherever they come from: anything else is refused, by its header before it's decoded, and also when MetaOS has
@@ -579,6 +580,50 @@ number, each with a title.
 - `MediaFilesTest` runs against a bucket in memory with ffprobe's answers as its files (`FakeProbe`); `MediaProbeTest`
   runs ffprobe itself where FFmpeg is installed, also on a file in the dev bucket with its key;
   `GoogleCloudStorageTest` sends a file in chunks and copies it in the dev bucket.
+
+### Distribution
+
+Where an episode went out once it was released: its own links and the posts that promote it, e.g. on Discord, LinkedIn,
+Facebook, Reddit or Monitor, logged by people and agents alike ([`Distributions.kt`](src/main/kotlin/si/ogrodje/metaos/Distributions.kt),
+[`V34__distributions.sql`](src/main/resources/db/migration/V34__distributions.sql)). They're the team's: none for anyone
+else.
+
+- An entry is a URL on a channel (`Channel`: told by its host, a subdomain too, else `OTHER`, which goes by its page's
+  site name; Mastodon by hand), with a title and a note someone gave it, when it went out (`posted_at`, a day in
+  Ljubljana or a time), who added it, and its page's preview. A post's URL is kept without tracking (`utm_*`, `fbclid`,
+  `si`, ...; `distributionUrl`), once an episode: the same URL again, however it's written, is the entry it has.
+- The episode's links are entries too (`platform`), which follow its link columns: every change to a link goes through
+  `Distributions.setLink` (`set_episode_link`, `setEpisodeLink`), which makes, changes or removes its entry, or makes the
+  post with its URL the link. Removing a link's entry clears the link, and changing its URL changes the link; its channel
+  is its platform's. V34 made entries of the links episodes had. The history tells the posts ("Shared it on LinkedIn",
+  `ChangeKind.DISTRIBUTION`), not the links, which the episode's changes tell, nor the previews (`AuditLog`).
+- The preview is a workflow's, `DistributionPreviewWorkflow` ([`DistributionPreview.kt`](src/main/kotlin/si/ogrodje/metaos/DistributionPreview.kt),
+  `preview-<id>`), started once the entry is in, or its URL changed, or asked for again (`refresh_distribution_preview`,
+  Refresh), and every ten minutes for those still waiting (`DistributionPreviews.startPending`), e.g. without Temporal.
+  It reads the page's OpenGraph tags, else Twitter's, else its title (jsoup), a YouTube video's from YouTube's oEmbed (its
+  pages ask Europe to consent first), and copies its picture to the public bucket (`Images.publish`, as the networks'
+  own picture URLs expire). A page that's busy or down (429, 5xx) is asked again a few times; one that won't say, e.g.
+  LinkedIn's 999 or a login wall, isn't (`PreviewUnavailable`), and the entry says why. It keeps the preview it had
+  until a new one is there.
+- It's the first thing MetaOS fetches from anywhere on the web, so `PublicWeb` fetches over https only, from public
+  addresses only (`isPublicAddress`: not loopback, private, link-local, e.g. the metadata server, the tailnet's
+  100.64.0.0/10 or IPv6's unique local ones), checked again at each of up to four redirects, within 20 s and a megabyte
+  of a page. `metaos.previews.allow-local` lets tests fetch from a stand-in server; never set it elsewhere.
+- MCP: `list_episode_distributions`, `list_distributions` (every episode's, the latest first, by channel and since),
+  `add_episode_distribution` (with `link`, the URL becomes one of the episode's links), `update_episode_distribution`,
+  `remove_episode_distribution` and `refresh_distribution_preview` (`DistributionsMCP`). GraphQL: `Episode.distributions`,
+  `distributions`, and `addDistribution`, `updateDistribution`, `removeDistribution` and `refreshDistributionPreview`,
+  with `metaos:write` (`DistributionsGraphQL`).
+- On the front-end, Distribution in Behind the episode (`#distribution`, [`DistributionList.vue`](fe/src/components/DistributionList.vue),
+  [`fe/src/distribution.ts`](fe/src/distribution.ts)), once it's in early access or released or has entries, folded to a
+  line of where it is and how many posts: Released on, its links, then the posts, the latest first, each with its
+  preview's picture, title and site, when it went out (a link: when the episode aired), who added it and its note, and
+  Refresh, Edit and Remove (asked on its row); under them, a form to log another, its channel told as it's typed. Home
+  and the episode's panel flag one released `DISTRIBUTED_DAYS` (3) days ago that isn't on YouTube or Patreon, by its
+  links or its distribution (`onYouTubeOrPatreon` in `attention.ts`).
+- `DistributionsTest` has the rules, the links and the history, over MCP and GraphQL; `DistributionPreviewTest` the
+  workflow in Temporal's test server against a stand-in server, and `LinkPreviewsTest` the parsing, the addresses and
+  the channels.
 
 ### Workflows (Temporal)
 

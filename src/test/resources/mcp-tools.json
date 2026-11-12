@@ -1,4 +1,52 @@
 {
+  "add_episode_distribution" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : true,
+      "readOnlyHint" : false,
+      "title" : "Add episode distribution"
+    },
+    "description" : "Log where an episode went out, by its URL, e.g. a post on Discord, LinkedIn, Facebook, Reddit or Monitor that promotes it. Its channel is told by the URL's host, unless given. MetaOS then fetches the page's preview (OpenGraph) and copies its picture to the public bucket, which list_episode_distributions shows once it's there. A URL the episode has already, also as one of its links, is that entry, with what's given changed. With link, the URL becomes that one of the episode's links, as set_episode_link does",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "channel" : {
+          "description" : "Where it is, e.g. MASTODON, which no host tells; by the URL's host without it",
+          "enum" : [ "YOUTUBE", "PATREON", "SPOTIFY", "APPLE_PODCASTS", "DISCORD", "LINKEDIN", "FACEBOOK", "INSTAGRAM", "REDDIT", "X", "BLUESKY", "MASTODON", "THREADS", "MONITOR", "NEWSLETTER", "OTHER" ],
+          "type" : "string"
+        },
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        },
+        "link" : {
+          "description" : "Make it this one of the episode's links, e.g. YOUTUBE or PATREON_AUDIO, as set_episode_link does",
+          "enum" : [ "YOUTUBE", "SPOTIFY", "APPLE_PODCASTS", "PATREON", "PATREON_AUDIO", "PATREON_BONUS", "PATREON_BONUS_AUDIO" ],
+          "type" : "string"
+        },
+        "note" : {
+          "description" : "A note about it, e.g. who posted it where, or that it was boosted; at most 2000 characters",
+          "type" : "string"
+        },
+        "postedAt" : {
+          "description" : "When it went out: a day, e.g. 2026-11-10, or a date and time, e.g. 2026-11-10T09:30:00+01:00; empty to clear",
+          "type" : "string"
+        },
+        "title" : {
+          "description" : "What to call it, when its page doesn't say, e.g. one behind a login",
+          "type" : "string"
+        },
+        "url" : {
+          "description" : "https URL of the post or page",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code", "url" ],
+      "type" : "object"
+    },
+    "title" : "Add episode distribution"
+  },
   "assign_person_to_episode" : {
     "annotations" : {
       "destructiveHint" : false,
@@ -974,6 +1022,38 @@
     },
     "title" : "List deleted"
   },
+  "list_distributions" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List distributions"
+    },
+    "description" : "List where episodes went out, of every episode, the latest first by when they went out, e.g. what was posted this week, or which episodes are on LinkedIn; as list_episode_distributions has them",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "channel" : {
+          "description" : "Only those on this channel, e.g. LINKEDIN",
+          "enum" : [ "YOUTUBE", "PATREON", "SPOTIFY", "APPLE_PODCASTS", "DISCORD", "LINKEDIN", "FACEBOOK", "INSTAGRAM", "REDDIT", "X", "BLUESKY", "MASTODON", "THREADS", "MONITOR", "NEWSLETTER", "OTHER" ],
+          "type" : "string"
+        },
+        "limit" : {
+          "description" : "At most this many, up to 500; 100 without it",
+          "format" : "int32",
+          "type" : "integer"
+        },
+        "since" : {
+          "description" : "Only those that went out since, e.g. 2026-11-01",
+          "type" : "string"
+        }
+      },
+      "required" : [ ],
+      "type" : "object"
+    },
+    "title" : "List distributions"
+  },
   "list_drive_folder" : {
     "annotations" : {
       "destructiveHint" : false,
@@ -1060,6 +1140,28 @@
       "type" : "object"
     },
     "title" : "List episode comments"
+  },
+  "list_episode_distributions" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List episode distributions"
+    },
+    "description" : "List where an episode went out: first its own links (platform set, e.g. YOUTUBE, as set_episode_link sets them), then the posts that promote it, e.g. on Discord, LinkedIn or Reddit, the latest first. Each with its channel, URL, title, note, when it went out, who added it, and its page's preview (OpenGraph: title, description, site, picture), or why there's none, e.g. a page behind a login",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code" ],
+      "type" : "object"
+    },
+    "title" : "List episode distributions"
   },
   "list_episode_documents" : {
     "annotations" : {
@@ -1837,6 +1939,52 @@
     },
     "title" : "Read Koofr file"
   },
+  "refresh_distribution_preview" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : true,
+      "readOnlyHint" : false,
+      "title" : "Refresh distribution preview"
+    },
+    "description" : "Fetch the preview of where an episode went out again, e.g. after the post changed, or when its page didn't let MetaOS in before. It keeps the one it had until the new one is there",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "distributionId" : {
+          "description" : "Distribution ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "distributionId" ],
+      "type" : "object"
+    },
+    "title" : "Refresh distribution preview"
+  },
+  "remove_episode_distribution" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Remove episode distribution"
+    },
+    "description" : "Take where an episode went out off it; one of its links is cleared on the episode too, as set_episode_link without a URL does. The history keeps that it was there",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "distributionId" : {
+          "description" : "Distribution ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "distributionId" ],
+      "type" : "object"
+    },
+    "title" : "Remove episode distribution"
+  },
   "remove_episode_image" : {
     "annotations" : {
       "destructiveHint" : true,
@@ -2247,11 +2395,11 @@
     "annotations" : {
       "destructiveHint" : true,
       "idempotentHint" : true,
-      "openWorldHint" : false,
+      "openWorldHint" : true,
       "readOnlyHint" : false,
       "title" : "Set episode link"
     },
-    "description" : "Set or clear where an episode can be watched or listened to: YouTube, Spotify, Apple Podcasts or Patreon. Patreon has four links, each set or cleared on its own: the full episode as video (PATREON) or audio only (PATREON_AUDIO), and its bonus as video (PATREON_BONUS) or audio only (PATREON_BONUS_AUDIO)",
+    "description" : "Set or clear where an episode can be watched or listened to: YouTube, Spotify, Apple Podcasts or Patreon. Patreon has four links, each set or cleared on its own: the full episode as video (PATREON) or audio only (PATREON_AUDIO), and its bonus as video (PATREON_BONUS) or audio only (PATREON_BONUS_AUDIO). Each link is also in the episode's distribution (list_episode_distributions), with its page's preview",
     "inputSchema" : {
       "$schema" : "https://json-schema.org/draft/2020-12/schema",
       "properties" : {
@@ -2898,6 +3046,50 @@
       "type" : "object"
     },
     "title" : "Update episode"
+  },
+  "update_episode_distribution" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : true,
+      "readOnlyHint" : false,
+      "title" : "Update episode distribution"
+    },
+    "description" : "Change where an episode went out: its URL (whose preview is fetched again), channel, note, title or when it went out. Omitted fields are left as they are. One of the episode's links changes the link too, and keeps its platform's channel",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "channel" : {
+          "description" : "Where it is, e.g. MASTODON",
+          "enum" : [ "YOUTUBE", "PATREON", "SPOTIFY", "APPLE_PODCASTS", "DISCORD", "LINKEDIN", "FACEBOOK", "INSTAGRAM", "REDDIT", "X", "BLUESKY", "MASTODON", "THREADS", "MONITOR", "NEWSLETTER", "OTHER" ],
+          "type" : "string"
+        },
+        "distributionId" : {
+          "description" : "Distribution ID",
+          "format" : "uuid",
+          "type" : "string"
+        },
+        "note" : {
+          "description" : "A note about it; empty to clear",
+          "type" : "string"
+        },
+        "postedAt" : {
+          "description" : "When it went out: a day, e.g. 2026-11-10, or a date and time, e.g. 2026-11-10T09:30:00+01:00; empty to clear",
+          "type" : "string"
+        },
+        "title" : {
+          "description" : "What to call it; empty for its page's title",
+          "type" : "string"
+        },
+        "url" : {
+          "description" : "Its new https URL",
+          "type" : "string"
+        }
+      },
+      "required" : [ "distributionId" ],
+      "type" : "object"
+    },
+    "title" : "Update episode distribution"
   },
   "update_episode_media" : {
     "annotations" : {

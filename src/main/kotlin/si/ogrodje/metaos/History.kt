@@ -12,7 +12,7 @@ import java.util.UUID
 data class FieldChangeDto(val field: String, val from: String?, val to: String?)
 
 /** What a change is to, so the front-end can tell changes apart without reading their words, e.g. to group them */
-enum class ChangeKind { EPISODE, SESSION, PERSON, DOCUMENT, KOOFR_FOLDER, DROPBOX_FOLDER, COMMENT, ACCOUNT, MEDIA, OTHER }
+enum class ChangeKind { EPISODE, SESSION, PERSON, DOCUMENT, KOOFR_FOLDER, DROPBOX_FOLDER, COMMENT, ACCOUNT, MEDIA, DISTRIBUTION, OTHER }
 
 /** A change to an episode or session, or to what's linked to it, as the front-end shows it */
 data class HistoryEntryDto(
@@ -43,6 +43,7 @@ private fun kindOf(table: String) = when (table) {
     "comments" -> ChangeKind.COMMENT
     "accounts" -> ChangeKind.ACCOUNT
     "episode_media", "transcripts" -> ChangeKind.MEDIA
+    "distributions" -> ChangeKind.DISTRIBUTION
     "people" -> ChangeKind.PERSON
     else -> ChangeKind.OTHER
 }
@@ -55,7 +56,7 @@ private fun AuditRow.subject(): Pair<ChangeKind, String>? {
         "sessions" -> ChangeKind.SESSION to rowId.toString()
         "people" -> ChangeKind.PERSON to rowId.toString()
         "episode_people", "episode_documents", "episode_koofr_folders", "episode_dropbox_folders", "episode_media",
-        "transcripts" -> id("episode_id")?.let { ChangeKind.EPISODE to it }
+        "transcripts", "distributions" -> id("episode_id")?.let { ChangeKind.EPISODE to it }
         "session_documents", "session_koofr_folders", "session_dropbox_folders" -> id("session_id")?.let { ChangeKind.SESSION to it }
         "comments" -> id("episode_id")?.let { ChangeKind.EPISODE to it } ?: id("session_id")?.let { ChangeKind.SESSION to it }
         "accounts" -> id("person_id")?.let { ChangeKind.PERSON to it }
@@ -81,6 +82,11 @@ private val SESSION_COLUMNS = linkedMapOf("name" to "Name", "date" to "Date", "l
 private val PERSON_COLUMNS = linkedMapOf(
     "name" to "Name", "bio" to "Bio", "homepage_url" to "Website", "linkedin_url" to "LinkedIn", "twitter_url" to "X",
     "instagram_url" to "Instagram", "facebook_url" to "Facebook", "avatar_image_id" to "Avatar",
+)
+
+// A post's, as someone gave them
+private val DISTRIBUTION_COLUMNS = linkedMapOf(
+    "channel" to "Channel", "url" to "URL", "title" to "Title", "note" to "Note", "posted_at" to "Posted",
 )
 
 // Too long to show what they were and what they became
@@ -195,6 +201,7 @@ private class Names(
         "accounts" -> account(row)
         "episode_media" -> media(row)
         "transcripts" -> transcript(row)
+        "distributions" -> distribution(row)
         "people" -> change(row, "person", PERSON_COLUMNS)
         else -> Described("Changed ${row.table}")
     }
@@ -251,6 +258,27 @@ private class Names(
             "INSERT" -> Described("Transcribed $name")
             "DELETE" -> Described("Removed the transcript of $name")
             else -> Described(if (row.diff()["speakers"] != null) "Named the speakers in the transcript of $name" else "Changed the transcript of $name")
+        }
+    }
+
+    // A post that promotes the episode (Distributions.kt), by where it is; its links' changes are the episode's
+    private fun distribution(row: AuditRow): Described {
+        fun channel(values: Map<String, Any?>) =
+            values["channel"]?.toString()?.let { runCatching { Channel.valueOf(it).label }.getOrNull() } ?: "a channel"
+        val on = channel(row.new.ifEmpty { row.old })
+        val url = (row.new["url"] ?: row.old["url"])?.toString()
+        val diff = row.diff()
+        val deletedAt = diff["deleted_at"]
+        val fields = DISTRIBUTION_COLUMNS.filterKeys { it in diff }.map { (column, label) ->
+            val change = diff.getValue(column)
+            if (column == "channel") FieldChangeDto(label, row.old["channel"]?.let { channel(row.old) }, channel(row.new))
+            else FieldChangeDto(label, change.from?.toString(), change.to?.toString())
+        }
+        return when {
+            row.operation == "INSERT" -> Described("Shared it on $on", listOf(FieldChangeDto("Post", null, url)))
+            row.operation == "DELETE" -> Described("Removed a post on $on for good")
+            deletedAt != null -> Described(if (deletedAt.to != null) "Removed a post on $on" else "Restored a post on $on")
+            else -> Described("Changed a post on $on", fields)
         }
     }
 

@@ -93,6 +93,17 @@ class Episode(
         }
     }
 
+    fun link(platform: Platform): String? = when (platform) {
+        Platform.YOUTUBE -> youtubeUrl
+        Platform.SPOTIFY -> spotifyUrl
+        Platform.APPLE_PODCASTS -> applePodcastsUrl
+        Platform.PATREON -> patreonUrl
+        Platform.PATREON_AUDIO -> patreonAudioUrl
+        Platform.PATREON_BONUS -> patreonBonusUrl
+        Platform.PATREON_BONUS_AUDIO -> patreonBonusAudioUrl
+    }
+
+    // Through Distributions.setLink, which keeps the episode's distribution in step
     fun setLink(platform: Platform, url: String?) {
         require(url == null || platform.accepts(url)) { "$url is not a $platform URL" }
         when (platform) {
