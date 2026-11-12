@@ -16,10 +16,13 @@ export interface SignInConfig {
 }
 
 /**
- * The realm role of an approved user, Ogrodje's team (APPROVED_ROLE in Security.kt): only they get the team's data from
- * the API. Anyone else who signs in sees what everyone does.
+ * The realm role of Ogrodje's staff, the team (APPROVED_ROLE in Security.kt): only they get the team's data from the
+ * API. Anyone else who signs in is a member, and sees what everyone does.
  */
 const TEAM_ROLE = 'metaos-user'
+
+/** The realm role of a member: everyone who signs in, with an email Keycloak verified (MEMBER_ROLE in Security.kt) */
+const MEMBER_ROLE = 'metaos-member'
 
 // How long the sign-in check may take before the page carries on with a guest: longer for one who was signed in here
 // last time, who's most likely still signed in and would otherwise see a guest's page while Keycloak is slow
@@ -94,8 +97,10 @@ export const useAuthStore = defineStore('auth', () => {
   // Whether it's known yet if the user is signed in
   const ready = ref(false)
   const authenticated = ref(false)
-  // Signed in as an approved user, who gets the team's data
+  // Signed in as staff, who get the team's data
   const team = ref(false)
+  // Signed in as a member, with a verified email; staff are members too
+  const member = ref(false)
   const username = ref<string>()
   // Their Keycloak ID (the token's sub), e.g. for Unleash's gradual rollouts (plugins/flags.ts)
   const userId = ref<string>()
@@ -114,16 +119,18 @@ export const useAuthStore = defineStore('auth', () => {
   const remembered = ref(false)
   // On the team, or most likely so while it's checked: the header keeps the team's tabs, rather than dropping them and
   // bringing them back once Keycloak answers
-  const likelyMember = computed(() => team.value || (!ready.value && remembered.value))
+  const likelyTeam = computed(() => team.value || (!ready.value && remembered.value))
   // For one who was: that the check is taking long, and then that it gave up, so the page they get, a guest's, doesn't
   // look as if they'd been signed out
   const checkingSlowly = ref(false)
   const unconfirmed = ref(false)
 
-  // What the token says, after signing in and each refresh, which may come with an approval given or taken back
+  // What the token says, after signing in and each refresh, which may come with staff given or taken back
   function update(client: Keycloak) {
     authenticated.value = !!client.authenticated
     team.value = !!client.authenticated && client.hasRealmRole(TEAM_ROLE)
+    member.value = team.value ||
+      (!!client.authenticated && client.hasRealmRole(MEMBER_ROLE) && client.tokenParsed?.email_verified === true)
     username.value = client.tokenParsed?.preferred_username
     userId.value = client.authenticated ? client.tokenParsed?.sub : undefined
     const provider = client.tokenParsed?.identity_provider
@@ -257,7 +264,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   return {
-    ready, authenticated, team, likelyMember, checkingSlowly, unconfirmed, username, userId, identityProvider, accountConsole,
+    ready, authenticated, team, member, likelyTeam, checkingSlowly, unconfirmed, username, userId, identityProvider, accountConsole,
     linked,
     init, login, logout, linkProvider, signInProviders, dismissLinked, token,
   }

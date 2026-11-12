@@ -22,24 +22,23 @@ compose.yml's Keycloak as `admin` / `admin`.
 
 | File                          | What                                                                                       |
 |-------------------------------|--------------------------------------------------------------------------------------------|
-| `realm/realm.tf`              | The realm: sign-in lengths, Remember me, token lifespan, brute-force protection, security headers, email (SMTP) and verifying addresses with it; the role `metaos-user`; the `dev` user in development |
-| `realm/scopes.tf`             | `mcp:tools`, `metaos:read` and `metaos:write`, the audience each puts in tokens, and that each needs `metaos-user` |
+| `realm/realm.tf`              | The realm: sign-in lengths, Remember me, token lifespan, brute-force protection, security headers, email (SMTP) and verifying addresses with it; the roles `metaos-member` (every user's, a default role) and `metaos-user` (staff); the `dev` user in development |
+| `realm/scopes.tf`             | `mcp:tools`, `metaos:read`, `metaos:write` and `metaos:account`, the audience each puts in tokens, and the role each needs: `metaos-user`, but `metaos:account`'s `metaos-member` |
 | `realm/clients.tf`            | `metaos-ui`, the front-end's client, and its scopes                                        |
 | `realm/registration.tf`       | What MCP clients registering themselves (DCR) may ask for, and from which hosts            |
-| `realm/identity_providers.tf` | Sign in with Google and Discord, each with its approval gate (the post-login flow that waits for `metaos-user`), which then remembers the sign-in (MetaOS's `metaos-remember-me`, which Keycloak has from `docker/keycloak.Dockerfile`'s image) |
+| `realm/identity_providers.tf` | Sign in with Google and Discord, each with its post-login flow, which remembers the sign-in (MetaOS's `metaos-remember-me`, which Keycloak has from `docker/keycloak.Dockerfile`'s image) |
 | `realm/user_profile.tf`       | The user profile: Keycloak's default, but a user's email only admins change               |
 
 Not managed, and left as they are: users and who has `metaos-user` (granted by hand in the admin console, where users
 are renamed too, as `edit_username_allowed` lets them be), the clients MCP clients registered, Keycloak's built-in
 clients and scopes, its keys, and realm master.
 
-## Approving a user
+## Members and staff
 
-Someone who signed in with Google or Discord waits for approval: in the admin console, Users, then theirs.
-
-1. Role mapping: assign `metaos-user`.
-2. From Discord: turn on "Email verified" only once the address is known to be theirs, e.g. they wrote from it. From
-   Google it's on already.
+Anyone who signs in with Google or Discord is a member, once their email is verified: Google's are, and Discord users
+follow the link Keycloak mails them (`verify_email`, which needs `smtp`; development's goes to compose's Mailpit,
+http://localhost:8025). Nobody approves members. To make one staff, in the admin console: Users, theirs, Role mapping:
+assign `metaos-user`. To take membership away, disable the user.
 
 "Email verified" is who they are in MetaOS: their account is linked to the person with that address (Accounts.kt), so a
 wrong one makes them someone else, and the address `ACCOUNT_LINKER` links accounts by hand. Only admins change a user's

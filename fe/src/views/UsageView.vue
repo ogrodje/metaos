@@ -235,7 +235,7 @@ const matches = computed(() => {
                   <p class="step-title">Sign in</p>
                   <p class="step-details">
                     Adding it opens MetaOS's sign-in in your browser, where you sign in with Discord or Google. Codex keeps
-                    the sign-in and refreshes it; to sign in again, e.g. once you're approved:
+                    the sign-in and refreshes it; to sign in again, e.g. once you're staff:
                   </p>
                   <CopyCommand :command="codexLogin"/>
                 </div>
@@ -272,10 +272,10 @@ const matches = computed(() => {
             <li class="step">
               <span class="marker" aria-hidden="true">3</span>
               <div>
-                <p class="step-title">Get approved</p>
+                <p class="step-title">Be on the staff</p>
                 <p class="step-details">
-                  The first time you sign in, an Ogrodje admin has to approve your account; until then MetaOS turns the
-                  sign-in down. Once you're approved, sign in again.
+                  MCP is for Ogrodje's staff. Signing in makes you a member; an Ogrodje admin makes your account staff,
+                  and until then MetaOS turns the assistant's sign-in down. Once you're staff, sign in again.
                 </p>
               </div>
             </li>
@@ -373,7 +373,7 @@ const matches = computed(() => {
         <div class="explain">
           <h3>With a token</h3>
           <p>
-            The rest is the team's. It takes an approved user's token, with <code>metaos:read</code>, and
+            The rest is the team's. It takes a staff user's token, with <code>metaos:read</code>, and
             <code>metaos:write</code> for changes. Scripts have no sign-in of their own yet, so it's one from MetaOS's
             sign-in, which has both.
           </p>

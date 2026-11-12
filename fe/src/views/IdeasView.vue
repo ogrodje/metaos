@@ -27,7 +27,7 @@ const error = ref<string>()
 // Only the latest load counts: an earlier one may answer after it
 let loads = 0
 
-// Ideas are the team's, so they load only for an approved user. Quietly when MetaOS's data changes: what's shown stays
+// Ideas are the team's, so they load only for staff. Quietly when MetaOS's data changes: what's shown stays
 // until the new ones are there, and stays if they don't come.
 async function loadIdeas(quietly = false) {
   const load = ++loads
@@ -119,8 +119,8 @@ const GROUPINGS = [
         Episodes that might be. Once an idea is planned, it gets a code and moves to Episodes.
       </PageHeader>
 
-      <!-- Signed in, but not approved yet, as the note under the header says -->
-      <p v-if="auth.ready && !auth.team" class="note">The ideas are here once an admin has approved your account.</p>
+      <!-- Signed in as a member, not staff -->
+      <p v-if="auth.ready && !auth.team" class="note">The ideas are for Ogrodje's staff.</p>
 
       <template v-else>
         <FilterBar v-model:find="find" placeholder="Find by title, guest or recommender">

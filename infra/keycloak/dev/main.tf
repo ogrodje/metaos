@@ -43,6 +43,17 @@ module "realm" {
   google_client_secret = var.google_client_secret
 
   dev_user = true
+
+  # compose.yml's Mailpit, which keeps what Keycloak sends, e.g. the links to verify an email, at http://localhost:8025.
+  # With it, Keycloak has users verify their email, as in production. Any password does
+  smtp = {
+    host              = "mailpit"
+    port              = "1025"
+    starttls          = false
+    from              = "metaos@metaos.local"
+    from_display_name = "MetaOS (dev)"
+    username          = "keycloak"
+  }
 }
 
 variable "google_client_secret" {

@@ -146,6 +146,7 @@ watch(() => route.fullPath, () => { open.value = false })
         <p class="who">
           <b>{{ name }}</b>
           <span v-if="auth.username && auth.username !== name">{{ auth.username }}</span>
+          <span v-if="auth.team || auth.member" class="role">{{ auth.team ? 'Staff' : 'Member' }}</span>
         </p>
         <RouterLink v-if="person" class="item" :to="personPath(person)"><FontAwesomeIcon :icon="faUser"/>Your page</RouterLink>
         <!-- Once MetaOS has said that your account isn't anyone. Only Oto links accounts to people, on the People page,
@@ -191,7 +192,6 @@ watch(() => route.fullPath, () => { open.value = false })
       <div v-if="open" :id="`${id}-menu`" class="menu sign-in">
         <button type="button" class="item" @click="auth.login('discord')"><FontAwesomeIcon :icon="faDiscord"/>Sign in with Discord</button>
         <button type="button" class="item" @click="auth.login('google')"><FontAwesomeIcon :icon="faGoogle"/>Sign in with Google</button>
-        <p class="note">New accounts get in once an admin has approved them.</p>
       </div>
     </template>
 
@@ -418,13 +418,6 @@ watch(() => route.fullPath, () => { open.value = false })
 .rule {
   margin: 6px 0;
   border-top: 1px solid var(--rule);
-}
-
-.note {
-  padding: 6px 10px 4px;
-  font-size: var(--text-caption);
-  line-height: 18px;
-  color: var(--muted);
 }
 
 // How linking went: a line under your initials, with its own way to go

@@ -30,6 +30,9 @@ data class CurrentUserDto(
     val account: AccountDto?,
     // Whether they may link accounts to people (ACCOUNT_LINKER)
     val canLinkAccounts: Boolean,
+    // A member signed in with a verified email; staff use MetaOS (Security.kt)
+    val member: Boolean,
+    val staff: Boolean,
     // The MCP tools' version, for whoami: the assistant's copy of them may be older (McpVersion.kt)
     val toolsVersion: String? = null,
 )
@@ -45,6 +48,8 @@ fun Jwt.toCurrentUserDto(accounts: Accounts) = CurrentUserDto(
     person = accounts.signedInPerson()?.toDto(),
     account = accounts.signedInAccount()?.let { accounts.dtos(listOf(it)).single() },
     canLinkAccounts = mayLinkAccounts(),
+    member = isMember,
+    staff = isStaff,
 )
 
 // One entry per episode, with all of the person's roles on it

@@ -83,7 +83,7 @@ const pages = computed(() => [
   {path: '/people', title: 'People', icon: faUserGroup},
   {path: '/dogodki', title: 'Events', icon: faCalendarDays},
   {path: '/transcriptions', title: 'Transcriptions', icon: faClosedCaptioning, team: true},
-].filter((page) => !page.team || auth.likelyMember))
+].filter((page) => !page.team || auth.likelyTeam))
 
 // Going to another page, as a screen reader hears it: focus moves to the page, which starts there for the keyboard too,
 // and its name is said once it's known. Not on the first page, nor when only the query changes, e.g. while a search
@@ -132,13 +132,8 @@ function reload() {
     </div>
   </header>
 
-  <!-- Signed in, but not approved yet: why they see what everyone does -->
-  <div v-if="auth.ready && auth.authenticated && !auth.team" class="notice" role="status">
-    <p>You're signed in, but an admin hasn't approved your account yet. Until they do, you see what everyone sees.</p>
-  </div>
-
   <!-- On the team last time, while Keycloak is slow to say so: that it's being asked, then that it didn't answer -->
-  <div v-else-if="auth.checkingSlowly || auth.unconfirmed" class="notice" role="status">
+  <div v-if="auth.checkingSlowly || auth.unconfirmed" class="notice" role="status">
     <p v-if="auth.checkingSlowly">Checking your sign-in…</p>
     <p v-else>
       Couldn't confirm your sign-in, as the sign-in service didn't answer, so you see what everyone sees.

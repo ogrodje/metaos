@@ -92,8 +92,8 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   `navigator`, `location`, `document` and storage are read in `onMounted` or handlers only. Nothing may write
   module-level state on the server, which every request shares (`pageName` in `title.ts` is the browser's only).
 - The team's pages, `/ideas`, `/sessions/**`, `/search` and `/transcriptions`, render in the browser only
-  (`ssr: false`), with `no-store` and `noindex`. Signed in but not approved, users see what everyone does, with a note
-  under the header.
+  (`ssr: false`), with `no-store` and `noindex`. Members who aren't staff see what everyone does, with a note on those
+  pages.
 - A page from a cache that's over 30 s old loads its data again once it's shown
   ([`fe/src/plugins/rendered.ts`](fe/src/plugins/rendered.ts)), as live updates do after a break, since they didn't
   hear what changed meanwhile.
@@ -136,8 +136,7 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   region (`App.vue`); a skip link leads past the header. Anything else is a not-found page (`NotFound.vue`, also an episode, session or person that isn't
   there), with where to go instead.
 - A list loads behind rows like its own (`LoadingRows.vue`), so the page doesn't jump, and what didn't load says why
-  with Try again (`LoadError.vue`); `graphql.ts` words errors so they say what to do, e.g. an account not approved
-  yet. Dates are in English (`DATE_LOCALE`), whatever the browser's language.
+  with Try again (`LoadError.vue`); `graphql.ts` words errors so they say what to do, e.g. that it's for staff. Dates are in English (`DATE_LOCALE`), whatever the browser's language.
 - Home is what's being made for the team, and the latest releases for everyone (as a grid of `EpisodeCard`s, two rows
   of four, with a line under them for the team to sign in). Signed in, two columns: first what needs attention
   ([`fe/src/attention.ts`](fe/src/attention.ts): recording dates that passed, recordings in the next two weeks with no
@@ -220,8 +219,8 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   page lists what's in the works (`IdeaRow.vue`: the title, who it's with, who recommended it and when it was added in a
   line, its tiny summary, then when it's recorded and its files), a section a group, by how far along each is
   (`readiness`: in a session, with a guest, with candidates, no one yet), by who recommended it, or not at all, and
-  filtered by show and recommender (by their whole names, in a select, as two may share a first name). It loads for an
-  approved user only; one who isn't yet gets a note.
+  filtered by show and recommender (by their whole names, in a select, as two may share a first name). It loads for staff
+  only; a member gets a note.
 - The Events page, `/dogodki` (ogrodje.si's address of it, which links keep; `/events` is the live updates'), lists
   Slovenia's tech, developer and startup events as ogrodje.si's Dogodki page did, for anyone, in Slovenian, as the
   events are: by week, Monday to Sunday ("Teden / 9. 11. – 15. 11. 2026"), then by day, each event with its title,
@@ -283,15 +282,23 @@ just keycloak apply dev         # and after each change to infra/keycloak/realm;
 - MCP clients (Claude Code, MCP Inspector, ...) discover Keycloak via `/.well-known/oauth-protected-resource/mcp`,
   register themselves with Dynamic Client Registration and log the user in. The realm's Trusted Hosts policy takes
   redirect URIs on `localhost`, `claude.ai`, `claude.com` and `chatgpt.com` only (`trusted_hosts`).
+- Members and staff: anyone who signs in with Discord or Google is a member (realm role `metaos-member`, one of the
+  realm's default roles, so every user has it; `MEMBER_ROLE`), once Keycloak has verified their email: Google's it
+  trusts, Discord users follow a link Keycloak mails them (`verify_email`, with SMTP; Mailpit's in development,
+  http://localhost:8025) before the sign-in goes through. A member only signs in so far (`me`'s `member`). Staff, "approved
+  users" in the code, are those an admin grants `metaos-user` (`APPROVED_ROLE`), which includes `metaos-member`: they
+  get the team's data, changes and MCP (`me`'s `staff`; `auth.team` on the front-end, `auth.member` for members).
 - Tokens need the `mcp:tools` scope; it also puts the MCP URL into `aud`, which the server checks. They also need the
-  realm role `metaos-user`, an approved user's (`APPROVED_ROLE` in `Security.kt`, also on `/graphql`'s team data and
-  changes and the thumbnails): Keycloak can issue the scope to more than approved users, e.g. a client registered
-  through DCR for its own service account, which no login and so no approval gate stands in front of. Test JWTs carry
-  it with `claim("realm_access", APPROVED)` (`TestTokens.kt`).
-- The front-end signs users in as `metaos-ui`, a public client with PKCE. Its tokens carry `metaos:read` and
-  `metaos:write` (`API_READ_SCOPE`, `API_WRITE_SCOPE`: reading the team's data and changing it, e.g. comments), which
-  put the `/graphql` URL into `aud` (and don't get them into `/mcp`). They're the client's own scopes, not realm
-  defaults, as MCP clients registering themselves could ask for any realm default.
+  realm role `metaos-user`, staff's (`APPROVED_ROLE` in `Security.kt`, also on `/graphql`'s team data and
+  changes and the thumbnails): Keycloak can issue the scope to more than staff, e.g. a client registered
+  through DCR for its own service account. Test JWTs carry it with `claim("realm_access", APPROVED)`, and a member's
+  roles with `MEMBER` (`TestTokens.kt`).
+- The front-end signs users in as `metaos-ui`, a public client with PKCE. Its tokens carry `metaos:account` for every
+  member (`API_ACCOUNT_SCOPE`, which only lets the token into `/graphql`, e.g. for `me`), and for staff `metaos:read`
+  and `metaos:write` (`API_READ_SCOPE`, `API_WRITE_SCOPE`: reading the team's data and changing it, e.g. comments);
+  each puts the `/graphql` URL into `aud` (and doesn't get them into `/mcp`), and Keycloak puts each in a token only
+  for its role (`infra/keycloak/realm/scopes.tf`). They're the client's own scopes, not realm defaults, as MCP clients
+  registering themselves could ask for any realm default.
 - Dev login: `dev` / `dev`.
 - A sign-in lasts 7 days without use and 30 days at most (`sso_session_idle_timeout`, `sso_session_max_lifespan`),
   and refresh tokens as long. Access tokens
@@ -329,7 +336,7 @@ person it is ([`Accounts.kt`](src/main/kotlin/si/ogrodje/metaos/Accounts.kt),
 [`V25__accounts.sql`](src/main/resources/db/migration/V25__accounts.sql)). Keycloak links a user's sign-ins (Google,
 Discord, ...) to one user, so they're one account; a person may have several, e.g. the `dev` user and a Google one.
 
-- `AccountsFilter` writes an approved user's account down as their token says it (username, name, email), once the token
+- `AccountsFilter` writes a member's account down (staff's too) as their token says it (username, name, email), once the token
   says something new or a few minutes on, so most requests write nothing; each pod keeps what it last wrote.
 - An account is linked by its verified email: when it signs in, or when a person gets that email (`create_person`,
   `set_person_email`), unless someone unlinked it. Users can't change their email in Keycloak, only admins

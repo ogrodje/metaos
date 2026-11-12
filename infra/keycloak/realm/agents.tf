@@ -1,5 +1,5 @@
 # The agents (agents/), which use MetaOS's MCP tools as MetaOS's own service account rather than a user's: a
-# confidential client with client credentials, whose service account is approved (metaos-user), so its tokens get
+# confidential client with client credentials, whose service account is staff (metaos-user), so its tokens get
 # mcp:tools. What they change is in the history as service-account-metaos-agents, through metaos-agents (azp).
 resource "keycloak_openid_client" "metaos_agents" {
   realm_id    = keycloak_realm.metaos.id

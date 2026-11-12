@@ -36,11 +36,11 @@ export default defineNuxtPlugin(async () => {
   })
 
   // Once the page is hydrated, as the server rendered it; then for whoever's signed in, and whether they're on the
-  // team, which a flag's strategy can ask for (context field team)
+  // team or members, which a flag's strategy can ask for (context fields team and member)
   onNuxtReady(() => {
     void client.start()
-    watch(() => [auth.userId, auth.team] as const, ([userId, team]) => {
-      void client.updateContext({ userId, properties: { team: String(team) } })
+    watch(() => [auth.userId, auth.team, auth.member] as const, ([userId, team, member]) => {
+      void client.updateContext({ userId, properties: { team: String(team), member: String(member) } })
     })
   })
 })

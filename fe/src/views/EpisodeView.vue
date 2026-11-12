@@ -177,7 +177,7 @@ const pastTitle = useScrolledPast(titleBlock)
   <main class="content">
     <LoadError v-if="error" what="The episode" :error="error" @retry="loadEpisode(episodeRef)"/>
     <!-- None so far, while it's checked whether the user is on the team, who may see it although it isn't released -->
-    <LoadingRows v-else-if="episode === undefined || (episode === null && auth.likelyMember && !auth.ready)" :rows="6"
+    <LoadingRows v-else-if="episode === undefined || (episode === null && auth.likelyTeam && !auth.ready)" :rows="6"
                  label="Loading the episode"/>
     <NotFound v-else-if="episode === null" :title="`There's no episode ${episodeRef}`" :search="episodeRef">
       <template v-if="auth.team">
@@ -238,7 +238,7 @@ const pastTitle = useScrolledPast(titleBlock)
           <ActivityPanel :comments="episode.comments" :changes="episode.history" :episode-id="episode.id"
                          @changed="reloadQuietly(episode.id)"/>
         </template>
-        <section v-else-if="auth.likelyMember && !auth.ready" class="loading" aria-label="Activity">
+        <section v-else-if="auth.likelyTeam && !auth.ready" class="loading" aria-label="Activity">
           <LoadingRows :rows="3" label="Loading the activity"/>
         </section>
 

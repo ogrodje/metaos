@@ -124,6 +124,14 @@ class SecurityTest @Autowired constructor(private val mvc: MockMvc, private val 
             initialize()
             with(jwt().jwt { it.claim("realm_access", mapOf("roles" to listOf("default-roles-metaos"))).claim("scope", MCP_SCOPE) })
         }.andExpect { status { isForbidden() } }
+        // A member, anyone who signed in, isn't staff
+        mvc.post("/mcp") {
+            initialize()
+            with(jwt().jwt {
+                it.claim("realm_access", MEMBER).claim("scope", MCP_SCOPE)
+                    .claim("email", "member@example.com").claim("email_verified", true)
+            })
+        }.andExpect { status { isForbidden() } }
     }
 
     // A client registered through DCR for its own service account: client_credentials, no user, no approval gate

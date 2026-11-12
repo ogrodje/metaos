@@ -103,6 +103,17 @@ services:
     ports:
       - '127.0.0.1:4242:4242'
 
+  # Mailpit, which takes Keycloak's mail in development (infra/keycloak/dev's smtp), e.g. the link a Discord user
+  # follows to verify their email and become a member: read it at http://localhost:8025. It sends nothing on
+  mailpit:
+    image: 'axllent/mailpit:v1.27'
+    environment:
+      # Keycloak signs in to send, as to production's server; Mailpit takes any user and password, without TLS
+      - MP_SMTP_AUTH_ACCEPT_ANY=1
+      - MP_SMTP_AUTH_ALLOW_INSECURE=1
+    ports:
+      - '127.0.0.1:8025:8025'
+
 volumes:
   temporal-data:
   pg-data:
