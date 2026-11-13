@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, useId, watch } from 'vue'
 import { faArrowLeft, faArrowRight, faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { DropboxPicture, KoofrPhoto } from '@/episodes'
 import { fetchObjectUrl } from '@/graphql'
+import { useLocale } from '@/useLocale'
 
 // Two rows of four
 const PAGE = 8
@@ -22,8 +23,10 @@ const props = defineProps<{
   bare?: boolean
 }>()
 
-// For the section's label: photos, artwork
-const headingId = computed(() => props.title.toLowerCase().replace(/\W+/g, '-'))
+const { t } = useLocale()
+
+// For the section's label
+const headingId = useId()
 
 const page = ref(0)
 // Which way the photos slide: in from the right for the next page
@@ -81,14 +84,14 @@ onBeforeUnmount(release)
         <span class="count">{{ photos.length }}</span>
       </template>
       <a v-if="folder" class="open" :href="folder" target="_blank" rel="noopener">
-        Open on {{ service }} <FontAwesomeIcon :icon="faArrowUpRightFromSquare"/>
+        {{ t('pictures.strip.open', { service }) }} <FontAwesomeIcon :icon="faArrowUpRightFromSquare"/>
       </a>
       <div v-if="pages > 1" class="pager">
         <span class="count" aria-live="polite">{{ page * PAGE + 1 }}–{{ page * PAGE + shown.length }}</span>
-        <button type="button" :disabled="page === 0" :aria-label="`Previous ${title.toLowerCase()}`" @click="go(page - 1)">
+        <button type="button" :disabled="page === 0" :aria-label="t('pictures.strip.previous', { title })" @click="go(page - 1)">
           <FontAwesomeIcon :icon="faArrowLeft"/>
         </button>
-        <button type="button" :disabled="page === pages - 1" :aria-label="`Next ${title.toLowerCase()}`" @click="go(page + 1)">
+        <button type="button" :disabled="page === pages - 1" :aria-label="t('pictures.strip.next', { title })" @click="go(page + 1)">
           <FontAwesomeIcon :icon="faArrowRight"/>
         </button>
       </div>
@@ -104,7 +107,7 @@ onBeforeUnmount(release)
               <img v-if="sources[photo.thumbnail]" :src="sources[photo.thumbnail]" :alt="artwork ? '' : photo.name">
             </span>
             <span v-if="artwork" class="name">{{ photo.name }}</span>
-            <span v-if="artwork && uses" class="use" :class="{ unused: !uses[photo.name] }">{{ uses[photo.name] ?? 'Not used' }}</span>
+            <span v-if="artwork && uses" class="use" :class="{ unused: !uses[photo.name] }">{{ uses[photo.name] ?? t('pictures.strip.notUsed') }}</span>
           </a>
         </li>
         <li v-for="filler in fillers" :key="`filler-${filler}`" class="filler" aria-hidden="true">

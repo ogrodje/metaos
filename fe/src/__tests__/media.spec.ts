@@ -1,9 +1,14 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   codecName, formatDuration, formatSize, infoLine, isMedia, type MediaInfo, type MediaKind, mediaConcerns, mediaParts, namedBonus, type Picked, placeAll,
   type Probe, probeOf, refusal, typeOf, warnings,
 } from '@/media'
+import { errorMessage } from '@/graphql'
 import { nextOffset, sendInChunks } from '@/resumable'
+import { t, tSl } from './i18n'
+
+// graphql.ts's UserError, without Nuxt
+vi.mock('#imports', () => ({}))
 
 let ids = 0
 
@@ -80,14 +85,14 @@ describe('typeOf and refusal', () => {
   })
 
   it("refuses what MetaOS doesn't take", () => {
-    expect(refusal(picked('S05E08.mkv', VIDEO))).toBe("It isn't MP4 or MOV, or MP3, M4A, WAV or FLAC.")
-    expect(refusal(picked('S05E08.mp4', VIDEO, 64_400_000_000))).toBe("It's 64 GB; a file is up to 50 GB.")
-    expect(refusal(picked('S05E08.mp3', VIDEO))).toBe('It has video, but its name says audio.')
-    expect(refusal(picked('S05E08.mov', AUDIO))).toBe("It's a MOV without video; audio is MP3, M4A, WAV or FLAC.")
-    expect(refusal(picked('S05E08.mp4', { ...VIDEO, video: false, audio: false }))).toBe("There's neither video nor audio in it.")
-    expect(refusal(picked('S05E08.mp4', VIDEO))).toBeNull()
+    expect(refusal(picked('S05E08.mkv', VIDEO), t, 'en-GB')).toBe("It isn't MP4 or MOV, or MP3, M4A, WAV or FLAC.")
+    expect(refusal(picked('S05E08.mp4', VIDEO, 64_400_000_000), t, 'en-GB')).toBe("It's 64 GB; a file is up to 50 GB.")
+    expect(refusal(picked('S05E08.mp3', VIDEO), t, 'en-GB')).toBe('It has video, but its name says audio.')
+    expect(refusal(picked('S05E08.mov', AUDIO), t, 'en-GB')).toBe("It's a MOV without video; audio is MP3, M4A, WAV or FLAC.")
+    expect(refusal(picked('S05E08.mp4', { ...VIDEO, video: false, audio: false }), t, 'en-GB')).toBe("There's neither video nor audio in it.")
+    expect(refusal(picked('S05E08.mp4', VIDEO), t, 'en-GB')).toBeNull()
     // MetaOS reads what the browser couldn't
-    expect(refusal(picked('S05E08.wav', null))).toBeNull()
+    expect(refusal(picked('S05E08.wav', null), t, 'en-GB')).toBeNull()
   })
 })
 
@@ -96,7 +101,7 @@ describe('placeAll', () => {
     const placement = placeAll([
       picked('S05E08-bonus.mp4', { ...VIDEO, duration: 7200 }), picked('S05E08.mp4', VIDEO), picked('S05E08.mp3', AUDIO),
       picked('S05E08-extra.wav', { ...AUDIO, duration: 300 }), picked('notes.mkv', VIDEO),
-    ])
+    ], t, 'en-GB')
     expect(Object.fromEntries(placement.placed.map((it) => [it.picked.name, it.kind]))).toEqual({
       'S05E08-bonus.mp4': 'BONUS_VIDEO', 'S05E08.mp4': 'FULL_VIDEO', 'S05E08.mp3': 'FULL_AUDIO', 'S05E08-extra.wav': 'BONUS_AUDIO',
     })
@@ -104,7 +109,7 @@ describe('placeAll', () => {
   })
 
   it("doesn't take the full ones' places from those picked before", () => {
-    const placement = placeAll([picked('S05E08 final.mov', VIDEO)], ['FULL_VIDEO'])
+    const placement = placeAll([picked('S05E08 final.mov', VIDEO)], t, 'en-GB', ['FULL_VIDEO'])
     expect(placement.placed.map((it) => it.kind)).toEqual(['BONUS_VIDEO'])
   })
 
@@ -119,11 +124,11 @@ describe('placeAll', () => {
 
 describe('warnings', () => {
   it('says what looks wrong for what it is to be', () => {
-    expect(warnings({ ...VIDEO, width: 1280, height: 720 }, 'FULL_VIDEO')).toEqual(["Under 1080p: it's 1280 × 720"])
-    expect(warnings({ ...VIDEO, width: 1280, height: 720 }, 'BONUS_VIDEO')).toEqual([])
-    expect(warnings({ ...AUDIO, sampleRate: 32000 }, 'FULL_AUDIO')).toEqual(['Its audio is 32 kHz, not 44.1 or 48 kHz'])
-    expect(warnings({ ...VIDEO, audio: false, sampleRate: null }, 'FULL_VIDEO')).toEqual(['It has no audio'])
-    expect(warnings(null, 'FULL_VIDEO')).toEqual([])
+    expect(warnings({ ...VIDEO, width: 1280, height: 720 }, 'FULL_VIDEO', t, 'en-GB')).toEqual(["Under 1080p: it's 1280 × 720"])
+    expect(warnings({ ...VIDEO, width: 1280, height: 720 }, 'BONUS_VIDEO', t, 'en-GB')).toEqual([])
+    expect(warnings({ ...AUDIO, sampleRate: 32000 }, 'FULL_AUDIO', t, 'en-GB')).toEqual(['Its audio is 32 kHz, not 44.1 or 48 kHz'])
+    expect(warnings({ ...VIDEO, audio: false, sampleRate: null }, 'FULL_VIDEO', t, 'en-GB')).toEqual(['It has no audio'])
+    expect(warnings(null, 'FULL_VIDEO', t, 'en-GB')).toEqual([])
   })
 })
 
@@ -131,28 +136,30 @@ describe('formatting', () => {
   it('says lengths, sizes and codecs as people know them', () => {
     expect(formatDuration(5525.4)).toBe('1:32:05')
     expect(formatDuration(245)).toBe('4:05')
-    expect(formatSize(4_200_000_000)).toBe('4.2 GB')
-    expect(formatSize(820_000_000)).toBe('820 MB')
-    expect(formatSize(512)).toBe('512 bytes')
+    expect(formatSize(4_200_000_000, 'en-GB')).toBe('4.2 GB')
+    expect(formatSize(820_000_000, 'en-GB')).toBe('820 MB')
+    expect(formatSize(512, 'en-GB')).toBe('512 bytes')
     expect(codecName('h264')).toBe('H.264')
     expect(codecName('pcm_s24le')).toBe('PCM 24-bit')
     expect(codecName('dvvideo')).toBe('DVVIDEO')
   })
 
   it("says what's in a file on one line", () => {
-    expect(infoLine(info(), 4_200_000_000)).toBe('1:32:05 · 1920 × 1080 · 25 fps · H.264 · AAC 48 kHz · 4.2 GB')
-    expect(infoLine(info({ frameRate: 30000 / 1001 }), 1)).toContain('29.97 fps')
-    expect(infoLine(info({ videoCodec: null, width: null, height: null, frameRate: null, audioCodec: 'mp3', sampleRate: 44100 }), 86_000_000))
+    expect(infoLine(info(), 4_200_000_000, 'en-GB')).toBe('1:32:05 · 1920 × 1080 · 25 fps · H.264 · AAC 48 kHz · 4.2 GB')
+    expect(infoLine(info({ frameRate: 30000 / 1001 }), 1, 'en-GB')).toContain('29.97 fps')
+    expect(infoLine(info({ videoCodec: null, width: null, height: null, frameRate: null, audioCodec: 'mp3', sampleRate: 44100 }), 86_000_000, 'en-GB'))
       .toBe('1:32:05 · MP3 44.1 kHz · 86 MB')
+    expect(infoLine(info({ frameRate: 30000 / 1001, audioCodec: 'mp3', sampleRate: 44100 }), 4_200_000_000, 'sl-SI'))
+      .toBe('1:32:05 · 1920 × 1080 · 29,97 fps · H.264 · MP3 44,1 kHz · 4,2 GB')
   })
 })
 
 describe('mediaConcerns', () => {
   it('says when the full audio is not as long as the full video', () => {
-    expect(mediaConcerns([{ kind: 'FULL_VIDEO', info: info() }, { kind: 'FULL_AUDIO', info: info({ duration: 5450 }) }]))
+    expect(mediaConcerns([{ kind: 'FULL_VIDEO', info: info() }, { kind: 'FULL_AUDIO', info: info({ duration: 5450 }) }], t))
       .toEqual(['The full audio is 1:15 shorter than the full video'])
-    expect(mediaConcerns([{ kind: 'FULL_VIDEO', info: info() }, { kind: 'FULL_AUDIO', info: info({ duration: 5528 }) }])).toEqual([])
-    expect(mediaConcerns([{ kind: 'FULL_VIDEO', info: info() }, { kind: 'BONUS_AUDIO', info: info({ duration: 60 }) }])).toEqual([])
+    expect(mediaConcerns([{ kind: 'FULL_VIDEO', info: info() }, { kind: 'FULL_AUDIO', info: info({ duration: 5528 }) }], t)).toEqual([])
+    expect(mediaConcerns([{ kind: 'FULL_VIDEO', info: info() }, { kind: 'BONUS_AUDIO', info: info({ duration: 60 }) }], t)).toEqual([])
   })
 })
 
@@ -188,12 +195,12 @@ describe('sendInChunks', () => {
 
   it('gives up on an upload that expired, or when the connection keeps breaking', async () => {
     const file = new Blob([new Uint8Array(10)])
-    await expect(sendInChunks('session', file, () => {}, controller().signal, 4, async () => ({ status: 410, range: null }), async () => {}))
-      .rejects.toThrow('The upload expired; send the file again')
-    await expect(sendInChunks('session', file, () => {}, controller().signal, 4, async () => ({ status: 503, range: null }), async () => {}))
-      .rejects.toThrow('The connection kept breaking while it was being sent')
-    await expect(sendInChunks('session', file, () => {}, controller().signal, 4, async () => ({ status: 403, range: null }), async () => {}))
-      .rejects.toThrow('Google Cloud Storage answered 403')
+    const failure = (status: number) =>
+      sendInChunks('session', file, () => {}, controller().signal, 4, async () => ({ status, range: null }), async () => {})
+        .then(() => 'sent', (error) => errorMessage(error, t))
+    expect(await failure(410)).toBe('The upload expired; send the file again')
+    expect(await failure(503)).toBe('The connection kept breaking while it was being sent')
+    expect(await failure(403)).toBe('Google Cloud Storage answered 403')
   })
 })
 
@@ -201,10 +208,12 @@ describe('mediaParts', () => {
   const file = (kind: MediaKind, duration: number | null) => ({ kind, info: { duration } as MediaInfo })
 
   it("says what's there, then what's missing once it's recorded", () => {
-    expect(mediaParts([file('FULL_AUDIO', 3314), file('BONUS_AUDIO', 772)], true)).toEqual([
+    expect(mediaParts([file('FULL_AUDIO', 3314), file('BONUS_AUDIO', 772)], true, t)).toEqual([
       { text: 'Full audio, 55:14' }, { text: 'a bonus, 12:52' }, { text: 'no video', missing: true },
     ])
-    expect(mediaParts([file('BONUS_VIDEO', null), file('BONUS_AUDIO', null)], false)).toEqual([{ text: '2 bonuses' }])
-    expect(mediaParts([], false)).toEqual([])
+    expect(mediaParts([file('BONUS_VIDEO', null), file('BONUS_AUDIO', null)], false, t)).toEqual([{ text: '2 bonuses' }])
+    expect(mediaParts([], false, t)).toEqual([])
+    expect(mediaParts([file('BONUS_VIDEO', null), file('BONUS_AUDIO', null), file('BONUS_AUDIO', null)], false, tSl))
+      .toEqual([{ text: '3 bonus posnetki' }])
   })
 })

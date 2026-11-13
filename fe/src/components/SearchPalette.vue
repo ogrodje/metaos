@@ -4,22 +4,26 @@ import { useRoute, useRouter } from 'vue-router'
 import { faUser } from '@fortawesome/free-regular-svg-icons'
 import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { I18nT } from 'vue-i18n'
 import MarkedText from '@/components/MarkedText.vue'
 import ShowBadge from '@/components/ShowBadge.vue'
 import StatusLabel from '@/components/StatusLabel.vue'
-import { DATE_LOCALE, episodePath, formatDate, guests, sessionName, sessionPath, sessionPlace, TIME_ZONE } from '@/episodes'
+import { episodePath, formatDate, guests, sessionName, sessionPath, sessionPlace } from '@/episodes'
 import { errorMessage, graphql } from '@/graphql'
+import { TIME_ZONE } from '@/i18n'
 import { personPath, rolesOf } from '@/people'
 import {
   type EpisodeHit, episodeMatch, type PersonHit, resultCount, SEARCH_QUERY, type SearchResults, searchPath, searchWords,
   type SessionHit,
 } from '@/search'
+import { useLocale } from '@/useLocale'
 
 // Search, over any page: from the header's button, ⌘K or Ctrl+K, or /. A few of each kind, the best first; an episode's
 // code is that episode alone, which ↵ opens. See all opens the search page with the rest.
 
 const router = useRouter()
 const route = useRoute()
+const { t, dateLocale, path } = useLocale()
 
 const dialog = ref<HTMLDialogElement>()
 const input = ref<HTMLInputElement>()
@@ -59,25 +63,25 @@ const groups = computed<Group[]>(() => {
   const more = (shown: number, count: number) => (count > shown ? count : null)
   const all: Group[] = []
   if (results.episode) {
-    all.push({ title: 'Episode', more: null, items: [episodeItem({ episode: results.episode, matchedIn: ['CODE'], snippet: null }, true)] })
+    all.push({ title: t('search.episodeOne'), more: null, items: [episodeItem({ episode: results.episode, matchedIn: ['CODE'], snippet: null }, true)] })
   }
   if (results.episodes.length) {
     all.push({
-      title: results.season != null ? `Season ${results.season}` : 'Episodes',
+      title: results.season != null ? t('search.season', { n: results.season }) : t('search.tabs.episodes'),
       more: more(results.episodes.length, results.episodeCount),
       items: results.episodes.map((hit) => episodeItem(hit)),
     })
   }
   if (results.people.length) {
     all.push({
-      title: 'People',
+      title: t('search.tabs.people'),
       more: more(results.people.length, results.personCount),
       items: results.people.map((hit) => ({ kind: 'person', key: `p${hit.person.id}`, path: personPath(hit.person), hit })),
     })
   }
   if (results.sessions.length) {
     all.push({
-      title: 'Recording sessions',
+      title: t('search.sessions'),
       more: more(results.sessions.length, results.sessionCount),
       items: results.sessions.map((hit) => ({ kind: 'session', key: `s${hit.session.id}`, path: sessionPath(hit.session), hit })),
     })
@@ -115,7 +119,7 @@ async function ask(value: string) {
     error.value = undefined
     selected.value = 0
   } catch (e) {
-    if (asked === asks) error.value = errorMessage(e)
+    if (asked === asks) error.value = errorMessage(e, t)
   }
 }
 
@@ -130,18 +134,19 @@ function close() {
   dialog.value?.close()
 }
 
-function go(path: string | ReturnType<typeof searchPath>) {
+// In the page's language, e.g. /en/episodes/S05E08
+function go(to: string | ReturnType<typeof searchPath>) {
   close()
-  router.push(path)
+  router.push(typeof to === 'string' ? path(to) : { ...to, path: path(to.path) })
 }
 
 // A result opens here, or with ⌘ or Ctrl, Shift or the middle button in a new tab, as a link would
-function onItemClick(event: MouseEvent, path: string) {
+function onItemClick(event: MouseEvent, to: string) {
   if (event.metaKey || event.ctrlKey || event.shiftKey || event.button === 1) {
     event.preventDefault()
-    window.open(router.resolve(path).href, '_blank', 'noopener')
+    window.open(router.resolve(path(to)).href, '_blank', 'noopener')
   } else {
-    go(path)
+    go(to)
   }
 }
 
@@ -197,11 +202,11 @@ watch(() => route.fullPath, close)
 
 // A session as lists name it: its place, or else its date
 const shortDate = (date: string) =>
-  new Date(date).toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'short', timeZone: TIME_ZONE })
+  new Date(date).toLocaleDateString(dateLocale.value, { day: 'numeric', month: 'short', timeZone: TIME_ZONE })
 
 // Under an episode's title: why it was found when the title doesn't say, or else its guests
 function episodeLine(hit: EpisodeHit) {
-  const match = episodeMatch(hit, words.value)
+  const match = episodeMatch(hit, words.value, t)
   if (match.text) return match
   return { words: words.value, label: null, text: guests(hit.episode).join(', ') || null }
 }
@@ -211,7 +216,7 @@ function personLine(hit: PersonHit) {
   const { person } = hit
   if (hit.matchedIn[0] === 'BIO' && person.bio) return person.bio
   const latest = person.episodes.slice(0, 3).map(({ episode }) => episode.code ?? episode.title).join(', ')
-  return person.episodes.length ? `${rolesOf(person)} · ${latest}` : 'On no episode yet'
+  return person.episodes.length ? `${rolesOf(person, t)} · ${latest}` : t('search.noEpisodes')
 }
 
 defineExpose({ open })
@@ -219,35 +224,40 @@ defineExpose({ open })
 
 <template>
   <button type="button" class="button search-button" aria-haspopup="dialog" aria-keyshortcuts="Meta+K Control+K /" @click="open()">
-    <FontAwesomeIcon :icon="faMagnifyingGlass"/><span class="label">Search</span><kbd>{{ mac ? '⌘K' : 'Ctrl K' }}</kbd>
+    <FontAwesomeIcon :icon="faMagnifyingGlass"/><span class="label">{{ t('pages.search') }}</span><kbd>{{ mac ? '⌘K' : 'Ctrl K' }}</kbd>
   </button>
 
-  <dialog ref="dialog" class="palette" aria-label="Search" @click="onDialogClick">
+  <dialog ref="dialog" class="palette" :aria-label="t('pages.search')" @click="onDialogClick">
     <div class="panel">
       <div class="field">
         <FontAwesomeIcon :icon="faMagnifyingGlass"/>
         <input ref="input" v-model="text" type="search" autocomplete="off" spellcheck="false"
-               placeholder="Search episodes, people and sessions" aria-label="Search" role="combobox"
+               :placeholder="t('search.palettePlaceholder')" :aria-label="t('pages.search')" role="combobox"
                aria-autocomplete="list" aria-controls="search-items" :aria-expanded="items.length > 0"
                :aria-activedescendant="items.length ? `search-item-${selected}` : undefined" @keydown="onKeydown">
         <!-- Esc on a keyboard, Cancel on a phone -->
-        <button type="button" class="close" aria-label="Close search" @click="close()">
-          <kbd aria-hidden="true">esc</kbd><span class="cancel" aria-hidden="true">Cancel</span>
+        <button type="button" class="close" :aria-label="t('search.close')" @click="close()">
+          <kbd aria-hidden="true">esc</kbd><span class="cancel" aria-hidden="true">{{ t('common.cancel') }}</span>
         </button>
       </div>
 
       <div class="results">
         <div v-if="!text.trim()" class="hints">
-          <p>Type a code, a name or a topic. Case and diacritics don't matter, and the start of a word is enough.</p>
-          <p><kbd>S05E08</kbd>, <kbd>s5e8</kbd> or <kbd>5x08</kbd> goes to an episode; <kbd>S04</kbd> lists a season.</p>
+          <p>{{ t('search.hint') }}</p>
+          <I18nT keypath="search.codesHint" tag="p" scope="global">
+            <template #a><kbd>S05E08</kbd></template>
+            <template #b><kbd>s5e8</kbd></template>
+            <template #c><kbd>5x08</kbd></template>
+            <template #season><kbd>S04</kbd></template>
+          </I18nT>
         </div>
-        <p v-else-if="error" class="note">Search didn't work: {{ error }}</p>
-        <p v-else-if="found && !items.length" class="note">Nothing found for “{{ found.text }}”.</p>
+        <p v-else-if="error" class="note">{{ t('search.failed', { error }) }}</p>
+        <p v-else-if="found && !items.length" class="note">{{ t('search.nothing', { q: found.text }) }}</p>
 
-        <ul v-else-if="items.length" id="search-items" role="listbox" aria-label="Results">
+        <ul v-else-if="items.length" id="search-items" role="listbox" :aria-label="t('search.results')">
           <template v-for="group in groups" :key="group.title">
             <li class="group" role="presentation">
-              {{ group.title }}<span v-if="group.more" class="more">{{ group.items.length }} of {{ group.more }}</span>
+              {{ group.title }}<span v-if="group.more" class="more">{{ t('search.of', { shown: group.items.length, total: group.more }) }}</span>
             </li>
             <li v-for="item in group.items" :id="`search-item-${indexOf(item)}`" :key="item.key" role="option"
                 :aria-selected="indexOf(item) === selected" class="item"
@@ -263,7 +273,7 @@ defineExpose({ open })
                   </span>
                 </span>
                 <span class="side">
-                  <time v-if="item.hit.episode.status === 'PUBLISHED' && item.hit.episode.airedDate" :datetime="item.hit.episode.airedDate">{{ formatDate(item.hit.episode.airedDate) }}</time>
+                  <time v-if="item.hit.episode.status === 'PUBLISHED' && item.hit.episode.airedDate" :datetime="item.hit.episode.airedDate">{{ formatDate(item.hit.episode.airedDate, dateLocale) }}</time>
                   <StatusLabel v-else :status="item.hit.episode.status"/>
                 </span>
               </template>
@@ -280,9 +290,9 @@ defineExpose({ open })
               <template v-else>
                 <span class="lead"><time :datetime="item.hit.session.date">{{ shortDate(item.hit.session.date) }}</time></span>
                 <span class="main">
-                  <span class="title"><MarkedText :text="sessionName(item.hit.session) ?? formatDate(item.hit.session.date)" :words="words"/></span>
+                  <span class="title"><MarkedText :text="sessionName(item.hit.session) ?? formatDate(item.hit.session.date, dateLocale)" :words="words"/></span>
                   <span class="line">
-                    {{ formatDate(item.hit.session.date) }}<template v-if="sessionPlace(item.hit.session)"> · <MarkedText :text="sessionPlace(item.hit.session)!" :words="words"/></template><template v-if="item.hit.session.episodes.length"> · {{ item.hit.session.episodes.map((episode) => episode.code ?? episode.title).join(', ') }}</template>
+                    {{ formatDate(item.hit.session.date, dateLocale) }}<template v-if="sessionPlace(item.hit.session)"> · <MarkedText :text="sessionPlace(item.hit.session)!" :words="words"/></template><template v-if="item.hit.session.episodes.length"> · {{ item.hit.session.episodes.map((episode) => episode.code ?? episode.title).join(', ') }}</template>
                   </span>
                 </span>
                 <span class="side"/>
@@ -294,9 +304,13 @@ defineExpose({ open })
       </div>
 
       <div class="foot">
-        <span class="keys"><kbd>↑</kbd> <kbd>↓</kbd> to move</span>
-        <span class="keys"><kbd>↵</kbd> to open</span>
-        <button v-if="found && total > items.length" type="button" class="all" @click="seeAll()">See all {{ total }} results</button>
+        <I18nT keypath="search.toMove" tag="span" class="keys" scope="global">
+          <template #keys><kbd>↑</kbd> <kbd>↓</kbd></template>
+        </I18nT>
+        <I18nT keypath="search.toOpen" tag="span" class="keys" scope="global">
+          <template #key><kbd>↵</kbd></template>
+        </I18nT>
+        <button v-if="found && total > items.length" type="button" class="all" @click="seeAll()">{{ t('search.seeAll', { n: total }, total) }}</button>
       </div>
     </div>
   </dialog>

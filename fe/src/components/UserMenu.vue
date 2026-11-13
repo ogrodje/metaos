@@ -4,17 +4,21 @@ import { RouterLink, useRoute } from 'vue-router'
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import { faDiscord, faGithub, faGoogle } from '@fortawesome/free-brands-svg-icons'
 import {
-  faArrowRightFromBracket, faArrowUpRightFromSquare, faCircleCheck, faCircleExclamation, faCircleQuestion, faKey, faUser, faXmark,
+  faArrowRightFromBracket, faArrowUpRightFromSquare, faCircleCheck, faCircleExclamation, faCircleQuestion, faKey, faLanguage, faUser,
+  faXmark,
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { type LinkOutcome, type SignInProvider } from '@/accounts'
+import { type LinkOutcome, linkOutcomeText, type SignInProvider } from '@/accounts'
+import LanguageSwitch from '@/components/LanguageSwitch.vue'
 import { errorMessage } from '@/graphql'
 import { personPath } from '@/people'
 import { useAuthStore } from '@/stores/auth'
+import { useLocale } from '@/useLocale'
 
 // You, at the right of the header. Signed in, your initials, which open your name, your page, the identity providers
 // you sign in with, and Sign out; otherwise Sign in, which asks with what. Linking another identity provider is for
-// everyone, as it only adds a way to sign in to the same Keycloak user, not which person that is. A button that shows
+// everyone, as it only adds a way to sign in to the same Keycloak user, not which person that is. Both have the UI's
+// language too, as the footer has (OG-58). A button that shows
 // and hides a few links and buttons, which Tab goes through, rather than a menu, whose role would promise arrow keys.
 const props = defineProps<{
   // Who MetaOS takes the signed-in user for
@@ -27,6 +31,7 @@ const props = defineProps<{
 
 const auth = useAuthStore()
 const route = useRoute()
+const { t, path } = useLocale()
 const id = useId()
 
 const root = ref<HTMLElement>()
@@ -53,7 +58,7 @@ async function loadProviders() {
     providers.value = await auth.signInProviders()
     providersFailed.value = false
   } catch (error) {
-    console.error("Keycloak didn't list the sign-ins", errorMessage(error))
+    console.error("Keycloak didn't list the sign-ins", errorMessage(error, t))
     if (!providers.value) providersFailed.value = true
   }
 }
@@ -141,57 +146,60 @@ watch(() => route.fullPath, () => { open.value = false })
   <div ref="root" class="you">
     <template v-if="auth.authenticated">
       <button ref="toggle" type="button" class="avatar" :aria-expanded="open" :aria-controls="`${id}-menu`" :title="name"
-              :aria-label="`${name ?? 'You'}: your page, your sign-ins and signing out`" @click="open = !open">{{ initials }}</button>
+              :aria-label="t('menu.toggle', { name: name ?? t('menu.you') })" @click="open = !open">{{ initials }}</button>
       <div v-if="open" :id="`${id}-menu`" class="menu">
         <p class="who">
           <b>{{ name }}</b>
           <span v-if="auth.username && auth.username !== name">{{ auth.username }}</span>
-          <span v-if="auth.team || auth.member" class="role">{{ auth.team ? 'Staff' : 'Member' }}</span>
+          <span v-if="auth.team || auth.member" class="role">{{ auth.team ? t('menu.staff') : t('menu.member') }}</span>
         </p>
-        <RouterLink v-if="person" class="item" :to="personPath(person)"><FontAwesomeIcon :icon="faUser"/>Your page</RouterLink>
+        <RouterLink v-if="person" class="item" :to="path(personPath(person))"><FontAwesomeIcon :icon="faUser"/>{{ t('menu.yourPage') }}</RouterLink>
         <!-- Once MetaOS has said that your account isn't anyone. Only Oto links accounts to people, on the People page,
              which has everyone and those nobody's linked to. -->
-        <RouterLink v-else-if="person === null && canLinkAccounts" class="item" to="/people"><FontAwesomeIcon :icon="faCircleQuestion"/>Which person are you?</RouterLink>
+        <RouterLink v-else-if="person === null && canLinkAccounts" class="item" :to="path('/people')"><FontAwesomeIcon :icon="faCircleQuestion"/>{{ t('menu.whichPerson') }}</RouterLink>
         <p v-else-if="person === null" class="unlinked">
           <FontAwesomeIcon :icon="faCircleQuestion"/>
-          <span>You aren't linked to a person in MetaOS yet. Oto links sign-ins to people: ask him to link yours.</span>
+          <span>{{ t('menu.unlinked') }}</span>
         </p>
 
         <!-- The ways you sign in, all to the same Keycloak user, so MetaOS takes them for the same account -->
         <div v-if="!providers || providers.length" class="sign-ins">
-          <p :id="`${id}-sign-ins`" class="label">Sign in with</p>
+          <p :id="`${id}-sign-ins`" class="label">{{ t('menu.signInWith') }}</p>
           <a v-if="providersFailed" class="item" :href="auth.accountConsole" target="_blank" rel="noopener">
-            <FontAwesomeIcon :icon="faKey"/>Manage sign-ins<FontAwesomeIcon class="external" :icon="faArrowUpRightFromSquare"/>
-            <span class="visually-hidden">(opens Keycloak in a new tab)</span>
+            <FontAwesomeIcon :icon="faKey"/>{{ t('menu.manageSignIns') }}<FontAwesomeIcon class="external" :icon="faArrowUpRightFromSquare"/>
+            <span class="visually-hidden">{{ t('menu.opensKeycloak') }}</span>
           </a>
-          <p v-else-if="!providers" class="loading">Loading…</p>
+          <p v-else-if="!providers" class="loading">{{ t('common.loading') }}</p>
           <ul v-else class="providers" :aria-labelledby="`${id}-sign-ins`">
             <li v-for="provider in providers" :key="provider.alias" class="provider">
               <FontAwesomeIcon class="brand" :icon="providerIcon(provider).icon"
                                :style="provider.connected ? { color: providerIcon(provider).color } : undefined"/>
               <span class="what">
                 {{ provider.name }}<template v-if="provider.username"><span class="username"> · {{ provider.username }}</span></template>
-                <span v-if="provider.connected && !provider.username" class="visually-hidden"> (linked)</span>
+                <span v-if="provider.connected && !provider.username" class="visually-hidden"> {{ t('menu.linked') }}</span>
               </span>
-              <span v-if="provider.connected && provider.alias === auth.identityProvider" class="this">this one</span>
-              <button v-else-if="!provider.connected" type="button" class="link" :aria-label="`Link ${provider.name}`"
+              <span v-if="provider.connected && provider.alias === auth.identityProvider" class="this">{{ t('menu.thisOne') }}</span>
+              <button v-else-if="!provider.connected" type="button" class="link" :aria-label="t('menu.linkProvider', { provider: provider.name })"
                       :aria-disabled="linking !== undefined || undefined" @click="linking === undefined && link(provider)">
-                {{ linking === provider.alias ? 'Linking…' : 'Link' }}
+                {{ linking === provider.alias ? t('accounts.linking') : t('menu.link') }}
               </button>
             </li>
           </ul>
         </div>
 
         <div class="rule" aria-hidden="true"></div>
-        <button type="button" class="item" @click="auth.logout()"><FontAwesomeIcon :icon="faArrowRightFromBracket"/>Sign out</button>
+        <div class="language"><FontAwesomeIcon :icon="faLanguage"/><LanguageSwitch/></div>
+        <button type="button" class="item" @click="auth.logout(path('/'))"><FontAwesomeIcon :icon="faArrowRightFromBracket"/>{{ t('common.signOut') }}</button>
       </div>
     </template>
 
     <template v-else>
-      <button ref="toggle" type="button" class="button" :aria-expanded="open" :aria-controls="`${id}-menu`" @click="open = !open">Sign in</button>
+      <button ref="toggle" type="button" class="button" :aria-expanded="open" :aria-controls="`${id}-menu`" @click="open = !open">{{ t('common.signIn') }}</button>
       <div v-if="open" :id="`${id}-menu`" class="menu sign-in">
-        <button type="button" class="item" @click="auth.login('discord')"><FontAwesomeIcon :icon="faDiscord"/>Sign in with Discord</button>
-        <button type="button" class="item" @click="auth.login('google')"><FontAwesomeIcon :icon="faGoogle"/>Sign in with Google</button>
+        <button type="button" class="item" @click="auth.login('discord')"><FontAwesomeIcon :icon="faDiscord"/>{{ t('auth.signInWith', { provider: 'Discord' }) }}</button>
+        <button type="button" class="item" @click="auth.login('google')"><FontAwesomeIcon :icon="faGoogle"/>{{ t('auth.signInWith', { provider: 'Google' }) }}</button>
+        <div class="rule" aria-hidden="true"></div>
+        <div class="language"><FontAwesomeIcon :icon="faLanguage"/><LanguageSwitch/></div>
       </div>
     </template>
 
@@ -199,8 +207,8 @@ watch(() => route.fullPath, () => { open.value = false })
     <div class="outcome-region" role="status">
       <p v-if="outcome && !open" class="outcome" :class="{ failed: !outcome.linked }">
         <FontAwesomeIcon class="mark" :icon="outcome.linked ? faCircleCheck : faCircleExclamation"/>
-        <span class="text">{{ outcome.text }}</span>
-        <button type="button" class="dismiss" aria-label="Dismiss" @click.stop="dismissOutcome"><FontAwesomeIcon :icon="faXmark"/></button>
+        <span class="text">{{ linkOutcomeText(outcome, t) }}</span>
+        <button type="button" class="dismiss" :aria-label="t('menu.dismiss')" @click.stop="dismissOutcome"><FontAwesomeIcon :icon="faXmark"/></button>
       </p>
     </div>
   </div>
@@ -418,6 +426,21 @@ watch(() => route.fullPath, () => { open.value = false })
 .rule {
   margin: 6px 0;
   border-top: 1px solid var(--rule);
+}
+
+// The UI's language, as the footer has it: a row as an item's, with its icon where theirs are
+.language {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  line-height: 20px;
+
+  > svg {
+    flex: none;
+    width: 16px;
+    color: var(--muted);
+  }
 }
 
 // How linking went: a line under your initials, with its own way to go

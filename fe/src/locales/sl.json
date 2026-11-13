@@ -1,97 +1,1252 @@
 {
-  "pages": {
-    "home": "Domov",
-    "episodes": "Epizode",
-    "people": "Ljudje",
-    "person": "Oseba",
-    "events": "Dogodki in konference",
-    "search": "Iskanje",
-    "ideas": "Ideje",
-    "transcriptions": "Prepisi",
-    "episode": "Epizoda",
-    "session": "Snemanje",
-    "usage": "Uporaba API-ja in MCP",
-    "privacy": "Zasebnost",
-    "notFound": "Strani ni"
+  "accounts": {
+    "aSignIn": "Prijava",
+    "claim": "Kot {person} se še nihče ne prijavlja. Ste to vi? Vaša prijava {account} še ni povezana z nikomer.",
+    "claimFailed": "Vaše prijave ni bilo mogoče povezati: {error}",
+    "confirmUnlink": "Želite prijavo {account} odvezati od osebe {person}?",
+    "confirmUnlinkNote": "Njeni komentarji in zgodovina bodo nato prikazovali njeno uporabniško ime.",
+    "firstSeen": "prvič zaznano {date}",
+    "howOn": "{how}, {date}",
+    "linkAccountTo": "Poveži {account} z",
+    "linkFailed": "Povezava ni uspela: {error}",
+    "linkTo": "Poveži z …",
+    "linkToPerson": "Poveži {account} z osebo",
+    "linkedBy": "povezano ročno ({name})",
+    "linkedByEmail": "povezano prek e-pošte",
+    "linkedBySomeone": "povezano ročno",
+    "linkedTo": "Prijava {account} je povezana z osebo {person}.",
+    "linking": "Povezujemo …",
+    "outcome": {
+      "cancelled": "Račun {provider} ni povezan, ker ste povezovanje preklicali.",
+      "failed": "Računa {provider} ni bilo mogoče povezati: morda je ta račun {provider} že povezan z drugo prijavo.",
+      "failedBecause": "Računa {provider} ni bilo mogoče povezati: {detail}",
+      "linked": "Račun {provider} je povezan: prijavite se lahko tudi z njim."
+    },
+    "picker": {
+      "matching": "Ustrezajo imenu {name}:",
+      "noOne": "Nikogar s tem imenom ni.",
+      "placeholder": "Poiščite osebo po imenu",
+      "typeName": "Vpišite ime."
+    },
+    "signIns": "Prijave",
+    "thisIsMe": "To sem jaz",
+    "unlink": "Odveži",
+    "unlinkAccount": "Odveži {account}",
+    "unlinkFailed": "Prijave ni bilo mogoče odvezati: {error}",
+    "unlinked": {
+      "linker": "Prijave, ki jih je MetaOS zaznal, a še niso povezane z nobeno osebo. Povežite vsako z osebo, ki ji pripada, in njeni komentarji ter zgodovina dobijo njeno ime.",
+      "others": "Prijave, ki jih je MetaOS zaznal, a še niso povezane z nobeno osebo. Oto jih poveže z osebami, ki jim pripadajo, in njihovi komentarji ter zgodovina nato dobijo njihova imena.",
+      "title": "Nepovezane prijave"
+    },
+    "unlinking": "Odvezujemo …",
+    "you": "vi"
   },
-  "nav": {
-    "main": "Glavno",
-    "home": "Domov",
-    "episodes": "Epizode",
-    "ideas": "Ideje",
-    "people": "Ljudje",
-    "events": "Dogodki",
-    "transcriptions": "Prepisi"
+  "activity": {
+    "addedPeople": "dodana {n} oseba | dodani {n} osebi | dodane {n} osebe | dodanih {n} oseb",
+    "andMore": "in še {n}",
+    "changed": "spremenjeno",
+    "changedRoles": "spremenjene vloge",
+    "changes": "{n} sprememba | {n} spremembi | {n} spremembe | {n} sprememb",
+    "fields": {
+      "added": "Dodana",
+      "address": "Naslov",
+      "aired": "Objavljena",
+      "code": "Oznaka",
+      "cover": "Naslovnica",
+      "date": "Datum",
+      "location": "Kraj",
+      "machineSummary": "Povzetek UI",
+      "name": "Ime",
+      "patreonAudio": "Patreon (samo zvok)",
+      "patreonBonus": "Patreon (bonus)",
+      "patreonBonusAudio": "Patreon (bonus, samo zvok)",
+      "recommendedBy": "Priporočilo",
+      "recordingDate": "Datum snemanja",
+      "session": "Snemanje",
+      "show": "Oddaja",
+      "status": "Stanje",
+      "summary": "Povzetek",
+      "thumbnail": "Sličica",
+      "thumbnailB": "Sličica B",
+      "thumbnailC": "Sličica C",
+      "tinySummary": "Kratki povzetek",
+      "title": "Naslov",
+      "titleB": "Naslov B",
+      "titleC": "Naslov C",
+      "web": "Spletna slika"
+    },
+    "filter": {
+      "all": "Vse",
+      "changes": "Spremembe",
+      "comments": "Komentarji"
+    },
+    "fold": "Strni",
+    "moreChanges": "še {n} sprememba | še {n} spremembi | še {n} spremembe | še {n} sprememb",
+    "new": "novo",
+    "newCount": "{n} nova | {n} novi | {n} nove | {n} novih",
+    "noChanges": "Sprememb še ni.",
+    "noComments": "Komentarjev še ni.",
+    "nothing": "Tu še ni ničesar.",
+    "onlyLatest": "Samo najnovejše",
+    "outside": "Zunaj sistema MetaOS",
+    "recent": {
+      "changed": {
+        "EPISODE": "Spremenjena {n} epizoda | Spremenjeni {n} epizodi | Spremenjene {n} epizode | Spremenjenih {n} epizod",
+        "PERSON": "Spremenjena {n} oseba | Spremenjeni {n} osebi | Spremenjene {n} osebe | Spremenjenih {n} oseb",
+        "SESSION": "Spremenjeno {n} snemanje | Spremenjeni {n} snemanji | Spremenjena {n} snemanja | Spremenjenih {n} snemanj",
+        "several": "Spremenjeno: {list}"
+      },
+      "count": {
+        "EPISODE": "{n} epizoda | {n} epizodi | {n} epizode | {n} epizod",
+        "PERSON": "{n} oseba | {n} osebi | {n} osebe | {n} oseb",
+        "SESSION": "{n} snemanje | {n} snemanji | {n} snemanja | {n} snemanj"
+      },
+      "created": {
+        "EPISODE": "Ustvarjena {n} epizoda | Ustvarjeni {n} epizodi | Ustvarjene {n} epizode | Ustvarjenih {n} epizod",
+        "PERSON": "Ustvarjena {n} oseba | Ustvarjeni {n} osebi | Ustvarjene {n} osebe | Ustvarjenih {n} oseb",
+        "SESSION": "Ustvarjeno {n} snemanje | Ustvarjeni {n} snemanji | Ustvarjena {n} snemanja | Ustvarjenih {n} snemanj",
+        "several": "Ustvarjeno: {list}"
+      }
+    },
+    "removedPeople": "odstranjena {n} oseba | odstranjeni {n} osebi | odstranjene {n} osebe | odstranjenih {n} oseb",
+    "removedWas": "odstranjeno (prej {from})",
+    "show": "Prikaži",
+    "showAll": "Pokaži vse ({n})",
+    "times": "{what} {n}-krat",
+    "title": "Dejavnost",
+    "today": "danes, {time}",
+    "twice": "{what} dvakrat",
+    "yesterday": "včeraj, {time}"
   },
   "app": {
-    "skip": "Na vsebino",
-    "logo": "Ogrodje MetaOS, domov",
     "checking": "Preverjamo vašo prijavo …",
-    "unconfirmed": "Vaše prijave ni bilo mogoče potrditi, ker storitev za prijavo ni odgovorila, zato vidite, kar vidijo vsi.",
-    "usage": "Uporaba API-ja in MCP",
-    "privacy": "Zasebnost",
+    "discord": "Ogrodje na Discordu",
     "elsewhere": "Ogrodje drugje",
     "github": "MetaOS na GitHubu",
-    "discord": "Ogrodje na Discordu"
+    "logo": "Ogrodje MetaOS, domov",
+    "privacy": "Zasebnost",
+    "skip": "Na vsebino",
+    "unconfirmed": "Vaše prijave ni bilo mogoče potrditi, ker storitev za prijavo ni odgovorila, zato vidite, kar vidijo vsi.",
+    "usage": "Uporaba API-ja in MCP"
   },
-  "language": {
-    "label": "Jezik",
-    "sl": "Slovenščina",
-    "en": "English"
+  "attention": {
+    "guestNotConfirmed": "Gost ni potrjen",
+    "noDoc": "Ni dokumenta",
+    "notDistributed": "Objavljena pred {n} dnem, a še ni na YouTubu ali Patreonu | Objavljena pred {n} dnevoma, a še ni na YouTubu ali Patreonu | Objavljena pred {n} dnevi, a še ni na YouTubu ali Patreonu | Objavljena pred {n} dnevi, a še ni na YouTubu ali Patreonu",
+    "notReleased": "Posneta pred {n} dnem, še ni objavljena | Posneta pred {n} dnevoma, še ni objavljena | Posneta pred {n} dnevi, še ni objavljena | Posneta pred {n} dnevi, še ni objavljena",
+    "passed": "Datum snemanja je minil, a je še vedno {status}"
+  },
+  "auth": {
+    "refreshFailed": "prijave pri Keycloaku ni bilo mogoče osvežiti; poskusite znova čez trenutek",
+    "signInWith": "Prijavite se z računom {provider}"
+  },
+  "comments": {
+    "commented": "napisano {date}",
+    "confirmDelete": "Želite izbrisati ta komentar?",
+    "delete": "Izbriši",
+    "deleting": "Brišemo …",
+    "editLabel": "Uredite komentar",
+    "edited": "urejeno",
+    "editedAt": "Urejeno {when}",
+    "fold": "Strni",
+    "goOn": "Nadaljujte s komentarjem …",
+    "keys": "{keys}: {action}",
+    "label": "Komentar",
+    "left": "Še {count} znak | Še {count} znaka | Še {count} znaki | Še {count} znakov",
+    "markdown": "Podprt je Markdown",
+    "notDeleted": "Komentar ni bil izbrisan: {error}",
+    "notPosted": "Komentar ni bil objavljen: {error}",
+    "notSaved": "Komentar ni bil shranjen: {error}",
+    "nothingToPreview": "Ničesar ni za predogled",
+    "placeholder": "Napišite komentar",
+    "posting": "Objavljamo …",
+    "previewTab": "Predogled",
+    "saving": "Shranjujemo …",
+    "submit": "Komentiraj",
+    "tooMany": "{count} znak preveč | {count} znaka preveč | {count} znaki preveč | {count} znakov preveč",
+    "via": "Napisano prek MCP z orodjem {tool}",
+    "write": "Napišite komentar …",
+    "writeTab": "Piši"
   },
   "common": {
-    "tryAgain": "Poskusite znova",
     "cancel": "Prekliči",
     "close": "Zapri",
-    "save": "Shrani",
-    "remove": "Odstrani",
     "edit": "Uredi",
+    "loading": "Nalagamo …",
+    "remove": "Odstrani",
+    "save": "Shrani",
     "showAll": "Pokaži vse",
     "showLess": "Pokaži manj",
-    "loading": "Nalagamo …",
     "signIn": "Prijava",
-    "signOut": "Odjava"
+    "signOut": "Odjava",
+    "tryAgain": "Poskusite znova"
+  },
+  "distribution": {
+    "add": {
+      "adding": "Dodajamo …",
+      "byLink": "Po povezavi",
+      "detected": "{channel}, po povezavi",
+      "hint": "MetaOS predogled pridobi s strani. Povezave epizode se tu prikažejo same.",
+      "notePlaceholder": "npr. Iva jo je objavila v #announcements",
+      "submit": "Dodaj",
+      "title": "Zabeležite, kje je bila objavljena",
+      "url": "Povezava do objave"
+    },
+    "channels": {
+      "NEWSLETTER": "E-novice",
+      "OTHER": "Drugo"
+    },
+    "confirmRemove": "Želite to odstraniti?",
+    "confirmRemoveLink": "Želite to odstraniti in z epizode izbrisati povezavo »{link}«?",
+    "fetching": "Pridobivamo predogled …",
+    "form": {
+      "link": "Povezava",
+      "note": "Opomba",
+      "on": "Kanal",
+      "title": "Naslov",
+      "titlePlaceholder": "Kot ga navaja stran",
+      "when": "Kdaj"
+    },
+    "line": {
+      "none": "Še brez objav",
+      "on": "Povezave: {where}",
+      "posts": "{n} objava: {where} | {n} objavi: {where} | {n} objave: {where} | {n} objav: {where}"
+    },
+    "links": {
+      "APPLE_PODCASTS": "Apple Podcasts",
+      "PATREON": "Patreon, celotna epizoda",
+      "PATREON_AUDIO": "Patreon, celotna epizoda kot zvok",
+      "PATREON_BONUS": "Patreon, bonus",
+      "PATREON_BONUS_AUDIO": "Patreon, bonus kot zvok",
+      "SPOTIFY": "Spotify",
+      "YOUTUBE": "YouTube"
+    },
+    "noPreview": "Brez predogleda: {error}",
+    "notAdded": "Objava ni bila dodana: {error}",
+    "notRefreshed": "Predogleda ni bilo mogoče znova pridobiti: {error}",
+    "notRemoved": "Ni bilo odstranjeno: {error}",
+    "notSaved": "Ni bilo shranjeno: {error}",
+    "posts": "Objave",
+    "refresh": "Osveži",
+    "refreshLabel": "Znova pridobi predogled za »{title}«",
+    "refreshTitle": "Znova pridobi predogled",
+    "releasedOn": "Objavljena na",
+    "removing": "Odstranjujemo …",
+    "saving": "Shranjujemo …"
+  },
+  "episode": {
+    "aiSummary": "Strojni povzetek",
+    "behind": {
+      "distribution": "Distribucija",
+      "media": "Video in zvok",
+      "noneYet": "Še nič",
+      "notTranscribed": "Še ni prepisana: {link} na strani Prepisi.",
+      "pictures": "Slike",
+      "teamOnly": "Ta del vidi samo ekipa.",
+      "title": "V ozadju epizode",
+      "transcribeIt": "prepišite jo",
+      "transcript": "Prepis"
+    },
+    "contents": "Na tej strani",
+    "facts": {
+      "added": "Dodana",
+      "aired": "Izšla",
+      "recommendedBy": "Na predlog",
+      "recording": "Datum snemanja",
+      "session": "Snemanje",
+      "spokenIn": "Jezik",
+      "teamOnly": "To vidi samo ekipa",
+      "title": "Epizoda"
+    },
+    "folded": {
+      "fold": "Skrči",
+      "paragraphs": "{n} odstavek | {n} odstavka | {n} odstavki | {n} odstavkov",
+      "readAll": "Preberite vse",
+      "words": "{n} beseda | {n} besedi | {n} besede | {n} besed"
+    },
+    "hero": {
+      "alt": "Sličica {letter}",
+      "tested": "Sličice, s katerimi jo testiramo",
+      "testedAs": "V testu"
+    },
+    "listen": {
+      "copied": "Kopirano",
+      "copiedLink": "Povezava na {platform} je kopirana",
+      "copy": "Kopiraj povezavo",
+      "copyLink": "Kopiraj povezavo na {platform}",
+      "patreonAudio": "Patreon, zvok",
+      "patreonBonus": "Patreon, bonus",
+      "patreonBonusAudio": "Patreon, bonus kot zvok"
+    },
+    "listenTitle": "Poslušajte",
+    "loading": "Nalagamo epizodo",
+    "notFound": {
+      "public": "Morda še ni objavljena, ima zdaj drugo oznako ali pa je bila izbrisana. Najdite jo med epizodami ali se prijavite, če ste v ekipi Ogrodja.",
+      "team": "Morda ima zdaj drugo oznako ali pa je bila izbrisana. Poiščite jo ali jo najdite med epizodami.",
+      "title": "Epizode {ref} ni"
+    },
+    "panel": {
+      "activity": "Dejavnost",
+      "backToTeam": "Nazaj na pogled ekipe",
+      "label": "O epizodi",
+      "loadingActivity": "Nalagamo dejavnost",
+      "needsAttention": "Potrebuje pozornost",
+      "seenAsPublic": "Tako jo vidi javnost.",
+      "toTop": "Na vrh: {title}"
+    },
+    "people": "Ljudje",
+    "seeAsPublic": "Poglejte jo, kot jo vidi javnost",
+    "signIn": {
+      "text": "Na tej strani dela ekipa: prepis, slike, datoteke in zgodovina epizode so namenjeni njej.",
+      "title": "Ste v ekipi Ogrodja?"
+    },
+    "summary": "Povzetek",
+    "transcript": {
+      "allLines": "Pokaži {n} vrstico | Pokaži obe vrstici | Pokaži vse {n} vrstice | Pokaži vseh {n} vrstic",
+      "allTurns": "Pokaži {n} izmenjavo | Pokaži obe izmenjavi | Pokaži vse {n} izmenjave | Pokaži vseh {n} izmenjav",
+      "heard": "Slišal ga je {provider} dne {date} iz datoteke {file}, kot sliši stroj: imena so morda napačno zapisana.",
+      "heardUnnamed": "Slišal ga je {provider} dne {date} iz datoteke {file}, kot sliši stroj: imena so morda napačno zapisana, govorci pa še niso poimenovani.",
+      "label": "Prepis",
+      "loading": "Nalagamo prepis",
+      "nothing": "Ničesar ni bilo slišati.",
+      "onlyStart": "Samo začetek",
+      "openAt": "Odprite na YouTubu pri {at}",
+      "removed": "Odstranjen je bil",
+      "what": "Prepis"
+    },
+    "what": "Epizoda"
   },
   "episodes": {
-    "role": {
-      "HOST": "voditelj",
-      "CO_HOST": "sovoditelj",
-      "GUEST": "gost",
-      "PRODUCER": "producent",
-      "CONSULTANT": "svetovalec",
-      "DESIGNER": "oblikovalec",
-      "CANDIDATE": "kandidat"
-    },
-    "status": {
-      "IDEA": "Ideja",
-      "PLANNED": "Načrtovana",
-      "SCHEDULED": "Na urniku",
-      "RECORDED": "Posneta",
-      "IN_PRODUCTION": "V produkciji",
-      "READY": "Pripravljena",
-      "EARLY_ACCESS": "Zgodnji dostop",
-      "PUBLISHED": "Objavljena",
-      "ON_HOLD": "Na čakanju",
-      "CANCELLED": "Preklicana"
-    },
     "pictures": {
-      "titlesTested": "naslovi v testu: {n}",
-      "thumbnail": "sličica",
-      "noThumbnailOf": "ni sličice {letter}",
-      "noThumbnail": "ni sličice",
+      "artwork": "{n} datoteka z grafiko | {n} datoteki z grafiko | {n} datoteke z grafiko | {n} datotek z grafiko",
       "cover": "naslovnica",
       "noCover": "ni naslovnice",
-      "web": "spletna slika",
+      "noThumbnail": "ni sličice",
+      "noThumbnailOf": "ni sličice {letter}",
       "noWeb": "ni spletne slike",
-      "artwork": "{n} datoteka z grafiko | {n} datoteki z grafiko | {n} datoteke z grafiko | {n} datotek z grafiko",
-      "photos": "{n} fotografija | {n} fotografiji | {n} fotografije | {n} fotografij"
+      "photos": "{n} fotografija | {n} fotografiji | {n} fotografije | {n} fotografij",
+      "thumbnail": "sličica",
+      "titlesTested": "naslovi v testu: {n}",
+      "web": "spletna slika"
+    },
+    "role": {
+      "CANDIDATE": "kandidat",
+      "CONSULTANT": "svetovalec",
+      "CO_HOST": "sovoditelj",
+      "DESIGNER": "oblikovalec",
+      "GUEST": "gost",
+      "HOST": "voditelj",
+      "PRODUCER": "producent"
+    },
+    "status": {
+      "CANCELLED": "Preklicana",
+      "EARLY_ACCESS": "Zgodnji dostop",
+      "IDEA": "Ideja",
+      "IN_PRODUCTION": "V produkciji",
+      "ON_HOLD": "Na čakanju",
+      "PLANNED": "Načrtovana",
+      "PUBLISHED": "Objavljena",
+      "READY": "Pripravljena",
+      "RECORDED": "Posneta",
+      "SCHEDULED": "Na urniku"
     }
   },
   "errors": {
-    "unreachable": "MetaOS ni dosegljiv; preverite povezavo",
+    "graphql": "{detail}",
     "restarting": "MetaOS ne odgovarja ({status}); morda se ponovno zaganja",
-    "status": "MetaOS je odgovoril s {status}",
     "staffOnly": "to je za ekipo Ogrodja; v ekipo vas doda skrbnik",
-    "graphql": "{detail}"
+    "status": "MetaOS je odgovoril s {status}",
+    "unreachable": "MetaOS ni dosegljiv; preverite povezavo"
+  },
+  "events": {
+    "api": "Podatki o dogodkih so na voljo tudi v {api}. Podatki se osvežijo vsakih 12 ur.",
+    "apiLink": "strojni obliki prek API-ja",
+    "description": "Tehnološki, razvijalski in startup dogodki ter konference v Sloveniji, ki jih spremlja Ogrodje, po tednih.",
+    "disclaimer": "⚠️ Sistem za zbiranje dogodkov in konferenc je v razvoju. Prosimo, preverite točnost podatkov na straneh organizatorjev. Ogrodje {not} organizator. Dogodki in podatki o konferencah so zbrani iz javnih virov. Napake, želje in PR-je sprejemamo na {github}.",
+    "discord": "Discord strežniku",
+    "intro": "Ogrodje spremlja preko 60 tehnoloških/razvijalskih/startup dogodkov/konferenc in organizacij. Na dogodke se lahko naročite tudi v našem {discord}, kanal {channel}.",
+    "loading": "Nalagam dogodke",
+    "newTab": "(odpre se v novem zavihku)",
+    "none": "Ta hip ni prihajajočih dogodkov.",
+    "not": "ni",
+    "promoted": "Izpostavljeno",
+    "week": "Teden / {range}",
+    "what": "Dogodki"
+  },
+  "files": {
+    "doc": "Google Doc",
+    "docN": "Google Doc {n}",
+    "docs": "Dokumenti",
+    "dropboxFolder": "Mapa v Dropboxu {path}",
+    "koofrFolder": "Mapa v Koofru {path}",
+    "missing": "manjka",
+    "title": "Datoteke"
+  },
+  "home": {
+    "allClear": "Trenutno nič. Snemanja v naslednjih {soon} dneh imajo potrjene goste in dokumente, nobena epizoda, posneta pred {long} ali več dnevi, pa ne čaka na objavo.",
+    "allEpisodes": "Vse epizode",
+    "byStage": "Po fazah",
+    "description": "MetaOS poganja Ogrodje: najnovejše epizode podkasta, ljudje v njih in kje jih lahko poslušate.",
+    "inProduction": "V produkciji",
+    "lately": "Nedavno",
+    "latestReleases": "Najnovejše epizode",
+    "latestWhat": "Najnovejše epizode",
+    "loadingLatest": "Nalagamo najnovejše epizode",
+    "loadingMaking": "Nalagamo, kaj nastaja",
+    "loadingRecent": "Nalagamo, kaj je ekipa nazadnje počela",
+    "loadingStages": "Nalagamo, koliko epizod je v posamezni fazi",
+    "makingWhat": "Prihajajoča snemanja in epizode v produkciji",
+    "needsAttention": "Zahteva pozornost",
+    "recentActivity": "Nedavna dejavnost",
+    "stagesLabel": "Epizode po fazah",
+    "teamPrompt": "Prijavite se in videli boste, kaj snemamo in pripravljamo ter kaj zahteva pozornost.",
+    "teamTitle": "Ste v ekipi Ogrodja?",
+    "upcoming": "Prihajajoča snemanja"
+  },
+  "ideas": {
+    "anyone": "Kdorkoli",
+    "find": "Iščite po naslovu, gostu ali predlagatelju",
+    "groupBy": "Združi po",
+    "grouping": {
+      "none": "Ne združuj, najnovejše najprej",
+      "readiness": "Napredku",
+      "recommender": "Predlagatelju"
+    },
+    "lede": "Epizode, ki bi lahko nastale. Ko je ideja načrtovana, dobi kodo in se preseli med epizode.",
+    "loading": "Nalagamo ideje",
+    "noMatch": "Nobena ideja ne ustreza iskanju",
+    "nobody": "Nihče",
+    "none": "Idej še ni.",
+    "recommendedByName": "Predlog: {name}",
+    "recommendedByNobody": "Brez predlagatelja",
+    "recommender": "Predlagatelj",
+    "row": {
+      "added": "Dodana {date}",
+      "addedAfter": "dodana {date}",
+      "maybe": "Morda {names}",
+      "recommendedBy": "Predlog: {name}",
+      "recommendedByAfter": "predlog: {name}",
+      "recording": "Snemanje"
+    },
+    "signIn": "Ideje za epizode so za ekipo Ogrodja. Prijavite se z Discordom ali Googlom ali pa MetaOS uporabljajte prek MCP v svojem asistentu AI: kako ga povežete, pove stran {usage}.",
+    "signInTitle": "Prijavite se in poglejte ideje",
+    "staffOnly": "Ideje so za ekipo Ogrodja.",
+    "what": "Ideje"
+  },
+  "language": {
+    "en": "English",
+    "label": "Jezik",
+    "sl": "Slovenščina"
+  },
+  "lists": {
+    "episodes": {
+      "description": "Vse objavljene epizode podkasta Ogrodje, po sezonah, in kje jih lahko poslušate.",
+      "find": "Iščite po naslovu, gostu ali kodi",
+      "inTheWorks": "V delu",
+      "lede": "Vse objavljene epizode podkasta Ogrodje, po sezonah.",
+      "ledeGuest": "Vse objavljene epizode podkasta Ogrodje. Ko se prijavite, vidite tudi, kaj snemamo in pripravljamo.",
+      "ledeTeam": "Kar nastaja, po fazah, nato objavljene epizode, po sezonah.",
+      "loading": "Nalagamo epizode",
+      "noMatch": "Nobena epizoda ne ustreza iskanju",
+      "setAside": "Na čakanju ali preklicane",
+      "what": "Epizode"
+    },
+    "everySeason": "Vse sezone",
+    "everyShow": "Vse oddaje",
+    "fold": "Strni",
+    "noShow": "Brez oddaje",
+    "readiness": {
+      "candidates": "S kandidati",
+      "guest": "Z gostom",
+      "none": "Še brez nikogar",
+      "session": "Z datumom snemanja"
+    },
+    "season": "Sezona",
+    "seasonTitle": {
+      "bonus": "Bonus",
+      "none": "Brez kode",
+      "season": "Sezona {n}"
+    },
+    "show": "Oddaja",
+    "showAllN": "Pokaži vse ({n})",
+    "stage": "Faza",
+    "teamSummary": {
+      "and": "{list} in {last}",
+      "as": "{episodes} kot {roles}",
+      "episodes": "{n} epizoda | {n} epizodi | {n} epizode | {n} epizod"
+    }
+  },
+  "media": {
+    "bonuses": {
+      "BONUS_AUDIO": "Bonus zvočni posnetki",
+      "BONUS_VIDEO": "Bonus videi"
+    },
+    "concerns": {
+      "audioLonger": "Celoten zvok je za {length} daljši od celotnega videa",
+      "audioShorter": "Celoten zvok je za {length} krajši od celotnega videa"
+    },
+    "kind": {
+      "BONUS_AUDIO": "Bonus zvok",
+      "BONUS_VIDEO": "Bonus video",
+      "FULL_AUDIO": "Celoten zvok",
+      "FULL_VIDEO": "Celoten video"
+    },
+    "kindName": {
+      "BONUS_AUDIO": "bonus zvok",
+      "BONUS_VIDEO": "bonus video",
+      "FULL_AUDIO": "celoten zvok",
+      "FULL_VIDEO": "celoten video"
+    },
+    "list": {
+      "ask": "Želite odstraniti posnetek in izbrisati datoteko?",
+      "download": "Prenesi",
+      "downloadFailed": "Prenos ni uspel: {error}",
+      "gone": "Datoteke ni več",
+      "removeFailed": "Odstranitev ni uspela: {error}",
+      "removing": "Odstranjujemo …",
+      "uploadKind": "Naloži {name}"
+    },
+    "parts": {
+      "bonus": "bonus posnetek",
+      "bonuses": "{n} bonus posnetek | {n} bonus posnetka | {n} bonus posnetki | {n} bonus posnetkov",
+      "fullAudio": "Celoten zvok",
+      "fullVideo": "Celoten video",
+      "noAudio": "ni zvoka",
+      "noVideo": "ni videa",
+      "withLength": "{what}, {length}"
+    },
+    "refusal": {
+      "empty": "V njej ni ne videa ne zvoka.",
+      "format": "Ni ne video v MP4 ali MOV ne zvok v MP3, M4A, WAV ali FLAC.",
+      "movWithoutVideo": "To je MOV brez videa; zvok mora biti v MP3, M4A, WAV ali FLAC.",
+      "size": "Velika je {size}; datoteka je lahko velika največ {max}.",
+      "videoAsAudio": "Ima video, po imenu pa je zvok."
+    },
+    "upload": {
+      "addMore": "Dodaj še …",
+      "afterPrevious": "za prejšnjo",
+      "announce": {
+        "added": "Dodano: {n}",
+        "failed": "{name}: nalaganje ni uspelo. {message}",
+        "refused": "zavrnjeno: {n}",
+        "uploaded": "{name}: naloženo"
+      },
+      "answer": {
+        "keep": "Obdrži trenutno | Obdrži trenutni | Obdrži trenutne | Obdrži trenutne",
+        "replace": "Zamenjaj in naloži {n}",
+        "uploadAndKeep": "Naloži {n}, obdrži trenutno | Naloži {n}, obdrži trenutni | Naloži {n}, obdrži trenutne | Naloži {n}, obdrži trenutne"
+      },
+      "answered": "Google Cloud Storage je odgovoril s {status}",
+      "as": "Kot",
+      "ask": "Želite zamenjati datoteko, ki jo {episode} že ima? | Želite zamenjati {n} datoteki, ki ju {episode} že ima? | Želite zamenjati {n} datoteke, ki jih {episode} že ima? | Želite zamenjati {n} datotek, ki jih {episode} že ima?",
+      "askOne": "Želite zamenjati {name}, ki ga {episode} že ima?",
+      "back": "Nazaj",
+      "broke": "Povezava se je med pošiljanjem prekinila",
+      "checking": "Preverjamo",
+      "checkingWhat": "beremo, kaj vsebuje",
+      "choose": "Izberi datoteke",
+      "chooseFolder": "Izberi mapo",
+      "chooseKind": "Izberi {name}",
+      "done": "Končano",
+      "drop": "Spustite sem video in zvok epizode",
+      "dropKind": "Spustite sem {name}",
+      "dropTouch": "Izberite video in zvok epizode",
+      "expired": "Nalaganje je poteklo; pošljite datoteko znova",
+      "failed": "Ni naložena",
+      "failedCount": "ni uspelo: {n}",
+      "files": "{n} datoteka | {n} datoteki | {n} datoteke | {n} datotek",
+      "fitsNone": "Ne ustrezajo nobenemu mestu",
+      "formats": "Video v MP4 ali MOV · zvok v MP3, M4A, WAV ali FLAC · do {max} na datoteko",
+      "history": "Zgodovina epizode ohrani, katera datoteka je bila. Zamenjano hrani shramba 30 dni, povrne pa jo lahko samo skrbnik.",
+      "keptBreaking": "Povezava se je med pošiljanjem kar naprej prekinjala",
+      "leave": "Video ali zvok se še nalaga. Želite oditi in nalaganje ustaviti?",
+      "leaveOut": "Izpusti {name}",
+      "leftOut": "izpuščena {n} druga datoteka | izpuščeni {n} drugi datoteki | izpuščene {n} druge datoteke | izpuščenih {n} drugih datotek",
+      "list": "Datoteke za nalaganje",
+      "new": "Nova",
+      "notTaken": "Google Cloud Storage datoteke ni sprejel ({status})",
+      "nothingChosen": "Ničesar še niste izbrali",
+      "nothingToUpload": "Ničesar ni za nalaganje",
+      "open": "Naloži video in zvok",
+      "reading": "Beremo datoteko … | Beremo {n} datoteki … | Beremo {n} datoteke … | Beremo {n} datotek …",
+      "refused": "Zavrnjena",
+      "refusedCount": "zavrnjeno: {n}",
+      "replaces": "Zamenja",
+      "sending": "{n} datoteko | {n} datoteki | {n} datoteke | {n} datotek",
+      "stop": "Ustavi",
+      "summary": {
+        "busy": "Nalagamo {files} · naloženo: {done}",
+        "replacing": "Za nalaganje: {n}, {size}, z zamenjavo: {r}",
+        "toUpload": "Za nalaganje: {n}, {size}"
+      },
+      "theEpisode": "epizoda",
+      "title": "Nalaganje videa in zvoka",
+      "titleOf": "Naslov za {name}",
+      "titlePlaceholder": "Naslov, npr. kaj je v bonusu",
+      "toUpload": "Za nalaganje: {n}",
+      "unreachable": "Google Cloud Storage ni dosegljiv; preverite povezavo",
+      "upload": "Naloži",
+      "uploadN": "Naloži {n}",
+      "uploaded": "Naložena",
+      "uploadedCount": "Naloženo: {n}",
+      "uploading": "Nalagamo {percent} %",
+      "waiting": "Čaka"
+    },
+    "warning": {
+      "longerThan": {
+        "FULL_AUDIO": "Za {length} daljši od celotnega zvoka",
+        "FULL_VIDEO": "Za {length} daljši od celotnega videa"
+      },
+      "noAudio": "Nima zvoka",
+      "sampleRate": "Zvok ima {rate}, ne 44,1 ali 48 kHz",
+      "shorterThan": {
+        "FULL_AUDIO": "Za {length} krajši od celotnega zvoka",
+        "FULL_VIDEO": "Za {length} krajši od celotnega videa"
+      },
+      "under1080p": "Pod 1080p: {width} × {height}"
+    }
+  },
+  "menu": {
+    "dismiss": "Zapri",
+    "link": "Poveži",
+    "linkProvider": "Poveži {provider}",
+    "linked": "(povezan)",
+    "manageSignIns": "Upravljajte prijave",
+    "member": "Član",
+    "opensKeycloak": "(odpre Keycloak v novem zavihku)",
+    "signInWith": "Načini prijave",
+    "staff": "Ekipa",
+    "thisOne": "trenutna",
+    "toggle": "{name}: vaša stran, vaše prijave in odjava",
+    "unlinked": "V MetaOS še niste povezani z nobeno osebo. Prijave z osebami povezuje Oto: prosite ga, naj poveže vašo.",
+    "whichPerson": "Katera oseba ste?",
+    "you": "Vi",
+    "yourPage": "Vaša stran"
+  },
+  "nav": {
+    "episodes": "Epizode",
+    "events": "Dogodki",
+    "home": "Domov",
+    "ideas": "Ideje",
+    "main": "Glavno",
+    "people": "Ljudje",
+    "transcriptions": "Prepisi"
+  },
+  "pages": {
+    "episode": "Epizoda",
+    "episodes": "Epizode",
+    "events": "Dogodki in konference",
+    "home": "Domov",
+    "ideas": "Ideje",
+    "notFound": "Strani ni",
+    "people": "Ljudje",
+    "person": "Oseba",
+    "privacy": "Zasebnost",
+    "search": "Iskanje",
+    "session": "Snemanje",
+    "transcriptions": "Prepisi",
+    "usage": "Uporaba API-ja in MCP"
+  },
+  "people": {
+    "andMore": "in še {n}",
+    "byLetter": "Gostje po začetnicah",
+    "candidatesNote": "Koga ima ekipa v mislih kot gosta za katero od idej.",
+    "description": "Voditelji in gostje podkasta Ogrodje: kdo so in kje jih najdete na spletu.",
+    "episodes": "{n} epizoda | {n} epizodi | {n} epizode | {n} epizod",
+    "find": "Iščite po imenu ali po tem, kaj počnejo",
+    "fold": "Skrij",
+    "kinds": {
+      "all": "Vsi",
+      "candidates": "Kandidati",
+      "guests": "Gostje",
+      "team": "Ekipa"
+    },
+    "lead": {
+      "everyone": "Voditelji, gostje in vsi drugi iz objavljenih epizod Ogrodja.",
+      "guest": "Voditelji, gostje in vsi drugi iz objavljenih epizod Ogrodja. Ko se prijavite, vidite vse, tudi tiste iz epizod v pripravi.",
+      "team": "Ekipa Ogrodja, gostje njegovih epizod in kdo bi lahko bil gost."
+    },
+    "links": {
+      "on": "{name} na omrežju {network}",
+      "website": "Spletna stran osebe {name}"
+    },
+    "loading": "Nalagamo ljudi",
+    "noMatch": "Nihče ne ustreza",
+    "noOne": "Tu še ni nikogar.",
+    "show": "Prikaži",
+    "showAll": "Pokaži {n} | Pokaži oba | Pokaži vse {n} | Pokaži vseh {n}",
+    "unlinkedFailed": "Prijav, ki niso povezane z nikomer, ni bilo mogoče naložiti: {error}",
+    "what": "Ljudje"
+  },
+  "person": {
+    "about": "O osebi {name}",
+    "as": "kot {roles}",
+    "byRole": "Prikaži epizode po vlogi",
+    "comingUp": "V pripravi",
+    "firstOn": "Prvič v",
+    "loading": "Nalagamo osebo",
+    "noEpisodes": "Še ni v nobeni epizodi.",
+    "notFound": {
+      "everyone": "Morda še ni v nobeni objavljeni epizodi ali pa je bila izbrisana. Na strani Ljudje so vsi, ki so.",
+      "team": "Morda je bila izbrisana ali združena s kom drugim. Na strani Ljudje so vsi.",
+      "title": "Te osebe ni"
+    },
+    "onEpisodes": "V epizodah",
+    "onOgrodje": "{roles} v Ogrodju",
+    "online": "Na spletu",
+    "recommended": "Priporočene",
+    "recommendedRole": "priporočene",
+    "released": "Objavljene",
+    "showFirstFew": "Pokaži le prvih nekaj",
+    "website": "Spletna stran",
+    "what": "Oseba"
+  },
+  "pictures": {
+    "missing": {
+      "cover": "Naloži naslovnico",
+      "thumbnail": "Naloži sličico {letter}",
+      "web": "Naloži spletno sliko"
+    },
+    "noTitle": "Ni naslova {letter}",
+    "refusal": {
+      "anySize": "Meri {width} × {height}; sličice in spletna slika merijo 1920 × 1080, naslovnica 3000 × 3000.",
+      "anyType": "Ni PNG ali JPEG.",
+      "size": "Meri {width} × {height}, {name} pa mora meriti {size}.",
+      "type": "{label} mora biti PNG ali JPEG, ta datoteka pa ni."
+    },
+    "slot": {
+      "COVER": "Naslovnica za podcast",
+      "THUMBNAIL": "Sličica A",
+      "THUMBNAIL_B": "Sličica B",
+      "THUMBNAIL_C": "Sličica C",
+      "WEB": "Spletna slika"
+    },
+    "slotName": {
+      "COVER": "naslovnica za podcast",
+      "THUMBNAIL": "sličica A",
+      "THUMBNAIL_B": "sličica B",
+      "THUMBNAIL_C": "sličica C",
+      "WEB": "spletna slika"
+    },
+    "strip": {
+      "next": "{title}: naslednje",
+      "notUsed": "Ni uporabljena",
+      "open": "Odpri v {service}",
+      "previous": "{title}: prejšnje"
+    },
+    "tabs": {
+      "artwork": "Grafika",
+      "label": "Pokaži",
+      "photos": "Fotografije",
+      "titles": "Naslovi in sličice"
+    },
+    "titleOf": "Naslov {letter}:",
+    "upload": {
+      "announce": {
+        "failed": "{label}: nalaganje ni uspelo. {message}",
+        "placed": "Razporejeno: {n}",
+        "refused": "zavrnjeno: {n}",
+        "refusedOne": "{label}: zavrnjena. {reason}",
+        "unplaced": "nerazporejeno: {n}",
+        "uploaded": "{label}: naložena"
+      },
+      "ask": "Želite zamenjati sliko, ki jo {episode} že ima? | Želite zamenjati {n} sliki, ki ju {episode} že ima? | Želite zamenjati {n} slike, ki jih {episode} že ima? | Želite zamenjati {n} slik, ki jih {episode} že ima?",
+      "byName": "razporejena po imenu",
+      "bySize": "razporejena po velikosti",
+      "choose": "Izberi slike",
+      "chooseAnother": "Izberi drugo …",
+      "chooseOne": "Izberi …",
+      "chosen": "izbrana zanjo",
+      "copies": "široke od 320 do 1920 px",
+      "current": "Trenutna",
+      "currentOf": "Trenutna {name}",
+      "drop": "Spustite sem mapo ali slike epizode",
+      "dropTouch": "Izberite slike ali mapo epizode",
+      "dropbox": {
+        "error": "ni v Dropboxu: {error}",
+        "saved": "shranjena v Dropbox",
+        "savedAs": "shranjena v Dropbox kot {name}",
+        "there": "že v Dropboxu"
+      },
+      "formats": "PNG ali JPEG · sličice in spletna slika {wide}, naslovnica {square}",
+      "history": "Zgodovina epizode ohrani, katera slika je bila.",
+      "new": "Nova",
+      "newOf": "Nova {name}",
+      "none": "Še ni",
+      "nothingToSend": "ničesar ni treba poslati",
+      "open": "Naloži grafiko",
+      "pictures": "{n} slika | {n} sliki | {n} slike | {n} slik",
+      "publishing": "Izdelujemo kopije",
+      "reading": "Beremo datoteke …",
+      "rowHint": "Spustite sliko na to vrstico ali jo izberite",
+      "same": "Že ta slika",
+      "sending": "{n} sliko | {n} sliki | {n} slike | {n} slik",
+      "slots": "Slike epizode",
+      "summary": {
+        "busy": "Nalagamo {pictures} · naloženo: {done}",
+        "replacingOne": "Za nalaganje: 1, z zamenjavo",
+        "replacingSome": "Za nalaganje: {n}, od tega z zamenjavo: {r}"
+      },
+      "title": "Nalaganje grafike",
+      "unplaced": "Nerazporejene",
+      "unplacedOne": "Nerazporejena",
+      "unplacedWhy": "ime ne pove, kam spada",
+      "useAs": "Uporabi {name} kot",
+      "useAsPrompt": "Uporabi kot …",
+      "webHint": "Sličica brez besedila, za ogrodje.si"
+    },
+    "use": {
+      "cover": "Naslovnica"
+    }
+  },
+  "privacy": {
+    "description": "Katere osebne podatke Ogrodje obdeluje na ogrodje.si, ob prijavi in v e-pošti Ogrodja, in kako dolgo jih hrani."
+  },
+  "search": {
+    "best": "Prikazan je najboljši zadetek; z več besedami jih najdete manj. | Prikazana sta najboljša {n}; z več besedami jih najdete manj. | Prikazani so najboljši {n}; z več besedami jih najdete manj. | Prikazanih je najboljših {n}; z več besedami jih najdete manj.",
+    "close": "Zapri iskanje",
+    "codes": "Oznaka, {a}, {b} ali {c}, najde svojo epizodo; {season} izpiše sezono.",
+    "codesHint": "{a}, {b} ali {c} odpre epizodo; {season} izpiše sezono.",
+    "episode": "Epizoda {code}",
+    "episodeOne": "Epizoda",
+    "failed": "Iskanje ni uspelo: {error}",
+    "hint": "Vpišite oznako, ime ali temo. Velike in male črke ter šumniki niso pomembni, dovolj je začetek besede.",
+    "intro": "Iščite po epizodah, tudi idejah, ljudeh v njih in snemanjih: po naslovu, imenu, oddaji, povzetku ali kraju.",
+    "noEpisodes": "Še v nobeni epizodi",
+    "nothing": "Za „{q}“ ni zadetkov.",
+    "nothingHint": "Iskanje pregleda naslove, imena, oddaje, povzetke in kraje. Poskusite z manj besedami ali z začetkom besede: jezikov najde jezikovni in jezikovnega.",
+    "of": "{shown} od {total}",
+    "palettePlaceholder": "Iščite epizode, ljudi in snemanja",
+    "placeholder": "Oznaka, ime ali tema",
+    "results": "Zadetki",
+    "searching": "Iščemo …",
+    "season": "Sezona {n}",
+    "seeAll": "Pokaži {n} zadetek | Pokaži oba zadetka | Pokaži vse {n} zadetke | Pokaži vseh {n} zadetkov",
+    "sessions": "Snemanja",
+    "show": "Prikaži",
+    "signIn": {
+      "text": "Iskanje najde epizode Ogrodja, tudi ideje, ljudi v njih in snemanja, ki so namenjeni ekipi Ogrodja. Prijavite se z računom Discord ali Google ali pa MetaOS uporabljajte prek MCP iz svojega pomočnika z umetno inteligenco: kako ga povežete, piše na strani {usage}.",
+      "title": "Za iskanje se prijavite"
+    },
+    "snippet": {
+      "alsoTitled": "Drugi naslov:",
+      "summary": "Iz povzetka:",
+      "tinySummary": "Iz kratkega povzetka:"
+    },
+    "tabs": {
+      "all": "Vse",
+      "episodes": "Epizode",
+      "people": "Ljudje",
+      "sessions": "Snemanja"
+    },
+    "titleFor": "Iskanje: {q}",
+    "toMove": "{keys} za premik",
+    "toOpen": "{key} za odpiranje",
+    "what": "Rezultati",
+    "with": "V epizodi:"
+  },
+  "sessions": {
+    "about": "O snemanju",
+    "address": "Naslov",
+    "docs": "Dokumenti",
+    "episodes": "Epizode",
+    "files": "Datoteke",
+    "form": {
+      "byDate": "Brez imena je snemanje označeno z datumom.",
+      "byLocation": "Brez imena je snemanje označeno z lokacijo, {location}.",
+      "name": "Ime",
+      "placeholder": "npr. AWS Community Day Adria 2026",
+      "saving": "Shranjujemo …"
+    },
+    "kind": "Snemanje",
+    "loading": "Nalagamo snemanje",
+    "location": "Lokacija",
+    "nameIt": "Poimenuj",
+    "noEpisodes": "V tem snemanju še ni epizod.",
+    "notFound": "Morda je bilo izbrisano. Prihajajoča snemanja so na domači strani, snemanje vsake epizode pa na njeni strani.",
+    "notFoundTitle": "Tega snemanja ni",
+    "photos": "Fotografije",
+    "rename": "Preimenuj",
+    "signIn": "Podrobnosti in zgodovina snemanj so za ekipo Ogrodja. Prijavite se z Discordom ali Googlom ali pa MetaOS uporabljajte prek MCP v svojem asistentu AI: kako ga povežete, pove stran {usage}.",
+    "signInTitle": "Prijavite se in poglejte to snemanje",
+    "what": "Snemanje",
+    "when": "Kdaj"
+  },
+  "tools": {
+    "descriptions": {
+      "add_episode_distribution": "Zabeleži objavo, ki promovira epizodo, po njenem URL-ju, na primer na Discordu, LinkedInu ali Redditu; MetaOS pridobi njen predogled",
+      "assign_person_to_episode": "Dodeli osebi vlogo na epizodi: voditelj, sovoditelj, gost, producent, svetovalec, oblikovalec ali kandidat za nekoga, ki bi lahko bil gost",
+      "cancel_transcription": "Ustavi prepisovanje, ki teče, in z njim tudi ponudnikovo",
+      "comment_on_episode": "Komentira epizodo ali idejo v vašem imenu, v Markdownu",
+      "comment_on_session": "Komentira snemanje v vašem imenu, v Markdownu",
+      "confirm_guest": "Kandidata naredi za gosta epizode, ko je privolil",
+      "create_dropbox_folder": "Ustvari mapo",
+      "create_episode": "Doda epizodo; začne kot ideja, ki je lahko brez kode, priporočili pa ste jo vi, razen če navedete koga drugega",
+      "create_koofr_folder": "Ustvari mapo",
+      "create_patreon_draft": "Pripravi osnutek objave, za vse, za vse podpornike ali za nekatere ravni; vidi ga le ekipa",
+      "create_person": "Doda osebo",
+      "create_session": "Doda snemanje: datum, ime, lokacijo in naslov",
+      "create_show": "Doda oddajo, z epizodami v slovenščini, razen če navedete drug jezik",
+      "delete_comment": "Izbriše enega od vaših komentarjev; zgodovina ohrani, da je obstajal",
+      "delete_episode": "Izbriše epizodo; mogoče jo je obnoviti",
+      "delete_patreon_post": "Izbriše objavo, na primer osnutek, ki ni več potreben",
+      "delete_person": "Izbriše osebo; dokler je ne obnovite, izgine z epizod, na katerih je, in s tistih, ki jih je priporočila",
+      "delete_session": "Izbriše snemanje; njegove epizode ostanejo",
+      "delete_show": "Izbriše oddajo; njene epizode ostanejo",
+      "edit_comment": "Spremeni besedilo enega od vaših komentarjev; prikazan je kot urejen",
+      "get_episode": "Epizoda po kodi ali ID-ju, s povzetki",
+      "get_episode_transcript": "Prepisi epizode, od vsakega ponudnika, s časovnimi oznakami in govorci, kjer jih loči, ter kako napredujejo njena prepisovanja v teku",
+      "get_history": "Vsaka sprememba epizode, osebe, snemanja ali oddaje, tudi njihove razprave, s tem, kdaj in kdo",
+      "get_patreon_job": "Kako napreduje sprememba v Patreonu, na primer nalaganje: končana, ni uspela in zakaj, ali čaka na vrsto ali na ponovni poskus",
+      "get_patreon_post": "Objava, izšla ali osnutek, z besedilom in tem, kdo jo sme videti",
+      "get_patreon_post_media": "Povezave za prenos zvoka (MP3, kot je bil naložen) ali videa (njegov najboljši MP4) objave, za približno en dan",
+      "get_person_avatar": "Avatar osebe, z njegovimi URL-ji",
+      "get_show": "Oddaja po imenu",
+      "get_transcription": "Eno prepisovanje po ID-ju, kakršno je zdaj, da ga spremljate do konca",
+      "link_account": "Poveže račun z osebo, ki ji pripada, da so njegovi komentarji in spremembe pod njenim imenom, tudi pretekli; to sme le Oto",
+      "link_episode_document": "Poveže dokument Google z epizodo, na primer dokument za njeno pripravo",
+      "link_episode_dropbox_folder": "Poveže mapo v Dropboxu z epizodo, na primer tisto z njeno grafiko",
+      "link_episode_koofr_folder": "Poveže mapo v Koofru z epizodo, na primer tisto z njenimi posnetki",
+      "link_session_document": "Poveže dokument Google s snemanjem, na primer načrt snemalnega dne",
+      "link_session_dropbox_folder": "Poveže mapo v Dropboxu s snemanjem",
+      "link_session_koofr_folder": "Poveže mapo v Koofru s snemanjem",
+      "list_accounts": "Računi, ki jih MetaOS pozna, in osebe, ki jim pripadajo, ali le tisti, ki niso povezani z nikomer",
+      "list_deleted": "Izbrisane epizode, ljudje, snemanja in oddaje, s tem, kdaj in kdo, za obnovo",
+      "list_distributions": "Kje so izšle vse epizode, najnovejše najprej, na primer ta teden ali na LinkedInu",
+      "list_drive_folder": "Kaj je v mapi",
+      "list_dropbox_folder": "Kaj je v mapi",
+      "list_dropbox_places": "Mape, ki jih z botom Ogrodja delijo drugi, in ali jih sme spreminjati",
+      "list_episode_comments": "Komentarji k epizodi ali ideji, najstarejši najprej, s tem, kdo jih je napisal in kdaj",
+      "list_episode_distributions": "Kje je epizoda izšla: njene povezave, nato objave, vsaka s predogledom svoje strani",
+      "list_episode_documents": "Dokumenti Google epizode in njenega snemanja",
+      "list_episode_dropbox_folders": "Mape v Dropboxu epizode in njenega snemanja",
+      "list_episode_images": "Sličice, spletna slika in naslovnica epizode, z njihovimi URL-ji",
+      "list_episode_koofr_folders": "Mape v Koofru epizode in njenega snemanja",
+      "list_episode_media": "Video in zvočne datoteke epizode, s tem, kaj je v vsaki (dolžina, kodeki, ločljivost), in povezavo za prenos, ki velja eno uro",
+      "list_episode_people": "Ljudje na epizodi in njihove vloge",
+      "list_episodes": "Seznam epizod, najnovejše najprej, po želji le tistih z določenim statusom",
+      "list_koofr_folder": "Kaj je v mapi",
+      "list_koofr_places": "Mape, ki jih z botom Ogrodja delijo drugi, in ali jih sme spreminjati",
+      "list_patreon_drafts": "Osnutki, tudi načrtovani, najprej nazadnje urejeni, s tem, kje jih uredite",
+      "list_patreon_members": "Člani, najprej podporniki: njihov status, ravni, prispevek, koliko so dali skupaj in njihovo zadnje plačilo",
+      "list_patreon_posts": "Objave, ki so izšle, najnovejše najprej, ali tiste z določenimi besedami v naslovu",
+      "list_patreon_tiers": "Ravni članstva, najcenejše najprej, s cenami in podporniki",
+      "list_people": "Seznam vseh ljudi",
+      "list_person_episodes": "Epizode, na katerih je oseba, in njene vloge",
+      "list_recent_changes": "Zadnje spremembe vsega",
+      "list_session_comments": "Komentarji k snemanju, najstarejši najprej",
+      "list_session_documents": "Dokumenti Google snemanja",
+      "list_session_dropbox_folders": "Mape v Dropboxu snemanja",
+      "list_session_episodes": "Epizode snemanja",
+      "list_session_koofr_folders": "Mape v Koofru snemanja",
+      "list_sessions": "Seznam vseh snemanj, najnovejša najprej",
+      "list_show_episodes": "Epizode oddaje",
+      "list_shows": "Seznam vseh oddaj",
+      "list_transcriptions": "Prepisovanja, najnovejša najprej: v čakalni vrsti, v teku, končana, neuspela ali preklicana, po ponudniku ali epizodi",
+      "match_episode_documents": "Poveže dokumente v mapi z epizodami po kodi v naslovu; le poroča, razen če mu naročite, naj jih poveže",
+      "move_dropbox_file": "Premakne ali preimenuje datoteko ali mapo",
+      "move_koofr_file": "Premakne ali preimenuje datoteko ali mapo; kar je povezano z njo, ostane povezano",
+      "my_episodes": "Epizode, na katerih ste vi, in vaše vloge",
+      "prepare_patreon_post": "Preveri, ali je osnutek pripravljen, da ga človek objavi v Patreonu: njegov naslov in obdelan zvok ali video",
+      "read_document": "Prebere dokument Google, kot Markdown",
+      "read_dropbox_file": "Prebere besedilno datoteko: txt, md, csv, json, srt in podobne",
+      "read_koofr_file": "Prebere besedilno datoteko: txt, md, csv, json, srt in podobne",
+      "refresh_distribution_preview": "Znova pridobi predogled objave, na primer ko se je spremenila",
+      "remove_episode_distribution": "Odstrani objavo z epizode; če je to ena od njenih povezav, se počisti tudi na epizodi",
+      "remove_episode_image": "Odstrani eno od slik epizode",
+      "remove_episode_media": "Odstrani video ali zvočno datoteko z epizode in jo izbriše",
+      "remove_person_avatar": "Odstrani avatar osebe",
+      "remove_person_from_episode": "Odstrani osebo z epizode: eno od njenih vlog ali vse",
+      "remove_transcript": "Odstrani enega od prepisov epizode in njegovo besedilo",
+      "restore_episode": "Vrne izbrisano epizodo, z ljudmi, povezavami, snemanjem in oddajo; pod novo kodo, če je njena zasedena",
+      "restore_link": "Vrne odstranjeno vlogo, dokument Google ali mapo v Koofru ali Dropboxu, iz spremembe, ki jo je odstranila",
+      "restore_person": "Vrne izbrisano osebo, z vlogami in epizodami, ki jih je priporočila; z drugim e-poštnim naslovom ali brez njega, če je njen zaseden",
+      "restore_session": "Vrne izbrisano snemanje, z njegovimi epizodami",
+      "restore_show": "Vrne izbrisano oddajo, z njenimi epizodami; pod novim imenom, če je njeno zasedeno",
+      "search": "Poišče epizode, ljudi in snemanja po kodi, imenu ali besedah v naslovih in povzetkih; koda najde samo svojo epizodo",
+      "search_documents": "Poišče dokumente Google po besedah v naslovu ali besedilu",
+      "search_dropbox": "Poišče datoteke in mape po imenu",
+      "search_koofr": "Poišče datoteke in mape po imenu",
+      "set_episode_image": "Sliko iz Dropboxa ali Koofra nastavi za sličico epizode, sličico B ali C (za nadomestne naslove) ali spletno sliko, 1920 × 1080, ali za njeno naslovnico, 3000 × 3000",
+      "set_episode_link": "Nastavi ali počisti povezavo do YouTuba, Spotifyja ali Apple Podcasts ali eno od njenih štirih na Patreonu: celotno epizodo ali bonus, kot video ali samo zvok; vsaka je tudi v njeni distribuciji",
+      "set_episode_recommended_by": "Nastavi ali počisti, kdo je epizodo priporočil",
+      "set_episode_session": "Premakne epizodo v snemanje ali iz njega",
+      "set_episode_show": "Premakne epizodo v oddajo ali iz nje",
+      "set_episode_status": "Premakne epizodo skozi njen življenjski cikel, od ideje do objave, korak za korakom",
+      "set_patreon_post_image": "Nastavi sličico objave, eno od slik epizode v MetaOS",
+      "set_patreon_post_media": "Naloži eno od datotek epizode v MetaOS v osnutek, kot objavo podkasta ali videa",
+      "set_person_avatar": "Sliko iz Hygrapha, Dropboxa ali Koofra nastavi za avatar osebe",
+      "set_person_bio": "Nastavi ali počisti vrstico o tem, kdo je oseba, na primer njeno vlogo in podjetje",
+      "set_person_email": "Nastavi ali počisti e-poštni naslov osebe; računi, ki se prijavljajo z njim, se povežejo z njo",
+      "set_person_link": "Nastavi ali počisti njeno domačo stran, LinkedIn, Twitter/X, Instagram ali Facebook",
+      "transcribe_episode": "Prepiše celoten zvok ali video epizode ali drugo njeno datoteko, z Googlovim Speech-to-Text ali s Sonioxom; ko je ponudnik zaseden, počaka na vrsto",
+      "unlink_account": "Odveže račun od osebe, na primer če je povezan z napačno; to sme le Oto",
+      "unlink_episode_document": "Odveže dokument Google od epizode; dokument ostane v Drivu",
+      "unlink_episode_dropbox_folder": "Odveže mapo v Dropboxu od epizode; mapa ostane v Dropboxu",
+      "unlink_episode_koofr_folder": "Odveže mapo v Koofru od epizode; mapa ostane v Koofru",
+      "unlink_session_document": "Odveže dokument Google od snemanja; dokument ostane v Drivu",
+      "unlink_session_dropbox_folder": "Odveže mapo v Dropboxu od snemanja; mapa ostane v Dropboxu",
+      "unlink_session_koofr_folder": "Odveže mapo v Koofru od snemanja; mapa ostane v Koofru",
+      "update_episode": "Spremeni kodo, naslov, nadomestne naslove za teste A/B, povzetke ali datume epizode",
+      "update_episode_distribution": "Spremeni URL, kanal, opombo ali naslov objave ali kdaj je izšla",
+      "update_episode_media": "Spremeni naslov datoteke ali kaj je, na primer bonus video, ki je v resnici celoten video",
+      "update_patreon_post": "Spremeni naslov ali besedilo objave ali kdo jo sme videti",
+      "update_session": "Spremeni datum, ime, lokacijo ali naslov snemanja",
+      "update_show": "Preimenuje oddajo ali spremeni njeno barvo ali jezik, v katerem so njene epizode",
+      "upload_dropbox_file": "Naloži datoteko; tisto z enakim imenom zamenja le na zahtevo",
+      "upload_koofr_file": "Naloži datoteko; tisto z enakim imenom zamenja le na zahtevo",
+      "view_dropbox_image": "Pogleda sliko, na primer grafiko za epizodo",
+      "whoami": "Kot kdo ste prijavljeni: vaš račun in oseba, s katero je povezan; ter različica orodij MetaOS"
+    },
+    "groups": {
+      "discussion": {
+        "about": "komentarji k epizodam, idejam in snemanjem, v Markdownu, kot na GitHubu",
+        "title": "Razprava"
+      },
+      "distribution": {
+        "about": "kje je epizoda izšla, ko je bila objavljena: njene povezave in objave, ki jo promovirajo",
+        "title": "Distribucija"
+      },
+      "drive": {
+        "about": "mapa Ogrodja",
+        "title": "Google Drive"
+      },
+      "dropbox": {
+        "about": "mape, ki jih z botom Ogrodja delijo drugi, kot je Artwork",
+        "title": "Dropbox"
+      },
+      "episodes": {
+        "about": "od ideje do objave",
+        "title": "Epizode"
+      },
+      "history": {
+        "about": "kdo je kaj spremenil in kdaj ter obnova izbrisanega",
+        "title": "Zgodovina"
+      },
+      "koofr": {
+        "about": "mape, ki jih z botom Ogrodja delijo drugi",
+        "title": "Koofr"
+      },
+      "media": {
+        "about": "celoten video in zvok epizode ter njeni bonusi, naloženi na njeni strani, le za ekipo",
+        "title": "Video in zvok"
+      },
+      "patreon": {
+        "about": "Patreon Ogrodja: osnutki ter zvok ali video epizode, ki jih v Patreonu objavi človek",
+        "title": "Patreon"
+      },
+      "people": {
+        "about": "voditelji, gostje, producenti in vi",
+        "title": "Ljudje"
+      },
+      "pictures": {
+        "about": "sličice, naslovnice in avatarji, ki jih vidijo vsi, na media.ogrodje.si",
+        "title": "Slike"
+      },
+      "search": {
+        "about": "epizode, ideje, ljudje in snemanja hkrati",
+        "title": "Iskanje"
+      },
+      "sessions": {
+        "about": "dnevi, ko snemamo epizode",
+        "title": "Snemanja"
+      },
+      "shows": {
+        "about": "serije epizod, kot je Borderless",
+        "title": "Oddaje"
+      },
+      "transcripts": {
+        "about": "kaj je izrečeno v videu in zvoku epizode, kot sta slišala Googlov Speech-to-Text ali Soniox, v trajnem poteku dela",
+        "title": "Prepisi"
+      }
+    }
+  },
+  "transcriptions": {
+    "about": "Video in zvok epizod, kot sta ju slišala Googlov Speech-to-Text ali Soniox.",
+    "alsoBy": "tudi {providers}",
+    "earlier": "Prej",
+    "filter": {
+      "all": "Vsi",
+      "anyProvider": "Vsi",
+      "cancelled": "Preklicani",
+      "done": "Končani",
+      "failed": "Neuspeli",
+      "find": "Iščite po epizodi ali datoteki",
+      "on": "V teku",
+      "provider": "Ponudnik",
+      "status": "Stanje"
+    },
+    "form": {
+      "batch": "V paketu: v enem dnevu, za petino cene",
+      "episode": "Epizoda",
+      "episodePlaceholder": "npr. S05E07",
+      "file": "Datoteka",
+      "find": "Poiščite datoteke",
+      "finding": "Iščemo …",
+      "hint": "Ponudnik prepisuje nekaj datotek hkrati; ostale počakajo na vrsto.",
+      "language": "Jezik",
+      "noEpisode": "Epizode {code} ni",
+      "noMedia": "{episode} še nima videa ali zvoka; naložite ju na strani epizode",
+      "provider": "Ponudnik",
+      "replace": "Zamenjajte prepis, ki ga je {provider} že naredil",
+      "starting": "Začenjamo …",
+      "transcribe": "Prepišite"
+    },
+    "languages": {
+      "en": "angleščina",
+      "sl": "slovenščina"
+    },
+    "lineCount": "{n} vrstica | {n} vrstici | {n} vrstice | {n} vrstic",
+    "lines": {
+      "loading": "Nalagamo prepis",
+      "none": "Slišati ni bilo ničesar.",
+      "removed": "bil je odstranjen",
+      "what": "Prepis"
+    },
+    "loading": "Nalagamo prepise",
+    "noMatch": "Noben prepis se ne ujema",
+    "none": "Prepisanega ni še ničesar.",
+    "noneYet": "Še nobenega",
+    "onNow": "V teku",
+    "row": {
+      "batch": "v paketu",
+      "cancelling": "Preklicujemo …",
+      "deletedEpisode": "Izbrisana epizoda",
+      "for": "že {duration}",
+      "hide": "Skrijte",
+      "keep": "Obdrži",
+      "read": "Preberite",
+      "removeAsk": "Odstranim prepis?",
+      "removing": "Odstranjujemo …",
+      "took": "trajalo {duration}",
+      "transcriptGone": "Prepis je bil odstranjen ali zamenjan"
+    },
+    "signIn": {
+      "text": "Prepisi so za ekipo Ogrodja. Prijavite se z Discordom ali Googlom ali pa MetaOS uporabljajte prek MCP v svojem asistentu AI: kako ga povežete, pove stran {usage}.",
+      "title": "Prijavite se in poglejte prepise"
+    },
+    "speaker": "Govorec {label}",
+    "speakers": "{n} govorec | {n} govorca | {n} govorci | {n} govorcev",
+    "status": {
+      "cancelled": "Preklicano",
+      "done": "Končano",
+      "failed": "Ni uspelo",
+      "heard": "Prepisovanje",
+      "heardPercent": "Prepisovanje · {percent} %",
+      "inLine": "{place} v vrsti",
+      "next": "Naslednji na vrsti",
+      "starting": "Začenja se",
+      "waiting": "Čaka na vrsto"
+    },
+    "teamOnly": "Prepisi so za ekipo Ogrodja.",
+    "transcribeEpisode": "Prepišite epizodo",
+    "what": "Prepisi",
+    "words": "{n} beseda | {n} besedi | {n} besede | {n} besed"
+  },
+  "ui": {
+    "clearFilters": "Počistite filtre",
+    "grid": "Mreža",
+    "list": "Seznam",
+    "loadError": "{what} – nalaganje ni uspelo: {error}",
+    "loading": "Nalagamo",
+    "loadingLabel": "{label} …",
+    "notFound": "Na naslovu {path} v MetaOS ni ničesar. Povezava je morda napačno vpisana ali pa je bila stran prestavljena.",
+    "notFoundTitle": "Te strani ni",
+    "quoted": "»{text}«",
+    "removeFilter": "{label}: {value}. Odstranite ta filter",
+    "searchFor": "Poiščite »{search}«",
+    "showAs": "Prikaži kot",
+    "shownOf": "{shown} od {count}"
+  },
+  "usage": {
+    "chatgpt": {
+      "add": "Na chatgpt.com, v brskalniku: ChatGPT-jeve aplikacije strežnikov MCP ne morejo dodajati. Pod {plugins} izberite {add}. Poimenujte ga {name}, kot URL vnesite {url}, kot overjanje pa {oauth}. V nastavitvah OAuth pustite {dcr}; da CIMD ni na voljo, je pričakovano. Kjer razdelka Plugins ni, v {settings} vklopite {developer} in ga ustvarite v {apps}. Kateri paketi ga lahko dodajo, določa OpenAI.",
+      "signIn": "Ko ga ustvarite, se odpre prijava v MetaOS, kjer se prijavite z Discordom ali Googlom in ChatGPT-ju dovolite dostop. V novem klepetu vtipkajte {at} in izberite {name}, da ga ChatGPT uporabi."
+    },
+    "claude": {
+      "add": "Na claude.ai ali v Claudovi namizni aplikaciji v {connectors} izberite {add}. Poimenujte ga {name}, kot URL vnesite {url}, napredne nastavitve pa pustite prazne. V organizaciji Team ali Enterprise ga za vse doda lastnik v nastavitvah organizacije, vi pa ga povežete v svojih.",
+      "signIn": "Ob njem izberite {connect}: odpre se prijava v MetaOS, kjer se prijavite z Discordom ali Googlom. Ko je povezan, ga uporabljajo tudi Claudove aplikacije za telefon. V klepetu ga vklopite v meniju {plus}, pod {connectors}."
+    },
+    "claudeCode": {
+      "add": "V terminalu; {scope} ga doda v vse vaše projekte.",
+      "signIn": "V Claude Code zaženite {mcp}, izberite {ogrodje} in nato Authenticate. Brskalnik odpre prijavo v MetaOS, kjer se prijavite z Discordom ali Googlom."
+    },
+    "codex": {
+      "add": "V terminalu. Zapiše se v vašo datoteko {config}, zato je na voljo v vseh vaših projektih: v CLI, v Codexovi razširitvi za IDE in v njegovi aplikaciji.",
+      "signIn": "Ko ga dodate, se v brskalniku odpre prijava v MetaOS, kjer se prijavite z Discordom ali Googlom. Codex prijavo hrani in jo osvežuje; znova se prijavite, na primer ko ste dodani v ekipo, takole:"
+    },
+    "copy": {
+      "copied": "Kopirano",
+      "copy": "Kopirajte",
+      "copyCommand": "Kopirajte ukaz",
+      "selected": "Izbrano; kopirajte s ⌘C ali Ctrl+C",
+      "terminal": "Terminal"
+    },
+    "description": "Uporabljajte MetaOS iz svojega asistenta AI prek MCP: kako povežete Claude Code, Claude, Codex ali ChatGPT in kaj zmore.",
+    "graphql": {
+      "commentExample": "Komentar k S05E08, z besedilom v spremenljivkah, da ničesar ni treba ubežati",
+      "endpoint": "Končna točka",
+      "endpointDetails": "{endpoint}, z JSON: {query} in njegove {variables}",
+      "errors": "Napake",
+      "errorsDetails": "V telesu odgovora, s statusom 200",
+      "intro": "Strani MetaOS dobijo, kar prikazujejo, iz njegovega API-ja GraphQL, in vaše skripte in aplikacije ga lahko sprašujejo prav tako.",
+      "limits": "Omejitve",
+      "limitsDetails": "15 ravni globine in 300 polj na poizvedbo",
+      "meExample": "Kdo ste za MetaOS",
+      "public": "Brez žetona",
+      "publicDetails": "Kar je javno, deluje za vsakogar: objavljene epizode in ljudje na njih. To je tudi vse, kar {episodes} in {people} vrneta komur koli brez žetona.",
+      "publicExample": "Zadnje tri objavljene epizode",
+      "schema": "Shema",
+      "schemaDetails": "Z introspekcijo, za odjemalce GraphQL, in opisana polje za poljem v {schema} na GitHubu",
+      "withToken": "Z žetonom",
+      "withTokenDetails": "Vse drugo je za ekipo. Potrebujete žeton člana ekipe z {read}, za spremembe pa še z {write}. Skripte še nimajo svoje prijave, zato uporabite žeton iz prijave v MetaOS, ki ima oba."
+    },
+    "mcp": {
+      "add": "Dodajte MetaOS v {client}",
+      "ask": "Vprašajte",
+      "askDetails": "Na primer: „Katere epizode so v produkciji?“ ali „Kdo snema na naslednjem snemanju?“ Asistent izmed spodnjih orodij izbere tista, ki jih potrebuje, in vas, razen če ste jih že dovolili, vpraša, preden katero uporabi.",
+      "assistant": "Asistent",
+      "intro": "MetaOS je strežnik MCP. Povežite z njim asistenta AI, na primer Claude, Codex ali ChatGPT, in asistent bo lahko v vašem imenu iskal in urejal epizode, ljudi, snemanja in oddaje Ogrodja ter njegove dokumente Google in datoteke v Koofru.",
+      "otherClients": "Drugi odjemalci MCP, ki se prijavljajo z OAuth, na primer MCP Inspector, se povežejo na {url}.",
+      "signIn": "Prijavite se",
+      "team": "Postanite del ekipe",
+      "teamDetails": "MCP je za ekipo Ogrodja. S prijavo postanete član; v ekipo vas doda skrbnik Ogrodja, do takrat pa MetaOS asistentovo prijavo zavrne. Ko ste v ekipi, se prijavite znova."
+    },
+    "refresh": {
+      "chatgpt": "ChatGPT jih obdrži, kakršna so bila, ko je bil MetaOS dodan ali v delovnem prostoru odobren: tam jih skrbnik osveži v nastavitvah delovnega prostora, pod {apps}. Če ste ga dodali sami, ga dodajte znova.",
+      "claude": "Claude jih obdrži, dokler jih ne osvežite: v {connectors} odprite {name}, izberite {refresh} in začnite nov klepet.",
+      "claudeCode": "Claude Code jih znova dobi v novi seji ali v {mcp}: izberite {ogrodje} in nato Reconnect.",
+      "codex": "Codex jih dobi ob začetku seje, zato začnite novo.",
+      "details": "Orodja MetaOS so v različici {version} in se spreminjajo skupaj z MetaOS. Asistent obdrži tista, ki jih je dobil, zato ima starejša, kadar katerega od spodaj naštetih ne najde ali kadar MetaOS zavrne, kako ga kliče.",
+      "title": "Posodabljajte njegova orodja"
+    },
+    "subtitle": "MetaOS uporabljajte iz svojega asistenta AI prek MCP ali iz svoje kode prek GraphQL.",
+    "token": {
+      "copied": "Kopirano",
+      "copiedStatus": "Kopirano; velja 5 minut.",
+      "copy": "Kopirajte žeton",
+      "keep": "Za MetaOS ste to vi, zato ga ne delite z nikomer. Za ukaze na tej strani ga shranite v {token}, ko poteče, pa kopirajte novega.",
+      "lasts": "velja 5 minut",
+      "none": "Žetona ni: {error}",
+      "notCopied": "Brskalnik strani ni dovolil, da ga kopira, zato ga kopirajte sami:",
+      "signIn": "Prijavite se desno zgoraj in tukaj boste kopirali svojega.",
+      "signedOut": "Niste več prijavljeni: prijavite se znova, da ga dobite.",
+      "title": "Vaš žeton"
+    },
+    "tools": {
+      "filter": "Filtrirajte orodja",
+      "filterPlaceholder": "Filtrirajte po imenu ali tem, kaj počne",
+      "intro": "Kaj lahko asistent naredi prek MCP v vašem imenu, v različici {version}. Izbere tista, ki jih potrebuje, in vas najprej vpraša, razen če ste jih že dovolili.",
+      "noMatch": "Nobeno orodje se ne ujema z „{filter}“.",
+      "shown": "{shown} od {total} orodja | {shown} od {total} orodij | {shown} od {total} orodij | {shown} od {total} orodij",
+      "title": "Orodja"
+    },
+    "ways": {
+      "ask": "Uporabite API",
+      "connect": "Povežite asistenta",
+      "graphql": "Za skripte in aplikacije",
+      "mcp": "Za asistente AI: Claude Code, Claude, Codex, ChatGPT",
+      "tools": "{n} orodje | {n} orodji | {n} orodja | {n} orodij"
+    }
   }
 }

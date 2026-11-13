@@ -2,6 +2,8 @@
 // size, as the Artwork folder in Dropbox has them (EpisodeImage in Images.kt). The browser reads each file's size from
 // its header and places it by its size and name before anything is sent; MetaOS checks the size again.
 
+import type { Translate } from '@/i18n'
+
 export type ArtworkKind = 'THUMBNAIL' | 'THUMBNAIL_B' | 'THUMBNAIL_C' | 'WEB' | 'COVER'
 
 export type ArtworkType = 'image/png' | 'image/jpeg'
@@ -10,21 +12,26 @@ export interface Slot {
   kind: ArtworkKind
   // The episode's field with it (GraphQL)
   field: 'thumbnail' | 'thumbnailB' | 'thumbnailC' | 'web' | 'cover'
-  label: string
   width: number
   height: number
 }
 
 /** The episode's pictures, as the dialog lists them */
 export const SLOTS: Slot[] = [
-  { kind: 'THUMBNAIL', field: 'thumbnail', label: 'Thumbnail A', width: 1920, height: 1080 },
-  { kind: 'THUMBNAIL_B', field: 'thumbnailB', label: 'Thumbnail B', width: 1920, height: 1080 },
-  { kind: 'THUMBNAIL_C', field: 'thumbnailC', label: 'Thumbnail C', width: 1920, height: 1080 },
-  { kind: 'WEB', field: 'web', label: 'Web picture', width: 1920, height: 1080 },
-  { kind: 'COVER', field: 'cover', label: 'Podcast cover', width: 3000, height: 3000 },
+  { kind: 'THUMBNAIL', field: 'thumbnail', width: 1920, height: 1080 },
+  { kind: 'THUMBNAIL_B', field: 'thumbnailB', width: 1920, height: 1080 },
+  { kind: 'THUMBNAIL_C', field: 'thumbnailC', width: 1920, height: 1080 },
+  { kind: 'WEB', field: 'web', width: 1920, height: 1080 },
+  { kind: 'COVER', field: 'cover', width: 3000, height: 3000 },
 ]
 
 export const slotOf = (kind: ArtworkKind) => SLOTS.find((slot) => slot.kind === kind)!
+
+/** A picture's name, as a label, e.g. Thumbnail A */
+export const slotLabel = (kind: ArtworkKind, t: Translate) => t(`pictures.slot.${kind}`)
+
+/** A picture's name within a sentence, e.g. the current thumbnail A */
+export const slotName = (kind: ArtworkKind, t: Translate) => t(`pictures.slotName.${kind}`)
 
 /** A slot's size, as people read it, e.g. 1920 × 1080 */
 export const sizeOf = (slot: Pick<Slot, 'width' | 'height'>) => `${slot.width} × ${slot.height}`
@@ -96,17 +103,18 @@ export async function readPicked(file: File): Promise<Picked> {
 const hex = (buffer: ArrayBuffer) => [...new Uint8Array(buffer)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
 
 /** Why a picture can't be this one of the episode's, or null when it can */
-export function refusal(picked: Picked, slot: Slot): string | null {
-  if (!picked.type) return `It isn't PNG or JPEG, which the ${slot.label.toLowerCase()} has to be.`
+export function refusal(picked: Picked, slot: Slot, t: Translate): string | null {
+  const names = { label: slotLabel(slot.kind, t), name: slotName(slot.kind, t) }
+  if (!picked.type) return t('pictures.refusal.type', names)
   if (picked.width === slot.width && picked.height === slot.height) return null
-  return `It's ${picked.width} × ${picked.height}; the ${slot.label.toLowerCase()} has to be ${sizeOf(slot)}.`
+  return t('pictures.refusal.size', { ...names, width: picked.width, height: picked.height, size: sizeOf(slot) })
 }
 
 /** Why a picture can't be any of the episode's, or null when it can be one */
-export function anyRefusal(picked: Picked): string | null {
-  if (!picked.type) return "It isn't PNG or JPEG."
+export function anyRefusal(picked: Picked, t: Translate): string | null {
+  if (!picked.type) return t('pictures.refusal.anyType')
   if (SLOTS.some((slot) => slot.width === picked.width && slot.height === picked.height)) return null
-  return `It's ${picked.width} × ${picked.height}; thumbnails and the web picture are 1920 × 1080, the cover 3000 × 3000.`
+  return t('pictures.refusal.anySize', { width: picked.width, height: picked.height })
 }
 
 /**
@@ -140,24 +148,24 @@ export interface Placement {
  * cover's size alone is enough for the cover, when nothing else is it. The first, by name, of those that say the same.
  * [taken] are the places that already have something picked, which these don't take from them.
  */
-export function placeAll(pictures: Picked[], taken: ArtworkKind[] = []): Placement {
+export function placeAll(pictures: Picked[], t: Translate, taken: ArtworkKind[] = []): Placement {
   const placement: Placement = { placed: [], unplaced: [], refused: [] }
   const free = (kind: ArtworkKind) => !taken.includes(kind) && !placement.placed.some((it) => it.kind === kind)
   const fitting: Picked[] = []
   for (const picked of [...pictures].sort((a, b) => a.name.localeCompare(b.name))) {
-    const reason = anyRefusal(picked)
+    const reason = anyRefusal(picked, t)
     if (reason) placement.refused.push({ picked, reason })
     else fitting.push(picked)
   }
   const unnamed: Picked[] = []
   for (const picked of fitting) {
     const kind = kindByName(picked.name)
-    if (kind && !refusal(picked, slotOf(kind)) && free(kind)) placement.placed.push({ kind, picked, by: 'name' })
+    if (kind && !refusal(picked, slotOf(kind), t) && free(kind)) placement.placed.push({ kind, picked, by: 'name' })
     else unnamed.push(picked)
   }
   for (const picked of unnamed) {
     const cover = slotOf('COVER')
-    if (!refusal(picked, cover) && free('COVER') && !kindByName(picked.name)) placement.placed.push({ kind: 'COVER', picked, by: 'size' })
+    if (!refusal(picked, cover, t) && free('COVER') && !kindByName(picked.name)) placement.placed.push({ kind: 'COVER', picked, by: 'size' })
     else placement.unplaced.push(picked)
   }
   placement.placed.sort((a, b) => SLOTS.indexOf(slotOf(a.kind)) - SLOTS.indexOf(slotOf(b.kind)))

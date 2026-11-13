@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { faXmark } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { useLocale } from '@/useLocale'
 
 // A filter that's on without chips of its own, e.g. the stage the home page led to: pressed, as a ChipGroup's chosen
 // chip is, and pressing it turns it off
@@ -9,10 +10,12 @@ defineProps<{
   value: string
 }>()
 defineEmits<{ clear: [] }>()
+
+const { t } = useLocale()
 </script>
 
 <template>
-  <button type="button" class="filter-chip" :aria-label="`${label}: ${value}. Remove this filter`" @click="$emit('clear')">
+  <button type="button" class="filter-chip" :aria-label="t('ui.removeFilter', { label, value })" @click="$emit('clear')">
     <span class="label">{{ label }}</span>{{ value }}<FontAwesomeIcon :icon="faXmark" class="icon"/>
   </button>
 </template>

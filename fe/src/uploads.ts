@@ -1,5 +1,6 @@
 import { type ArtworkKind, type Picked } from '@/artwork'
-import { errorMessage, graphql } from '@/graphql'
+import { errorMessage, graphql, UserError } from '@/graphql'
+import type { Translate } from '@/i18n'
 import { type Image, IMAGE_FIELDS } from '@/images'
 
 // Pictures sent from the browser to MetaOS's bucket, and made an episode's (Artwork.kt): see artwork.ts for which
@@ -34,10 +35,10 @@ export async function startUpload(upload: SignedUpload, signal: AbortSignal): Pr
     signal,
   }).catch((error) => {
     if (signal.aborted) throw error
-    throw new Error("Google Cloud Storage can't be reached; check the connection", { cause: error })
+    throw new UserError('media.upload.unreachable', {}, { cause: error })
   })
   const session = start.ok ? start.headers.get('Location') : null
-  if (!session) throw new Error(`Google Cloud Storage didn't take it (${start.status})`)
+  if (!session) throw new UserError('media.upload.notTaken', { status: start.status })
   return session
 }
 
@@ -80,9 +81,9 @@ function send(url: string, file: File, type: string, onProgress: (percent: numbe
     }
     request.onload = () => {
       if (request.status >= 200 && request.status < 300) resolve()
-      else reject(new Error(`Google Cloud Storage answered ${request.status}`))
+      else reject(new UserError('media.upload.answered', { status: request.status }))
     }
-    request.onerror = () => reject(new Error('The connection broke while it was being sent'))
+    request.onerror = () => reject(new UserError('media.upload.broke'))
     request.onabort = () => reject(new DOMException('Stopped', 'AbortError'))
     signal.addEventListener('abort', () => request.abort(), { once: true })
     request.send(file)
@@ -93,4 +94,4 @@ function send(url: string, file: File, type: string, onProgress: (percent: numbe
 export const stopped = (error: unknown) => error instanceof DOMException && error.name === 'AbortError'
 
 /** What went wrong with an upload, for its row */
-export const uploadError = (error: unknown) => errorMessage(error).replace(/\.$/, '') + '.'
+export const uploadError = (error: unknown, t: Translate) => errorMessage(error, t).replace(/\.$/, '') + '.'

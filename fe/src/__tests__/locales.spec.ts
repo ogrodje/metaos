@@ -24,12 +24,14 @@ function sources(dir: string): string[] {
   })
 }
 
-// The keys the code names outright: t('...'), $t('...') and the routes' titles (title: '...')
+// The keys the code names outright: t('...'), $t('...'), <I18nT keypath="..."> and the routes' titles (title: '...')
 function usedKeys(): Set<string> {
   const used = new Set<string>()
   for (const file of sources(src)) {
     const text = readFileSync(file, 'utf8')
     for (const match of text.matchAll(/\b\$?t\(\s*'([a-zA-Z][\w-]*(?:\.[\w-]+)+)'/g)) used.add(match[1]!)
+    // A sentence with a link or markup in it: <I18nT keypath="..."> (or <i18n-t>)
+    for (const match of text.matchAll(/\bkeypath="([a-zA-Z][\w-]*(?:\.[\w-]+)+)"/g)) used.add(match[1]!)
     if (file.endsWith(join('router', 'index.ts'))) {
       for (const match of text.matchAll(/title: '([\w.]+)'/g)) used.add(match[1]!)
     }

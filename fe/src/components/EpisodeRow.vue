@@ -12,9 +12,11 @@ import { type Episode, episodePath, formatDate, guests, listPicture, sessionName
 import { src, srcset } from '@/images'
 import type { EpisodeMatch } from '@/search'
 import { useAuthStore } from '@/stores/auth'
+import { useLocale } from '@/useLocale'
 
 // The title leads to the episode's page, which is the team's while it's in the works
 const auth = useAuthStore()
+const { t, dateLocale, path } = useLocale()
 
 const props = defineProps<{
   episode: Episode
@@ -49,7 +51,7 @@ const guestNames = computed(() => (released.value ? guests(props.episode).join('
 const session = computed(() => {
   const { session } = props.episode
   if (!session || released.value || props.underSession || !auth.team) return null
-  return { path: sessionPath(session), label: sessionName(session) ?? formatDate(session.date) }
+  return { path: path(sessionPath(session)), label: sessionName(session) ?? formatDate(session.date, dateLocale.value) }
 })
 </script>
 
@@ -65,19 +67,19 @@ const session = computed(() => {
     </span>
     <div class="main">
       <p class="title">
-        <RouterLink v-if="auth.team || released" :to="episodePath(episode)" lang="sl"><MarkedText :text="episode.title" :words="match?.words"/></RouterLink>
+        <RouterLink v-if="auth.team || released" :to="path(episodePath(episode))" lang="sl"><MarkedText :text="episode.title" :words="match?.words"/></RouterLink>
         <span v-else lang="sl">{{ episode.title }}</span>
         <ShowBadge v-if="episode.show" :name="episode.show" :color="episode.showColor"/>
         <span v-if="guestNames" class="guests" lang="sl">{{ guestNames }}</span>
       </p>
-      <p v-if="session" class="session"><FontAwesomeIcon class="icon" :icon="faCalendar" title="Recording session"/> <RouterLink :to="session.path">{{ session.label }}</RouterLink></p>
+      <p v-if="session" class="session"><FontAwesomeIcon class="icon" :icon="faCalendar" :title="t('sessions.kind')"/> <RouterLink :to="session.path">{{ session.label }}</RouterLink></p>
       <p v-if="match?.text" class="found"><span class="label">{{ match.label }}</span> <span lang="sl"><MarkedText :text="match.text" :words="match.words"/></span></p>
     </div>
     <span class="meta">
       <span v-if="role" class="role">{{ role }}</span>
       <StatusLabel v-else-if="!released && !underStage" :status="episode.status"/>
       <span v-else class="none"/>
-      <time v-if="date" class="date" :datetime="date">{{ formatDate(date) }}</time>
+      <time v-if="date" class="date" :datetime="date">{{ formatDate(date, dateLocale) }}</time>
     </span>
     <span class="files" :class="{ released }">
       <ListenLinks v-if="released" :episode="episode"/>

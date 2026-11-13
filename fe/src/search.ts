@@ -2,6 +2,7 @@
 // people and recording sessions. It's the team's, so only signed-in users can search.
 
 import { EPISODE_FIELDS, type Episode } from '@/episodes'
+import type { Translate } from '@/i18n'
 import { type Person, PERSON_FIELDS } from '@/people'
 
 /** Where a search matched */
@@ -81,11 +82,11 @@ export function searchPath(text: string) {
   return { path: '/search', query: { q: text } }
 }
 
-// What a row says before a snippet, by where it's from
+// What a row says before a snippet, by where it's from: its message's key
 const SNIPPET_LABELS: Partial<Record<SearchField, string>> = {
-  ALTERNATIVE_TITLE: 'Also titled',
-  TINY_SUMMARY: 'From the short summary',
-  SUMMARY: 'From the summary',
+  ALTERNATIVE_TITLE: 'search.snippet.alsoTitled',
+  TINY_SUMMARY: 'search.snippet.tinySummary',
+  SUMMARY: 'search.snippet.summary',
 }
 
 /** Why a search found an episode, for its row: what to mark, and a line the row wouldn't show otherwise */
@@ -99,17 +100,20 @@ export interface EpisodeMatch {
  * Why a search found an episode, as its row says it when it doesn't show that already: another title, a bit of a
  * summary, or the people on it whose names matched
  */
-export function episodeMatch(hit: EpisodeHit, words: string[], shown: { tinySummary?: boolean, guests?: boolean } = {}): EpisodeMatch {
+export function episodeMatch(
+  hit: EpisodeHit, words: string[], t: Translate, shown: { tinySummary?: boolean, guests?: boolean } = {},
+): EpisodeMatch {
   // The snippet is from the best of the fields it can be from, which matchedIn has first
   const source = hit.matchedIn.find((field) => SNIPPET_LABELS[field])
   if (hit.snippet && source && !(source === 'TINY_SUMMARY' && shown.tinySummary)) {
-    return { words, label: SNIPPET_LABELS[source] ?? null, text: hit.snippet }
+    const label = SNIPPET_LABELS[source]
+    return { words, label: label ? t(label) : null, text: hit.snippet }
   }
   if (hit.matchedIn.includes('PEOPLE')) {
     const named = hit.episode.people
       .filter((person) => markWords(person.name, words).some((part) => part.marked))
       .filter((person) => !(shown.guests && person.roles.includes('GUEST')))
-    if (named.length) return { words, label: 'With', text: named.map((person) => person.name).join(', ') }
+    if (named.length) return { words, label: t('search.with'), text: named.map((person) => person.name).join(', ') }
   }
   return { words, label: null, text: null }
 }

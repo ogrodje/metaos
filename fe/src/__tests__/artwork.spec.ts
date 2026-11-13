@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { anyRefusal, kindByName, type Picked, placeAll, readHeader, refusal, slotOf } from '@/artwork'
+import { t, tSl } from './i18n'
 
 let ids = 0
 
@@ -61,13 +62,17 @@ describe('kindByName', () => {
 
 describe('refusal', () => {
   it('says what a picture is and what its place needs', () => {
-    expect(refusal(thumbnail('a.png'), slotOf('WEB'))).toBeNull()
-    expect(refusal(cover('ogrodje-zidar-podcast.png'), slotOf('WEB'))).toBe("It's 3000 × 3000; the web picture has to be 1920 × 1080.")
-    expect(refusal(picked('a.webp', null, null, null), slotOf('COVER'))).toBe("It isn't PNG or JPEG, which the podcast cover has to be.")
-    expect(anyRefusal(picked('Anton Babenko.png', 460, 460))).toBe(
+    expect(refusal(thumbnail('a.png'), slotOf('WEB'), t)).toBeNull()
+    expect(refusal(cover('ogrodje-zidar-podcast.png'), slotOf('WEB'), t)).toBe("It's 3000 × 3000; the web picture has to be 1920 × 1080.")
+    expect(refusal(picked('a.webp', null, null, null), slotOf('COVER'), t)).toBe("It isn't PNG or JPEG, which the podcast cover has to be.")
+    expect(anyRefusal(picked('Anton Babenko.png', 460, 460), t)).toBe(
       "It's 460 × 460; thumbnails and the web picture are 1920 × 1080, the cover 3000 × 3000.",
     )
-    expect(anyRefusal(cover('bonus.png'))).toBeNull()
+    expect(anyRefusal(cover('bonus.png'), t)).toBeNull()
+  })
+
+  it('says it in Slovenian too', () => {
+    expect(refusal(cover('a.png'), slotOf('THUMBNAIL_B'), tSl)).toBe('Meri 3000 × 3000, sličica B pa mora meriti 1920 × 1080.')
   })
 })
 
@@ -78,7 +83,7 @@ describe('placeAll', () => {
     const placement = placeAll([
       cover('ogrodje-zidar-podcast.png'), thumbnail('ogrodje-zidar-thumb3.png'), thumbnail('ogrodje-zidar-thumb1.png'),
       thumbnail('ogrodje-zidar-thumb2.png'),
-    ])
+    ], t)
     expect(kinds(placement)).toEqual([
       ['THUMBNAIL', 'ogrodje-zidar-thumb1.png', 'name'],
       ['THUMBNAIL_B', 'ogrodje-zidar-thumb2.png', 'name'],
@@ -94,7 +99,7 @@ describe('placeAll', () => {
       thumbnail('ogrodje-MooHero-thumbnail.png'), thumbnail('ogrodje-MooHero-web.png'), cover('ogrodje-mooHero-podcast.png'),
       cover('bonus.png'), thumbnail('ogrodje-MooHero-thumb-1.png'), picked('ogrodje-MooHero-story.png', 1080, 1920),
       picked('ogrodje-MooHero.webp', null, null, null),
-    ])
+    ], t)
     expect(kinds(placement)).toEqual([
       ['THUMBNAIL', 'ogrodje-MooHero-thumb-1.png', 'name'],
       ['WEB', 'ogrodje-MooHero-web.png', 'name'],
@@ -106,16 +111,16 @@ describe('placeAll', () => {
   })
 
   it("makes the only square one the cover, and doesn't take a place that's taken", () => {
-    expect(kinds(placeAll([cover('final.png')]))).toEqual([['COVER', 'final.png', 'size']])
-    expect(kinds(placeAll([cover('final.png'), cover('ogrodje-x-podcast.png')]))).toEqual([['COVER', 'ogrodje-x-podcast.png', 'name']])
+    expect(kinds(placeAll([cover('final.png')], t))).toEqual([['COVER', 'final.png', 'size']])
+    expect(kinds(placeAll([cover('final.png'), cover('ogrodje-x-podcast.png')], t))).toEqual([['COVER', 'ogrodje-x-podcast.png', 'name']])
 
-    const placement = placeAll([thumbnail('ogrodje-x-thumb1.png'), cover('final.png')], ['THUMBNAIL', 'COVER'])
+    const placement = placeAll([thumbnail('ogrodje-x-thumb1.png'), cover('final.png')], t, ['THUMBNAIL', 'COVER'])
     expect(placement.placed).toEqual([])
     expect(placement.unplaced.map((it) => it.name)).toEqual(['final.png', 'ogrodje-x-thumb1.png'])
   })
 
   it("doesn't place a picture by its name where it isn't that one's size", () => {
-    const placement = placeAll([thumbnail('ogrodje-x-podcast.png')])
+    const placement = placeAll([thumbnail('ogrodje-x-podcast.png')], t)
     expect(placement.placed).toEqual([])
     expect(placement.unplaced.map((it) => it.name)).toEqual(['ogrodje-x-podcast.png'])
   })

@@ -12,18 +12,21 @@ import NoMatch from '@/components/NoMatch.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import ViewToggle, { type ListView } from '@/components/ViewToggle.vue'
 import { type Episode, EPISODE_FIELDS, type EpisodeStatus, LIST_PICTURE_FIELDS, statusName } from '@/episodes'
-import { errorMessage, graphql } from '@/graphql'
+import { graphql } from '@/graphql'
 import { byStage, episodeText, IN_THE_WORKS, matches, seasonOf, seasonTitle, SET_ASIDE, STAGES } from '@/lists'
 import { useClearQuery, useQueryState } from '@/query'
 import { usePageMeta } from '@/seo'
 import { useFirstLoad } from '@/ssr'
 import { useAuthStore } from '@/stores/auth'
+import { useLocale } from '@/useLocale'
 
 const auth = useAuthStore()
+const { t } = useLocale()
 
 // Every episode for the team; for everyone else only the released ones
 const episodes = ref<Episode[]>()
-const error = ref<string>()
+// What went wrong, said in the page's language as it's shown (LoadError)
+const error = ref<unknown>()
 
 // How they're shown and which, as the address says, e.g. ?view=grid&show=Bytes&season=4&q=vres; and the stage, which
 // the home page's stages lead to, e.g. ?status=RECORDED
@@ -51,7 +54,7 @@ const shows = computed(() => {
     counts.set(episode.show, { count: (seen?.count ?? 0) + 1, color: episode.showColor })
   }
   return [
-    { value: 'all', title: 'Every show', count: all.value.length },
+    { value: 'all', title: t('lists.everyShow'), count: all.value.length },
     ...[...counts].map(([name, { count, color }]) => ({ value: name, title: name, count, color })),
   ]
 })
@@ -59,9 +62,9 @@ const shows = computed(() => {
 const seasons = computed(() => {
   const numbers = [...new Set(all.value.map(seasonOf).filter((n): n is number => n !== null))]
   return [
-    { value: 'all', title: 'Every season' },
-    ...numbers.filter((n) => n !== 99).map((n) => ({ value: String(n), title: seasonTitle(n) })),
-    ...(numbers.includes(99) ? [{ value: '99', title: seasonTitle(99) }] : []),
+    { value: 'all', title: t('lists.everySeason') },
+    ...numbers.filter((n) => n !== 99).map((n) => ({ value: String(n), title: seasonTitle(n, t) })),
+    ...(numbers.includes(99) ? [{ value: '99', title: seasonTitle(99, t) }] : []),
   ]
 })
 
@@ -101,7 +104,7 @@ const released = computed(() => {
   }
   return [...groups].map(([id, episodes], index): Season => {
     const foldable = index >= 2 && !filtering.value && episodes.length > (view.value === 'grid' ? 4 : 5)
-    return { id, episodes, title: seasonTitle(seasonOf(episodes[0]!)), foldable, folded: foldable && !opened.value.has(id) }
+    return { id, episodes, title: seasonTitle(seasonOf(episodes[0]!), t), foldable, folded: foldable && !opened.value.has(id) }
   })
 })
 
@@ -133,7 +136,7 @@ async function loadEpisodes(quietly = false) {
   } catch (e) {
     if (load !== loads) return
     if (quietly) throw e
-    error.value = errorMessage(e)
+    error.value = e
   }
 }
 
@@ -145,48 +148,46 @@ error.value = first.error
 watch(() => auth.team, () => void loadEpisodes())
 useLiveRefresh(() => loadEpisodes(true))
 
-usePageMeta(() => ({ description: "Every released episode of Ogrodje's podcast, by season, with where to listen." }))
+usePageMeta(() => ({ description: t('lists.episodes.description') }))
 </script>
 
 <template>
   <main class="content">
-    <PageHeader title="Episodes" :count="episodes?.length" :shown="filtering && episodes ? shown.length : undefined">
-      <template v-if="auth.team">What's being made, by stage, then what's released, by season.</template>
-      <template v-else-if="auth.ready && !auth.authenticated">
-        Every released episode of Ogrodje's podcast. Signed in, you also see what's being recorded and produced.
-      </template>
-      <template v-else>Every released episode of Ogrodje's podcast, by season.</template>
+    <PageHeader :title="t('pages.episodes')" :count="episodes?.length" :shown="filtering && episodes ? shown.length : undefined">
+      <template v-if="auth.team">{{ t('lists.episodes.ledeTeam') }}</template>
+      <template v-else-if="auth.ready && !auth.authenticated">{{ t('lists.episodes.ledeGuest') }}</template>
+      <template v-else>{{ t('lists.episodes.lede') }}</template>
     </PageHeader>
 
-    <FilterBar v-model:find="find" placeholder="Find by title, guest or code">
-      <FilterChip v-if="status !== 'all'" label="Stage" :value="statusName(status)" @clear="status = 'all'"/>
-      <ChipGroup v-if="shows.length > 2" v-model="show" label="Show" :options="shows"/>
-      <ChipGroup v-model="season" label="Season" :options="seasons"/>
+    <FilterBar v-model:find="find" :placeholder="t('lists.episodes.find')">
+      <FilterChip v-if="status !== 'all'" :label="t('lists.stage')" :value="statusName(status, t)" @clear="status = 'all'"/>
+      <ChipGroup v-if="shows.length > 2" v-model="show" :label="t('lists.show')" :options="shows"/>
+      <ChipGroup v-model="season" :label="t('lists.season')" :options="seasons"/>
       <template #end><ViewToggle v-model="view"/></template>
     </FilterBar>
 
-    <LoadError v-if="error" what="The episodes" :error="error" @retry="loadEpisodes()"/>
-    <LoadingRows v-else-if="!episodes" :rows="8" label="Loading the episodes"/>
-    <NoMatch v-else-if="!shown.length" :find="find" @clear="clearFilters">No episodes match</NoMatch>
+    <LoadError v-if="error" :what="t('lists.episodes.what')" :error="error" @retry="loadEpisodes()"/>
+    <LoadingRows v-else-if="!episodes" :rows="8" :label="t('lists.episodes.loading')"/>
+    <NoMatch v-else-if="!shown.length" :find="find" @clear="clearFilters">{{ t('lists.episodes.noMatch') }}</NoMatch>
 
     <template v-else>
       <!-- The team's: what's being made, by stage, a line each -->
       <section v-if="stages.length" aria-labelledby="in-the-works">
         <div class="heading">
-          <h2 id="in-the-works">In the works</h2>
+          <h2 id="in-the-works">{{ t('lists.episodes.inTheWorks') }}</h2>
           <span class="count">{{ workingCount }}</span>
         </div>
         <template v-for="stage in working" :key="stage.status">
-          <h3 class="subheading">{{ statusName(stage.status) }} <span class="count">{{ stage.episodes.length }}</span></h3>
+          <h3 class="subheading">{{ statusName(stage.status, t) }} <span class="count">{{ stage.episodes.length }}</span></h3>
           <ul class="episodes">
             <EpisodeRow v-for="episode in stage.episodes" :key="episode.id" :episode="episode" under-stage/>
           </ul>
         </template>
         <template v-if="setAside.length">
           <div class="subheading">
-            <h3 id="set-aside">On hold or cancelled <span class="count">{{ setAside.length }}</span></h3>
+            <h3 id="set-aside">{{ t('lists.episodes.setAside') }} <span class="count">{{ setAside.length }}</span></h3>
             <button v-if="!filtering" type="button" class="text-button more" :aria-expanded="!setAsideFolded" aria-describedby="set-aside"
-                    @click="setAsideOpen = !setAsideOpen">{{ setAsideFolded ? `Show all ${setAside.length}` : 'Fold' }}</button>
+                    @click="setAsideOpen = !setAsideOpen">{{ setAsideFolded ? t('lists.showAllN', { n: setAside.length }) : t('lists.fold') }}</button>
           </div>
           <ul v-if="!setAsideFolded" class="episodes">
             <EpisodeRow v-for="episode in setAside" :key="episode.id" :episode="episode"/>
@@ -199,7 +200,7 @@ usePageMeta(() => ({ description: "Every released episode of Ogrodje's podcast, 
           <h2 :id="group.id">{{ group.title }}</h2>
           <span class="count">{{ group.episodes.length }}</span>
           <button v-if="group.foldable" type="button" class="text-button more" :aria-expanded="!group.folded" :aria-describedby="group.id"
-                  @click="toggle(group)">{{ group.folded ? `Show all ${group.episodes.length}` : 'Fold' }}</button>
+                  @click="toggle(group)">{{ group.folded ? t('lists.showAllN', { n: group.episodes.length }) : t('lists.fold') }}</button>
         </div>
         <ul v-if="view === 'grid'" class="episode-cards">
           <EpisodeCard v-for="episode in firstOf(group)" :key="episode.id" :episode="episode"/>

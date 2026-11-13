@@ -3,6 +3,7 @@ import { RouterLink } from 'vue-router'
 import PersonAvatar from '@/components/PersonAvatar.vue'
 import type { Image } from '@/images'
 import { personPath } from '@/people'
+import { useLocale } from '@/useLocale'
 
 // Someone in a line: their picture, their name, which leads to their page, and what they are, e.g. host
 defineProps<{
@@ -11,12 +12,14 @@ defineProps<{
   avatar?: Image | null
   role?: string
 }>()
+
+const { path } = useLocale()
 </script>
 
 <template>
   <div class="person-line">
     <PersonAvatar :image="avatar ?? null" :name="name" :size="24"/>
-    <RouterLink class="name" :to="personPath({ id })">{{ name }}</RouterLink>
+    <RouterLink class="name" :to="path(personPath({ id }))">{{ name }}</RouterLink>
     <span v-if="role" class="role">{{ role }}</span>
   </div>
 </template>

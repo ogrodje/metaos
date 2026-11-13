@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { errorMessage, graphql } from '@/graphql'
-import { kindOf, type MediaKind } from '@/media'
+import { kindLabel, type MediaKind } from '@/media'
 import {
-  defaultFile, EPISODE_FILES, type EpisodeFiles, hasTranscript, languageOf, LANGUAGES, providerName, type SpeechProvider,
+  defaultFile, EPISODE_FILES, type EpisodeFiles, hasTranscript, languageOf, languages, providerName, type SpeechProvider,
   TRANSCRIBE, type Transcription,
 } from '@/transcriptions'
+import { useLocale } from '@/useLocale'
 
 // Transcribing one of an episode's files, as transcribeEpisode does, as transcribe_episode does over MCP: the episode
 // by its code, which finds its files; the file, its full audio unless another is chosen; the provider; and the language,
@@ -13,6 +14,7 @@ import {
 // already.
 const props = defineProps<{ providers: SpeechProvider[] }>()
 const emit = defineEmits<{ started: [transcription: Transcription] }>()
+const { t } = useLocale()
 
 const typed = ref('')
 
@@ -43,10 +45,12 @@ async function find() {
     episode.value = data.episode
     media.value = data.episode ? defaultFile(data.episode)?.id ?? data.episode.media[0]?.id ?? '' : ''
     if (data.episode) language.value = languageOf(data.episode)
-    if (!data.episode) error.value = `No episode ${code}`
-    else if (!data.episode.media.length) error.value = `${data.episode.code ?? data.episode.title} has no video or audio yet; upload them on its page`
+    if (!data.episode) error.value = t('transcriptions.form.noEpisode', { code })
+    else if (!data.episode.media.length) {
+      error.value = t('transcriptions.form.noMedia', { episode: data.episode.code ?? data.episode.title })
+    }
   } catch (e) {
-    error.value = errorMessage(e)
+    error.value = errorMessage(e, t)
   } finally {
     finding.value = false
   }
@@ -75,7 +79,7 @@ async function transcribe() {
     batch.value = false
     replace.value = false
   } catch (e) {
-    error.value = errorMessage(e)
+    error.value = errorMessage(e, t)
   } finally {
     busy.value = false
   }
@@ -83,54 +87,55 @@ async function transcribe() {
 </script>
 
 <template>
-  <section class="transcribe" aria-label="Transcribe an episode">
+  <section class="transcribe" :aria-label="t('transcriptions.transcribeEpisode')">
     <form class="fields" @submit.prevent="episode ? transcribe() : find()">
       <label class="field episode">
-        <span class="label">Episode</span>
-        <input ref="field" v-model="typed" class="input" type="text" placeholder="e.g. S05E07" autocomplete="off" spellcheck="false"
+        <span class="label">{{ t('transcriptions.form.episode') }}</span>
+        <input ref="field" v-model="typed" class="input" type="text" :placeholder="t('transcriptions.form.episodePlaceholder')"
+               autocomplete="off" spellcheck="false"
                @change="find" @input="episode = undefined">
       </label>
 
       <template v-if="episode && episode.media.length">
         <label class="field">
-          <span class="label">File</span>
+          <span class="label">{{ t('transcriptions.form.file') }}</span>
           <select v-model="media" class="input">
             <option v-for="file in episode.media" :key="file.id" :value="file.id">
-              {{ kindOf(file.kind as MediaKind).label }} · {{ file.name }}
+              {{ kindLabel(file.kind as MediaKind, t) }} · {{ file.name }}
             </option>
           </select>
         </label>
         <label class="field">
-          <span class="label">Provider</span>
+          <span class="label">{{ t('transcriptions.form.provider') }}</span>
           <select v-model="provider" class="input">
             <option v-for="p in providers" :key="p.name" :value="p.name">{{ providerName(p.name) }}</option>
           </select>
         </label>
         <label class="field">
-          <span class="label">Language</span>
+          <span class="label">{{ t('transcriptions.form.language') }}</span>
           <select v-model="language" class="input">
-            <option v-for="l in LANGUAGES" :key="l.value" :value="l.value">{{ l.title }}</option>
+            <option v-for="l in languages(t)" :key="l.value" :value="l.value">{{ l.title }}</option>
           </select>
         </label>
       </template>
 
       <button v-if="!episode" type="submit" class="button" :aria-disabled="finding || !typed.trim() || undefined">
-        {{ finding ? 'Finding…' : 'Find its files' }}
+        {{ finding ? t('transcriptions.form.finding') : t('transcriptions.form.find') }}
       </button>
       <button v-else-if="episode.media.length" type="submit" class="button primary" :aria-disabled="busy || undefined">
-        {{ busy ? 'Starting…' : 'Transcribe' }}
+        {{ busy ? t('transcriptions.form.starting') : t('transcriptions.form.transcribe') }}
       </button>
     </form>
 
     <div v-if="episode && episode.media.length" class="options">
       <label v-if="provider === 'google'" class="check">
-        <input v-model="batch" type="checkbox"> In a batch: within a day, for a fifth of the price
+        <input v-model="batch" type="checkbox"> {{ t('transcriptions.form.batch') }}
       </label>
       <label v-if="replacing" class="check">
-        <input v-model="replace" type="checkbox"> Replace the transcript {{ providerName(provider) }} made of it already
+        <input v-model="replace" type="checkbox"> {{ t('transcriptions.form.replace', { provider: providerName(provider) }) }}
       </label>
       <p class="hint">
-        {{ episode.code ?? '' }} {{ episode.title }}. A provider transcribes a few files at once; the rest wait their turn.
+        <span lang="sl">{{ episode.code ?? '' }} {{ episode.title }}</span>. {{ t('transcriptions.form.hint') }}
       </p>
     </div>
     <p v-if="error" class="error" role="alert">{{ error }}</p>

@@ -16,22 +16,25 @@ import {
   LIST_PICTURE_FIELDS, listPicture, relativeDate, type SessionGroup,
 } from '@/episodes'
 import { src, srcset } from '@/images'
-import { errorMessage, graphql } from '@/graphql'
+import { graphql } from '@/graphql'
 import { usePageMeta } from '@/seo'
 import { useFirstLoad } from '@/ssr'
 import { useAuthStore } from '@/stores/auth'
+import { useLocale } from '@/useLocale'
 
 const auth = useAuthStore()
+const { t, dateLocale, path } = useLocale()
 
 const released = ref<Episode[]>()
-const releasedError = ref<string>()
+// What went wrong, said in the page's language as it's shown (LoadError)
+const releasedError = ref<unknown>()
 
 // What's being made - for the team only. The episodes as they come, for what needs attention, and by recording
 // session, for their lists.
 const making = ref<{ upcoming: Episode[], inProduction: Episode[] }>()
 const upcoming = ref<SessionGroup[]>()
 const inProduction = ref<SessionGroup[]>()
-const makingError = ref<string>()
+const makingError = ref<unknown>()
 
 // How many episodes are at each stage, and what the team did lately: the team's too
 const stages = ref<{ status: EpisodeStatus, count: number }[]>()
@@ -41,7 +44,7 @@ const STAGES: EpisodeStatus[] = ['IDEA', 'PLANNED', 'SCHEDULED', 'RECORDED', 'IN
 // What needs attention, the most pressing first: a recording date that passed, then what's coming up without what it
 // needs, then the latest releases that aren't on YouTube or Patreon, then what's been in production long
 const attention = computed(() => (making.value
-  ? concerns(making.value.upcoming, making.value.inProduction, new Date(), released.value ?? [])
+  ? concerns(making.value.upcoming, making.value.inProduction, t, new Date(), released.value ?? [])
   : []))
 
 interface Section {
@@ -54,8 +57,8 @@ interface Section {
 // What's coming up first, as it's what's due; only those with episodes in them, once they've loaded
 const sections = computed(() =>
   [
-    { id: 'upcoming-recordings', title: 'Upcoming recordings', groups: upcoming.value },
-    { id: 'in-production', title: 'In production', groups: inProduction.value },
+    { id: 'upcoming-recordings', title: t('home.upcoming'), groups: upcoming.value },
+    { id: 'in-production', title: t('home.inProduction'), groups: inProduction.value },
   ].flatMap(({ id, title, groups }): Section[] =>
     groups?.length ? [{ id, title, groups, count: groups.reduce((n, group) => n + group.episodes.length, 0) }] : []),
 )
@@ -85,7 +88,7 @@ async function loadReleased(load: number, quietly: boolean) {
   } catch (error) {
     if (load !== loads) return
     if (quietly) throw error
-    releasedError.value = errorMessage(error)
+    releasedError.value = error
   }
 }
 
@@ -116,7 +119,7 @@ async function loadMaking(load: number, quietly: boolean) {
   } catch (error) {
     if (load !== loads) return
     if (quietly) throw error
-    makingError.value = errorMessage(error)
+    makingError.value = error
   }
 }
 
@@ -145,38 +148,35 @@ onMounted(() => {
 useLiveRefresh(() => loadLists(true))
 
 usePageMeta(() => ({
-  description: "MetaOS runs Ogrodje: the podcast's latest episodes, the people on them and where to listen.",
+  description: t('home.description'),
 }))
 </script>
 
 <template>
   <main class="content">
-    <h1 class="visually-hidden">Home</h1>
+    <h1 class="visually-hidden">{{ t('pages.home') }}</h1>
 
     <!-- Signed in, what's being made, and of it first what needs attention; at the side how many are at each stage, the
          releases and what the team did lately. Its place is kept while one who was signed in last time is checked. -->
     <div v-if="auth.likelyTeam" class="home">
       <div class="main">
-        <LoadError v-if="makingError" what="The upcoming recordings and what's in production" :error="makingError"
+        <LoadError v-if="makingError" :what="t('home.makingWhat')" :error="makingError"
                    @retry="loadLists()"/>
         <section v-else-if="!making" aria-labelledby="needs-attention">
-          <div class="heading"><h2 id="needs-attention">Needs attention</h2></div>
-          <LoadingRows :rows="3" label="Loading what's being made"/>
+          <div class="heading"><h2 id="needs-attention">{{ t('home.needsAttention') }}</h2></div>
+          <LoadingRows :rows="3" :label="t('home.loadingMaking')"/>
         </section>
 
         <template v-else>
           <section aria-labelledby="needs-attention">
             <div class="heading">
-              <h2 id="needs-attention">Needs attention</h2>
+              <h2 id="needs-attention">{{ t('home.needsAttention') }}</h2>
               <span class="count">{{ attention.length }}</span>
             </div>
             <ul v-if="attention.length" class="episodes">
               <ConcernRow v-for="concern in attention" :key="concern.episode.id" :concern="concern"/>
             </ul>
-            <p v-else class="all-clear">
-              Nothing right now. The recordings in the next {{ SOON_DAYS }} days have their guests and docs, and nothing
-              recorded {{ LONG_IN_PRODUCTION_DAYS }} days ago or more is waiting to be released.
-            </p>
+            <p v-else class="all-clear">{{ t('home.allClear', { soon: SOON_DAYS, long: LONG_IN_PRODUCTION_DAYS }) }}</p>
           </section>
 
           <!-- What's being made, by recording session, each a card with its episodes a line each -->
@@ -190,37 +190,37 @@ usePageMeta(() => ({
         </template>
       </div>
 
-      <aside class="rail" aria-label="Lately">
+      <aside class="rail" :aria-label="t('home.lately')">
         <section v-if="!makingError" aria-labelledby="by-stage">
-          <div class="heading"><h2 id="by-stage">By stage</h2></div>
+          <div class="heading"><h2 id="by-stage">{{ t('home.byStage') }}</h2></div>
           <StageBar v-if="stages" :counts="stages"/>
-          <LoadingRows v-else :rows="4" label="Loading how many episodes are at each stage"/>
+          <LoadingRows v-else :rows="4" :label="t('home.loadingStages')"/>
         </section>
 
         <section aria-labelledby="latest-releases">
           <div class="heading">
-            <h2 id="latest-releases">Latest releases</h2>
-            <RouterLink class="text-button more" to="/episodes">All episodes</RouterLink>
+            <h2 id="latest-releases">{{ t('home.latestReleases') }}</h2>
+            <RouterLink class="text-button more" :to="path('/episodes')">{{ t('home.allEpisodes') }}</RouterLink>
           </div>
-          <LoadError v-if="releasedError" what="The latest releases" :error="releasedError" @retry="loadLists()"/>
-          <LoadingRows v-else-if="!released" :rows="3" label="Loading the latest releases"/>
+          <LoadError v-if="releasedError" :what="t('home.latestWhat')" :error="releasedError" @retry="loadLists()"/>
+          <LoadingRows v-else-if="!released" :rows="3" :label="t('home.loadingLatest')"/>
           <ul v-else class="releases">
             <li v-for="episode in released.slice(0, 3)" :key="episode.id">
-              <RouterLink class="shot" :to="episodePath(episode)" tabindex="-1" aria-hidden="true">
+              <RouterLink class="shot" :to="path(episodePath(episode))" tabindex="-1" aria-hidden="true">
                 <img v-if="listPicture(episode)" :src="src(listPicture(episode)!, 320)" :srcset="srcset(listPicture(episode)!)" sizes="56px" alt="">
               </RouterLink>
               <div>
-                <RouterLink class="title" :to="episodePath(episode)" lang="sl">{{ episode.title }}</RouterLink>
-                <p class="meta"><span class="code">{{ episode.code }}</span><template v-if="episode.airedDate"> · {{ relativeDate(episode.airedDate) }}</template></p>
+                <RouterLink class="title" :to="path(episodePath(episode))" lang="sl">{{ episode.title }}</RouterLink>
+                <p class="meta"><span class="code">{{ episode.code }}</span><template v-if="episode.airedDate"> · {{ relativeDate(episode.airedDate, dateLocale) }}</template></p>
               </div>
             </li>
           </ul>
         </section>
 
         <section aria-labelledby="recent-activity">
-          <div class="heading"><h2 id="recent-activity">Recent activity</h2></div>
+          <div class="heading"><h2 id="recent-activity">{{ t('home.recentActivity') }}</h2></div>
           <RecentActivity v-if="recent" :changes="recent"/>
-          <LoadingRows v-else-if="!makingError" :rows="4" label="Loading what the team did lately"/>
+          <LoadingRows v-else-if="!makingError" :rows="4" :label="t('home.loadingRecent')"/>
         </section>
       </aside>
     </div>
@@ -229,18 +229,18 @@ usePageMeta(() => ({
     <template v-else>
       <section aria-labelledby="latest-releases">
         <div class="heading">
-          <h2 id="latest-releases">Latest releases</h2>
-          <RouterLink class="text-button more" to="/episodes">All episodes</RouterLink>
+          <h2 id="latest-releases">{{ t('home.latestReleases') }}</h2>
+          <RouterLink class="text-button more" :to="path('/episodes')">{{ t('home.allEpisodes') }}</RouterLink>
         </div>
-        <LoadError v-if="releasedError" what="The latest releases" :error="releasedError" @retry="loadLists()"/>
-        <LoadingRows v-else-if="!released" :rows="3" tall label="Loading the latest releases"/>
+        <LoadError v-if="releasedError" :what="t('home.latestWhat')" :error="releasedError" @retry="loadLists()"/>
+        <LoadingRows v-else-if="!released" :rows="3" tall :label="t('home.loadingLatest')"/>
         <ul v-else class="episode-cards">
           <EpisodeCard v-for="episode in released" :key="episode.id" :episode="episode"/>
         </ul>
       </section>
 
-      <SignInPrompt v-if="auth.ready && !auth.authenticated" compact title="On Ogrodje's team?">
-        Sign in to see what's being recorded and produced, and what needs attention.
+      <SignInPrompt v-if="auth.ready && !auth.authenticated" compact :title="t('home.teamTitle')">
+        {{ t('home.teamPrompt') }}
       </SignInPrompt>
     </template>
   </main>

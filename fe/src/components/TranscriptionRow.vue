@@ -7,15 +7,17 @@ import {
   CANCEL_TRANSCRIPTION, formatWhen, isOn, providerName, REMOVE_TRANSCRIPT, statusText, took, type Transcription,
   transcriptSummary,
 } from '@/transcriptions'
+import { useLocale } from '@/useLocale'
 
 // One transcription: its episode and file, its provider, how far it is, and what may be done with it: cancelling one
 // that's on; reading the transcript one made, or removing it, which is asked on its row first
 // [now] is the page's clock, by which one that's on says how long it's taken so far
 const props = defineProps<{ transcription: Transcription, now: Date }>()
 const emit = defineEmits<{ changed: [] }>()
+const { t, dateLocale, path } = useLocale()
 
-const t = computed(() => props.transcription)
-const on = computed(() => isOn(t.value))
+const job = computed(() => props.transcription)
+const on = computed(() => isOn(job.value))
 const reading = ref(false)
 const removing = ref(false)
 const busy = ref(false)
@@ -29,70 +31,76 @@ async function act(query: string, variables: Record<string, unknown>) {
     await graphql(query, variables)
     emit('changed')
   } catch (e) {
-    error.value = errorMessage(e)
+    error.value = errorMessage(e, t)
   } finally {
     busy.value = false
   }
 }
 
-const cancel = () => act(CANCEL_TRANSCRIPTION, { id: t.value.id })
+const cancel = () => act(CANCEL_TRANSCRIPTION, { id: job.value.id })
 
 async function remove() {
-  await act(REMOVE_TRANSCRIPT, { id: t.value.transcript?.id })
+  await act(REMOVE_TRANSCRIPT, { id: job.value.transcript?.id })
   if (!error.value) {
     removing.value = false
     reading.value = false
   }
 }
 
-const episodeLink = computed(() => (t.value.episode ? `/episodes/${t.value.episode.code ?? t.value.episode.id}` : null))
+const episodeLink = computed(() => (job.value.episode ? path(`/episodes/${job.value.episode.code ?? job.value.episode.id}`) : null))
+// How long it's taken so far, or took
+const duration = computed(() => took(job.value, props.now))
 </script>
 
 <template>
-  <li class="transcription" :class="t.status.toLowerCase()">
+  <li class="transcription" :class="job.status.toLowerCase()">
     <!-- Its episode's code in a column of its own, as the Episodes page has it -->
-    <span class="code" :aria-hidden="!t.episode?.code">{{ t.episode?.code ?? '—' }}</span>
+    <span class="code" :aria-hidden="!job.episode?.code">{{ job.episode?.code ?? '—' }}</span>
     <div class="what">
-      <RouterLink v-if="episodeLink && t.episode" :to="episodeLink" class="episode" lang="sl">{{ t.episode.title }}</RouterLink>
-      <span v-else class="episode gone">A deleted episode</span>
-      <span class="file">{{ t.mediaName }}</span>
+      <RouterLink v-if="episodeLink && job.episode" :to="episodeLink" class="episode" lang="sl">{{ job.episode.title }}</RouterLink>
+      <span v-else class="episode gone">{{ t('transcriptions.row.deletedEpisode') }}</span>
+      <span class="file">{{ job.mediaName }}</span>
     </div>
 
     <div class="how">
-      <span class="provider">{{ providerName(t.provider) }}<span v-if="t.batch"> · batch</span></span>
-      <span class="status" :role="on ? 'status' : undefined">{{ statusText(t) }}</span>
-      <span v-if="t.status === 'FAILED' && t.error" class="why">{{ t.error }}</span>
-      <span v-else-if="t.transcript" class="summary">{{ transcriptSummary(t.transcript) }}</span>
-      <span v-else-if="t.status === 'DONE'" class="summary">Its transcript was removed or replaced</span>
+      <span class="provider">{{ providerName(job.provider) }}<span v-if="job.batch"> · {{ t('transcriptions.row.batch') }}</span></span>
+      <span class="status" :role="on ? 'status' : undefined">{{ statusText(job, t, dateLocale) }}</span>
+      <span v-if="job.status === 'FAILED' && job.error" class="why">{{ job.error }}</span>
+      <span v-else-if="job.transcript" class="summary">{{ transcriptSummary(job.transcript, t, dateLocale) }}</span>
+      <span v-else-if="job.status === 'DONE'" class="summary">{{ t('transcriptions.row.transcriptGone') }}</span>
     </div>
 
     <div class="when">
-      <span>{{ formatWhen(t.createdAt) }}<span v-if="t.requestedBy"> · {{ t.requestedBy }}</span></span>
-      <span v-if="t.status !== 'CANCELLED'" class="took">{{ on ? 'for' : 'took' }} {{ took(t, now) }}</span>
+      <span>{{ formatWhen(job.createdAt, dateLocale) }}<span v-if="job.requestedBy"> · {{ job.requestedBy }}</span></span>
+      <span v-if="job.status !== 'CANCELLED' && duration" class="took">
+        {{ on ? t('transcriptions.row.for', { duration }) : t('transcriptions.row.took', { duration }) }}
+      </span>
     </div>
 
     <div class="actions">
       <button v-if="on" type="button" class="button small" :aria-disabled="busy || undefined" @click="cancel">
-        {{ busy ? 'Cancelling…' : 'Cancel' }}
+        {{ busy ? t('transcriptions.row.cancelling') : t('common.cancel') }}
       </button>
-      <template v-else-if="t.transcript && !removing">
+      <template v-else-if="job.transcript && !removing">
         <button type="button" class="button small" :aria-expanded="reading" @click="reading = !reading">
-          {{ reading ? 'Hide' : 'Read' }}
+          {{ reading ? t('transcriptions.row.hide') : t('transcriptions.row.read') }}
         </button>
-        <button type="button" class="button small quiet" @click="removing = true">Remove</button>
+        <button type="button" class="button small quiet" @click="removing = true">{{ t('common.remove') }}</button>
       </template>
-      <template v-else-if="t.transcript">
-        <span class="ask">Remove its transcript?</span>
+      <template v-else-if="job.transcript">
+        <span class="ask">{{ t('transcriptions.row.removeAsk') }}</span>
         <button type="button" class="button small danger" :aria-disabled="busy || undefined" @click="remove">
-          {{ busy ? 'Removing…' : 'Remove' }}
+          {{ busy ? t('transcriptions.row.removing') : t('common.remove') }}
         </button>
-        <button type="button" class="button small" :disabled="busy" @click="removing = false">Keep</button>
+        <button type="button" class="button small" :disabled="busy" @click="removing = false">
+          {{ t('transcriptions.row.keep') }}
+        </button>
       </template>
     </div>
 
     <p v-if="error" class="error" role="alert">{{ error }}</p>
-    <div v-if="reading && t.transcript" class="transcript">
-      <TranscriptLines :id="t.transcript.id" :language="t.language"/>
+    <div v-if="reading && job.transcript" class="transcript">
+      <TranscriptLines :id="job.transcript.id" :language="job.language"/>
     </div>
   </li>
 </template>

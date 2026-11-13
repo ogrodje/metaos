@@ -3,9 +3,12 @@ import { RouterLink } from 'vue-router'
 import ShowBadge from '@/components/ShowBadge.vue'
 import type { Concern } from '@/attention'
 import { episodePath, formatDate, relativeDate } from '@/episodes'
+import { useLocale } from '@/useLocale'
 
 // An episode that needs attention, on the home page: the code and title, what's wrong, and when it's recorded
 defineProps<{ concern: Concern }>()
+
+const { dateLocale, path } = useLocale()
 </script>
 
 <template>
@@ -13,15 +16,15 @@ defineProps<{ concern: Concern }>()
     <span class="code" :aria-hidden="!concern.episode.code">{{ concern.episode.code ?? '—' }}</span>
     <div class="main">
       <p class="title">
-        <RouterLink :to="episodePath(concern.episode)" lang="sl">{{ concern.episode.title }}</RouterLink>
+        <RouterLink :to="path(episodePath(concern.episode))" lang="sl">{{ concern.episode.title }}</RouterLink>
         <ShowBadge v-if="concern.episode.show" :name="concern.episode.show" :color="concern.episode.showColor"/>
       </p>
       <p class="reasons">
         <span v-for="reason in concern.reasons" :key="reason">{{ reason }}</span>
       </p>
     </div>
-    <time v-if="concern.date" class="when" :datetime="concern.date" :title="formatDate(concern.date)">
-      {{ relativeDate(concern.date) }}
+    <time v-if="concern.date" class="when" :datetime="concern.date" :title="formatDate(concern.date, dateLocale)">
+      {{ relativeDate(concern.date, dateLocale) }}
     </time>
   </li>
 </template>

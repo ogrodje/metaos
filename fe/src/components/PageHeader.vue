@@ -2,11 +2,16 @@
 // A list page's heading: its name, how many it has, and a line about what it lists; while it's filtered, how many of them
 // are shown, e.g. 12 of 74, which screen readers hear as it changes. What the page does besides listing, e.g. transcribe
 // an episode, is a button at the end of its name's line (actions).
+import { useLocale } from '@/useLocale'
+
 defineProps<{
   title: string
   count?: number
   shown?: number
 }>()
+
+const { t, dateLocale } = useLocale()
+const number = (n: number) => n.toLocaleString(dateLocale.value)
 </script>
 
 <template>
@@ -14,7 +19,7 @@ defineProps<{
     <div class="name">
       <h1>{{ title }}</h1>
       <span v-if="count !== undefined" class="count" aria-live="polite" aria-atomic="true">
-        {{ shown === undefined ? count : `${shown} of ${count}` }}<span class="visually-hidden"> {{ title.toLowerCase() }}</span>
+        {{ shown === undefined ? number(count) : t('ui.shownOf', { shown: number(shown), count: number(count) }) }}<span class="visually-hidden"> {{ title.toLowerCase() }}</span>
       </span>
       <div v-if="$slots.actions" class="actions"><slot name="actions"/></div>
     </div>

@@ -1,19 +1,23 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { I18nT } from 'vue-i18n'
 import { keepUnchanged, useLiveRefresh } from '@/changes'
 import EventRow from '@/components/EventRow.vue'
 import LoadError from '@/components/LoadError.vue'
 import LoadingRows from '@/components/LoadingRows.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import { byWeek, EVENT_FIELDS, type GooEvent, shortDay, weekdayName, weekRange } from '@/events'
-import { errorMessage, graphql } from '@/graphql'
+import { graphql } from '@/graphql'
 import { usePageMeta } from '@/seo'
 import { useFirstLoad } from '@/ssr'
+import { useLocale } from '@/useLocale'
 
 // Slovenia's tech, developer and startup events that haven't ended yet, from Goo, as ogrodje.si's Dogodki page listed
-// them, and in Slovenian as it did: by week, then by day. Everyone sees the same, so the server renders it.
+// them: by week, then by day, in the page's language (the events themselves are as Goo has them). Everyone sees the
+// same, so the server renders it.
+const { t, dateLocale } = useLocale()
 const events = ref<GooEvent[]>()
-const error = ref<string>()
+const error = ref<unknown>()
 
 async function fetchEvents() {
   return (await graphql<{ events: GooEvent[] }>(`{ events { ${EVENT_FIELDS} } }`)).events
@@ -31,7 +35,7 @@ async function loadEvents(quietly = false) {
   } catch (e) {
     if (load !== loads) return
     if (quietly) throw e
-    error.value = errorMessage(e)
+    error.value = e
   }
 }
 
@@ -43,32 +47,35 @@ error.value = first.error
 useLiveRefresh(() => loadEvents(true))
 
 usePageMeta(() => ({
-  description: 'Tehnološki, razvijalski in startup dogodki ter konference v Sloveniji, ki jih spremlja Ogrodje, po tednih.',
+  description: t('events.description'),
 }))
 
 const weeks = computed(() => byWeek(events.value ?? []))
 </script>
 
 <template>
-  <main class="content" lang="sl">
-    <PageHeader title="Dogodki in konference" :count="events?.length">
-      Ogrodje spremlja preko 60 tehnoloških/razvijalskih/startup dogodkov/konferenc in organizacij. Na dogodke se lahko
-      naročite tudi v našem <a class="link" href="https://discord.com/invite/xV2Xc4VX9W" target="_blank" rel="noopener">Discord
-      strežniku</a>, kanal <strong>#🗓-dogodki</strong>.
+  <main class="content">
+    <PageHeader :title="t('pages.events')" :count="events?.length">
+      <I18nT keypath="events.intro" scope="global">
+        <template #discord>
+          <a class="link" href="https://discord.com/invite/xV2Xc4VX9W" target="_blank" rel="noopener">{{ t('events.discord') }}</a>
+        </template>
+        <template #channel><strong>#🗓-dogodki</strong></template>
+      </I18nT>
     </PageHeader>
 
-    <LoadError v-if="error" what="The events" :error="error" lang="en" @retry="loadEvents()"/>
-    <LoadingRows v-else-if="!events" :rows="6" tall label="Nalagam dogodke"/>
-    <p v-else-if="!events.length" class="note">Ta hip ni prihajajočih dogodkov.</p>
+    <LoadError v-if="error" :what="t('events.what')" :error="error" @retry="loadEvents()"/>
+    <LoadingRows v-else-if="!events" :rows="6" tall :label="t('events.loading')"/>
+    <p v-else-if="!events.length" class="note">{{ t('events.none') }}</p>
 
     <template v-else>
       <section v-for="week in weeks" :key="week.monday" :aria-labelledby="`week-${week.monday}`">
         <div class="heading">
-          <h2 :id="`week-${week.monday}`">Teden / {{ weekRange(week.monday) }}</h2>
+          <h2 :id="`week-${week.monday}`">{{ t('events.week', { range: weekRange(week.monday, dateLocale) }) }}</h2>
           <span class="count">{{ week.count }}</span>
         </div>
         <template v-for="day in week.days" :key="day.day">
-          <h3 class="day">{{ weekdayName(day.day) }} <span class="date">{{ shortDay(day.day) }}</span></h3>
+          <h3 class="day">{{ weekdayName(day.day, dateLocale) }} <span class="date">{{ shortDay(day.day, dateLocale) }}</span></h3>
           <ul class="events">
             <EventRow v-for="event in day.events" :key="event.id" :event="event"/>
           </ul>
@@ -77,17 +84,17 @@ const weeks = computed(() => byWeek(events.value ?? []))
     </template>
 
     <footer class="disclaimer">
-      <p>
-        ⚠️ Sistem za zbiranje dogodkov in konferenc je v razvoju. Prosimo, preverite točnost podatkov na straneh
-        organizatorjev. Ogrodje <strong>ni</strong> organizator. Dogodki in podatki o konferencah so zbrani iz javnih
-        virov. Napake, želje in PR-je sprejemamo na
-        <a class="link" href="https://github.com/ogrodje/goo" target="_blank" rel="noopener">github.com/ogrodje/goo</a>.
-      </p>
-      <p>
-        Podatki o dogodkih so na voljo tudi v
-        <a class="link" href="https://goo.ogrodje.si/docs/openapi" target="_blank" rel="noopener">strojni obliki prek API-ja</a>.
-        Podatki se osvežijo vsakih 12 ur.
-      </p>
+      <I18nT keypath="events.disclaimer" tag="p" scope="global">
+        <template #not><strong>{{ t('events.not') }}</strong></template>
+        <template #github>
+          <a class="link" href="https://github.com/ogrodje/goo" target="_blank" rel="noopener">github.com/ogrodje/goo</a>
+        </template>
+      </I18nT>
+      <I18nT keypath="events.api" tag="p" scope="global">
+        <template #api>
+          <a class="link" href="https://goo.ogrodje.si/docs/openapi" target="_blank" rel="noopener">{{ t('events.apiLink') }}</a>
+        </template>
+      </I18nT>
     </footer>
   </main>
 </template>

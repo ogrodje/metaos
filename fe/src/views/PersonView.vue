@@ -25,6 +25,7 @@ import { personData, shorten, usePageMeta, useSiteUrl } from '@/seo'
 import { useFirstLoad } from '@/ssr'
 import { useAuthStore } from '@/stores/auth'
 import { usePageTitle } from '@/title'
+import { useLocale } from '@/useLocale'
 
 /** A person with everything about them, for their page: their episodes whole, those they recommended, and their sign-ins */
 interface PersonDetails extends Omit<Person, 'episodes' | 'accounts'> {
@@ -35,6 +36,7 @@ interface PersonDetails extends Omit<Person, 'episodes' | 'accounts'> {
 
 const auth = useAuthStore()
 const route = useRoute()
+const { t, path } = useLocale()
 const siteUrl = useSiteUrl()
 
 // The page is for the person in the path when it opens: going to another person opens another page
@@ -86,7 +88,7 @@ async function loadPerson(id: string, quietly = false) {
   } catch (e) {
     if (load !== loads) return
     if (quietly) throw e
-    error.value = errorMessage(e)
+    error.value = errorMessage(e, t)
   }
 }
 
@@ -110,7 +112,7 @@ usePageMeta(() => {
   const shown = person.value
   if (!shown) return {}
   // E.g. Engineer @ Somewhere. Host, guest on Ogrodje.
-  const about = [shown.bio?.replace(/[\s.]+$/, ''), shown.episodes.length ? `${rolesOf(shown)} on Ogrodje` : null]
+  const about = [shown.bio?.replace(/[\s.]+$/, ''), shown.episodes.length ? t('person.onOgrodje', { roles: rolesOf(shown, t) }) : null]
     .filter(Boolean)
   return {
     description: about.length ? shorten(`${about.join('. ')}.`) : null,
@@ -140,7 +142,7 @@ function pick(picked: Role) {
 // Their episodes, those of the role picked, each with what they are on it
 const theirs = computed(() => (person.value?.episodes ?? [])
   .filter((on) => role.value === 'all' || on.roles.includes(role.value))
-  .map((on) => ({ episode: on.episode, as: on.roles.map(roleName).join(', ') })))
+  .map((on) => ({ episode: on.episode, as: on.roles.map((r) => roleName(r, t)).join(', ') })))
 
 // Being made, and ideas, the team's: first, as that's what's next
 const comingUp = computed(() => theirs.value.filter(({ episode }) => episode.status !== 'PUBLISHED'))
@@ -150,7 +152,7 @@ const released = computed(() => theirs.value.filter(({ episode }) => episode.sta
 const bySeason = computed(() => {
   const groups = new Map<string, typeof released.value>()
   for (const on of released.value) {
-    const title = seasonTitle(seasonOf(on.episode))
+    const title = seasonTitle(seasonOf(on.episode), t)
     groups.set(title, [...(groups.get(title) ?? []), on])
   }
   return [...groups].map(([title, episodes]) => ({ title, episodes }))
@@ -175,17 +177,13 @@ const hasLinks = computed(() => (person.value ? socialLinks(person.value).length
 
 <template>
   <main class="content">
-    <LoadError v-if="error" what="The person" :error="error" @retry="loadPerson(id)"/>
+    <LoadError v-if="error" :what="t('person.what')" :error="error" @retry="loadPerson(id)"/>
     <!-- None so far, while it's checked whether the user is on the team, who may see everyone -->
     <LoadingRows v-else-if="person === undefined || (person === null && auth.likelyTeam && !auth.ready)" :rows="6"
-                 label="Loading the person"/>
-    <NotFound v-else-if="person === null" title="There's no such person">
-      <template v-if="auth.team">
-        They may have been deleted, or merged with someone else. The People page lists everyone.
-      </template>
-      <template v-else>
-        They may not be on a released episode yet, or have been deleted. The People page lists everyone who is.
-      </template>
+                 :label="t('person.loading')"/>
+    <NotFound v-else-if="person === null" :title="t('person.notFound.title')">
+      <template v-if="auth.team">{{ t('person.notFound.team') }}</template>
+      <template v-else>{{ t('person.notFound.everyone') }}</template>
     </NotFound>
 
     <!-- Who they are, as an episode's page has what it is; at the right their episodes as what, and where they're online;
@@ -196,45 +194,45 @@ const hasLinks = computed(() => (person.value ? socialLinks(person.value).length
           <PersonAvatar :image="person.avatar" :name="person.name" :size="96"/>
           <div class="title">
             <h1>{{ person.name }}</h1>
-            <p v-if="person.episodes.length" class="meta">{{ rolesOf(person) }}</p>
+            <p v-if="person.episodes.length" class="meta">{{ rolesOf(person, t) }}</p>
             <p v-if="person.bio" class="subtitle">{{ person.bio }}</p>
           </div>
         </header>
       </div>
 
-      <FactPanel :label="`About ${person.name}`" tall>
-        <FactGroup v-if="roleCounts.length || person.recommended.length" title="On episodes" :count="person.episodes.length">
+      <FactPanel :label="t('person.about', { name: person.name })" tall>
+        <FactGroup v-if="roleCounts.length || person.recommended.length" :title="t('person.onEpisodes')" :count="person.episodes.length">
           <!-- Each also shows only those -->
-          <ul class="roles" aria-label="Show their episodes as">
+          <ul class="roles" :aria-label="t('person.byRole')">
             <li v-for="{ role: r, count } in roleCounts" :key="r">
               <button type="button" class="role" :aria-pressed="role === r" @click="pick(r)">
-                <span class="name">{{ roleName(r) }}</span><b>{{ count }}</b>
+                <span class="name">{{ roleName(r, t) }}</span><b>{{ count }}</b>
               </button>
             </li>
             <li v-if="person.recommended.length">
-              <a class="role" href="#recommended"><span class="name">recommended</span><b>{{ person.recommended.length }}</b></a>
+              <a class="role" href="#recommended"><span class="name">{{ t('person.recommendedRole') }}</span><b>{{ person.recommended.length }}</b></a>
             </li>
           </ul>
         </FactGroup>
         <FactGroup v-if="hasLinks || firstOn">
           <dl>
-            <Fact v-if="hasLinks" label="Online"><span class="icons"><SocialLinks :person="person"/></span></Fact>
-            <Fact v-if="person.homepageUrl" label="Website">
+            <Fact v-if="hasLinks" :label="t('person.online')"><span class="icons"><SocialLinks :person="person"/></span></Fact>
+            <Fact v-if="person.homepageUrl" :label="t('person.website')">
               <a :href="person.homepageUrl">{{ person.homepageUrl.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') }}</a>
             </Fact>
-            <Fact v-if="firstOn" label="First on">
-              <RouterLink :to="episodePath(firstOn)">{{ firstOn.code ?? firstOn.title }}</RouterLink> <span class="aside" lang="sl">{{ firstOn.title }}</span>
+            <Fact v-if="firstOn" :label="t('person.firstOn')">
+              <RouterLink :to="path(episodePath(firstOn))">{{ firstOn.code ?? firstOn.title }}</RouterLink> <span class="aside" lang="sl">{{ firstOn.title }}</span>
             </Fact>
           </dl>
         </FactGroup>
       </FactPanel>
 
       <div class="main">
-        <p v-if="!person.episodes.length && !person.recommended.length" class="note">Not on any episode yet.</p>
+        <p v-if="!person.episodes.length && !person.recommended.length" class="note">{{ t('person.noEpisodes') }}</p>
 
         <section v-if="comingUp.length" aria-labelledby="coming-up">
           <div class="heading">
-            <h2 id="coming-up">Coming up</h2>
+            <h2 id="coming-up">{{ t('person.comingUp') }}</h2>
             <span class="count">{{ comingUp.length }}</span>
           </div>
           <ul class="episodes">
@@ -244,12 +242,12 @@ const hasLinks = computed(() => (person.value ? socialLinks(person.value).length
 
         <section v-if="released.length" aria-labelledby="released">
           <div class="heading">
-            <h2 id="released">Released</h2>
+            <h2 id="released">{{ t('person.released') }}</h2>
             <span class="count">{{ released.length }}</span>
             <ViewToggle v-model="view" class="view"/>
           </div>
           <ul v-if="view === 'grid'" class="episode-cards">
-            <EpisodeCard v-for="on in released" :key="on.episode.id" :episode="on.episode" :role="`as ${on.as}`"/>
+            <EpisodeCard v-for="on in released" :key="on.episode.id" :episode="on.episode" :role="t('person.as', { roles: on.as })"/>
           </ul>
           <template v-for="group in bySeason" v-else :key="group.title">
             <h3 class="subheading">{{ group.title }} <span class="count">{{ group.episodes.length }}</span></h3>
@@ -261,11 +259,11 @@ const hasLinks = computed(() => (person.value ? socialLinks(person.value).length
 
         <section v-if="person.recommended.length" id="recommended" aria-labelledby="recommended-heading">
           <div class="heading">
-            <h2 id="recommended-heading">Recommended</h2>
+            <h2 id="recommended-heading">{{ t('person.recommended') }}</h2>
             <span class="count">{{ person.recommended.length }}</span>
             <button v-if="person.recommended.length > RECOMMENDED" type="button" class="text-button more" :aria-expanded="allRecommended"
                     @click="allRecommended = !allRecommended">
-              {{ allRecommended ? 'Show the first few' : `Show all ${person.recommended.length}` }}
+              {{ allRecommended ? t('person.showFirstFew') : t('people.showAll', { n: person.recommended.length }, person.recommended.length) }}
             </button>
           </div>
           <ul class="episodes">

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch, shallowReactive } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { faArrowUpFromBracket, faChevronRight, faLock } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -16,6 +16,7 @@ import { distributionLine } from '@/distribution'
 import { type DropboxPicture, type EpisodeDetails, isRecorded, type KoofrPhoto, type LinePart, pictureParts } from '@/episodes'
 import { type MediaKind, mediaParts } from '@/media'
 import { transcriptsLine } from '@/transcriptions'
+import { useLocale } from '@/useLocale'
 
 // What the episode is made of, at the end of its page and the team's only: its transcript, its pictures, and its video
 // and audio, each folded to a line that says what there is and what's missing, until it's wanted. Each once there's
@@ -36,19 +37,22 @@ const emit = defineEmits<{
   changed: []
 }>()
 
+const { t, dateLocale, path } = useLocale()
+
 type Part = 'transcript' | 'pictures' | 'media' | 'distribution'
 
 // Those opened so far, which stay as they are while they're closed again
 const opened = ref<Partial<Record<Part, boolean>>>({})
-const parts = ref<Partial<Record<Part, HTMLDetailsElement>>>({})
+// The parts' elements, as they are: shallowly, as a deep ref would unwrap the elements' types into plain objects
+const parts = shallowReactive<Partial<Record<Part, HTMLDetailsElement>>>({})
 
 function toggled(part: Part) {
-  if (parts.value[part]?.open) opened.value = { ...opened.value, [part]: true }
+  if (parts[part]?.open) opened.value = { ...opened.value, [part]: true }
 }
 
 // Opening it opens what it shows, as toggled says
 function openLinked(hash: string) {
-  const part = parts.value[hash.slice(1) as Part]
+  const part = parts[hash.slice(1) as Part]
   if (part) part.open = true
 }
 
@@ -58,10 +62,10 @@ const out = computed(() => released.value || props.episode.status === 'EARLY_ACC
 const transcribed = computed(() => props.episode.transcripts.length > 0)
 
 const lines = computed<Record<Part, LinePart[]>>(() => ({
-  transcript: [{ text: transcriptsLine(props.episode.transcripts) }],
-  pictures: pictureParts(props.episode, props.artwork.length, props.photos.length),
-  media: mediaParts(props.episode.media, recorded.value),
-  distribution: [{ text: distributionLine(props.episode.distributions) }],
+  transcript: [{ text: transcriptsLine(props.episode.transcripts, t, dateLocale.value) }],
+  pictures: pictureParts(props.episode, props.artwork.length, props.photos.length, t),
+  media: mediaParts(props.episode.media, recorded.value, t),
+  distribution: [{ text: distributionLine(props.episode.distributions, t) }],
 }))
 
 const shown = computed<Record<Part | 'files', boolean>>(() => {
@@ -79,7 +83,7 @@ const route = useRoute()
 onMounted(() => {
   if (!released.value) {
     for (const part of ['pictures', 'media'] as const) {
-      if (lines.value[part].some((line) => line.missing) && parts.value[part]) parts.value[part].open = true
+      if (lines.value[part].some((line) => line.missing) && parts[part]) parts[part].open = true
     }
   }
   openLinked(route.hash)
@@ -97,31 +101,31 @@ function upload(kind?: MediaKind) {
   <!-- Released, the page is anyone's but for this part; in the works, all of it is the team's -->
   <section v-if="Object.values(shown).some(Boolean)" class="behind" aria-labelledby="behind">
     <div class="heading" :class="{ released }">
-      <h2 id="behind">Behind the episode</h2>
+      <h2 id="behind">{{ t('episode.behind.title') }}</h2>
       <FontAwesomeIcon v-if="released" class="lock" :icon="faLock"/>
     </div>
-    <p v-if="released" class="note intro">Only the team sees this part.</p>
+    <p v-if="released" class="note intro">{{ t('episode.behind.teamOnly') }}</p>
 
     <details v-if="shown.transcript" id="transcript" :ref="(el) => { parts.transcript = el as HTMLDetailsElement }"
              @toggle="toggled('transcript')">
       <summary>
-        <span class="part">Transcript</span>
+        <span class="part">{{ t('episode.behind.transcript') }}</span>
         <span class="line">{{ lines.transcript[0]!.text }}</span>
         <FontAwesomeIcon class="chevron" :icon="faChevronRight"/>
       </summary>
       <div class="inside">
         <EpisodeTranscript v-if="transcribed && opened.transcript" :transcripts="episode.transcripts" :media="episode.media"
                            :youtube-url="episode.youtubeUrl"/>
-        <p v-else-if="!transcribed" class="note">
-          Not transcribed yet: <RouterLink to="/transcriptions">transcribe it</RouterLink> on the Transcriptions page.
-        </p>
+        <i18n-t v-else-if="!transcribed" keypath="episode.behind.notTranscribed" tag="p" class="note" scope="global">
+          <template #link><RouterLink :to="path('/transcriptions')">{{ t('episode.behind.transcribeIt') }}</RouterLink></template>
+        </i18n-t>
       </div>
     </details>
 
     <details v-if="shown.pictures" id="pictures" :ref="(el) => { parts.pictures = el as HTMLDetailsElement }"
              @toggle="toggled('pictures')">
       <summary>
-        <span class="part">Pictures</span>
+        <span class="part">{{ t('episode.behind.pictures') }}</span>
         <span class="line">
           <template v-for="(part, i) in lines.pictures" :key="part.text"><template v-if="i"> · </template><span
             :class="{ missing: part.missing }">{{ part.text }}</span></template>
@@ -135,9 +139,9 @@ function upload(kind?: MediaKind) {
 
     <details v-if="shown.media" id="media" :ref="(el) => { parts.media = el as HTMLDetailsElement }" @toggle="toggled('media')">
       <summary>
-        <span class="part">Video and audio</span>
+        <span class="part">{{ t('episode.behind.media') }}</span>
         <span class="line">
-          <template v-if="!lines.media.length">None yet</template>
+          <template v-if="!lines.media.length">{{ t('episode.behind.noneYet') }}</template>
           <template v-for="(part, i) in lines.media" :key="part.text"><template v-if="i"> · </template><span
             :class="{ missing: part.missing }">{{ part.text }}</span></template>
         </span>
@@ -146,7 +150,7 @@ function upload(kind?: MediaKind) {
       <div class="inside">
         <MediaList :media="episode.media" @upload="upload" @changed="emit('changed')"/>
         <button type="button" class="button" aria-haspopup="dialog" @click="upload()">
-          <FontAwesomeIcon :icon="faArrowUpFromBracket"/>Upload video and audio
+          <FontAwesomeIcon :icon="faArrowUpFromBracket"/>{{ t('media.upload.open') }}
         </button>
       </div>
     </details>
@@ -154,7 +158,7 @@ function upload(kind?: MediaKind) {
     <details v-if="shown.distribution" id="distribution" :ref="(el) => { parts.distribution = el as HTMLDetailsElement }"
              @toggle="toggled('distribution')">
       <summary>
-        <span class="part">Distribution</span>
+        <span class="part">{{ t('episode.behind.distribution') }}</span>
         <span class="line">{{ lines.distribution[0]!.text }}</span>
         <FontAwesomeIcon class="chevron" :icon="faChevronRight"/>
       </summary>
@@ -167,9 +171,9 @@ function upload(kind?: MediaKind) {
 
     <!-- Links, which are what it's for, so in view rather than folded -->
     <div v-if="shown.files" id="files" class="files">
-      <h3 class="part">Files</h3>
+      <h3 class="part">{{ t('files.title') }}</h3>
       <dl>
-        <Fact v-if="episode.documents.length" label="Docs"><span class="icons"><DocLinks :documents="episode.documents"/></span></Fact>
+        <Fact v-if="episode.documents.length" :label="t('files.docs')"><span class="icons"><DocLinks :documents="episode.documents"/></span></Fact>
         <Fact v-if="episode.koofrFolders.length" label="Koofr"><KoofrFolderList :folders="episode.koofrFolders"/></Fact>
         <Fact v-if="episode.dropboxFolders.length" label="Dropbox"><DropboxFolderList :folders="episode.dropboxFolders"/></Fact>
       </dl>

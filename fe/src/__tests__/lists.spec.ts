@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Episode, EpisodePerson } from '@/episodes'
-import { byStage, episodeText, kindOf, letterOf, matches, readiness, roleCounts, seasonOf, teamSummary } from '@/lists'
+import { byStage, episodeText, kindOf, letterOf, matches, readiness, readinessTitle, roleCounts, seasonOf, seasonTitle, teamSummary } from '@/lists'
+import { t, tSl } from './i18n'
 
 function episode(fields: Partial<Episode> = {}): Episode {
   return {
@@ -29,6 +30,11 @@ describe('seasonOf', () => {
     expect(seasonOf({ code: 'S99E02' })).toBe(99)
     expect(seasonOf({ code: null })).toBe(null)
   })
+
+  it('names it', () => {
+    expect([5, 99, null].map((season) => seasonTitle(season, t))).toEqual(['Season 5', 'Bonus', 'Without a code'])
+    expect(seasonTitle(5, tSl)).toBe('Sezona 5')
+  })
 })
 
 describe('byStage', () => {
@@ -49,6 +55,7 @@ describe('readiness', () => {
     expect(readiness(episode({ people: [person('Larsen Cundrič', 'GUEST'), person('Frenk Dragar', 'HOST')] }))).toBe('guest')
     expect(readiness(episode({ people: [person('Gavin King', 'CANDIDATE')] }))).toBe('candidates')
     expect(readiness(episode({ people: [person('Andraž Sraka', 'HOST')] }))).toBe('none')
+    expect(readinessTitle('guest', t)).toBe('With a guest')
   })
 })
 
@@ -74,9 +81,11 @@ describe('people', () => {
   })
 
   it('says what someone on the team does, without what they were as a guest, and on how many episodes', () => {
-    expect(teamSummary(on(['CO_HOST'], ['CO_HOST'], ['HOST'], ['CONSULTANT', 'HOST'], ['GUEST'], ['CANDIDATE'])))
+    expect(teamSummary(on(['CO_HOST'], ['CO_HOST'], ['HOST'], ['CONSULTANT', 'HOST'], ['GUEST'], ['CANDIDATE']), t))
       .toBe('5 episodes as co-host, host and consultant')
-    expect(teamSummary(on(['PRODUCER']))).toBe('1 episode as producer')
-    expect(teamSummary(on(['HOST'], ['PRODUCER']))).toBe('2 episodes as host and producer')
+    expect(teamSummary(on(['PRODUCER']), t, 'en-GB')).toBe('1 episode as producer')
+    expect(teamSummary(on(['HOST'], ['PRODUCER']), t)).toBe('2 episodes as host and producer')
+    expect(teamSummary(on(['HOST'], ['PRODUCER']), tSl)).toBe('2 epizodi kot voditelj in producent')
+    expect(teamSummary(on(['GUEST'], ['GUEST'], ['GUEST']), tSl)).toBe('3 epizode')
   })
 })

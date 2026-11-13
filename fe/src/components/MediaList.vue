@@ -5,8 +5,9 @@ import { faArrowDown } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { formatDate } from '@/episodes'
 import { errorMessage } from '@/graphql'
-import { infoLine, KINDS, type MediaFile, type MediaKind } from '@/media'
+import { infoLine, KINDS, kindName, type MediaFile, type MediaKind } from '@/media'
 import { downloadUrl, removeMedia } from '@/mediaUploads'
+import { useLocale } from '@/useLocale'
 
 // An episode's video and audio, for the team: a row for its full video and full audio, which, missing, opens the
 // upload for it, then its bonuses, each with what's in it, who uploaded it, and Download and Remove. Removing asks
@@ -22,11 +23,11 @@ const emit = defineEmits<{
   changed: []
 }>()
 
+const { t, dateLocale } = useLocale()
 const id = useId()
 
 interface Group {
   kind: MediaKind
-  label: string
   video: boolean
   full: boolean
   files: MediaFile[]
@@ -51,7 +52,7 @@ async function download(file: MediaFile) {
     // Saved as a file, by its name, as Cloud Storage says (Content-Disposition), so the page stays
     window.location.assign(await downloadUrl(file.id))
   } catch (e) {
-    error.value = { id: file.id, message: `It didn't download: ${errorMessage(e)}` }
+    error.value = { id: file.id, message: t('media.list.downloadFailed', { error: errorMessage(e, t) }) }
   } finally {
     busy.value = undefined
   }
@@ -77,7 +78,7 @@ async function remove(file: MediaFile) {
     confirming.value = undefined
     emit('changed')
   } catch (e) {
-    error.value = { id: file.id, message: `It wasn't removed: ${errorMessage(e)}` }
+    error.value = { id: file.id, message: t('media.list.removeFailed', { error: errorMessage(e, t) }) }
   } finally {
     busy.value = undefined
   }
@@ -87,9 +88,9 @@ async function remove(file: MediaFile) {
 <template>
   <div class="media">
     <section v-for="group in groups" :key="group.kind" class="group" :aria-labelledby="`${id}-${group.kind}`">
-      <h3 :id="`${id}-${group.kind}`">{{ group.full ? group.label : `${group.label}s` }}<span v-if="!group.full" class="count">{{ group.files.length }}</span></h3>
+      <h3 :id="`${id}-${group.kind}`">{{ group.full ? t(`media.kind.${group.kind}`) : t(`media.bonuses.${group.kind}`) }}<span v-if="!group.full" class="count">{{ group.files.length }}</span></h3>
       <button v-if="!group.files.length" type="button" class="missing" aria-haspopup="dialog" @click="emit('upload', group.kind)">
-        <FontAwesomeIcon :icon="group.video ? faFileVideo : faFileAudio"/>Upload the {{ group.label.toLowerCase() }}
+        <FontAwesomeIcon :icon="group.video ? faFileVideo : faFileAudio"/>{{ t('media.list.uploadKind', { name: kindName(group.kind, t) }) }}
       </button>
       <ul v-else class="files">
         <li v-for="file in group.files" :key="file.id" class="file">
@@ -97,22 +98,22 @@ async function remove(file: MediaFile) {
           <span class="text">
             <span v-if="file.title" class="title" lang="sl">{{ file.title }}</span>
             <span class="name">{{ file.name }}</span>
-            <span class="info">{{ infoLine(file.info, file.size) }}</span>
-            <span class="by">{{ file.uploadedBy }}, <time :datetime="file.uploadedAt">{{ formatDate(file.uploadedAt) }}</time></span>
+            <span class="info">{{ infoLine(file.info, file.size, dateLocale) }}</span>
+            <span class="by">{{ file.uploadedBy }}, <time :datetime="file.uploadedAt">{{ formatDate(file.uploadedAt, dateLocale) }}</time></span>
             <span v-if="error?.id === file.id" class="error" role="alert">{{ error.message }}</span>
           </span>
           <span v-if="confirming === file.id" class="confirm" role="group" :aria-labelledby="`${id}-ask-${file.id}`" @keydown.esc="keep(file)">
-            <span :id="`${id}-ask-${file.id}`" class="question">Remove it, and delete the file?</span>
+            <span :id="`${id}-ask-${file.id}`" class="question">{{ t('media.list.ask') }}</span>
             <button type="button" class="button delete" :aria-disabled="busy === file.id || undefined" @click="remove(file)">
-              {{ busy === file.id ? 'Removing…' : 'Remove' }}
+              {{ busy === file.id ? t('media.list.removing') : t('common.remove') }}
             </button>
-            <button :id="`${id}-keep-${file.id}`" type="button" class="button" :disabled="busy === file.id" @click="keep(file)">Cancel</button>
+            <button :id="`${id}-keep-${file.id}`" type="button" class="button" :disabled="busy === file.id" @click="keep(file)">{{ t('common.cancel') }}</button>
           </span>
           <span v-else class="actions">
             <button type="button" class="button small" :aria-disabled="busy === file.id || undefined" @click="download(file)">
-              <FontAwesomeIcon :icon="faArrowDown"/>Download
+              <FontAwesomeIcon :icon="faArrowDown"/>{{ t('media.list.download') }}
             </button>
-            <button :id="`${id}-remove-${file.id}`" type="button" class="button small quiet" @click="askToRemove(file)">Remove</button>
+            <button :id="`${id}-remove-${file.id}`" type="button" class="button small quiet" @click="askToRemove(file)">{{ t('common.remove') }}</button>
           </span>
         </li>
       </ul>

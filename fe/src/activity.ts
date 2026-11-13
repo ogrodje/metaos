@@ -2,12 +2,17 @@
 // GitHub. One person's changes made close together read as one entry, e.g. creating an episode and adding its people.
 
 import type { Comment } from '@/comments'
-import { type Change, type ChangeSubject, DATE_LOCALE, type FieldChange, TIME_ZONE } from '@/episodes'
+import { type Change, type ChangeSubject, type EpisodeStatus, type FieldChange, statusName } from '@/episodes'
+import { type DateLocale, TIME_ZONE, type Translate } from '@/i18n'
 
 /** How far apart one person's changes may be and still read as one entry */
 export const BURST_MINUTES = 15
 
-/** A line of an entry: a field and what it became, or a change told in words (without a label) */
+/**
+ * A line of an entry: a field and what it became, or a change told in words (without a label). The changes' summaries
+ * are History.kt's, in English, as the API has them; what this file adds to them, and the fields' names, are the page's
+ * language ([t], [dateLocale]).
+ */
 export interface ActivityLine {
   label: string | null
   text: string
@@ -46,11 +51,11 @@ export type ActivityFilter = 'all' | 'comments' | 'changes'
  * The [comments] and the [changes] (both oldest first, as the API has them) as one feed, oldest first. Writing or
  * editing a comment that's shown is in its card already, so those changes are left out; deleting one isn't.
  */
-export function activity(changes: Change[], comments: Comment[]): ActivityEntry[] {
+export function activity(changes: Change[], comments: Comment[], t: Translate, dateLocale: DateLocale): ActivityEntry[] {
   const shown = new Set(comments.map((comment) => comment.id))
   const told = changes.filter((change) => !(change.kind === 'COMMENT' && change.commentId && shown.has(change.commentId)))
   const entries: ActivityEntry[] = [
-    ...bursts(told).map(entry),
+    ...bursts(told).map((burst) => entry(burst, t, dateLocale)),
     ...comments.map((comment): CommentEntry => ({ type: 'comment', key: `comment-${comment.id}`, at: comment.createdAt, comment })),
   ]
   // Stable, so a change and a comment at the same moment keep that order
@@ -82,10 +87,10 @@ function outside(change: Change) {
   return !change.actor && !change.client
 }
 
-function entry(changes: Change[]): ChangeEntry {
+function entry(changes: Change[], t: Translate, dateLocale: DateLocale): ChangeEntry {
   const first = changes[0]!
   const last = changes.at(-1)!
-  const { headline, lines } = told(changes)
+  const { headline, lines } = told(changes, t, dateLocale)
   return {
     type: 'changes', key: `changes-${first.at}`, at: first.at, until: last.at, actor: first.actor, how: how(changes),
     headline, lines, count: changes.length,
@@ -107,8 +112,8 @@ function how(changes: Change[]): string | null {
 const OWN = new Set(['EPISODE', 'SESSION'])
 
 // What the changes did: a headline, and a line for each field (what it was first and became last) and each other change
-function told(changes: Change[]): { headline: string, lines: ActivityLine[] } {
-  const fields = mergedFields(changes)
+function told(changes: Change[], t: Translate, dateLocale: DateLocale): { headline: string, lines: ActivityLine[] } {
+  const fields = mergedFields(changes, t)
   const others = otherSummaries(changes)
   const lines: ActivityLine[] = [...fields, ...others.map((text) => ({ label: null, text }))]
   const created = changes.find((change) => change.summary.startsWith('Created the'))
@@ -117,12 +122,37 @@ function told(changes: Change[]): { headline: string, lines: ActivityLine[] } {
     const headline = others.length === 1 && !fields.length ? others[0]! : changes[0]!.summary
     return { headline, lines: lines.filter((line) => line.text !== headline) }
   }
-  return { headline: headlineOf(changes, others), lines }
+  return { headline: headlineOf(changes, others, t, dateLocale), lines }
+}
+
+// The fields of an episode and a session, by the names History.kt gives them (EPISODE_COLUMNS, SESSION_COLUMNS), as
+// their messages have them (activity.fields); one it doesn't know keeps its name
+const FIELDS: Record<string, string> = {
+  'Code': 'code', 'Title': 'title', 'Title B': 'titleB', 'Title C': 'titleC', 'Status': 'status', 'Show': 'show',
+  'Session': 'session', 'Recommended by': 'recommendedBy', 'Recording date': 'recordingDate', 'Aired': 'aired',
+  'Added': 'added', 'Patreon (audio only)': 'patreonAudio', 'Patreon bonus': 'patreonBonus',
+  'Patreon bonus (audio only)': 'patreonBonusAudio', 'Summary': 'summary', 'Tiny summary': 'tinySummary',
+  'AI summary': 'machineSummary', 'Thumbnail': 'thumbnail', 'Thumbnail B': 'thumbnailB', 'Thumbnail C': 'thumbnailC',
+  'Web picture': 'web', 'Cover': 'cover', 'Name': 'name', 'Date': 'date', 'Location': 'location', 'Address': 'address',
+}
+
+function fieldName(field: string, t: Translate) {
+  return FIELDS[field] ? t(`activity.fields.${FIELDS[field]}`) : field
+}
+
+const STATUSES = new Set<string>([
+  'IDEA', 'PLANNED', 'SCHEDULED', 'RECORDED', 'IN_PRODUCTION', 'READY', 'EARLY_ACCESS', 'PUBLISHED', 'ON_HOLD', 'CANCELLED',
+])
+
+// A status as the history says it, e.g. in production, by its name in the page's language
+function statusValue(value: string | null, t: Translate) {
+  const status = value?.toUpperCase().replaceAll(' ', '_')
+  return status && STATUSES.has(status) ? statusName(status as EpisodeStatus, t) : value
 }
 
 // Each field once, in the order it first changed: from what it was before the first change to what the last made it.
 // A status shows each step, as an episode moves through them.
-function mergedFields(changes: Change[]): ActivityLine[] {
+function mergedFields(changes: Change[], t: Translate): ActivityLine[] {
   const merged = new Map<string, { from: string | null, to: string | null, steps: (string | null)[] }>()
   for (const change of changes.filter((change) => OWN.has(change.kind))) {
     for (const field of change.fields) {
@@ -137,16 +167,19 @@ function mergedFields(changes: Change[]): ActivityLine[] {
   }
   return [...merged].flatMap(([label, { from, to, steps }]) => {
     if (from !== null && from === to) return []
+    const status = label === 'Status'
     const path = steps.filter((step, i) => step !== null && step !== steps[i - 1])
-    const text = label === 'Status' && path.length > 2 ? path.join(' → ') : value({ field: label, from, to })
-    return [{ label, text }]
+    const text = status && path.length > 2
+      ? path.map((step) => statusValue(step, t)).join(' → ')
+      : value(status ? { field: label, from: statusValue(from, t), to: statusValue(to, t) } : { field: label, from, to }, t)
+    return [{ label: fieldName(label, t), text }]
   })
 }
 
-function value(field: FieldChange) {
-  if (field.from === null && field.to === null) return 'changed'
+function value(field: FieldChange, t: Translate) {
+  if (field.from === null && field.to === null) return t('activity.changed')
   if (field.from === null) return field.to!
-  if (field.to === null) return `removed (was ${field.from})`
+  if (field.to === null) return t('activity.removedWas', { from: field.from })
   return `${field.from} → ${field.to}`
 }
 
@@ -171,7 +204,7 @@ function otherSummaries(changes: Change[]): string[] {
 }
 
 // What a burst of changes did, as one sentence: changed the episode, added 4 people and linked the Koofr folder
-function headlineOf(changes: Change[], others: string[]): string {
+function headlineOf(changes: Change[], others: string[], t: Translate, dateLocale: DateLocale): string {
   const parts: string[] = []
   const own = changes.find((change) => OWN.has(change.kind) && change.fields.length)
   if (own) parts.push(own.summary)
@@ -180,17 +213,26 @@ function headlineOf(changes: Change[], others: string[]): string {
     && (/^(Added|Removed) /.test(change.summary) || change.summary.endsWith("'s role")))
   const added = people.filter((change) => change.summary.startsWith('Added '))
   const removed = people.filter((change) => change.summary.startsWith('Removed '))
-  if (added.length) parts.push(added.length === 1 ? added[0]!.summary : `added ${added.length} people`)
-  if (removed.length) parts.push(removed.length === 1 ? removed[0]!.summary : `removed ${removed.length} people`)
-  if (people.length > added.length + removed.length) parts.push('changed roles')
+  if (added.length) parts.push(added.length === 1 ? added[0]!.summary : t('activity.addedPeople', { n: added.length }, added.length))
+  if (removed.length) {
+    parts.push(removed.length === 1 ? removed[0]!.summary : t('activity.removedPeople', { n: removed.length }, removed.length))
+  }
+  if (people.length > added.length + removed.length) parts.push(t('activity.changedRoles'))
   const counted = new Set(people.map((change) => change.summary))
   // The same change more than once, e.g. two comments, once, with how often
   const times = new Map<string, number>()
   for (const summary of others.filter((summary) => !counted.has(summary))) times.set(summary, (times.get(summary) ?? 0) + 1)
-  parts.push(...[...times].map(([summary, n]) => (n === 1 ? summary : `${summary} ${n === 2 ? 'twice' : `${n} times`}`)))
-  const said = parts.length > 3 ? [...parts.slice(0, 2), `${parts.length - 2} more changes`] : parts
+  parts.push(...[...times].map(([summary, n]) =>
+    (n === 1 ? summary : n === 2 ? t('activity.twice', { what: summary }) : t('activity.times', { what: summary, n }))))
+  const more = parts.length - 2
+  const said = parts.length > 3 ? [...parts.slice(0, 2), t('activity.moreChanges', { n: more }, more)] : parts
   const sentence = said.map((part, i) => (i ? part.charAt(0).toLowerCase() + part.slice(1) : part.charAt(0).toUpperCase() + part.slice(1)))
-  return sentence.length > 1 ? `${sentence.slice(0, -1).join(', ')} and ${sentence.at(-1)}` : sentence[0] ?? `${changes.length} changes`
+  return sentence.length ? listed(sentence, dateLocale) : t('activity.changes', { n: changes.length }, changes.length)
+}
+
+// A, B and C, in the page's language
+function listed(parts: string[], dateLocale: DateLocale) {
+  return new Intl.ListFormat(dateLocale, { type: 'conjunction' }).format(parts)
 }
 
 /**
@@ -202,17 +244,18 @@ export function isNew(entry: ActivityEntry, seen: number | null, me: string | nu
   return entry.type === 'comment' ? !entry.comment.mine : entry.actor === null || entry.actor !== me
 }
 
-const dayOf = (at: Date) => at.toLocaleDateString(DATE_LOCALE, { dateStyle: 'medium', timeZone: TIME_ZONE })
+// The day, the same in every language, to tell days apart
+const dayOf = (at: Date) => at.toLocaleDateString('en-GB', { dateStyle: 'medium', timeZone: TIME_ZONE })
 
 /** When an entry was, as short as a side panel has room for: today, 15:14; yesterday, 17:32; 23 Oct; 23 Oct 2025 */
-export function shortWhen(at: string, now = new Date()) {
+export function shortWhen(at: string, t: Translate, dateLocale: DateLocale, now = new Date()) {
   const date = new Date(at)
-  const time = date.toLocaleTimeString(DATE_LOCALE, { hour: '2-digit', minute: '2-digit', timeZone: TIME_ZONE })
+  const time = date.toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit', timeZone: TIME_ZONE })
   const day = dayOf(date)
-  if (day === dayOf(now)) return `today, ${time}`
-  if (day === dayOf(new Date(now.getTime() - 86_400_000))) return `yesterday, ${time}`
-  const year = (d: Date) => d.toLocaleDateString(DATE_LOCALE, { year: 'numeric', timeZone: TIME_ZONE })
-  return date.toLocaleDateString(DATE_LOCALE, {
+  if (day === dayOf(now)) return t('activity.today', { time })
+  if (day === dayOf(new Date(now.getTime() - 86_400_000))) return t('activity.yesterday', { time })
+  const year = (d: Date) => d.toLocaleDateString('en-GB', { year: 'numeric', timeZone: TIME_ZONE })
+  return date.toLocaleDateString(dateLocale, {
     day: 'numeric', month: 'short', ...(year(date) === year(now) ? {} : { year: 'numeric' }), timeZone: TIME_ZONE,
   })
 }
@@ -234,18 +277,14 @@ export interface RecentEntry {
 // How many of what a burst of changes was to an entry names
 const NAMED = 3
 
-const NOUNS: Record<ChangeSubject['kind'], [string, string]> = {
-  EPISODE: ['episode', 'episodes'],
-  SESSION: ['session', 'sessions'],
-  PERSON: ['person', 'people'],
-}
+const KINDS: ChangeSubject['kind'][] = ['EPISODE', 'SESSION', 'PERSON']
 
 /**
  * The latest [changes] to everything (recentChanges, oldest first) as entries, the newest first: one person's changes
  * within BURST_MINUTES of each other are one, told as an episode's activity tells them when they're to one thing, and
  * counted by what they're to when to several, e.g. Created 28 episodes
  */
-export function recentActivity(changes: Change[]): RecentEntry[] {
+export function recentActivity(changes: Change[], t: Translate, dateLocale: DateLocale): RecentEntry[] {
   return bursts(changes).map((burst): RecentEntry => {
     const subjects = new Map<string, ChangeSubject>()
     for (const change of burst) if (change.about) subjects.set(`${change.about.kind}:${change.about.id}`, change.about)
@@ -253,21 +292,24 @@ export function recentActivity(changes: Change[]): RecentEntry[] {
     const first = burst[0]!
     return {
       key: `recent-${first.at}`, at: first.at, until: burst.at(-1)!.at, actor: first.actor, how: how(burst),
-      headline: about.length > 1 ? counted(burst, about) : told(burst).headline,
+      headline: about.length > 1 ? counted(burst, about, t, dateLocale) : told(burst, t, dateLocale).headline,
       about: about.slice(0, NAMED), more: Math.max(0, about.length - NAMED), count: burst.length,
     }
   }).reverse()
 }
 
-// Created 3 episodes, or Changed 2 episodes and 1 person
-function counted(changes: Change[], about: ChangeSubject[]) {
+// Created 3 episodes, or Changed 2 episodes and 1 person: a sentence of its own for one kind, as in Slovenian its words
+// agree with it, else the kinds counted in a list
+function counted(changes: Change[], about: ChangeSubject[], t: Translate, dateLocale: DateLocale) {
   const created = about.every((subject) =>
     changes.some((change) => change.about?.id === subject.id && change.summary.startsWith('Created the')))
-  const parts = (Object.keys(NOUNS) as ChangeSubject['kind'][]).flatMap((kind) => {
+  const verb = created ? 'created' : 'changed'
+  const counts = KINDS.flatMap((kind) => {
     const n = about.filter((subject) => subject.kind === kind).length
-    return n ? [`${n} ${NOUNS[kind][n === 1 ? 0 : 1]}`] : []
+    return n ? [{ kind, n }] : []
   })
-  const listed = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}` : parts[0]
-  return `${created ? 'Created' : 'Changed'} ${listed}`
+  if (counts.length === 1) return t(`activity.recent.${verb}.${counts[0]!.kind}`, { n: counts[0]!.n }, counts[0]!.n)
+  const list = listed(counts.map(({ kind, n }) => t(`activity.recent.count.${kind}`, { n }, n)), dateLocale)
+  return t(`activity.recent.${verb}.several`, { list })
 }
 

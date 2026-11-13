@@ -6,6 +6,7 @@ import PersonAvatar from '@/components/PersonAvatar.vue'
 import SocialLinks from '@/components/SocialLinks.vue'
 import { episodePath } from '@/episodes'
 import { type Person, personPath, rolesOf, socialLinks } from '@/people'
+import { useLocale } from '@/useLocale'
 
 const props = defineProps<{
   person: Person
@@ -13,12 +14,14 @@ const props = defineProps<{
   words?: string[]
 }>()
 
+const { t, path } = useLocale()
+
 // Their latest episodes by code, and how many more there are: hosts have dozens
 const LATEST = 3
 const latest = computed(() => props.person.episodes.slice(0, LATEST).map(({ episode }) => episode))
 const more = computed(() => props.person.episodes.length - latest.value.length)
 
-const roles = computed(() => rolesOf(props.person))
+const roles = computed(() => rolesOf(props.person, t))
 const hasLinks = computed(() => socialLinks(props.person).length > 0)
 </script>
 
@@ -29,7 +32,7 @@ const hasLinks = computed(() => socialLinks(props.person).length > 0)
     <PersonAvatar class="picture" :image="person.avatar" :name="person.name" :size="40"/>
     <div class="main">
       <p class="title">
-        <RouterLink :to="personPath(person)"><MarkedText :text="person.name" :words="words"/></RouterLink>
+        <RouterLink :to="path(personPath(person))"><MarkedText :text="person.name" :words="words"/></RouterLink>
       </p>
       <p v-if="person.bio" class="summary"><MarkedText :text="person.bio" :words="words"/></p>
       <p v-if="person.episodes.length" class="details">
@@ -38,9 +41,9 @@ const hasLinks = computed(() => socialLinks(props.person).length > 0)
         <span>
           <template v-for="(episode, i) in latest" :key="episode.id">
             <template v-if="i">, </template>
-            <RouterLink :class="{ code: episode.code }" :to="episodePath(episode)" :title="episode.title" lang="sl">{{ episode.code ?? episode.title }}</RouterLink>
+            <RouterLink :class="{ code: episode.code }" :to="path(episodePath(episode))" :title="episode.title" lang="sl">{{ episode.code ?? episode.title }}</RouterLink>
           </template>
-          <template v-if="more"> and {{ more }} more</template>
+          <template v-if="more"> {{ t('people.andMore', { n: more }) }}</template>
         </span>
       </p>
     </div>

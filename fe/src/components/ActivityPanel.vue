@@ -13,6 +13,7 @@ import type { Change } from '@/episodes'
 import { errorMessage, graphql } from '@/graphql'
 import { SIDE_PANEL } from '@/scroll'
 import { plainText } from '@/seo'
+import { useLocale } from '@/useLocale'
 
 // An episode's activity in its side panel, where it stays in view however far down the page is read: a box to comment,
 // then its latest comments and changes, the newest first, with what came since the viewer last opened the page marked
@@ -30,6 +31,8 @@ const emit = defineEmits<{
   changed: []
 }>()
 
+const { t, dateLocale } = useLocale()
+
 // How many it shows until all are asked for
 const LATEST = 5
 
@@ -40,15 +43,18 @@ watch(() => props.comments, () => {
 })
 
 const comments = computed(() => withWritten(props.comments, written.value))
-const entries = computed(() => activity(props.changes, comments.value).reverse())
+const entries = computed(() => activity(props.changes, comments.value, t, dateLocale.value).reverse())
 
 const all = ref(false)
 const filter = ref<ActivityFilter>('all')
 const filters = computed(() => [
-  { value: 'all' as ActivityFilter, title: 'All', count: entries.value.length },
-  { value: 'comments' as ActivityFilter, title: 'Comments', count: comments.value.length },
-  { value: 'changes' as ActivityFilter, title: 'Changes', count: entries.value.length - comments.value.length },
+  { value: 'all' as ActivityFilter, title: t('activity.filter.all'), count: entries.value.length },
+  { value: 'comments' as ActivityFilter, title: t('activity.filter.comments'), count: comments.value.length },
+  { value: 'changes' as ActivityFilter, title: t('activity.filter.changes'), count: entries.value.length - comments.value.length },
 ])
+
+const when = (at: string) => shortWhen(at, t, dateLocale.value)
+const fullWhen = (at: string) => fullDateTime(at, dateLocale.value)
 const shown = computed(() => (all.value ? filtered(entries.value, filter.value) : entries.value.slice(0, LATEST)))
 
 // The entries opened: a comment whole, a change's fields; each folded to a line or so otherwise, so the panel stays short
@@ -130,7 +136,7 @@ async function post() {
     stopWriting()
     emit('changed')
   } catch (e) {
-    error.value = errorMessage(e)
+    error.value = errorMessage(e, t)
   } finally {
     posting.value = false
   }
@@ -151,22 +157,23 @@ function onDeleted(id: string) {
 <template>
   <section class="activity-panel" aria-labelledby="activity">
     <div class="head">
-      <h2 id="activity" ref="heading" tabindex="-1">Activity</h2>
+      <h2 id="activity" ref="heading" tabindex="-1">{{ t('activity.title') }}</h2>
       <span v-if="entries.length" class="tag">{{ entries.length }}</span>
-      <span v-if="fresh.size" class="tag new">{{ fresh.size }} new</span>
+      <span v-if="fresh.size" class="tag new">{{ t('activity.newCount', { n: fresh.size }, fresh.size) }}</span>
     </div>
 
-    <CommentEditor v-if="writing" v-model="draft" label="Comment" placeholder="Leave a comment" submit-label="Comment"
-                   busy-label="Commenting…" :busy="posting" cancellable autofocus @submit="post" @cancel="stopWriting">
-      <p v-if="error" class="error" role="alert">The comment wasn't posted: {{ error }}</p>
+    <CommentEditor v-if="writing" v-model="draft" :label="t('comments.label')" :placeholder="t('comments.placeholder')"
+                   :submit-label="t('comments.submit')" :busy-label="t('comments.posting')" :busy="posting" cancellable
+                   autofocus @submit="post" @cancel="stopWriting">
+      <p v-if="error" class="error" role="alert">{{ t('comments.notPosted', { error }) }}</p>
     </CommentEditor>
     <button v-else ref="writeButton" type="button" class="write" @click="writing = true">
-      {{ draft ? 'Go on with your comment…' : 'Write a comment…' }}
+      {{ draft ? t('comments.goOn') : t('comments.write') }}
     </button>
 
-    <ChipGroup v-if="all" v-model="filter" class="filters" label="Show" :options="filters"/>
+    <ChipGroup v-if="all" v-model="filter" class="filters" :label="t('activity.show')" :options="filters"/>
 
-    <p v-if="!shown.length" class="note">{{ filter === 'changes' ? 'No changes yet.' : 'Nothing yet.' }}</p>
+    <p v-if="!shown.length" class="note">{{ filter === 'changes' ? t('activity.noChanges') : t('activity.nothing') }}</p>
     <ol v-else class="feed">
       <template v-for="entry in shown" :key="entry.key">
         <!-- Opened: the comment whole, with Edit and Delete on one's own, and Fold -->
@@ -178,9 +185,9 @@ function onDeleted(id: string) {
           <div class="what">
             <p class="who">
               <b>{{ entry.comment.author.name }}</b>
-              <time class="when" :datetime="entry.at" :title="fullDateTime(entry.at)">{{ shortWhen(entry.at) }}</time>
+              <time class="when" :datetime="entry.at" :title="fullWhen(entry.at)">{{ when(entry.at) }}</time>
               <span v-if="entry.comment.tool" class="when" :title="toolLabel(entry.comment) ?? undefined"> · MCP</span>
-              <span v-if="fresh.has(entry.key)" class="new">new</span>
+              <span v-if="fresh.has(entry.key)" class="new">{{ t('activity.new') }}</span>
             </p>
             <button type="button" class="said" :aria-expanded="false" @click="toggle(entry.key)">
               <span class="clamp">{{ plainText(entry.comment.body) }}</span>
@@ -202,9 +209,9 @@ function onDeleted(id: string) {
             </dl>
             <!-- Who and how, as the history said it: outside MetaOS when neither, e.g. a migration -->
             <p class="when">
-              {{ entry.actor || entry.how ? [entry.actor, entry.how].filter(Boolean).join(' · ') : 'Outside MetaOS' }}
-              · <time :datetime="entry.at" :title="fullDateTime(entry.at)">{{ shortWhen(entry.at) }}</time>
-              <span v-if="fresh.has(entry.key)" class="new">new</span>
+              {{ entry.actor || entry.how ? [entry.actor, entry.how].filter(Boolean).join(' · ') : t('activity.outside') }}
+              · <time :datetime="entry.at" :title="fullWhen(entry.at)">{{ when(entry.at) }}</time>
+              <span v-if="fresh.has(entry.key)" class="new">{{ t('activity.new') }}</span>
             </p>
           </div>
         </li>
@@ -212,7 +219,7 @@ function onDeleted(id: string) {
     </ol>
 
     <button v-if="entries.length > LATEST" type="button" class="text-button more" :aria-expanded="all" @click="all = !all">
-      {{ all ? 'Only the latest' : `Show all ${entries.length}` }}
+      {{ all ? t('activity.onlyLatest') : t('activity.showAll', { n: entries.length }) }}
     </button>
   </section>
 </template>

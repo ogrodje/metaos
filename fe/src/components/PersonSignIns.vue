@@ -2,6 +2,7 @@
 import { computed, nextTick, ref, useId, watch } from 'vue'
 import { type Account, accountName, LINK_ACCOUNT, signInDetails, UNLINK_ACCOUNT } from '@/accounts'
 import { errorMessage, graphql } from '@/graphql'
+import { useLocale } from '@/useLocale'
 
 /** The signed-in user's own account, and the person it's linked to */
 export interface MyAccount extends Pick<Account, 'id' | 'username' | 'name' | 'email'> {
@@ -26,6 +27,7 @@ const emit = defineEmits<{
   changed: []
 }>()
 
+const { t, dateLocale } = useLocale()
 const id = useId()
 
 // What was written here, as MetaOS answered, shown until the page's accounts change: its reload a moment later brings
@@ -77,7 +79,7 @@ async function unlink(account: Account) {
     // Its buttons went with it: the section has the focus instead, where it is
     heading.value?.focus({ preventScroll: true })
   } catch (e) {
-    error.value = `The sign-in wasn't unlinked: ${errorMessage(e)}`
+    error.value = t('accounts.unlinkFailed', { error: errorMessage(e, t) })
   } finally {
     busy.value = false
   }
@@ -93,7 +95,7 @@ async function claim() {
     emit('changed')
     heading.value?.focus({ preventScroll: true })
   } catch (e) {
-    error.value = `Your sign-in wasn't linked: ${errorMessage(e)}`
+    error.value = t('accounts.claimFailed', { error: errorMessage(e, t) })
   } finally {
     busy.value = false
   }
@@ -103,7 +105,7 @@ async function claim() {
 <template>
   <section v-if="shown.length || claimable" :aria-labelledby="`${id}-heading`">
     <div class="heading">
-      <h2 :id="`${id}-heading`" ref="heading" tabindex="-1">Sign-ins</h2>
+      <h2 :id="`${id}-heading`" ref="heading" tabindex="-1">{{ t('accounts.signIns') }}</h2>
       <span class="count">{{ shown.length }}</span>
     </div>
 
@@ -111,37 +113,34 @@ async function claim() {
       <li v-for="account in shown" :key="account.id" class="sign-in">
         <div class="row">
           <p class="what">
-            <span class="name">{{ accountName(account) }}</span>
-            <span v-if="account.id === me?.id" class="you">you</span>
-            <span class="how">{{ signInDetails(account) }}</span>
+            <span class="name">{{ accountName(account, t) }}</span>
+            <span v-if="account.id === me?.id" class="you">{{ t('accounts.you') }}</span>
+            <span class="how">{{ signInDetails(account, t, dateLocale) }}</span>
           </p>
           <button v-if="canLink && confirming !== account.id" :id="`${id}-unlink-${account.id}`" type="button" class="quiet"
-                  :aria-label="`Unlink ${accountName(account)}`" @click="askToUnlink(account)">Unlink</button>
+                  :aria-label="t('accounts.unlinkAccount', { account: accountName(account, t) })" @click="askToUnlink(account)">{{ t('accounts.unlink') }}</button>
         </div>
 
         <div v-if="confirming === account.id" class="confirm" role="group" :aria-labelledby="`${id}-question`"
              @keydown.esc="keep(account)">
           <p :id="`${id}-question`" class="question">
-            Unlink {{ accountName(account) }} from {{ person.name }}?
-            <span>Its comments and history will show its username instead.</span>
+            {{ t('accounts.confirmUnlink', { account: accountName(account, t), person: person.name }) }}
+            <span>{{ t('accounts.confirmUnlinkNote') }}</span>
           </p>
           <span class="buttons">
             <button type="button" class="button unlink" :aria-disabled="busy || undefined" @click="unlink(account)">
-              {{ busy ? 'Unlinking…' : 'Unlink' }}
+              {{ busy ? t('accounts.unlinking') : t('accounts.unlink') }}
             </button>
-            <button :id="`${id}-keep`" type="button" class="button" :disabled="busy" @click="keep(account)">Cancel</button>
+            <button :id="`${id}-keep`" type="button" class="button" :disabled="busy" @click="keep(account)">{{ t('common.cancel') }}</button>
           </span>
         </div>
       </li>
     </ul>
 
     <div v-if="claimable && me" class="claim">
-      <p>
-        Nobody signs in as {{ person.name }} yet. Is that you? Your sign-in, {{ accountName(me) }}, isn't linked to
-        anyone.
-      </p>
+      <p>{{ t('accounts.claim', { person: person.name, account: accountName(me, t) }) }}</p>
       <button type="button" class="button" :aria-disabled="busy || undefined" @click="claim">
-        {{ busy ? 'Linking…' : 'This is me' }}
+        {{ busy ? t('accounts.linking') : t('accounts.thisIsMe') }}
       </button>
     </div>
 

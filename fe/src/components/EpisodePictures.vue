@@ -2,11 +2,12 @@
 import { computed, ref } from 'vue'
 import { faArrowUpFromBracket } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import type { ArtworkKind } from '@/artwork'
+import { type ArtworkKind, slotLabel } from '@/artwork'
 import ArtworkUpload from '@/components/ArtworkUpload.vue'
 import PhotoStrip from '@/components/PhotoStrip.vue'
 import { type DropboxPicture, type EpisodeDetails, isRecorded, type KoofrPhoto } from '@/episodes'
 import { type Image, src, srcset } from '@/images'
+import { useLocale } from '@/useLocale'
 
 // An episode's pictures, the team's, behind the episode on its page: tabs of its titles with the thumbnails they're A/B
 // tested with, its web picture and its cover; its artwork (its Dropbox folders' pictures, each marked with what it's
@@ -22,6 +23,8 @@ const emit = defineEmits<{
   changed: []
 }>()
 
+const { t } = useLocale()
+
 const upload = ref<InstanceType<typeof ArtworkUpload>>()
 
 function open(kind?: ArtworkKind) {
@@ -32,12 +35,12 @@ type Tab = 'titles' | 'artwork' | 'photos'
 const tab = ref<Tab>('titles')
 
 const tabs = computed(() => [
-  { id: 'titles' as Tab, title: 'Titles and thumbnails', count: all.value.filter((v) => v.title).length },
-  ...(props.artwork.length ? [{ id: 'artwork' as Tab, title: 'Artwork', count: props.artwork.length }] : []),
-  ...(props.photos.length ? [{ id: 'photos' as Tab, title: 'Photos', count: props.photos.length }] : []),
+  { id: 'titles' as Tab, title: t('pictures.tabs.titles'), count: all.value.filter((v) => v.title).length },
+  ...(props.artwork.length ? [{ id: 'artwork' as Tab, title: t('pictures.tabs.artwork'), count: props.artwork.length }] : []),
+  ...(props.photos.length ? [{ id: 'photos' as Tab, title: t('pictures.tabs.photos'), count: props.photos.length }] : []),
 ])
 // A tab that's gone, e.g. as the artwork's folder was unlinked, leaves the titles
-const shown = computed(() => (tabs.value.some((t) => t.id === tab.value) ? tab.value : 'titles'))
+const shown = computed(() => (tabs.value.some((it) => it.id === tab.value) ? tab.value : 'titles'))
 
 interface Variant {
   kind: ArtworkKind
@@ -67,8 +70,8 @@ const uses = computed(() => {
   const { episode } = props
   const used: Record<string, string> = {}
   const pictures = [
-    [episode.cover, 'Cover'], [episode.web, 'Web picture'], [episode.thumbnailC, 'Thumbnail C'],
-    [episode.thumbnailB, 'Thumbnail B'], [episode.thumbnail, 'Thumbnail A'],
+    [episode.cover, t('pictures.use.cover')], [episode.web, slotLabel('WEB', t)], [episode.thumbnailC, slotLabel('THUMBNAIL_C', t)],
+    [episode.thumbnailB, slotLabel('THUMBNAIL_B', t)], [episode.thumbnail, slotLabel('THUMBNAIL', t)],
   ] as const
   for (const [image, use] of pictures) {
     if (image) used[image.name] = used[image.name] ? `${use}, ${used[image.name]}` : use
@@ -82,13 +85,13 @@ const folder = computed(() => props.artwork[0]?.url)
 <template>
   <div class="episode-pictures">
     <div class="toolbar">
-      <div v-if="tabs.length > 1" class="tabs" role="group" aria-label="Show">
-        <button v-for="t in tabs" :key="t.id" type="button" :aria-pressed="shown === t.id" @click="tab = t.id">
-          {{ t.title }}<span class="count">{{ t.count }}</span>
+      <div v-if="tabs.length > 1" class="tabs" role="group" :aria-label="t('pictures.tabs.label')">
+        <button v-for="it in tabs" :key="it.id" type="button" :aria-pressed="shown === it.id" @click="tab = it.id">
+          {{ it.title }}<span class="count">{{ it.count }}</span>
         </button>
       </div>
       <button type="button" class="button upload" aria-haspopup="dialog" @click="open()">
-        <FontAwesomeIcon :icon="faArrowUpFromBracket"/>Upload artwork
+        <FontAwesomeIcon :icon="faArrowUpFromBracket"/>{{ t('pictures.upload.open') }}
       </button>
     </div>
 
@@ -99,33 +102,33 @@ const folder = computed(() => props.artwork[0]?.url)
           <a v-if="episode.cover" class="shot" :href="episode.cover.url" target="_blank" rel="noopener"
              :title="`${episode.cover.name}, ${episode.cover.width} × ${episode.cover.height}`">
             <img :src="src(episode.cover, 640)" :srcset="srcset(episode.cover)" sizes="(max-width: 640px) 50vw, 260px"
-                 :width="episode.cover.width" :height="episode.cover.height" alt="Cover" loading="lazy">
+                 :width="episode.cover.width" :height="episode.cover.height" :alt="t('pictures.use.cover')" loading="lazy">
           </a>
-          <button v-else type="button" class="shot missing" aria-haspopup="dialog" @click="open('COVER')">Upload the cover</button>
-          <p class="title">Cover</p>
+          <button v-else type="button" class="shot missing" aria-haspopup="dialog" @click="open('COVER')">{{ t('pictures.missing.cover') }}</button>
+          <p class="title">{{ t('pictures.use.cover') }}</p>
         </li>
         <li v-for="variant in variants" :key="variant.letter">
           <a v-if="variant.image" class="shot" :href="variant.image.url" target="_blank" rel="noopener"
              :title="`${variant.image.name}, ${variant.image.width} × ${variant.image.height}`">
             <img :src="src(variant.image, 640)" :srcset="srcset(variant.image)" sizes="(max-width: 640px) 50vw, 300px"
-                 :width="variant.image.width" :height="variant.image.height" :alt="`Thumbnail ${variant.letter}`" loading="lazy">
+                 :width="variant.image.width" :height="variant.image.height" :alt="t('episode.hero.alt', { letter: variant.letter })" loading="lazy">
             <span class="letter" aria-hidden="true">{{ variant.letter }}</span>
           </a>
           <button v-else type="button" class="shot missing" aria-haspopup="dialog" @click="open(variant.kind)">
-            <span class="letter" aria-hidden="true">{{ variant.letter }}</span>Upload thumbnail {{ variant.letter }}
+            <span class="letter" aria-hidden="true">{{ variant.letter }}</span>{{ t('pictures.missing.thumbnail', { letter: variant.letter }) }}
           </button>
-          <p v-if="variant.title" class="title" lang="sl"><span class="visually-hidden">Title {{ variant.letter }}: </span>{{ variant.title }}</p>
-          <p v-else class="title none">No title {{ variant.letter }}</p>
+          <p v-if="variant.title" class="title" lang="sl"><span class="visually-hidden">{{ t('pictures.titleOf', { letter: variant.letter }) }} </span>{{ variant.title }}</p>
+          <p v-else class="title none">{{ t('pictures.noTitle', { letter: variant.letter }) }}</p>
           <p v-if="variant.image" class="file">{{ variant.image.name }}</p>
         </li>
         <li class="web">
           <a v-if="episode.web" class="shot" :href="episode.web.url" target="_blank" rel="noopener"
              :title="`${episode.web.name}, ${episode.web.width} × ${episode.web.height}`">
             <img :src="src(episode.web, 640)" :srcset="srcset(episode.web)" sizes="(max-width: 640px) 50vw, 260px"
-                 :width="episode.web.width" :height="episode.web.height" alt="Web picture" loading="lazy">
+                 :width="episode.web.width" :height="episode.web.height" :alt="slotLabel('WEB', t)" loading="lazy">
           </a>
-          <button v-else type="button" class="shot missing" aria-haspopup="dialog" @click="open('WEB')">Upload the web picture</button>
-          <p class="title">Web picture</p>
+          <button v-else type="button" class="shot missing" aria-haspopup="dialog" @click="open('WEB')">{{ t('pictures.missing.web') }}</button>
+          <p class="title">{{ slotLabel('WEB', t) }}</p>
           <p v-if="episode.web" class="file">{{ episode.web.name }}</p>
         </li>
       </ul>
@@ -133,15 +136,15 @@ const folder = computed(() => props.artwork[0]?.url)
       <ul v-else class="titles" lang="sl">
         <li v-for="variant in variants" :key="variant.letter">
           <span class="letter" aria-hidden="true">{{ variant.letter }}</span>
-          <span v-if="variant.title"><span class="visually-hidden">Title {{ variant.letter }}: </span>{{ variant.title }}</span>
-          <span v-else class="none">No title {{ variant.letter }}</span>
+          <span v-if="variant.title"><span class="visually-hidden">{{ t('pictures.titleOf', { letter: variant.letter }) }} </span>{{ variant.title }}</span>
+          <span v-else class="none">{{ t('pictures.noTitle', { letter: variant.letter }) }}</span>
         </li>
       </ul>
     </template>
 
-    <PhotoStrip v-else-if="shown === 'artwork'" title="Artwork" :photos="artwork" :folder="folder" service="Dropbox"
+    <PhotoStrip v-else-if="shown === 'artwork'" :title="t('pictures.tabs.artwork')" :photos="artwork" :folder="folder" service="Dropbox"
                 artwork :uses="uses" bare/>
-    <PhotoStrip v-else title="Photos" :photos="photos" :folder="episode.koofrFolders[0]?.url" service="Koofr" bare/>
+    <PhotoStrip v-else :title="t('pictures.tabs.photos')" :photos="photos" :folder="episode.koofrFolders[0]?.url" service="Koofr" bare/>
 
     <ArtworkUpload ref="upload" :episode="episode" @changed="emit('changed')"/>
   </div>

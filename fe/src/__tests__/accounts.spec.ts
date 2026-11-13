@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
   type Account, accountConsoleUrl, accountName, findPeople, firstSeen, howLinked, linkAction, linkedAccountsUrl,
-  linkedAlias, linkOutcome, loadSignInProviders, parseLinkedAccounts, shortDate, signInDetails, unlinkedDetails,
+  linkedAlias, linkOutcome, linkOutcomeText, loadSignInProviders, parseLinkedAccounts, shortDate, signInDetails,
+  unlinkedDetails,
 } from '@/accounts'
+import { t, tSl } from './i18n'
 
 const ISSUER = 'https://metaos-auth.ogrodje.si/realms/metaos'
 const NOW = new Date('2026-10-23T12:00:00Z')
@@ -107,69 +109,77 @@ describe('linkAction and linkedAlias', () => {
 })
 
 describe('linkOutcome', () => {
+  const text = (status: string | undefined, provider: string, detail?: string | null) =>
+    linkOutcomeText(linkOutcome(status, provider, detail), t)
+
   it('says a provider is linked', () => {
-    expect(linkOutcome('success', 'Discord')).toEqual({ linked: true, text: 'Discord is linked: you can sign in with it too.' })
+    expect(linkOutcome('success', 'Discord').linked).toBe(true)
+    expect(text('success', 'Discord')).toBe('Discord is linked: you can sign in with it too.')
   })
 
   it("says it wasn't, and why", () => {
-    expect(linkOutcome('cancelled', 'Discord')).toEqual({ linked: false, text: "Discord wasn't linked, as you cancelled it." })
-    expect(linkOutcome('error', 'Discord').text)
-      .toBe("Discord wasn't linked: that Discord account may be linked to another sign-in already.")
+    expect(text('cancelled', 'Discord')).toBe("Discord wasn't linked, as you cancelled it.")
+    expect(text('error', 'Discord')).toBe("Discord wasn't linked: that Discord account may be linked to another sign-in already.")
   })
 
   it("passes on what Keycloak said went wrong, as a sentence", () => {
-    expect(linkOutcome('error', 'Discord', 'Identity provider is disabled').text)
-      .toBe("Discord wasn't linked: Identity provider is disabled.")
-    expect(linkOutcome(undefined, 'Google', 'Not allowed.').text).toBe("Google wasn't linked: Not allowed.")
+    expect(text('error', 'Discord', 'Identity provider is disabled')).toBe("Discord wasn't linked: Identity provider is disabled.")
+    expect(text(undefined, 'Google', 'Not allowed.')).toBe("Google wasn't linked: Not allowed.")
   })
 
   it("takes a status it doesn't know for an error", () => {
     expect(linkOutcome('pending', 'Discord').linked).toBe(false)
+    expect(linkOutcome('pending', 'Discord').cancelled).toBe(false)
+  })
+
+  it('says it in Slovenian', () => {
+    expect(linkOutcomeText(linkOutcome('cancelled', 'Discord'), tSl)).toBe('Račun Discord ni povezan, ker ste povezovanje preklicali.')
   })
 })
 
 describe('accountName', () => {
   it("is Keycloak's username, or else the email or the name", () => {
-    expect(accountName(account())).toBe('otobrglez@gmail.com')
-    expect(accountName(account({ username: null }))).toBe('otobrglez@gmail.com')
-    expect(accountName(account({ username: null, email: null }))).toBe('Oto Brglez')
-    expect(accountName(account({ username: null, email: null, name: null }))).toBe('A sign-in')
+    expect(accountName(account(), t)).toBe('otobrglez@gmail.com')
+    expect(accountName(account({ username: null }), t)).toBe('otobrglez@gmail.com')
+    expect(accountName(account({ username: null, email: null }), t)).toBe('Oto Brglez')
+    expect(accountName(account({ username: null, email: null, name: null }), t)).toBe('A sign-in')
   })
 })
 
 describe('howLinked', () => {
   it('says by email or by whom, and when', () => {
-    expect(howLinked(account(), NOW, 'en-GB')).toBe('linked by email, 23 Oct')
-    expect(howLinked(account({ linkedHow: 'MANUAL', linkedBy: 'Oto Brglez', linkedAt: '2026-10-19T12:00:00Z' }), NOW, 'en-GB'))
+    expect(howLinked(account(), t, 'en-GB', NOW)).toBe('linked by email, 23 Oct')
+    expect(howLinked(account({ linkedHow: 'MANUAL', linkedBy: 'Oto Brglez', linkedAt: '2026-10-19T12:00:00Z' }), t, 'en-GB', NOW))
       .toBe('linked by Oto Brglez, 19 Oct')
   })
 
   it('says someone when it was linked by hand by whom MetaOS no longer knows', () => {
-    expect(howLinked(account({ linkedHow: 'MANUAL', linkedBy: null }), NOW, 'en-GB')).toBe('linked by someone, 23 Oct')
+    expect(howLinked(account({ linkedHow: 'MANUAL', linkedBy: null }), t, 'en-GB', NOW)).toBe('linked by someone, 23 Oct')
   })
 
   it("has the year when it isn't this year's", () => {
-    expect(howLinked(account({ linkedAt: '2025-10-19T12:00:00Z' }), NOW, 'en-GB')).toBe('linked by email, 19 Oct 2025')
+    expect(howLinked(account({ linkedAt: '2025-10-19T12:00:00Z' }), t, 'en-GB', NOW)).toBe('linked by email, 19 Oct 2025')
   })
 
   it("says nothing of an account that isn't linked, and no date it doesn't have", () => {
-    expect(howLinked(account({ linkedHow: null, linkedAt: null, person: null }), NOW)).toBeNull()
-    expect(howLinked(account({ linkedAt: null }), NOW)).toBe('linked by email')
+    expect(howLinked(account({ linkedHow: null, linkedAt: null, person: null }), t, 'en-GB', NOW)).toBeNull()
+    expect(howLinked(account({ linkedAt: null }), t, 'en-GB', NOW)).toBe('linked by email')
   })
 })
 
 describe('shortDate', () => {
   it('is the day and the month', () => {
-    expect(shortDate('2026-01-02T12:00:00Z', NOW, 'en-GB')).toBe('2 Jan')
+    expect(shortDate('2026-01-02T12:00:00Z', 'en-GB', NOW)).toBe('2 Jan')
+    expect(shortDate('2026-01-02T12:00:00Z', 'sl-SI', NOW)).toBe('2. jan.')
   })
 })
 
 describe('signInDetails', () => {
   it("has the email when it isn't the account's name, and how it was linked", () => {
-    expect(signInDetails(account(), NOW, 'en-GB')).toBe('linked by email, 23 Oct')
+    expect(signInDetails(account(), t, 'en-GB', NOW)).toBe('linked by email, 23 Oct')
     expect(signInDetails(account({
       username: 'dev', email: 'dev@metaos.local', linkedHow: 'MANUAL', linkedBy: 'Oto Brglez', linkedAt: '2026-10-19T12:00:00Z',
-    }), NOW, 'en-GB')).toBe('dev@metaos.local · linked by Oto Brglez, 19 Oct')
+    }), t, 'en-GB', NOW)).toBe('dev@metaos.local · linked by Oto Brglez, 19 Oct')
   })
 })
 
@@ -179,9 +189,9 @@ describe('unlinkedDetails', () => {
       username: 'maja.k', name: 'Maja Kovač', email: 'maja@example.com', person: null, linkedHow: null, linkedAt: null,
       createdAt: '2026-10-21T12:00:00Z',
     })
-    expect(unlinkedDetails(maja, NOW, 'en-GB')).toBe('Maja Kovač · maja@example.com · first seen 21 Oct')
-    expect(unlinkedDetails({ ...maja, name: null, email: null }, NOW, 'en-GB')).toBe('first seen 21 Oct')
-    expect(firstSeen(maja, NOW, 'en-GB')).toBe('first seen 21 Oct')
+    expect(unlinkedDetails(maja, t, 'en-GB', NOW)).toBe('Maja Kovač · maja@example.com · first seen 21 Oct')
+    expect(unlinkedDetails({ ...maja, name: null, email: null }, t, 'en-GB', NOW)).toBe('first seen 21 Oct')
+    expect(firstSeen(maja, t, 'en-GB', NOW)).toBe('first seen 21 Oct')
   })
 })
 

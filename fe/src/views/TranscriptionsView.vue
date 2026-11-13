@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
+import { I18nT } from 'vue-i18n'
 import { keepUnchanged, useLiveRefresh } from '@/changes'
 import ChipGroup from '@/components/ChipGroup.vue'
 import FilterBar from '@/components/FilterBar.vue'
@@ -11,15 +12,17 @@ import PageHeader from '@/components/PageHeader.vue'
 import SignInPrompt from '@/components/SignInPrompt.vue'
 import TranscribeForm from '@/components/TranscribeForm.vue'
 import TranscriptionRow from '@/components/TranscriptionRow.vue'
-import { errorMessage, graphql } from '@/graphql'
+import { graphql } from '@/graphql'
 import { matches } from '@/lists'
 import { useClearQuery, useQueryState } from '@/query'
 import { useAuthStore } from '@/stores/auth'
+import { useLocale } from '@/useLocale'
 import {
   isOn, providerName, type SpeechProvider, split, type Transcription, transcriptionText, TRANSCRIPTIONS,
 } from '@/transcriptions'
 
 const auth = useAuthStore()
+const { t, path } = useLocale()
 
 // The latest transcriptions, and the providers to transcribe with; undefined while they load
 const transcriptions = ref<Transcription[]>()
@@ -32,7 +35,7 @@ function started() {
   transcribing.value = false
   void load(true)
 }
-const error = ref<string>()
+const error = ref<unknown>()
 
 // Only the latest load counts: an earlier one may answer after it
 let loads = 0
@@ -55,7 +58,7 @@ async function load(quietly = false) {
   } catch (e) {
     if (load !== loads) return
     if (quietly) throw e
-    error.value = errorMessage(e)
+    error.value = e
   }
 }
 
@@ -80,81 +83,89 @@ const clear = useClearQuery()
 const all = computed(() => transcriptions.value ?? [])
 const filtering = computed(() => status.value !== 'all' || provider.value !== 'all' || find.value.trim() !== '')
 
-function inStatus(t: Transcription, which: StatusFilter) {
+function inStatus(transcription: Transcription, which: StatusFilter) {
   if (which === 'all') return true
-  if (which === 'on') return isOn(t)
-  return t.status === which.toUpperCase()
+  if (which === 'on') return isOn(transcription)
+  return transcription.status === which.toUpperCase()
 }
 
-const STATUSES: { value: StatusFilter, title: string }[] = [
-  { value: 'all', title: 'All' },
-  { value: 'on', title: 'On' },
-  { value: 'done', title: 'Done' },
-  { value: 'failed', title: 'Failed' },
-  { value: 'cancelled', title: 'Cancelled' },
-]
-const statuses = computed(() => STATUSES.map((s) => ({ ...s, count: all.value.filter((t) => inStatus(t, s.value)).length }))
-  .filter((s) => s.value === 'all' || s.count || s.value === status.value))
+const statuses = computed(() => {
+  const options: { value: StatusFilter, title: string }[] = [
+    { value: 'all', title: t('transcriptions.filter.all') },
+    { value: 'on', title: t('transcriptions.filter.on') },
+    { value: 'done', title: t('transcriptions.filter.done') },
+    { value: 'failed', title: t('transcriptions.filter.failed') },
+    { value: 'cancelled', title: t('transcriptions.filter.cancelled') },
+  ]
+  return options.map((s) => ({ ...s, count: all.value.filter((each) => inStatus(each, s.value)).length }))
+    .filter((s) => s.value === 'all' || s.count || s.value === status.value)
+})
 
 // The providers that have transcribed something, and those MetaOS has
 const providerOptions = computed(() => {
   const names = [...new Set([...providers.value.map((p) => p.name), ...all.value.map((t) => t.provider)])].sort()
   return [
-    { value: 'all', title: 'Any' },
-    ...names.map((name) => ({ value: name, title: providerName(name), count: all.value.filter((t) => t.provider === name).length })),
+    { value: 'all', title: t('transcriptions.filter.anyProvider') },
+    ...names.map((name) => ({ value: name, title: providerName(name), count: all.value.filter((each) => each.provider === name).length })),
   ]
 })
 
-const shown = computed(() => all.value.filter((t) =>
-  inStatus(t, status.value) && (provider.value === 'all' || t.provider === provider.value) && matches(transcriptionText(t), find.value)))
+const shown = computed(() => all.value.filter((each) =>
+  inStatus(each, status.value) && (provider.value === 'all' || each.provider === provider.value)
+  && matches(transcriptionText(each), find.value)))
 const parts = computed(() => split(shown.value))
 </script>
 
 <template>
   <main class="content">
-    <SignInPrompt v-if="auth.ready && !auth.authenticated" title="Sign in to see the transcriptions">
-      Transcriptions are for Ogrodje's team. Sign in with Discord or Google, or use MetaOS from your AI assistant over
-      MCP: <RouterLink class="usage" to="/usage">API and MCP usage</RouterLink> shows how to connect it.
+    <SignInPrompt v-if="auth.ready && !auth.authenticated" :title="t('transcriptions.signIn.title')">
+      <I18nT keypath="transcriptions.signIn.text" scope="global">
+        <template #usage><RouterLink class="usage" :to="path('/usage')">{{ t('pages.usage') }}</RouterLink></template>
+      </I18nT>
     </SignInPrompt>
 
     <template v-else>
-      <PageHeader title="Transcriptions" :count="transcriptions?.length" :shown="filtering && transcriptions ? shown.length : undefined">
-        Episodes' video and audio, as Google's Speech-to-Text or Soniox heard it.
+      <PageHeader :title="t('pages.transcriptions')" :count="transcriptions?.length"
+                  :shown="filtering && transcriptions ? shown.length : undefined">
+        {{ t('transcriptions.about') }}
         <template v-if="auth.team && providers.length" #actions>
           <button type="button" class="button" :class="{ primary: !transcribing }" :aria-expanded="transcribing"
                   aria-controls="transcribe" @click="transcribing = !transcribing">
-            {{ transcribing ? 'Cancel' : 'Transcribe an episode' }}
+            {{ transcribing ? t('common.cancel') : t('transcriptions.transcribeEpisode') }}
           </button>
         </template>
       </PageHeader>
 
       <!-- Signed in as a member, not staff -->
-      <p v-if="auth.ready && !auth.team" class="note">The transcriptions are for Ogrodje's staff.</p>
+      <p v-if="auth.ready && !auth.team" class="note">{{ t('transcriptions.teamOnly') }}</p>
 
       <template v-else>
         <!-- Opened from the heading, as the page is a list like the others first -->
         <TranscribeForm v-if="transcribing && providers.length" id="transcribe" :providers="providers" @started="started"/>
 
-        <FilterBar v-model:find="find" placeholder="Find by episode or file">
-          <ChipGroup v-model="status" label="Status" :options="statuses"/>
+        <FilterBar v-model:find="find" :placeholder="t('transcriptions.filter.find')">
+          <ChipGroup v-model="status" :label="t('transcriptions.filter.status')" :options="statuses"/>
           <template #end>
-            <ChipGroup v-if="providerOptions.length > 2" v-model="provider" label="Provider" :options="providerOptions"/>
+            <ChipGroup v-if="providerOptions.length > 2" v-model="provider" :label="t('transcriptions.filter.provider')"
+                       :options="providerOptions"/>
           </template>
         </FilterBar>
 
-        <LoadError v-if="error" what="The transcriptions" :error="error" @retry="load()"/>
-        <LoadingRows v-else-if="!transcriptions" :rows="6" label="Loading the transcriptions"/>
-        <p v-else-if="!transcriptions.length" class="note">Nothing's been transcribed yet.</p>
-        <NoMatch v-else-if="!shown.length" :find="find" @clear="clear(['status', 'provider', 'q'])">No transcriptions match</NoMatch>
+        <LoadError v-if="error" :what="t('transcriptions.what')" :error="error" @retry="load()"/>
+        <LoadingRows v-else-if="!transcriptions" :rows="6" :label="t('transcriptions.loading')"/>
+        <p v-else-if="!transcriptions.length" class="note">{{ t('transcriptions.none') }}</p>
+        <NoMatch v-else-if="!shown.length" :find="find" @clear="clear(['status', 'provider', 'q'])">
+          {{ t('transcriptions.noMatch') }}
+        </NoMatch>
         <div v-else class="parts">
           <section v-if="parts.on.length" aria-labelledby="on-heading">
-            <div class="heading"><h2 id="on-heading">On now</h2><span class="count">{{ parts.on.length }}</span></div>
+            <div class="heading"><h2 id="on-heading">{{ t('transcriptions.onNow') }}</h2><span class="count">{{ parts.on.length }}</span></div>
             <ul class="list">
               <TranscriptionRow v-for="t in parts.on" :key="t.id" :transcription="t" :now="now" @changed="load(true)"/>
             </ul>
           </section>
           <section v-if="parts.ended.length" aria-labelledby="ended-heading">
-            <div class="heading"><h2 id="ended-heading">Earlier</h2><span class="count">{{ parts.ended.length }}</span></div>
+            <div class="heading"><h2 id="ended-heading">{{ t('transcriptions.earlier') }}</h2><span class="count">{{ parts.ended.length }}</span></div>
             <ul class="list">
               <TranscriptionRow v-for="t in parts.ended" :key="t.id" :transcription="t" :now="now" @changed="load(true)"/>
             </ul>

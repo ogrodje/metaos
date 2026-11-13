@@ -1,5 +1,5 @@
 import type { MediaInfo } from 'mediainfo.js'
-import { graphql } from '@/graphql'
+import { graphql, UserError } from '@/graphql'
 import { MEDIA_FILE_FIELDS, type MediaFile, type MediaKind, type Picked, probeOf, typeOf } from '@/media'
 import { sendInChunks } from '@/resumable'
 import { type SignedUpload, startUpload } from '@/uploads'
@@ -77,7 +77,7 @@ export async function downloadUrl(id: string): Promise<string> {
   const { mediaFile } = await graphql<{ mediaFile: { downloadUrl: string | null } | null }>(
     'query ($id: ID!) { mediaFile(id: $id) { downloadUrl } }', { id },
   )
-  if (!mediaFile?.downloadUrl) throw new Error("The file isn't there anymore")
+  if (!mediaFile?.downloadUrl) throw new UserError('media.list.gone')
   return mediaFile.downloadUrl
 }
 

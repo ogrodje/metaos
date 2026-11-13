@@ -4,6 +4,7 @@ import { faDiscord, faGoogle } from '@fortawesome/free-brands-svg-icons'
 import { faArrowRight } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useAuthStore } from '@/stores/auth'
+import { useLocale } from '@/useLocale'
 
 // What a visitor who isn't signed in can do: sign in, or use MetaOS over MCP. The slot says why to. Compact, a line
 // under what the page shows everyone, e.g. the home page's releases, with only the sign-ins.
@@ -13,6 +14,7 @@ defineProps<{
 }>()
 
 const auth = useAuthStore()
+const { t, path } = useLocale()
 </script>
 
 <template>
@@ -21,12 +23,12 @@ const auth = useAuthStore()
     <p><slot/></p>
     <div class="actions">
       <button type="button" class="button" @click="auth.login('discord')">
-        <FontAwesomeIcon :icon="faDiscord"/>Sign in with Discord
+        <FontAwesomeIcon :icon="faDiscord"/>{{ t('auth.signInWith', { provider: 'Discord' }) }}
       </button>
       <button type="button" class="button" @click="auth.login('google')">
-        <FontAwesomeIcon :icon="faGoogle"/>Sign in with Google
+        <FontAwesomeIcon :icon="faGoogle"/>{{ t('auth.signInWith', { provider: 'Google' }) }}
       </button>
-      <RouterLink v-if="!compact" class="button" to="/usage">API and MCP usage<FontAwesomeIcon :icon="faArrowRight"/></RouterLink>
+      <RouterLink v-if="!compact" class="button" :to="path('/usage')">{{ t('pages.usage') }}<FontAwesomeIcon :icon="faArrowRight"/></RouterLink>
     </div>
   </section>
 </template>

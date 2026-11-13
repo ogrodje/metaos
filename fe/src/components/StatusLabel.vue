@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { type EpisodeStatus, statusName } from '@/episodes'
+import { useLocale } from '@/useLocale'
 
 const props = defineProps<{ status: EpisodeStatus }>()
+
+const { t } = useLocale()
 
 // A ring until it's recorded, the logo's pink while it's being made, grey once it's out, on hold or cancelled
 const stage = computed(() => {
@@ -23,7 +26,7 @@ const stage = computed(() => {
 </script>
 
 <template>
-  <span class="status" :class="stage"><span class="dot" aria-hidden="true"/>{{ statusName(status) }}</span>
+  <span class="status" :class="stage"><span class="dot" aria-hidden="true"/>{{ statusName(status, t) }}</span>
 </template>
 
 <style scoped lang="scss">

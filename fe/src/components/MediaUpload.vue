@@ -9,11 +9,12 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { droppedFiles } from '@/artwork'
 import type { EpisodeDetails } from '@/episodes'
 import {
-  ACCEPT, AUDIO_FORMATS, formatDuration, formatSize, isMedia, isVideo, KINDS, kindOf, MAX_MEDIA_BYTES, type MediaFile,
-  type MediaKind, type Picked, placeAll, type Probe, VIDEO_FORMATS, warnings,
+  ACCEPT, formatDuration, formatFrameRate, formatSampleRate, formatSize, isMedia, isVideo, KINDS, kindLabel, kindName, kindOf,
+  MAX_MEDIA_BYTES, type MediaFile, type MediaKind, type Picked, placeAll, type Probe, warnings,
 } from '@/media'
 import { readMedia, uploadMedia } from '@/mediaUploads'
 import { stopped, uploadError } from '@/uploads'
+import { useLocale } from '@/useLocale'
 
 // Upload video and audio: an episode's full video and full audio, and its bonuses. Drop its files anywhere on it, or
 // choose them, and each goes where what's in it and its name say (media.ts), which can be changed on its row; or open
@@ -46,6 +47,8 @@ interface Row {
   // Whether it may replace the episode's full one, once that was asked
   replace: boolean
 }
+
+const { t, dateLocale } = useLocale()
 
 const id = useId()
 const dialog = ref<HTMLDialogElement>()
@@ -83,14 +86,20 @@ const sending = computed(() => rows.value.filter((row) => row.upload && row.uplo
 const finished = computed(() => !busy.value && rows.value.some((row) => ['done', 'failed'].includes(status(row))))
 
 const summary = computed(() => {
-  const refusedNote = refused.value.length ? ` · ${refused.value.length} refused` : ''
-  if (busy.value) return `Uploading ${sending.value} ${sending.value === 1 ? 'file' : 'files'} · ${count('done')} uploaded`
-  if (finished.value && !toSend.value.length) return [`${count('done')} uploaded`, count('failed') && `${count('failed')} didn't`].filter(Boolean).join(' · ')
-  if (!toSend.value.length) return refused.value.length ? `Nothing to upload${refusedNote}` : 'Nothing chosen yet'
+  const refusedNote = refused.value.length ? t('media.upload.refusedCount', { n: refused.value.length }) : null
+  const line = (...parts: (string | null | false)[]) => parts.filter(Boolean).join(' · ')
+  const done = count('done')
+  const failed = count('failed')
+  if (busy.value) return t('media.upload.summary.busy', { files: t('media.upload.sending', { n: sending.value }, sending.value), done })
+  if (finished.value && !toSend.value.length) return line(t('media.upload.uploadedCount', { n: done }), !!failed && t('media.upload.failedCount', { n: failed }))
+  if (!toSend.value.length) return refusedNote ? line(t('media.upload.nothingToUpload'), refusedNote) : t('media.upload.nothingChosen')
   const n = toSend.value.length
-  const bytes = formatSize(toSend.value.reduce((sum, row) => sum + row.picked.file.size, 0))
-  const replaces = replacing.value.length ? `, replacing ${replacing.value.length === 1 ? 'one' : replacing.value.length}` : ''
-  return `${n} to upload, ${bytes}${replaces}${refusedNote}`
+  const size = formatSize(toSend.value.reduce((sum, row) => sum + row.picked.file.size, 0), dateLocale.value)
+  const r = replacing.value.length
+  const toUpload = r
+    ? t('media.upload.summary.replacing', { n, size, r }, r)
+    : t('media.upload.summary.toUpload', { n, size })
+  return line(toUpload, refusedNote)
 })
 
 // The kinds a row may be: of its medium, video or audio
@@ -102,23 +111,26 @@ function probeLine(picked: Picked) {
   const parts: string[] = []
   if (probe?.duration) parts.push(formatDuration(probe.duration))
   if (probe?.width && probe.height) parts.push(`${probe.width} × ${probe.height}`)
-  if (probe?.frameRate) parts.push(`${Number(probe.frameRate.toFixed(2))} fps`)
+  if (probe?.frameRate) parts.push(formatFrameRate(probe.frameRate, dateLocale.value))
   if (probe?.videoFormat) parts.push(probe.videoFormat)
-  if (probe?.audioFormat) parts.push([probe.audioFormat, probe.sampleRate && `${Number((probe.sampleRate / 1000).toFixed(1))} kHz`].filter(Boolean).join(' '))
-  parts.push(formatSize(picked.file.size))
+  if (probe?.audioFormat) {
+    parts.push([probe.audioFormat, probe.sampleRate && formatSampleRate(probe.sampleRate, dateLocale.value)].filter(Boolean).join(' '))
+  }
+  parts.push(formatSize(picked.file.size, dateLocale.value))
   return parts.join(' · ')
 }
 
 // What looks wrong with it as what it's to be, and a full audio that isn't as long as the full video
 function concerns(row: Row): string[] {
-  const found = warnings(row.picked.probe, row.kind)
+  const found = warnings(row.picked.probe, row.kind, t, dateLocale.value)
   const other: MediaKind | null = row.kind === 'FULL_AUDIO' ? 'FULL_VIDEO' : row.kind === 'FULL_VIDEO' ? 'FULL_AUDIO' : null
   const length = row.picked.probe?.duration
   if (other && length) {
     const otherRow = rows.value.find((it) => it.kind === other)
     const otherLength = otherRow ? otherRow.picked.probe?.duration : current(other)?.info.duration
     if (otherLength && Math.abs(otherLength - length) > 5) {
-      found.push(`${formatDuration(Math.abs(otherLength - length))} ${length < otherLength ? 'shorter' : 'longer'} than the ${kindOf(other).label.toLowerCase()}`)
+      const apart = formatDuration(Math.abs(otherLength - length))
+      found.push(t(`media.warning.${length < otherLength ? 'shorterThan' : 'longerThan'}.${other}`, { length: apart }))
     }
   }
   return found
@@ -180,7 +192,7 @@ async function add(files: File[]) {
     reading.value = 0
   }
   const taken = rows.value.map((row) => row.kind)
-  const placement = placeAll(picked, taken)
+  const placement = placeAll(picked, t, dateLocale.value, taken)
   const wanted = choosingFor.value
   for (const { picked: it, kind } of placement.placed) {
     const chosen = wanted && kindOf(wanted).video === isVideo(it) ? wanted : kind
@@ -194,8 +206,9 @@ async function add(files: File[]) {
   const leftOut = files.length - media.length
   choosingFor.value = undefined
   announcement.value = [
-    `${placement.placed.length} added`, placement.refused.length && `${placement.refused.length} refused`,
-    leftOut && `${leftOut} other ${leftOut === 1 ? 'file' : 'files'} left out`,
+    t('media.upload.announce.added', { n: placement.placed.length }),
+    placement.refused.length && t('media.upload.announce.refused', { n: placement.refused.length }),
+    leftOut && t('media.upload.leftOut', { n: leftOut }, leftOut),
   ].filter(Boolean).join(', ')
 }
 
@@ -238,9 +251,9 @@ function upload() {
 const keeping = computed(() => (asking.value?.length ?? 0) - ticked.value.length)
 const answerLabel = computed(() => {
   const left = toSend.value.length - keeping.value
-  if (!keeping.value) return `Replace and upload ${left}`
-  const ones = keeping.value === 1 ? 'one' : 'ones'
-  return left ? `Upload ${left}, keep the current ${ones}` : `Keep the current ${ones}`
+  const kept = keeping.value
+  if (!kept) return t('media.upload.answer.replace', { n: left })
+  return left ? t('media.upload.answer.uploadAndKeep', { n: left, kept }, kept) : t('media.upload.answer.keep', { kept }, kept)
 })
 
 function answer() {
@@ -271,11 +284,11 @@ async function send(toGo: Row[]) {
           row.upload = progress.state === 'uploading' ? { state: 'uploading', percent: progress.percent } : { state: 'checking' }
         }, signal)
         row.upload = { state: 'done', file }
-        announcement.value = `${row.picked.name} uploaded`
+        announcement.value = t('media.upload.announce.uploaded', { name: row.picked.name })
         emit('changed')
       } catch (error) {
-        row.upload = stopped(error) ? null : { state: 'failed', message: uploadError(error) }
-        if (row.upload) announcement.value = `${row.picked.name} didn't upload: ${row.upload.message}`
+        row.upload = stopped(error) ? null : { state: 'failed', message: uploadError(error, t) }
+        if (row.upload) announcement.value = t('media.upload.announce.failed', { name: row.picked.name, message: row.upload.message })
       }
     }
   } finally {
@@ -299,7 +312,7 @@ function onBeforeUnload(event: BeforeUnloadEvent) {
   if (busy.value) event.preventDefault()
 }
 
-onBeforeRouteLeave(() => !busy.value || window.confirm('Video or audio is still being uploaded. Leave, and stop it?'))
+onBeforeRouteLeave(() => !busy.value || window.confirm(t('media.upload.leave')))
 
 onMounted(() => window.addEventListener('beforeunload', onBeforeUnload))
 
@@ -317,12 +330,12 @@ defineExpose({ open })
     <div class="panel" :class="{ dragging: dragging > 0 && !busy }">
       <header class="head">
         <div class="names">
-          <h2 :id="`${id}-title`">Upload video and audio</h2>
+          <h2 :id="`${id}-title`">{{ t('media.upload.title') }}</h2>
           <p class="sub"><span v-if="episode.code" class="code">{{ episode.code }}</span><span lang="sl">{{ episode.title }}</span></p>
         </div>
         <!-- Esc on a keyboard, Cancel on a phone -->
-        <button type="button" class="close" aria-label="Close" @click="close()">
-          <kbd aria-hidden="true">esc</kbd><span class="cancel" aria-hidden="true">Close</span>
+        <button type="button" class="close" :aria-label="t('common.close')" @click="close()">
+          <kbd aria-hidden="true">esc</kbd><span class="cancel" aria-hidden="true">{{ t('common.close') }}</span>
         </button>
       </header>
 
@@ -330,25 +343,25 @@ defineExpose({ open })
         <div v-if="!rows.length" class="drop">
           <FontAwesomeIcon :icon="faFileVideo" class="big-icon"/>
           <p class="big">
-            <span class="desk">{{ choosingFor ? `Drop the ${kindOf(choosingFor).label.toLowerCase()} here` : "Drop the episode's video and audio here" }}</span>
-            <span class="touch">{{ choosingFor ? `Choose the ${kindOf(choosingFor).label.toLowerCase()}` : "Choose the episode's video and audio" }}</span>
+            <span class="desk">{{ choosingFor ? t('media.upload.dropKind', { name: kindName(choosingFor, t) }) : t('media.upload.drop') }}</span>
+            <span class="touch">{{ choosingFor ? t('media.upload.chooseKind', { name: kindName(choosingFor, t) }) : t('media.upload.dropTouch') }}</span>
           </p>
-          <p class="small">Video {{ VIDEO_FORMATS }} · audio {{ AUDIO_FORMATS }} · up to {{ formatSize(MAX_MEDIA_BYTES) }} a file</p>
+          <p class="small">{{ t('media.upload.formats', { max: formatSize(MAX_MEDIA_BYTES, dateLocale) }) }}</p>
           <div class="buttons">
             <button :id="`${id}-choose`" type="button" class="button" @click="chooseFiles?.click()">
-              <FontAwesomeIcon :icon="faFileVideo"/>{{ choosingFor ? `Choose the ${kindOf(choosingFor).label.toLowerCase()}` : 'Choose files' }}
+              <FontAwesomeIcon :icon="faFileVideo"/>{{ choosingFor ? t('media.upload.chooseKind', { name: kindName(choosingFor, t) }) : t('media.upload.choose') }}
             </button>
-            <button v-if="!choosingFor" type="button" class="button" @click="chooseFolder?.click()"><FontAwesomeIcon :icon="faFolderOpen"/>Choose a folder</button>
+            <button v-if="!choosingFor" type="button" class="button" @click="chooseFolder?.click()"><FontAwesomeIcon :icon="faFolderOpen"/>{{ t('media.upload.chooseFolder') }}</button>
           </div>
         </div>
         <div v-else class="dropbar">
           <FontAwesomeIcon :icon="faFolderOpen"/>
-          <span class="grow">{{ rows.length }} {{ rows.length === 1 ? 'file' : 'files' }}</span>
-          <button :id="`${id}-choose`" type="button" class="button small quiet" :disabled="busy" @click="chooseFiles?.click()">Add more…</button>
+          <span class="grow">{{ t('media.upload.files', { n: rows.length }, rows.length) }}</span>
+          <button :id="`${id}-choose`" type="button" class="button small quiet" :disabled="busy" @click="chooseFiles?.click()">{{ t('media.upload.addMore') }}</button>
         </div>
-        <p v-if="reading" class="note" role="status">Reading {{ reading === 1 ? 'a file' : `${reading} files` }}…</p>
+        <p v-if="reading" class="note" role="status">{{ t('media.upload.reading', { n: reading }, reading) }}</p>
 
-        <ul v-if="rows.length" class="slots" aria-label="Files to upload">
+        <ul v-if="rows.length" class="slots" :aria-label="t('media.upload.list')">
           <li v-for="row in rows" :key="row.picked.id" class="slot">
             <span class="kind-icon" :class="{ new: ['new', 'replace'].includes(status(row)) }">
               <FontAwesomeIcon :icon="isVideo(row.picked) ? faFileVideo : faFileAudio"/>
@@ -357,50 +370,50 @@ defineExpose({ open })
               <span class="name"><b class="file-name">{{ row.picked.name }}</b></span>
               <span class="line">{{ probeLine(row.picked) }}</span>
               <span class="line choose">
-                <label :for="`${id}-kind-${row.picked.id}`">As</label>
+                <label :for="`${id}-kind-${row.picked.id}`">{{ t('media.upload.as') }}</label>
                 <select :id="`${id}-kind-${row.picked.id}`" :value="row.kind" :disabled="busy || !!row.upload"
                         @change="setKind(row, ($event.target as HTMLSelectElement).value)">
-                  <option v-for="kind in kindsFor(row)" :key="kind.kind" :value="kind.kind">{{ kind.label }}</option>
+                  <option v-for="kind in kindsFor(row)" :key="kind.kind" :value="kind.kind">{{ kindLabel(kind.kind, t) }}</option>
                 </select>
                 <template v-if="!kindOf(row.kind).full">
-                  <label class="visually-hidden" :for="`${id}-title-${row.picked.id}`">Title of {{ row.picked.name }}</label>
+                  <label class="visually-hidden" :for="`${id}-title-${row.picked.id}`">{{ t('media.upload.titleOf', { name: row.picked.name }) }}</label>
                   <input :id="`${id}-title-${row.picked.id}`" v-model="row.title" class="title-input" type="text" maxlength="200"
-                         placeholder="Title, e.g. what the bonus is" :disabled="busy || !!row.upload" lang="sl">
+                         :placeholder="t('media.upload.titlePlaceholder')" :disabled="busy || !!row.upload" lang="sl">
                 </template>
               </span>
               <span v-for="concern in concerns(row)" :key="concern" class="line warn"><FontAwesomeIcon :icon="faTriangleExclamation"/>{{ concern }}</span>
               <span class="line state">
-                <template v-if="status(row) === 'new'"><span class="st new"><i/>New</span></template>
-                <template v-else-if="status(row) === 'replace'"><span class="st"><FontAwesomeIcon :icon="faRightLeft"/>Replaces</span><span class="file">{{ current(row.kind)!.name }}</span></template>
-                <template v-else-if="status(row) === 'waiting'"><span class="st hollow"><i/>Waiting</span><span>after the one before it</span></template>
+                <template v-if="status(row) === 'new'"><span class="st new"><i/>{{ t('media.upload.new') }}</span></template>
+                <template v-else-if="status(row) === 'replace'"><span class="st"><FontAwesomeIcon :icon="faRightLeft"/>{{ t('media.upload.replaces') }}</span><span class="file">{{ current(row.kind)!.name }}</span></template>
+                <template v-else-if="status(row) === 'waiting'"><span class="st hollow"><i/>{{ t('media.upload.waiting') }}</span><span>{{ t('media.upload.afterPrevious') }}</span></template>
                 <template v-else-if="status(row) === 'uploading'">
-                  <span class="st">Uploading {{ percent(row) }}%</span>
+                  <span class="st">{{ t('media.upload.uploading', { percent: percent(row) }) }}</span>
                   <span class="progress" role="progressbar" :aria-valuenow="percent(row)" aria-valuemin="0" aria-valuemax="100" :aria-label="row.picked.name"><b :style="{ width: `${percent(row)}%` }"/></span>
                 </template>
-                <template v-else-if="status(row) === 'checking'"><span class="st"><span class="spin" aria-hidden="true"/>Checking</span><span>reading what's in it</span></template>
-                <template v-else-if="status(row) === 'done'"><span class="st ok"><FontAwesomeIcon :icon="faCheck"/>Uploaded</span></template>
-                <template v-else-if="status(row) === 'failed'"><span class="st bad"><FontAwesomeIcon :icon="faCircleExclamation"/>Didn't upload</span><span>{{ failure(row) }}</span></template>
+                <template v-else-if="status(row) === 'checking'"><span class="st"><span class="spin" aria-hidden="true"/>{{ t('media.upload.checking') }}</span><span>{{ t('media.upload.checkingWhat') }}</span></template>
+                <template v-else-if="status(row) === 'done'"><span class="st ok"><FontAwesomeIcon :icon="faCheck"/>{{ t('media.upload.uploaded') }}</span></template>
+                <template v-else-if="status(row) === 'failed'"><span class="st bad"><FontAwesomeIcon :icon="faCircleExclamation"/>{{ t('media.upload.failed') }}</span><span>{{ failure(row) }}</span></template>
               </span>
             </span>
             <span class="actions">
-              <button v-if="status(row) === 'failed'" type="button" class="button small" :disabled="busy" @click="retry(row)"><FontAwesomeIcon :icon="faRotateRight"/>Try again</button>
+              <button v-if="status(row) === 'failed'" type="button" class="button small" :disabled="busy" @click="retry(row)"><FontAwesomeIcon :icon="faRotateRight"/>{{ t('common.tryAgain') }}</button>
               <button v-if="['new', 'replace', 'failed'].includes(status(row))" type="button" class="iconbutton" :disabled="busy"
-                      :aria-label="`Leave ${row.picked.name} out`" @click="leaveOut(row)"><FontAwesomeIcon :icon="faXmark"/></button>
+                      :aria-label="t('media.upload.leaveOut', { name: row.picked.name })" @click="leaveOut(row)"><FontAwesomeIcon :icon="faXmark"/></button>
             </span>
           </li>
         </ul>
 
         <template v-if="refused.length">
-          <p class="group">Can't be any of them</p>
+          <p class="group">{{ t('media.upload.fitsNone') }}</p>
           <ul class="slots">
             <li v-for="{ picked, reason } in refused" :key="picked.id" class="slot">
               <span class="kind-icon refused"><FontAwesomeIcon :icon="faCircleExclamation"/></span>
               <span class="text">
                 <span class="name"><b class="file-name">{{ picked.name }}</b></span>
-                <span class="line state"><span class="st bad"><FontAwesomeIcon :icon="faCircleExclamation"/>Refused</span><span>{{ reason }}</span></span>
+                <span class="line state"><span class="st bad"><FontAwesomeIcon :icon="faCircleExclamation"/>{{ t('media.upload.refused') }}</span><span>{{ reason }}</span></span>
               </span>
               <span class="actions">
-                <button type="button" class="iconbutton" :aria-label="`Leave ${picked.name} out`" @click="refused = refused.filter((it) => it.picked.id !== picked.id)"><FontAwesomeIcon :icon="faXmark"/></button>
+                <button type="button" class="iconbutton" :aria-label="t('media.upload.leaveOut', { name: picked.name })" @click="refused = refused.filter((it) => it.picked.id !== picked.id)"><FontAwesomeIcon :icon="faXmark"/></button>
               </span>
             </li>
           </ul>
@@ -409,12 +422,14 @@ defineExpose({ open })
 
       <div v-if="asking" class="ask" role="group" :aria-labelledby="`${id}-ask`">
         <p :id="`${id}-ask`" class="question" tabindex="-1">
-          Replace {{ asking.length === 1 ? `the ${kindOf(asking[0]!.kind).label.toLowerCase()}` : `${asking.length} files` }} {{ episode.code ?? 'the episode' }} already has?
+          {{ asking.length === 1
+            ? t('media.upload.askOne', { name: kindName(asking[0]!.kind, t), episode: episode.code ?? t('media.upload.theEpisode') })
+            : t('media.upload.ask', { n: asking.length, episode: episode.code ?? t('media.upload.theEpisode') }, asking.length) }}
         </p>
         <label v-for="row in asking" :key="row.picked.id" class="replacement" :class="{ on: ticked.includes(row.picked.id) }">
           <input v-model="ticked" type="checkbox" :value="row.picked.id">
           <span>
-            <b>{{ kindOf(row.kind).label }}</b>
+            <b>{{ kindLabel(row.kind, t) }}</b>
             <span class="swap">
               <span class="was file">{{ current(row.kind)!.name }}</span>
               <FontAwesomeIcon :icon="faArrowRight" class="arrow"/>
@@ -422,23 +437,23 @@ defineExpose({ open })
             </span>
           </span>
         </label>
-        <p class="note">The episode's history keeps which file it was. The bucket keeps the one replaced for 30 days, where only an administrator gets it back.</p>
+        <p class="note">{{ t('media.upload.history') }}</p>
         <div class="buttons end">
-          <button type="button" class="button quiet" @click="asking = undefined">Back</button>
+          <button type="button" class="button quiet" @click="asking = undefined">{{ t('media.upload.back') }}</button>
           <button type="button" class="button primary" @click="answer()">{{ answerLabel }}</button>
         </div>
       </div>
       <div v-else class="foot">
         <span class="summary" aria-live="polite">{{ summary }}</span>
         <span class="buttons">
-          <template v-if="busy"><button type="button" class="button quiet" @click="stop()">Stop</button></template>
+          <template v-if="busy"><button type="button" class="button quiet" @click="stop()">{{ t('media.upload.stop') }}</button></template>
           <template v-else-if="finished && !toSend.length">
-            <button v-if="count('failed')" type="button" class="button" @click="retry()"><FontAwesomeIcon :icon="faRotateRight"/>Try again</button>
-            <button type="button" class="button primary" @click="close()">Done</button>
+            <button v-if="count('failed')" type="button" class="button" @click="retry()"><FontAwesomeIcon :icon="faRotateRight"/>{{ t('common.tryAgain') }}</button>
+            <button type="button" class="button primary" @click="close()">{{ t('media.upload.done') }}</button>
           </template>
           <template v-else>
-            <button type="button" class="button quiet" @click="cancel()">Cancel</button>
-            <button type="button" class="button primary" :aria-disabled="!toSend.length || reading > 0" @click="reading || upload()">Upload{{ toSend.length ? ` ${toSend.length}` : '' }}</button>
+            <button type="button" class="button quiet" @click="cancel()">{{ t('common.cancel') }}</button>
+            <button type="button" class="button primary" :aria-disabled="!toSend.length || reading > 0" @click="reading || upload()">{{ toSend.length ? t('media.upload.uploadN', { n: toSend.length }) : t('media.upload.upload') }}</button>
           </template>
         </span>
       </div>

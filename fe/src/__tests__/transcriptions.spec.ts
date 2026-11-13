@@ -3,6 +3,7 @@ import {
   defaultFile, formatWhen, hasTranscript, languageOf, isOn, ordinal, providerName, speakerName, split, statusText, timestamp, took, type Transcription,
   transcriptSummary, firstTranscript, transcriptsLine, turns, youtubeAt, type EpisodeTranscript,
 } from '@/transcriptions'
+import { t, tSl } from './i18n'
 
 function transcription(status: Transcription['status'], more: Partial<Transcription> = {}): Transcription {
   return {
@@ -14,13 +15,18 @@ function transcription(status: Transcription['status'], more: Partial<Transcript
 
 describe('transcriptions', () => {
   it('say how far they are, a place in line too', () => {
-    expect(statusText(transcription('QUEUED', { queued: 1 }))).toBe('Next in line')
-    expect(statusText(transcription('QUEUED', { queued: 3 }))).toBe('3rd in line')
-    expect(statusText(transcription('QUEUED'))).toBe('Waiting its turn')
-    expect(statusText(transcription('RECOGNIZING', { percent: 40 }))).toBe('Being heard · 40%')
-    expect(statusText(transcription('RECOGNIZING'))).toBe('Being heard')
-    expect(statusText(transcription('CANCELLED'))).toBe('Cancelled')
-    expect([1, 2, 3, 4, 11, 12, 13, 21, 22].map(ordinal)).toEqual(['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '22nd'])
+    const status = (it: Transcription) => statusText(it, t, 'en-GB')
+    expect(status(transcription('QUEUED', { queued: 1 }))).toBe('Next in line')
+    expect(status(transcription('QUEUED', { queued: 3 }))).toBe('3rd in line')
+    expect(status(transcription('QUEUED'))).toBe('Waiting its turn')
+    expect(status(transcription('RECOGNIZING', { percent: 40 }))).toBe('Being heard · 40%')
+    expect(status(transcription('RECOGNIZING'))).toBe('Being heard')
+    expect(status(transcription('CANCELLED'))).toBe('Cancelled')
+    expect([1, 2, 3, 4, 11, 12, 13, 21, 22].map((n) => ordinal(n, 'en-GB')))
+      .toEqual(['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '22nd'])
+    // In Slovenian, with its ordinals
+    expect(statusText(transcription('QUEUED', { queued: 3 }), tSl, 'sl-SI')).toBe('3. v vrsti')
+    expect(statusText(transcription('RECOGNIZING', { percent: 40 }), tSl, 'sl-SI')).toBe('Prepisovanje · 40 %')
   })
 
   it('are on while queued, starting or heard', () => {
@@ -44,16 +50,22 @@ describe('transcriptions', () => {
     expect(took(transcription('DONE', { finishedAt: '2026-10-28T10:24:30Z' }))).toBe('24:30')
     expect(took(transcription('RECOGNIZING'), new Date('2026-10-28T11:02:05Z'))).toBe('1:02:05')
     // In Ljubljana, whatever the browser's time zone
-    expect(formatWhen('2026-10-28T13:02:00Z')).toBe('28 Oct, 14:02')
+    expect(formatWhen('2026-10-28T13:02:00Z', 'en-GB')).toBe('28 Oct, 14:02')
+    expect(formatWhen('2026-10-28T13:02:00Z', 'sl-SI')).toBe('28. okt., 14:02')
   })
 
   it("say what a transcript has, and who speaks in it", () => {
-    expect(transcriptSummary({ id: 't', segments: 187, words: 7585, duration: 3314, speakers: [] })).toBe('187 lines · 7,585 words · 55:14')
-    expect(transcriptSummary({ id: 't', segments: 1, words: 1, duration: null, speakers: [{ label: '1', name: null }] }))
+    expect(transcriptSummary({ id: 't', segments: 187, words: 7585, duration: 3314, speakers: [] }, t, 'en-GB'))
+      .toBe('187 lines · 7,585 words · 55:14')
+    expect(transcriptSummary({ id: 't', segments: 1, words: 1, duration: null, speakers: [{ label: '1', name: null }] }, t, 'en-GB'))
       .toBe('1 line · 1 word · 1 speaker')
-    expect(speakerName('2', [{ label: '1', name: 'Oto Brglez' }])).toBe('Speaker 2')
-    expect(speakerName('1', [{ label: '1', name: 'Oto Brglez' }])).toBe('Oto Brglez')
-    expect(speakerName(null, [])).toBe(null)
+    const two = [{ label: '1', name: null }, { label: '2', name: null }]
+    expect(transcriptSummary({ id: 't', segments: 3, words: 105, duration: null, speakers: two }, tSl, 'sl-SI'))
+      .toBe('3 vrstice · 105 besed · 2 govorca')
+    expect(speakerName('2', [{ label: '1', name: 'Oto Brglez' }], t)).toBe('Speaker 2')
+    expect(speakerName('2', [], tSl)).toBe('Govorec 2')
+    expect(speakerName('1', [{ label: '1', name: 'Oto Brglez' }], t)).toBe('Oto Brglez')
+    expect(speakerName(null, [], t)).toBe(null)
     expect(timestamp(3725.9)).toBe('1:02:05')
     expect(providerName('soniox')).toBe('Soniox')
     expect(providerName('google')).toBe('Google Speech-to-Text')
@@ -108,8 +120,9 @@ describe("an episode's transcripts", () => {
     const google = transcript('g', 'google', 0, 8000)
     const soniox = transcript('s', 'soniox', 2, 8445)
     expect(firstTranscript([google, soniox])).toBe(soniox)
-    expect(transcriptsLine([google, soniox])).toBe('Soniox, 2 speakers, 8,445 words · also by Google Speech-to-Text')
-    expect(transcriptsLine([google])).toBe('Google Speech-to-Text, 8,000 words')
-    expect(transcriptsLine([])).toBe('None yet')
+    expect(transcriptsLine([google, soniox], t, 'en-GB')).toBe('Soniox, 2 speakers, 8,445 words · also by Google Speech-to-Text')
+    expect(transcriptsLine([google], t, 'en-GB')).toBe('Google Speech-to-Text, 8,000 words')
+    expect(transcriptsLine([], t, 'en-GB')).toBe('None yet')
+    expect(transcriptsLine([google, soniox], tSl, 'sl-SI')).toBe('Soniox, 2 govorca, 8445 besed · tudi Google Speech-to-Text')
   })
 })

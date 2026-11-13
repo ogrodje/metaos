@@ -4,16 +4,16 @@ import { faCopy } from '@fortawesome/free-regular-svg-icons'
 import { faCheck } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { withTimeout } from '@/usage'
+import { useLocale } from '@/useLocale'
 
 // A command to run in a terminal, or code to use, e.g. a GraphQL query: on the page's one code surface, with what it
 // is and a button that copies it at the top. Long lines scroll inside it rather than widening the page.
-const props = withDefaults(defineProps<{
+const props = defineProps<{
   command: string
-  // What it is, e.g. Terminal or GraphQL
+  // What it is, e.g. A comment on S05E08; else Terminal
   label?: string
-  // For the button, e.g. Copy the query
-  what?: string
-}>(), { label: 'Terminal', what: 'command' })
+}>()
+const { t } = useLocale()
 
 const code = ref<HTMLElement>()
 const copied = ref(false)
@@ -26,15 +26,15 @@ async function copy() {
   try {
     await withTimeout(navigator.clipboard.writeText(props.command))
     copied.value = true
-    status.value = 'Copied'
+    status.value = t('usage.copy.copied')
   } catch (error) {
     // Selected instead, for the keyboard's copy
-    console.error(`The ${props.what} was not copied`, error)
+    console.error('The command was not copied', error)
     const range = document.createRange()
     if (code.value) range.selectNodeContents(code.value)
     getSelection()?.removeAllRanges()
     getSelection()?.addRange(range)
-    status.value = 'Selected, to copy with ⌘C or Ctrl+C'
+    status.value = t('usage.copy.selected')
   }
   timer = setTimeout(() => {
     copied.value = false
@@ -46,9 +46,9 @@ async function copy() {
 <template>
   <div class="code">
     <div class="bar">
-      <span class="label">{{ label }}</span>
-      <button type="button" class="icon-link" :aria-label="copied ? 'Copied' : `Copy the ${what}`"
-              :title="copied ? 'Copied' : 'Copy'" @click="copy">
+      <span class="label">{{ label ?? t('usage.copy.terminal') }}</span>
+      <button type="button" class="icon-link" :aria-label="copied ? t('usage.copy.copied') : t('usage.copy.copyCommand')"
+              :title="copied ? t('usage.copy.copied') : t('usage.copy.copy')" @click="copy">
         <FontAwesomeIcon :icon="copied ? faCheck : faCopy"/>
       </button>
       <span class="visually-hidden" role="status">{{ status }}</span>

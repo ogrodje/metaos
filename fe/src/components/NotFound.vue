@@ -6,6 +6,7 @@ import { setResponseStatus, useHead } from '#imports'
 import { searchPath } from '@/search'
 import { useAuthStore } from '@/stores/auth'
 import { usePageTitle } from '@/title'
+import { useLocale } from '@/useLocale'
 
 // What isn't there, e.g. a page, an episode or a person, and where to go instead: on the team, a search for it first,
 // as it may have moved, e.g. to another code
@@ -16,6 +17,7 @@ const props = defineProps<{
 }>()
 
 const auth = useAuthStore()
+const { t, path } = useLocale()
 
 usePageTitle(() => props.title)
 
@@ -25,11 +27,17 @@ setResponseStatus(404)
 useHead({ meta: [{ name: 'robots', content: 'noindex' }] })
 
 const places = [
-  { path: '/', title: 'Home' },
-  { path: '/episodes', title: 'Episodes' },
-  { path: '/people', title: 'People' },
-  { path: '/dogodki', title: 'Events' },
+  { path: '/', title: 'nav.home' },
+  { path: '/episodes', title: 'nav.episodes' },
+  { path: '/people', title: 'nav.people' },
+  { path: '/dogodki', title: 'nav.events' },
 ]
+
+// The search, in the page's language
+function searchFor(text: string) {
+  const to = searchPath(text)
+  return { ...to, path: path(to.path) }
+}
 </script>
 
 <template>
@@ -37,10 +45,10 @@ const places = [
     <h1 id="not-found">{{ title }}</h1>
     <p><slot/></p>
     <div class="actions">
-      <RouterLink v-if="auth.team && search" class="button" :to="searchPath(search)">
-        <FontAwesomeIcon :icon="faMagnifyingGlass"/>Search for “{{ search }}”
+      <RouterLink v-if="auth.team && search" class="button" :to="searchFor(search)">
+        <FontAwesomeIcon :icon="faMagnifyingGlass"/>{{ t('ui.searchFor', { search }) }}
       </RouterLink>
-      <RouterLink v-for="place in places" :key="place.path" class="button" :to="place.path">{{ place.title }}</RouterLink>
+      <RouterLink v-for="place in places" :key="place.path" class="button" :to="path(place.path)">{{ t(place.title) }}</RouterLink>
     </div>
   </section>
 </template>

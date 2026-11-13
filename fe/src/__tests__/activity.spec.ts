@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { activity, BURST_MINUTES, type ChangeEntry, filtered, isNew, recentActivity, shortWhen } from '@/activity'
 import type { Comment } from '@/comments'
 import type { Change, ChangeKind, ChangeSubject, FieldChange } from '@/episodes'
+import { t, tSl } from './i18n'
 
 function change(at: string, summary: string, kind: ChangeKind = 'EPISODE', fields: FieldChange[] = [], more: Partial<Change> = {}): Change {
   return { at: `2026-10-19T${at}:00Z`, actor: 'Oto Brglez', client: 'claude', tool: 'update_episode', kind, commentId: null, summary, fields, ...more }
@@ -32,15 +33,15 @@ const created = [
 
 describe('activity', () => {
   it("reads one person's changes made close together as one entry", () => {
-    const [entry] = changes(activity(created, []))
-    expect(activity(created, [])).toHaveLength(1)
+    const [entry] = changes(activity(created, [], t, 'en-GB'))
+    expect(activity(created, [], t, 'en-GB')).toHaveLength(1)
     expect(entry?.headline).toBe('Created the episode')
     expect(entry?.count).toBe(8)
     expect(entry?.how).toBe('MCP · create_episode, assign_person_to_episode, update_episode, set_episode_status')
     expect(entry?.lines).toEqual([
       { label: 'Code', text: 'S05E08' },
       { label: 'Title', text: 'Poletna vročica' },
-      { label: 'Status', text: 'idea → planned → scheduled → recorded → in production' },
+      { label: 'Status', text: 'Idea → Planned → Scheduled → Recorded → In production' },
       { label: null, text: 'Added Andraž Sraka as host' },
       { label: null, text: 'Added Andraž Brodnik as guest' },
     ])
@@ -51,7 +52,7 @@ describe('activity', () => {
       change('10:00', 'Linked a Google Doc', 'DOCUMENT'),
       change('10:16', 'Linked the Koofr folder /Epizode/S05E08', 'KOOFR_FOLDER'),
       change('10:17', 'Added Jan Dolar as producer', 'PERSON', [], { actor: 'Andraž Sraka' }),
-    ], [])
+    ], [], t, 'en-GB')
     expect(changes(entries).map((entry) => entry.headline))
       .toEqual(['Linked a Google Doc', 'Linked the Koofr folder /Epizode/S05E08', 'Added Jan Dolar as producer'])
   })
@@ -61,7 +62,7 @@ describe('activity', () => {
       change('10:00', 'Changed the episode', 'EPISODE', [field('Title', 'A', 'B'), field('Title B', null, 'X')]),
       change('10:05', 'Changed the episode', 'EPISODE', [field('Title', 'B', 'C'), field('Summary', null, null)]),
       change('10:06', 'Changed the episode', 'EPISODE', [field('Title B', 'X', null)]),
-    ], []))
+    ], [], t, 'en-GB'))
     expect(entry?.headline).toBe('Changed the episode')
     expect(entry?.lines).toEqual([
       { label: 'Title', text: 'A → C' },
@@ -76,8 +77,15 @@ describe('activity', () => {
       change('10:01', 'Added Ana as guest', 'PERSON'),
       change('10:01', 'Added Bor as guest', 'PERSON'),
       change('10:02', 'Linked a Google Doc', 'DOCUMENT'),
-    ], []))
+    ], [], t, 'en-GB'))
     expect(entry?.headline).toBe('Changed the episode, added 2 people and linked a Google Doc')
+    // In Slovenian what it adds, with the summaries as the API has them
+    const [sl] = changes(activity([
+      change('10:01', 'Added Ana as guest', 'PERSON'),
+      change('10:01', 'Added Bor as guest', 'PERSON'),
+      change('10:02', 'Linked a Google Doc', 'DOCUMENT'),
+    ], [], tSl, 'sl-SI'))
+    expect(sl?.headline).toBe('Dodani 2 osebi in linked a Google Doc')
     expect(entry?.lines.map((line) => line.text)).toEqual(['9 Jul 2026', 'Added Ana as guest', 'Added Bor as guest', 'Linked a Google Doc'])
   })
 
@@ -86,7 +94,7 @@ describe('activity', () => {
       change('10:00', 'Commented', 'COMMENT', [], { commentId: 'gone-1' }),
       change('10:01', 'Commented', 'COMMENT', [], { commentId: 'gone-2' }),
       change('10:02', "Changed Ana's role", 'PERSON'),
-    ], []))
+    ], [], t, 'en-GB'))
     expect(entry?.headline).toBe('Changed roles and commented twice')
   })
 
@@ -96,7 +104,7 @@ describe('activity', () => {
       change('10:11', 'Unlinked the Dropbox folder /Season 5/S05E07', 'DROPBOX_FOLDER'),
       change('10:12', 'Linked the Dropbox folder /Season 5/S05E07', 'DROPBOX_FOLDER'),
       change('10:12', 'Made a link to the Dropbox folder /Season 5/S05E07', 'DROPBOX_FOLDER'),
-    ], []))
+    ], [], t, 'en-GB'))
     expect(entry?.headline).toBe('Linked the Dropbox folder /Season 5/S05E07')
     expect(entry?.lines).toEqual([])
     expect(entry?.count).toBe(4)
@@ -107,7 +115,7 @@ describe('activity', () => {
       change('10:00', 'Commented', 'COMMENT', [field('Comment', null, 'Hi')], { commentId: 'c1', tool: null, client: 'metaos-ui' }),
       change('10:01', 'Edited a comment', 'COMMENT', [], { commentId: 'c1', tool: null, client: 'metaos-ui' }),
       change('11:00', 'Deleted a comment', 'COMMENT', [], { commentId: 'c2', tool: null, client: 'metaos-ui' }),
-    ], [comment('c1', '10:00')])
+    ], [comment('c1', '10:00')], t, 'en-GB')
     expect(entries.map((entry) => (entry.type === 'comment' ? `comment ${entry.comment.id}` : entry.headline)))
       .toEqual(['comment c1', 'Deleted a comment'])
     expect(changes(entries)[0]?.how).toBe('MetaOS')
@@ -115,7 +123,7 @@ describe('activity', () => {
 
   it('puts comments and changes in the order they were made, and filters them', () => {
     const entries = activity([change('09:00', 'Linked a Google Doc', 'DOCUMENT'), change('12:00', 'Added Ana as guest', 'PERSON')],
-      [comment('c1', '10:00')])
+      [comment('c1', '10:00')], t, 'en-GB')
     expect(entries.map((entry) => entry.type)).toEqual(['changes', 'comment', 'changes'])
     expect(filtered(entries, 'comments')).toHaveLength(1)
     expect(filtered(entries, 'changes')).toHaveLength(2)
@@ -126,7 +134,7 @@ describe('activity', () => {
     const entries = changes(activity([
       change('10:00', 'Changed the episode', 'EPISODE', [field('Aired', null, '13 Oct 2026')]),
       change('10:01', 'Changed the episode', 'EPISODE', [field('Status', 'ready', 'published')], { actor: null, client: null, tool: null }),
-    ], []))
+    ], [], t, 'en-GB'))
     expect(entries.map((entry) => [entry.actor, entry.how])).toEqual([['Oto Brglez', 'MCP · update_episode'], [null, null]])
   })
 })
@@ -142,18 +150,20 @@ describe('recentActivity', () => {
       change('10:03', 'Created the episode', 'EPISODE', [], { about: idea('3'), actor: 'Andraž Sraka' }),
       change('10:04', 'Created the episode', 'EPISODE', [], { about: idea('4'), actor: 'Andraž Sraka' }),
       change('11:00', 'Linked a Google Doc', 'DOCUMENT', [], { about: idea('1') }),
-    ])
+    ], t, 'en-GB')
     expect(entries.map((entry) => entry.headline)).toEqual(['Linked a Google Doc', 'Created 4 episodes'])
     expect(entries[1]?.about.map((subject) => subject.id)).toEqual(['1', '2', '3'])
     expect(entries[1]?.more).toBe(1)
     expect(entries[1]?.count).toBe(5)
+    expect(recentActivity(created.map((c, i) => ({ ...c, summary: 'Created the episode', about: idea(`${i}`) })), tSl, 'sl-SI')[0]?.headline)
+      .toBe('Ustvarjenih 8 epizod')
   })
 
   it('says it changed things when not all of them were created', () => {
     const [entry] = recentActivity([
       change('10:00', 'Changed the episode', 'EPISODE', [field('Title', 'A', 'B')], { about: idea('1') }),
       change('10:01', 'Changed the person', 'PERSON', [field('Bio', null, 'X')], { about: { kind: 'PERSON', id: 'p', name: 'Ana', code: null } }),
-    ])
+    ], t, 'en-GB')
     expect(entry?.headline).toBe('Changed 1 episode and 1 person')
   })
 })
@@ -164,26 +174,26 @@ describe("what's new", () => {
     change(time, 'Changed the episode', 'EPISODE', [field('Title', 'A', 'B')], { actor }))
 
   it('is what others did since the page was last opened', () => {
-    const [entry] = activity(by('Jan Dolar', '16:30'), [])
+    const [entry] = activity(by('Jan Dolar', '16:30'), [], t, 'en-GB')
     expect(isNew(entry!, seen, 'Oto Brglez')).toBe(true)
     expect(isNew(entry!, seen, 'Jan Dolar')).toBe(false)
     expect(isNew(entry!, Date.parse('2026-10-19T17:00:00Z'), 'Oto Brglez')).toBe(false)
   })
 
   it('is nothing the first time the page is opened', () => {
-    const [entry] = activity(by('Jan Dolar', '16:30'), [])
+    const [entry] = activity(by('Jan Dolar', '16:30'), [], t, 'en-GB')
     expect(isNew(entry!, null, 'Oto Brglez')).toBe(false)
   })
 
   it("isn't one's own comment", () => {
-    const [mine] = activity([], [comment('1', '16:30')])
-    const [theirs] = activity([], [{ ...comment('2', '16:30'), mine: false }])
+    const [mine] = activity([], [comment('1', '16:30')], t, 'en-GB')
+    const [theirs] = activity([], [{ ...comment('2', '16:30'), mine: false }], t, 'en-GB')
     expect(isNew(mine!, seen, null)).toBe(false)
     expect(isNew(theirs!, seen, null)).toBe(true)
   })
 
   it('counts changes made close together by when the last was made', () => {
-    const [entry] = activity(by('Jan Dolar', '15:50', '16:05'), [])
+    const [entry] = activity(by('Jan Dolar', '15:50', '16:05'), [], t, 'en-GB')
     expect(isNew(entry!, seen, 'Oto Brglez')).toBe(true)
   })
 })
@@ -193,14 +203,18 @@ describe('shortWhen', () => {
   const now = new Date('2026-10-28T14:00:00Z')
 
   it('says today and yesterday with the time, else the date, with its year when it was another', () => {
-    expect(shortWhen('2026-10-28T13:14:00Z', now)).toBe('today, 14:14')
-    expect(shortWhen('2026-10-27T16:32:00Z', now)).toBe('yesterday, 17:32')
-    expect(shortWhen('2026-10-23T10:00:00Z', now)).toBe('23 Oct')
-    expect(shortWhen('2025-10-23T10:00:00Z', now)).toBe('23 Oct 2025')
+    expect(shortWhen('2026-10-28T13:14:00Z', t, 'en-GB', now)).toBe('today, 14:14')
+    expect(shortWhen('2026-10-27T16:32:00Z', t, 'en-GB', now)).toBe('yesterday, 17:32')
+    expect(shortWhen('2026-10-23T10:00:00Z', t, 'en-GB', now)).toBe('23 Oct')
+    expect(shortWhen('2025-10-23T10:00:00Z', t, 'en-GB', now)).toBe('23 Oct 2025')
+  })
+
+  it('says it in Slovenian', () => {
+    expect(shortWhen('2026-10-27T16:32:00Z', tSl, 'sl-SI', now)).toBe('včeraj, 17:32')
   })
 
   it("goes by Ogrodje's days, whatever the browser's time zone", () => {
-    expect(shortWhen('2026-10-27T23:30:00Z', now)).toBe('today, 00:30')
+    expect(shortWhen('2026-10-27T23:30:00Z', t, 'en-GB', now)).toBe('today, 00:30')
   })
 })
 

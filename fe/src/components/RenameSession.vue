@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { RENAME_SESSION, type Session } from '@/episodes'
 import { errorMessage, graphql } from '@/graphql'
+import { useLocale } from '@/useLocale'
 
 // A recording session's name, as the team changes it on its page, in place of its heading: updateSession, as
 // update_session does over MCP. Empty clears it, and the session goes by its location again, else by its date.
@@ -12,9 +13,11 @@ const emit = defineEmits<{
   close: []
 }>()
 
+const { t } = useLocale()
+
 const draft = ref(props.session.name ?? '')
 const busy = ref(false)
-const error = ref<string>()
+const error = ref<unknown>()
 const input = ref<HTMLInputElement>()
 
 onMounted(() => {
@@ -33,7 +36,7 @@ async function save() {
     emit('renamed', session)
     emit('close')
   } catch (e) {
-    error.value = errorMessage(e)
+    error.value = e
   } finally {
     busy.value = false
   }
@@ -42,17 +45,17 @@ async function save() {
 
 <template>
   <form class="rename" @submit.prevent="save" @keydown.esc.prevent="emit('close')">
-    <label for="session-name" class="label">Name</label>
+    <label for="session-name" class="label">{{ t('sessions.form.name') }}</label>
     <div class="row">
       <input id="session-name" ref="input" v-model="draft" class="input" type="text" lang="sl" autocomplete="off" :readonly="busy"
-             :placeholder="session.location ?? 'e.g. AWS Community Day Adria 2026'" aria-describedby="session-name-hint">
-      <button type="submit" class="button primary" :aria-disabled="busy || undefined">{{ busy ? 'Saving…' : 'Save' }}</button>
-      <button type="button" class="button" :disabled="busy" @click="emit('close')">Cancel</button>
+             :placeholder="session.location ?? t('sessions.form.placeholder')" aria-describedby="session-name-hint">
+      <button type="submit" class="button primary" :aria-disabled="busy || undefined">{{ busy ? t('sessions.form.saving') : t('common.save') }}</button>
+      <button type="button" class="button" :disabled="busy" @click="emit('close')">{{ t('common.cancel') }}</button>
     </div>
     <p id="session-name-hint" class="hint">
-      Without a name, it goes by its {{ session.location ? `location, ${session.location}` : 'date' }}.
+      {{ session.location ? t('sessions.form.byLocation', { location: session.location }) : t('sessions.form.byDate') }}
     </p>
-    <p v-if="error" class="error" role="alert">{{ error }}</p>
+    <p v-if="error" class="error" role="alert">{{ errorMessage(error, t) }}</p>
   </form>
 </template>
 

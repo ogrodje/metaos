@@ -1,18 +1,22 @@
 <script setup lang="ts">
+import { useLocale } from '@/useLocale'
+
 // A list's place while it loads: rows as tall and ruled as the list's, so the page doesn't jump when it comes. They
 // show only when loading takes a moment, so a quick load doesn't flash them.
 withDefaults(defineProps<{
   rows?: number
   // Episodes and ideas with their summary (EpisodeItem, PersonItem) are taller than a line (EpisodeRow)
   tall?: boolean
-  // Said to screen readers, e.g. "Loading the episodes"
+  // Said to screen readers, in the page's language, e.g. "Loading the episodes"; else Loading
   label?: string
-}>(), { rows: 4, tall: false, label: 'Loading' })
+}>(), { rows: 4, tall: false })
+
+const { t } = useLocale()
 </script>
 
 <template>
   <div class="loading" :class="{ tall }" role="status">
-    <span class="visually-hidden">{{ label }}…</span>
+    <span class="visually-hidden">{{ t('ui.loadingLabel', { label: label ?? t('ui.loading') }) }}</span>
     <div v-for="row in rows" :key="row" class="row" aria-hidden="true">
       <span class="bar code"/>
       <span class="lines">
