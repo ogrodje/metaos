@@ -324,8 +324,10 @@ class TranscriptionTest @Autowired constructor(
         single.holding = true
 
         val firstOn = mcp.transcribeEpisode("S09E86", first.id, "single", null, null, null)
-        until("the first was heard") { transcription("S09E86", first, "single")?.status == TranscriptionStatus.RECOGNIZING }
-        assertEquals(50, transcription("S09E86", first, "single")?.percent)
+        // How far it got comes in a write after its status, so it's waited for too, not read the moment the status is in
+        until("the first was heard, half of it") {
+            transcription("S09E86", first, "single")?.let { it.status == TranscriptionStatus.RECOGNIZING && it.percent == 50 } == true
+        }
         val secondOn = mcp.transcribeEpisode("S09E86", second.id, "single", null, null, null)
         until("the second waited its turn, next in line") {
             mcp.getTranscription(secondOn.id).let { it.status == TranscriptionStatus.QUEUED && it.queued == 1 }
