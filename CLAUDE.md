@@ -93,7 +93,7 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
 - keycloak-js starts once the page is hydrated ([`fe/src/plugins/auth.client.ts`](fe/src/plugins/auth.client.ts)), and
   a page loads again once the user is known to be on the team (`auth.team`: the realm role `metaos-user` is in their
   token), when what's the team's comes on top. Until then a page has to render in the browser as it did on the server:
-  what depends on who's signed in waits for `auth.ready`, `auth.team` or `auth.likelyMember`, which are false there;
+  what depends on who's signed in waits for `auth.ready`, `auth.team`, `auth.member` or `auth.likelyTeam`, which are false there;
   dates are in English and in Ogrodje's time zone (`DATE_LOCALE`, `TIME_ZONE`), whatever the browser's; and
   `navigator`, `location`, `document` and storage are read in `onMounted` or handlers only. Nothing may write
   module-level state on the server, which every request shares (`pageName` in `title.ts` is the browser's only).
@@ -304,12 +304,15 @@ just keycloak apply dev         # and after each change to infra/keycloak/realm;
   changes and the thumbnails): Keycloak can issue the scope to more than staff, e.g. a client registered
   through DCR for its own service account. Test JWTs carry it with `claim("realm_access", APPROVED)`, and a member's
   roles with `MEMBER` (`TestTokens.kt`).
-- The front-end signs users in as `metaos-ui`, a public client with PKCE. Its tokens carry `metaos:account` for every
-  member (`API_ACCOUNT_SCOPE`, which only lets the token into `/graphql`, e.g. for `me`), and for staff `metaos:read`
-  and `metaos:write` (`API_READ_SCOPE`, `API_WRITE_SCOPE`: reading the team's data and changing it, e.g. comments);
-  each puts the `/graphql` URL into `aud` (and doesn't get them into `/mcp`), and Keycloak puts each in a token only
-  for its role (`infra/keycloak/realm/scopes.tf`). They're the client's own scopes, not realm defaults, as MCP clients
-  registering themselves could ask for any realm default.
+- The front-end signs users in as `metaos-ui`, a public client with PKCE. Its tokens carry `metaos:account`
+  (`API_ACCOUNT_SCOPE`, which only lets the token into `/graphql`, e.g. for `me`), `metaos:read` and `metaos:write`
+  (`API_READ_SCOPE`, `API_WRITE_SCOPE`: reading the team's data and changing it, e.g. comments); each puts the
+  `/graphql` URL into `aud` (and doesn't get them into `/mcp`). They're the client's own scopes, not realm defaults, as
+  MCP clients registering themselves could ask for any realm default. **A member's token has all three:** Keycloak
+  gives every user a client's default scopes, whatever the scopes' role mappings (`infra/keycloak/realm/scopes.tf`),
+  as a real member's token showed. So the scope never decides alone: `approvedFor` (`Security.kt`) wants
+  `metaos-user` too, for `/mcp`, the team's data, every change and the thumbnails, and the tests sign members in with
+  every scope (`AccountsGraphQLTest`'s `member`).
 - Dev login: `dev` / `dev`.
 - Every Keycloak sends its email (e.g. the links to verify an address) through Ogrodje's mail server as
   `iva@ogrodje.si`, which forwards to the bot's Gmail (OG-61): production's and development's alike, so a dev

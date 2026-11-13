@@ -86,10 +86,13 @@ class AccountsGraphQLTest @Autowired constructor(
             .andExpect(jsonPath("$.data.unlinkAccount.linkedHow").value(null as Any?))
     }
 
-    // Anyone who signs in through MetaOS's pages, as Keycloak would sign them in: a member, with metaos:account only
+    // Anyone who signs in through MetaOS's pages, as Keycloak signs them in: a member, whose token has every scope of
+    // metaos-ui's, metaos:read and metaos:write too. Keycloak doesn't keep a client's default scopes from users without
+    // their roles (seen on a real token), so the role is what keeps a member out (approvedFor in Security.kt)
     private fun member(username: String, email: String? = null, verified: Boolean = true) = jwt().jwt {
         it.subject("$username-id").claim("preferred_username", username).claim("azp", "metaos-ui")
-            .claim("realm_access", MEMBER).claim("scope", "profile email $API_ACCOUNT_SCOPE")
+            .claim("realm_access", MEMBER)
+            .claim("scope", "openid profile email $API_ACCOUNT_SCOPE $API_READ_SCOPE $API_WRITE_SCOPE")
         if (email != null) it.claim("email", email).claim("email_verified", verified)
     }
 

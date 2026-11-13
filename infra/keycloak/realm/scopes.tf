@@ -1,8 +1,8 @@
-# MetaOS's client scopes. Each puts a MetaOS URL into the token's audience, which MetaOS checks, and Keycloak puts one in
-# a token only when its user has the scope's role (the role scope mappings): metaos-user, staff, for all but
-# metaos:account, which every member has, so that /graphql takes a member's token, e.g. for `me`. So a member gets
-# neither MCP nor the team's data nor changes, and a client's own service account none of them (no client it may
-# register has metaos:account).
+# MetaOS's client scopes. Each puts a MetaOS URL into the token's audience, which MetaOS checks. Each has its role (the
+# role scope mappings): metaos-user, staff, for all but metaos:account, every member's, so that /graphql takes a
+# member's token, e.g. for `me`. Those don't keep a scope out of a token: a client's default scopes are in every user's,
+# so a member's token from metaos-ui has metaos:read and metaos:write too (seen on a real one). MetaOS is what keeps a
+# member from MCP, the team's data and changes: it wants metaos-user as well as the scope (approvedFor in Security.kt).
 locals {
   scopes = {
     "mcp:tools" = {

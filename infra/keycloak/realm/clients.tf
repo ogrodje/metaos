@@ -26,8 +26,8 @@ resource "keycloak_openid_client" "metaos_ui" {
   web_origins                     = local.ui_urls
 }
 
-# Its tokens carry metaos:account for every member, and metaos:read and metaos:write for staff, which let them into
-# /graphql (scopes.tf); mcp:tools is no business of its
+# Its tokens carry metaos:account, metaos:read and metaos:write, which let them into /graphql (scopes.tf), every user's,
+# a member's too: MetaOS gives only staff (metaos-user) the team's data and changes. mcp:tools is no business of its
 resource "keycloak_openid_client_default_scopes" "metaos_ui" {
   realm_id  = keycloak_realm.metaos.id
   client_id = keycloak_openid_client.metaos_ui.id
