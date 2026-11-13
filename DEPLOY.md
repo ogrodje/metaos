@@ -275,20 +275,21 @@ Terraform's applies lands first:
      policy `https://ogrodje.si/zasebnost`, and the app is published, not in Testing, so members can sign in with
      Google.
 
-`metaos.ogrodje.si` keeps working, whole, so the MCP connectors added there keep theirs; the Usage page asks whoever
-added one there to add it again at `https://ogrodje.si/mcp` by 30 November 2026 (`MCP_MOVED` in `fe/src/usage.ts`).
-Then it redirects to `ogrodje.si`, and the second host goes from Keycloak, the app, the Ingresses, CORS and the cache
-rule (OG-60).
+`metaos.ogrodje.si` kept working, whole, the same day only: then everything on it redirected to `ogrodje.si`'s home
+page, whatever its path, `/mcp` and `/graphql` too (OG-60). Nothing's kept for the old address: the second host went
+from Keycloak, the app, the Ingresses, CORS (`just infra gcp apply`) and the cache rule, and so did what let MetaOS be
+at two hosts. MCP connectors added at `metaos.ogrodje.si` are added again at `https://ogrodje.si/mcp`; the team was
+told so.
 
-**Rolling back** is pointing DNS at Netlify again: in `infra/cloudflare/dns.tf`, the apex's A record `75.2.60.5` and
-www's CNAME `ogrodje.netlify.app`, and the redirect rule out, as Netlify redirects www itself. MetaOS is still whole at
-`metaos.ogrodje.si`, and Keycloak takes both, so nothing else has to go back first; `public-urls` and Keycloak's URLs
-go back after, for the canonical addresses and the MCP address the Usage page gives.
+**Rolling back** to Netlify would be pointing DNS at it again (the apex's A record `75.2.60.5`, www's CNAME
+`ogrodje.netlify.app`, which Netlify redirects itself), with MetaOS back at `metaos.ogrodje.si`: its redirect out,
+and `public-urls`, Keycloak's URLs, the Ingresses and CORS back to it. Only while the Netlify site still has the
+domain.
 
 ## Next steps
 
-1. [ ] **DNS.** Add `metaos.ogrodje.si` and `metaos-auth.ogrodje.si` as proxied Cloudflare CNAMEs to
-   `ogrodje-one.boo.run`, like `goo.ogrodje.si`.
+1. [x] **DNS.** Terraform's (`infra/cloudflare/dns.tf`): `ogrodje.si` and `metaos-auth.ogrodje.si` on the node,
+   `ogrodje-one.ogrodje.si`, proxied; `www` redirects to `ogrodje.si`, and `metaos.ogrodje.si` to its home page.
 2. [ ] **Secrets.** Add `PROD_METAOS_DB_PASSWORD`, `PROD_KEYCLOAK_DB_PASSWORD`, `PROD_KEYCLOAK_ADMIN_PASSWORD`
    (`openssl rand -hex 24` each), `DOCKER_REGISTRY_USERNAME` and
    `DOCKER_REGISTRY_PASSWORD` to `.envrc`, then run `./k8s/set_secrets.sh`.

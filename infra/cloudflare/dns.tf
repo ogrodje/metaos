@@ -1,6 +1,7 @@
 # MetaOS's names, proxied: Cloudflare holds their certificates (the cluster has none) and caches what may be cached
 
-# The pages, and MetaOS's paths beside them (the Ingress tells them apart), on the node
+# MetaOS's address until OG-59, which Cloudflare redirects to ogrodje.si (redirects.tf), so nothing of it reaches the
+# node. Proxied, as the redirect is Cloudflare's
 resource "cloudflare_dns_record" "metaos" {
   zone_id = local.zone_id
   name    = "metaos.ogrodje.si"

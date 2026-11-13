@@ -25,8 +25,8 @@ someone's head or inbox.
 
 ## Positioning
 
-It's Ogrodje's own production desk, not a podcast host or a listeners' site: [ogrodje.si](https://ogrodje.si) is for
-listeners. Its public pages are the same pages the team works on, with the team's parts left out.
+It's Ogrodje's own production desk, not a podcast host, and since OG-59 also [ogrodje.si](https://ogrodje.si), where
+listeners come: its public pages are the same pages the team works on, with the team's parts left out.
 
 ## Operating Context
 

@@ -22,5 +22,21 @@ resource "cloudflare_ruleset" "redirects" {
       }
       enabled = true
     },
+    {
+      # metaos.ogrodje.si, MetaOS's address until OG-59: anything on it goes to ogrodje.si's home page, for good, its
+      # path and query not kept, /mcp and /graphql too, as nothing's kept for the old address (OG-60)
+      ref         = "metaos-to-apex"
+      description = "metaos: to ogrodje.si"
+      expression  = "(http.host eq \"metaos.ogrodje.si\")"
+      action      = "redirect"
+      action_parameters = {
+        from_value = {
+          status_code           = 301
+          target_url            = { value = "https://ogrodje.si/" }
+          preserve_query_string = false
+        }
+      }
+      enabled = true
+    },
   ]
 }

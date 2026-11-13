@@ -67,7 +67,7 @@ module "storage_prod" {
 
   env          = "prod"
   media_bucket = "media.ogrodje.si"
-  origins      = ["https://metaos.ogrodje.si", "https://ogrodje.si"] # both, while MetaOS moves to ogrodje.si (OG-59)
+  origins      = ["https://ogrodje.si"]
   production   = true
 }
 

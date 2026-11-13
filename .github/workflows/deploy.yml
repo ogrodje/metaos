@@ -279,19 +279,18 @@ jobs:
 
       - name: Smoke the deployed app
         run: |
-          # Public discovery documents: prove Cloudflare, nginx, the app and Keycloak, and that the URLs line up. Two
-          # minutes for the first, as Terraform points ogrodje.si's DNS at the node beside this deploy (OG-59)
-          meta=$(curl -sf --retry 12 --retry-delay 10 --retry-all-errors \
+          # Public discovery documents: prove Cloudflare, nginx, the app and Keycloak, and that the URLs line up
+          meta=$(curl -sf --retry 6 --retry-delay 5 --retry-all-errors \
             https://ogrodje.si/.well-known/oauth-protected-resource/mcp)
           if ! echo "$meta" | grep -q '"resource":"https://ogrodje.si/mcp"'; then
             echo "::error::unexpected protected resource metadata: $meta"
             exit 1
           fi
-          # MCP's old address, for the clients that still connect there till OG-60, says its own
-          meta=$(curl -sf --retry 6 --retry-delay 5 --retry-all-errors \
-            https://metaos.ogrodje.si/.well-known/oauth-protected-resource/mcp)
-          if ! echo "$meta" | grep -q '"resource":"https://metaos.ogrodje.si/mcp"'; then
-            echo "::error::unexpected protected resource metadata at metaos.ogrodje.si: $meta"
+          # MetaOS's old address is Cloudflare's redirect to ogrodje.si's home page, whatever's asked for (OG-60)
+          location=$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' --retry 6 --retry-delay 5 \
+            'https://metaos.ogrodje.si/mcp?x=1')
+          if [ "$location" != '301 https://ogrodje.si/' ]; then
+            echo "::error::metaos.ogrodje.si answers '$location'"
             exit 1
           fi
           # www is Cloudflare's redirect to ogrodje.si, path and query kept
