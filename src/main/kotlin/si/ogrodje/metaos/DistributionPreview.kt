@@ -148,7 +148,7 @@ class PublicWeb(@Value("\${metaos.previews.allow-local:false}") private val allo
 
     private companion object {
         const val MAX_REDIRECTS = 4
-        const val USER_AGENT = "Mozilla/5.0 (compatible; MetaOS/1.0; +https://metaos.ogrodje.si)"
+        const val USER_AGENT = "Mozilla/5.0 (compatible; MetaOS/1.0; +https://ogrodje.si)"
     }
 }
 

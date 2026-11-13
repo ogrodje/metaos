@@ -108,7 +108,7 @@ class Media(private val properties: PatreonProperties) {
         repeat(6) {
             onTheInternet(uri)
             val request = HttpRequest.newBuilder(uri).timeout(Duration.ofHours(1))
-                .header("User-Agent", "Ogrodje patreon-gateway (https://metaos.ogrodje.si)").GET().build()
+                .header("User-Agent", "Ogrodje patreon-gateway (https://ogrodje.si)").GET().build()
             val response = downloader.send(request, HttpResponse.BodyHandlers.ofFile(file))
             if (response.statusCode() !in 300..399) return response
             uri = uri.resolve(response.headers().firstValue("Location").orElseThrow { IllegalArgumentException("${uri.host} redirected nowhere") })

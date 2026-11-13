@@ -350,7 +350,7 @@ class PatreonApi(
 
     private companion object {
         const val API = "https://www.patreon.com/api/oauth2/v2/"
-        const val USER_AGENT = "Ogrodje patreon-gateway (https://metaos.ogrodje.si)"
+        const val USER_AGENT = "Ogrodje patreon-gateway (https://ogrodje.si)"
         const val POST_FIELDS = "title,url,published_at,is_public,is_paid,tiers,content,embed_url"
         const val MEMBER_FIELDS = "full_name,email,patron_status,pledge_relationship_start,lifetime_support_cents," +
             "currently_entitled_amount_cents,last_charge_date,last_charge_status,is_free_trial,is_gifted"

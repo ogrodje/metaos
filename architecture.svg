@@ -89,7 +89,7 @@
   <rect class="box main" x="664" y="144" width="324" height="450" rx="10"/>
   <text class="t" x="680" y="170">MetaOS</text>
   <text class="m" x="972" y="170" text-anchor="end">Spring Boot · Kotlin</text>
-  <text class="mono m" x="680" y="188">metaos.ogrodje.si</text>
+  <text class="mono m" x="680" y="188">ogrodje.si</text>
 
   <rect class="row" x="676" y="196" width="300" height="36" rx="5"/>
   <text class="mono" x="688" y="218">/graphql</text>

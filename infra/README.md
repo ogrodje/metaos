@@ -8,7 +8,7 @@ Nothing in it is set up by hand or by a script: a change to it is a change here,
 | [`keycloak/`](keycloak)       | Realm `metaos`: scopes, clients, sign-in providers, members and staff, sessions, email | `prod`: Cloud Storage; `dev`: each developer's own | `prod`: CI, on merge; `dev`: `just keycloak <command> dev` |
 | [`gcp/`](gcp)                 | Project `ogrodje-metaos`: both environments' Cloud Storage, the states' bucket, CI's way in | Cloud Storage          | `just infra gcp <command>`, by its owners only |
 | [`newrelic/`](newrelic)       | New Relic: the browser apps, uptime checks, alerts and where they go, the dashboard       | Cloud Storage          | CI, on merge |
-| [`cloudflare/`](cloudflare)   | Zone `ogrodje.si`, as far as MetaOS goes: its three names, the zone's cache and configuration rules, Smart Tiered Caching | Cloud Storage          | CI, on merge |
+| [`cloudflare/`](cloudflare)   | Zone `ogrodje.si`, as far as MetaOS goes: its five names (the apex and www too), the zone's cache, configuration and redirect rules, Smart Tiered Caching | Cloud Storage          | CI, on merge |
 | [`tailscale/`](tailscale)     | The tailnet's policy file, all of it. **Private:** never in git, never in CI (below)     | Cloud Storage          | `just infra tailscale <command>`, on a machine that has the file |
 
 ## Public and private
@@ -54,7 +54,7 @@ in them, so only the project's owners and CI read it. Development's Keycloak is 
 | The states, and `gcp`                       | You, in gcloud (`gcloud auth login`): `just` hands Terraform gcloud's token | `metaos-terraform-ci`, with no key (Workload Identity Federation, `gcp/ci.tf`) |
 | Keycloak                                    | `KEYCLOAK_ADMIN_USERNAME`, `KEYCLOAK_ADMIN_PASSWORD`; development's is `admin` / `admin` | The same secrets |
 | New Relic                                   | `NEW_RELIC_USER_KEY`, a User API key                 | `NEW_RELIC_API_KEY`           |
-| Cloudflare                                  | `CLOUDFLARE_API_TOKEN`: zone `ogrodje.si`, Zone Read, DNS Edit, Zone Settings Edit, Cache Rules Edit, Config Rules Edit | The same secret |
+| Cloudflare                                  | `CLOUDFLARE_API_TOKEN`: zone `ogrodje.si`, Zone Read, DNS Edit, Zone Settings Edit, Cache Rules Edit, Config Rules Edit, Single Redirect Edit | The same secret |
 | Tailscale                                   | `TAILSCALE_OAUTH_CLIENT_ID`, `TAILSCALE_OAUTH_CLIENT_SECRET`: the OAuth client "MetaOS Terraform" (Trust credentials) with Policy File write, Devices Core read, Devices Routes read | Not in CI |
 
 ## CI

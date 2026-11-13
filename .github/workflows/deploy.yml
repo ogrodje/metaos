@@ -196,7 +196,7 @@ jobs:
     timeout-minutes: 20
     environment:
       name: production
-      url: https://metaos.ogrodje.si
+      url: https://ogrodje.si
     steps:
       - uses: actions/checkout@v7
 
@@ -279,11 +279,25 @@ jobs:
 
       - name: Smoke the deployed app
         run: |
-          # Public discovery documents: prove Cloudflare, nginx, the app and Keycloak, and that the URLs line up
+          # Public discovery documents: prove Cloudflare, nginx, the app and Keycloak, and that the URLs line up. Two
+          # minutes for the first, as Terraform points ogrodje.si's DNS at the node beside this deploy (OG-59)
+          meta=$(curl -sf --retry 12 --retry-delay 10 --retry-all-errors \
+            https://ogrodje.si/.well-known/oauth-protected-resource/mcp)
+          if ! echo "$meta" | grep -q '"resource":"https://ogrodje.si/mcp"'; then
+            echo "::error::unexpected protected resource metadata: $meta"
+            exit 1
+          fi
+          # MCP's old address, for the clients that still connect there till OG-60, says its own
           meta=$(curl -sf --retry 6 --retry-delay 5 --retry-all-errors \
             https://metaos.ogrodje.si/.well-known/oauth-protected-resource/mcp)
           if ! echo "$meta" | grep -q '"resource":"https://metaos.ogrodje.si/mcp"'; then
-            echo "::error::unexpected protected resource metadata: $meta"
+            echo "::error::unexpected protected resource metadata at metaos.ogrodje.si: $meta"
+            exit 1
+          fi
+          # www is Cloudflare's redirect to ogrodje.si, path and query kept
+          location=$(curl -s -o /dev/null -w '%{redirect_url}' --retry 6 --retry-delay 5 'https://www.ogrodje.si/episodes?x=1')
+          if [ "$location" != 'https://ogrodje.si/episodes?x=1' ]; then
+            echo "::error::www.ogrodje.si redirects to '$location'"
             exit 1
           fi
           oidc=$(curl -sf --retry 6 --retry-delay 5 --retry-all-errors \
@@ -293,13 +307,13 @@ jobs:
             exit 1
           fi
           # The front-end renders its pages on the server, from the app's API: the episodes are in the HTML itself
-          page=$(curl -sf --retry 6 --retry-delay 5 --retry-all-errors https://metaos.ogrodje.si/episodes)
+          page=$(curl -sf --retry 6 --retry-delay 5 --retry-all-errors https://ogrodje.si/episodes)
           if ! echo "$page" | grep -q 'href="/episodes/S'; then
             echo "::error::the Episodes page came without its episodes"
             exit 1
           fi
           # Actuator is on the management port, which no Ingress routes
-          code=$(curl -s -o /dev/null -w '%{http_code}' https://metaos.ogrodje.si/actuator/prometheus)
+          code=$(curl -s -o /dev/null -w '%{http_code}' https://ogrodje.si/actuator/prometheus)
           if [ "$code" = 200 ]; then
             echo "::error::/actuator/prometheus is reachable through the ingress"
             exit 1

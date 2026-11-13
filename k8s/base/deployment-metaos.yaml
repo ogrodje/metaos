@@ -10,7 +10,7 @@ data:
   POSTGRES_PORT: "5432"
   POSTGRES_DB: "metaos"
   POSTGRES_USER: "metaos"
-  # Honour ingress-nginx's X-Forwarded-*, so the OAuth protected resource metadata says https://metaos.ogrodje.si.
+  # Honour ingress-nginx's X-Forwarded-*, so the OAuth protected resource metadata says the host it was asked on, e.g. https://ogrodje.si.
   # Safe to trust blindly: the pod is reachable only through the Service and the Ingress.
   SERVER_FORWARD_HEADERS_STRATEGY: "framework"
   # Actuator on its own port, which no Ingress routes: the kubelet and Prometheus reach it, the internet doesn't

@@ -359,10 +359,11 @@ just keycloak apply dev         # and after each change to infra/keycloak/realm;
   `http://localhost:8080/graphql`) must be the public URLs of `/mcp` and `/graphql`; they are used by both Keycloak
   (token audience) and the app (audience check); Keycloak has them from `infra/keycloak/<env>/main.tf`, which has to
   change with them. `METAOS_UI_URL` (default `http://localhost:5173`) is where the front-end is, for `metaos-ui`'s
-  redirect URIs. `KEYCLOAK_ISSUER_URI` points the app at another realm. While MetaOS moves to another host (OG-59:
-  `metaos.ogrodje.si` to `ogrodje.si`), it's at both: the Ingresses have both hosts, Keycloak's `metaos_other_urls`
-  puts the other's `/mcp` and `/graphql` into tokens too and lets its front-end sign in, the app takes them as well
-  (`METAOS_OTHER_AUDIENCES`, in `public-urls`), and the private bucket's CORS has both origins.
+  redirect URIs. `KEYCLOAK_ISSUER_URI` points the app at another realm. While MetaOS moves to another host, it's at
+  both: the Ingresses have both hosts, Keycloak's `metaos_other_urls` puts the other's `/mcp` and `/graphql` into
+  tokens too and lets its front-end sign in, the app takes them as well (`METAOS_OTHER_AUDIENCES`, in `public-urls`),
+  and the private bucket's CORS has both origins. So it is now, at `ogrodje.si` and, till OG-60 redirects it, at
+  `metaos.ogrodje.si`, where it was until OG-59 (DEPLOY.md, ogrodje.si).
 - A change to the realm is a change to `infra/keycloak/realm`, planned and applied, never one made in the admin
   console, which the next apply would undo; only users and who has `metaos-user` are the console's. To start over in
   development (wipes all Keycloak data, including registered MCP clients):
@@ -1049,8 +1050,8 @@ takes nothing until the next, and one full user ([`NewRelic.kt`](src/main/kotlin
 
 ### Deployment
 
-Production runs on the ogrodje-one Kubernetes cluster, namespace `metaos-prod`: the app at `https://metaos.ogrodje.si`
-and its Keycloak at `https://metaos-auth.ogrodje.si`. Pushes to `master` deploy through
+Production runs on the ogrodje-one Kubernetes cluster, namespace `metaos-prod`: the app at `https://ogrodje.si`
+(which www redirects to; `https://metaos.ogrodje.si` till OG-60) and its Keycloak at `https://metaos-auth.ogrodje.si`. Pushes to `master` deploy through
 [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml); [`k8s/README.md`](k8s/README.md) has the manifests,
 the one-time setup and the `just` recipes for deploying by hand. [`DEPLOY.md`](DEPLOY.md) explains the setup, the
 decisions behind it and what is left to do.
