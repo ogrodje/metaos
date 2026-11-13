@@ -119,6 +119,10 @@ keycloak command env *ARGS:
               GOOGLE_OAUTH_ACCESS_TOKEN="${GOOGLE_OAUTH_ACCESS_TOKEN:-$(gcloud auth print-access-token)}" ;;
       *) echo "dev or prod" >&2; exit 2 ;;
     esac
+    # How Keycloak sends email, in both: secretspec.toml's KEYCLOAK_SMTP_* (OG-61)
+    export TF_VAR_smtp_host="${KEYCLOAK_SMTP_HOST:?KEYCLOAK_SMTP_HOST, from secretspec.toml}" \
+      TF_VAR_smtp_port="${KEYCLOAK_SMTP_PORT:?}" TF_VAR_smtp_email="${KEYCLOAK_SMTP_EMAIL:?}" \
+      TF_VAR_smtp_password="${KEYCLOAK_SMTP_PASSWORD:?}"
     cd infra/keycloak/{{env}}
     terraform init -input=false >/dev/null
     if [ "{{command}}" = adopt ]; then exec ../import.sh {{env}}; fi

@@ -9,6 +9,23 @@ variable "keycloak_admin_password" {
   sensitive   = true
 }
 
+# How Keycloak sends email: secretspec.toml's KEYCLOAK_SMTP_HOST, _PORT and _EMAIL (justfile, terraform.yml)
+
+variable "smtp_host" {
+  description = "The SMTP server (TF_VAR_smtp_host)"
+  type        = string
+}
+
+variable "smtp_port" {
+  description = "Its port, with STARTTLS (TF_VAR_smtp_port)"
+  type        = string
+}
+
+variable "smtp_email" {
+  description = "The address Keycloak sends from and signs in to the server as (TF_VAR_smtp_email)"
+  type        = string
+}
+
 # Secrets, each only to create what has it or change it: one left unset keeps what Keycloak has (../realm/realm.tf)
 
 variable "google_client_secret" {

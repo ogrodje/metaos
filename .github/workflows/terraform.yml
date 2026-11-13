@@ -136,6 +136,10 @@ jobs:
           {
             echo "TF_VAR_keycloak_admin_username=$KEYCLOAK_ADMIN_USERNAME"
             echo "TF_VAR_keycloak_admin_password=$KEYCLOAK_ADMIN_PASSWORD"
+            echo "TF_VAR_smtp_host=$KEYCLOAK_SMTP_HOST"
+            echo "TF_VAR_smtp_port=$KEYCLOAK_SMTP_PORT"
+            echo "TF_VAR_smtp_email=$KEYCLOAK_SMTP_EMAIL"
+            echo "TF_VAR_smtp_password=$KEYCLOAK_SMTP_PASSWORD"
             echo "NEW_RELIC_API_KEY=$NEW_RELIC_USER_KEY"
           } >> "$GITHUB_ENV"
 

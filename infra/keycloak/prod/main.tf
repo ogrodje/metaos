@@ -46,16 +46,17 @@ module "realm" {
   google_client_secret  = var.google_client_secret
   discord_client_secret = var.discord_client_secret
 
-  # Through delta.srv4all.net on 587 with StartTLS, as Hetzner blocks 25 and 465
+  # Ogrodje's mail server, as iva@ogrodje.si (OG-61), with STARTTLS, as Hetzner blocks 25 and 465. Server, port and
+  # address are secretspec.toml's KEYCLOAK_SMTP_*, so they change in 1Password, not here
   smtp = {
-    host                  = "delta.srv4all.net"
-    port                  = "587"
+    host                  = var.smtp_host
+    port                  = var.smtp_port
     starttls              = true
-    from                  = "iva@ogrodje.si"
+    from                  = var.smtp_email
     from_display_name     = "Iva"
-    reply_to              = "iva@ogrodje.si"
+    reply_to              = var.smtp_email
     reply_to_display_name = "Iva"
-    username              = "iva@ogrodje.si"
+    username              = var.smtp_email
   }
   smtp_password = var.smtp_password
 }
