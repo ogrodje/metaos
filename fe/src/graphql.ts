@@ -27,7 +27,7 @@ function graphqlMessage(error: { message: string, extensions?: { classification?
   switch (error.extensions?.classification) {
     case 'UNAUTHORIZED':
     case 'FORBIDDEN':
-      return "your account isn't approved for this yet; an admin approves new accounts"
+      return "this is for Ogrodje's staff; an admin makes an account staff"
     default:
       return error.message
   }

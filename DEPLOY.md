@@ -158,13 +158,14 @@ from git.
 - **Generic OAuth v2 provider.** Keycloak has no Discord provider; the generic one reads `id`, `username`,
   `global_name` and `email` from `https://discord.com/api/users/@me`. The community keycloak-discord extension could
   restrict logins to a Discord server, but it targets Keycloak 26.0 and server membership isn't a fine enough gate.
-- **Approval gate.** Every approved user may use every MCP tool, so the post-login flow `discord-post-login` denies
-  Discord logins until the user has the realm role `metaos-user`. A first login creates the user and is denied; an admin
-  approves them by granting the role. The flow doesn't cover password users that an admin creates, but MetaOS itself
-  does: it takes no token without the role (see "Only approved users" below).
+- **Approval gate, then members.** The post-login flow `discord-post-login` denied Discord logins until the user had
+  the realm role `metaos-user`, and an admin approved them by granting it. Since OG-57 anyone who signs in is a member
+  (`metaos-member`, a default role) and only signs in; staff still need `metaos-user`, which MetaOS itself checks: it
+  takes no token for the team's data, changes or MCP without it (see "Only approved users" below). The flow now only
+  remembers the sign-in.
 - **Emails aren't trusted.** Discord also returns unverified emails, and a verified email links a login's account to a
-  Person (`Accounts.kt`). When approving someone, also turn on *Email verified* once you know the address is theirs, or
-  link their account to their person by hand (`link_account`, or the People page).
+  Person (`Accounts.kt`). Keycloak mails the address a link to verify it before the sign-in goes through
+  (`verify_email`), which an admin turned on by hand before members.
 - Verified on a throwaway Keycloak 26.8.1, with a second realm standing in for Discord: denied without the role,
   allowed with it, denied again once it's removed; password logins unaffected; the Discord button redirects to
   `discord.com/oauth2/authorize` with scope `identify email`.
@@ -178,9 +179,9 @@ from git.
   `http://localhost:8180/realms/metaos/broker/google/endpoint`. Its ID and secret are `GOOGLE_IDP_CLIENT_ID` and
   `GOOGLE_IDP_CLIENT_SECRET` in `.envrc`. The project's "Desktop app" client "MetaOS" is a different one: it is for
   the Drive bot (`google/refresh_token.sh`).
-- **Approval gate.** Same as Discord's, with its own flow `google-post-login`: denied until the user has `metaos-user`.
-- **Emails are trusted.** Google only hands out addresses it has verified, so approving a Google user is just granting
-  the role. Keycloak 26 still asks to verify an existing account with the same email before linking it.
+- **Post-login flow.** Same as Discord's, with its own flow `google-post-login`.
+- **Emails are trusted.** Google only hands out addresses it has verified, so a Google user is a member at once, and
+  making them staff is just granting the role. Keycloak 26 still asks to verify an existing account with the same email before linking it.
 - **Publishing.** While the Google app is in *Testing*, only its test users can sign in with Google.
 - Verified on a throwaway Keycloak 26.8.1: both scripts create the same flow structure and are idempotent, and the
   Google button redirects to `accounts.google.com/o/oauth2/v2/auth` with scope `openid profile email`.

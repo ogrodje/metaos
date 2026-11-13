@@ -1,5 +1,5 @@
 # What MCP clients registering themselves (Dynamic Client Registration) may ask for: Keycloak's default policies, with
-# the trusted hosts MetaOS's clients redirect to. Whoever registers still has to sign in as an approved user to get a
+# the trusted hosts MetaOS's clients redirect to. Whoever registers still has to sign in as staff (metaos-user) to get a
 # token MetaOS takes.
 locals {
   allowed_protocol_mapper_types = [

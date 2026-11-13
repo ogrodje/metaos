@@ -263,14 +263,14 @@ class Accounts(
 }
 
 /**
- * Writes down the account of whoever a request comes from (Accounts.seen), once Spring Security knows who that is: an
- * approved user's, so a client's own service account never gets one.
+ * Writes down the account of whoever a request comes from (Accounts.seen), once Spring Security knows who that is: a
+ * member's (with their verified email) or staff's, so a client's own service account, which has no email, never gets one.
  */
 @Component
 class AccountsFilter(private val accounts: Accounts) : OncePerRequestFilter() {
 
     override fun doFilterInternal(request: HttpServletRequest, response: HttpServletResponse, chain: FilterChain) {
-        currentJwt()?.takeIf { APPROVED_ROLE in it.realmRoles }?.let { jwt ->
+        currentJwt()?.takeIf { it.isMember }?.let { jwt ->
             // A request doesn't fail for want of its account
             runCatching { accounts.seen(jwt) }.onFailure { logger.warn("Couldn't write down the account of ${jwt.subject}", it) }
         }

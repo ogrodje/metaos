@@ -177,7 +177,7 @@ const hasLinks = computed(() => (person.value ? socialLinks(person.value).length
   <main class="content">
     <LoadError v-if="error" what="The person" :error="error" @retry="loadPerson(id)"/>
     <!-- None so far, while it's checked whether the user is on the team, who may see everyone -->
-    <LoadingRows v-else-if="person === undefined || (person === null && auth.likelyMember && !auth.ready)" :rows="6"
+    <LoadingRows v-else-if="person === undefined || (person === null && auth.likelyTeam && !auth.ready)" :rows="6"
                  label="Loading the person"/>
     <NotFound v-else-if="person === null" title="There's no such person">
       <template v-if="auth.team">

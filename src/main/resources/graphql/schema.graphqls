@@ -810,6 +810,10 @@ type CurrentUser {
     account: Account
     "Whether they may link accounts to people and unlink them, which only one user may"
     canLinkAccounts: Boolean!
+    "Whether they're a member: signed in, with an email Keycloak verified. Staff are members too"
+    member: Boolean!
+    "Whether they're staff, who use MetaOS: the team's data, changes and MCP"
+    staff: Boolean!
 }
 
 """

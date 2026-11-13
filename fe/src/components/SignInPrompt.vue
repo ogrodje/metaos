@@ -28,7 +28,6 @@ const auth = useAuthStore()
       </button>
       <RouterLink v-if="!compact" class="button" to="/usage">API and MCP usage<FontAwesomeIcon :icon="faArrowRight"/></RouterLink>
     </div>
-    <p v-if="!compact" class="approval">New accounts get in once an admin has approved them.</p>
   </section>
 </template>
 
@@ -59,12 +58,6 @@ const auth = useAuthStore()
     flex-wrap: wrap;
     gap: 8px;
     margin-top: 8px;
-  }
-
-  .approval {
-    font-size: var(--text-small);
-    line-height: 20px;
-    color: var(--muted);
   }
 }
 

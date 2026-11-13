@@ -55,19 +55,26 @@ adopt() {
 echo "Adopting realm $REALM at $KC into $ENV's state"
 adopt keycloak_realm.metaos "$REALM"
 
-role=$(api /roles | jq -r '.[] | select(.name == "metaos-user") | .id')
+roles=$(api /roles)
+role=$(jq -r '.[] | select(.name == "metaos-user") | .id' <<<"$roles")
 adopt keycloak_role.metaos_user "${role:+$REALM/$role}"
+member=$(jq -r '.[] | select(.name == "metaos-member") | .id' <<<"$roles")
+adopt keycloak_role.metaos_member "${member:+$REALM/$member}"
+default_role=$(api "" | jq -r '.defaultRole.id // empty')
+adopt keycloak_default_roles.metaos "${default_role:+$REALM/$default_role}"
 
 scopes=$(api /client-scopes)
-for scope in mcp:tools metaos:read metaos:write; do
+# Each scope with the role it needs (scopes.tf)
+for pair in mcp:tools=$role metaos:read=$role metaos:write=$role metaos:account=$member; do
+  scope=${pair%%=*} needs=${pair#*=}
   id=$(jq -r --arg n "$scope" '.[] | select(.name == $n) | .id' <<<"$scopes")
   [ -n "$id" ] || { adopt "keycloak_openid_client_scope.metaos[\"$scope\"]" ""; continue; }
   adopt "keycloak_openid_client_scope.metaos[\"$scope\"]" "$REALM/$id"
   mapper=$(jq -r --arg n "$scope" '.[] | select(.name == $n) | .protocolMappers[]? | select(.protocolMapper == "oidc-audience-mapper") | .id' <<<"$scopes" | head -1)
   adopt "keycloak_openid_audience_protocol_mapper.metaos[\"$scope\"]" "${mapper:+$REALM/client-scope/$id/$mapper}"
-  mapped=$(api "/client-scopes/$id/scope-mappings/realm" | jq -r --arg r "${role:-none}" 'any(.[]; .id == $r)')
+  mapped=$(api "/client-scopes/$id/scope-mappings/realm" | jq -r --arg r "${needs:-none}" 'any(.[]; .id == $r)')
   adopt "keycloak_generic_role_mapper.metaos_scope_needs_approval[\"$scope\"]" \
-    "$([ "$mapped" = true ] && echo "$REALM/client-scope/$id/scope-mappings/realm/$role")"
+    "$([ "$mapped" = true ] && echo "$REALM/client-scope/$id/scope-mappings/realm/$needs")"
 done
 adopt keycloak_realm_optional_client_scopes.metaos "$REALM"
 
@@ -107,19 +114,10 @@ for idp in $(value "$MODULE.identity_providers" | jq -r '.[]'); do
 
   executions=$(api "/authentication/flows/$idp-post-login/executions")
   execution() { jq -c --arg p "$1" '.[] | select(.providerId == $p)' <<<"$executions"; }
-  subflow=$(jq -r '.[] | select(.authenticationFlow == true and .level == 0) | .flowId' <<<"$executions")
-  adopt "keycloak_authentication_subflow.require_role[\"$idp\"]" "${subflow:+$REALM/$idp-post-login/$subflow}"
   allow=$(execution allow-access-authenticator | jq -r .id)
   adopt "keycloak_authentication_execution.allow[\"$idp\"]" "${allow:+$REALM/$idp-post-login/$allow}"
   remember=$(execution metaos-remember-me | jq -r .id)
   adopt "keycloak_authentication_execution.remember[\"$idp\"]" "${remember:+$REALM/$idp-post-login/$remember}"
-  for step in without_role:conditional-user-role deny:deny-access-authenticator; do
-    name=${step%%:*} provider=${step#*:}
-    id=$(execution "$provider" | jq -r .id)
-    config=$(execution "$provider" | jq -r '.authenticationConfig // empty')
-    adopt "keycloak_authentication_execution.$name[\"$idp\"]" "${id:+$REALM/$idp-require-role/$id}"
-    adopt "keycloak_authentication_execution_config.$name[\"$idp\"]" "${config:+$REALM/$id/$config}"
-  done
 done
 
 dev=$(api "/users?username=dev&exact=true" | jq -r '.[0].id // empty')

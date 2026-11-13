@@ -28,8 +28,11 @@ const val API_READ_SCOPE = "metaos:read"
 /** For changes through /graphql, e.g. comments; the front-end's tokens have it too */
 const val API_WRITE_SCOPE = "metaos:write"
 
+/** What a member's token has from the front-end, which lets it into /graphql, e.g. for `me`, and no further */
+const val API_ACCOUNT_SCOPE = "metaos:account"
+
 /**
- * The realm role an admin grants to approve a user (infra/keycloak). MetaOS checks it as well as the scope, as Keycloak
+ * The realm role an admin grants to make a user staff (infra/keycloak), who use MetaOS. MetaOS checks it as well as the scope, as Keycloak
  * can issue a token with the scope to more than approved users: a client registered through DCR for its own service
  * account (client_credentials: no user, no login, so no approval gate), or a user whose approval was taken back while
  * their session lives on. The scopes' role mappings (infra/keycloak/realm/scopes.tf) keep the scopes out of their
@@ -39,9 +42,21 @@ const val API_WRITE_SCOPE = "metaos:write"
  */
 const val APPROVED_ROLE = "metaos-user"
 
+/**
+ * The realm role every user has (one of the realm's default roles, infra/keycloak/realm/realm.tf), staff too: a member,
+ * who signed in with an email Keycloak verified. It gives nothing yet but being signed in; staff have [APPROVED_ROLE].
+ */
+const val MEMBER_ROLE = "metaos-member"
+
 /** The token's realm roles, from Keycloak's realm_access claim */
 val Jwt.realmRoles: Set<String>
     get() = (getClaimAsMap("realm_access")?.get("roles") as? Collection<*>).orEmpty().filterIsInstance<String>().toSet()
+
+/** Whether the token is staff's (APPROVED_ROLE) */
+val Jwt.isStaff: Boolean get() = APPROVED_ROLE in realmRoles
+
+/** Whether the token is a member's, with their verified email; staff are members too */
+val Jwt.isMember: Boolean get() = isStaff || MEMBER_ROLE in realmRoles && verifiedEmail != null
 
 /** Whether this is an approved user's token with [scope] */
 fun Authentication?.approvedFor(scope: String): Boolean {

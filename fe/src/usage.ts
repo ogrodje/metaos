@@ -4,7 +4,7 @@
 import { fold, searchWords } from '@/search'
 import type { ToolGroup } from '@/tools'
 
-/** The assistants the MCP steps are for; their first two steps differ, approval and asking don't */
+/** The assistants the MCP steps are for; their first two steps differ, being staff and asking don't */
 export type Client = 'claude-code' | 'claude' | 'codex' | 'chatgpt'
 
 export const CLIENTS: { id: Client, name: string }[] = [

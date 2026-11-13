@@ -10,7 +10,7 @@ resource "keycloak_realm" "metaos" {
   enabled      = true
   ssl_required = "external"
 
-  # Users come from Discord and Google, and wait for approval (identity_providers.tf)
+  # Users come from Discord and Google, and are members once their email is verified (identity_providers.tf)
   registration_allowed     = false
   login_with_email_allowed = true
   duplicate_emails_allowed = false
@@ -19,6 +19,7 @@ resource "keycloak_realm" "metaos" {
   # admin console; with it, users also rename themselves in the Account Console. MetaOS knows them by their ID (`sub`)
   edit_username_allowed = true
   # Wherever Keycloak can send mail: a user whose provider doesn't vouch for their address, as Discord doesn't, confirms it
+  # before their sign-in goes through, which makes them a member. At every sign-in, so also those who signed in before
   verify_email = var.smtp != null
 
   # A sign-in lasts 7 days without use and 30 at most, and refresh tokens as long (keycloak/sessions.sh had the why)
@@ -85,12 +86,32 @@ resource "keycloak_realm" "metaos" {
   }
 }
 
-# Approved users have it: MetaOS requires it on /mcp, /graphql's team data and changes, and the thumbnails (Security.kt),
-# and the sign-in providers' post-login flows let no one in without it. Granted by hand in the admin console.
+# Staff have it: MetaOS requires it on /mcp, /graphql's team data and changes, and the thumbnails (Security.kt). Granted
+# by hand in the admin console; a member without it only signs in.
 resource "keycloak_role" "metaos_user" {
+  realm_id        = keycloak_realm.metaos.id
+  name            = "metaos-user"
+  description     = "Staff: may use MetaOS. MetaOS itself requires it on /mcp, /graphql's team data and the thumbnails"
+  composite_roles = [keycloak_role.metaos_member.id]
+}
+
+# Members have it: everyone who signs in, as it's one of the realm's default roles, which every user has, those who
+# signed in before too. A member only signs in so far; what they may do comes later (MEMBER_ROLE in Security.kt).
+resource "keycloak_role" "metaos_member" {
   realm_id    = keycloak_realm.metaos.id
-  name        = "metaos-user"
-  description = "Approved: may use MetaOS. MetaOS itself requires it on /mcp, /graphql's team data and the thumbnails"
+  name        = "metaos-member"
+  description = "Member: signed in to MetaOS, with a verified email. Every user has it (the realm's default roles)"
+}
+
+# default-roles-metaos, which every user has: Keycloak's own, and metaos-member. This resource is the whole list, so
+# Keycloak's four are named here too, or the apply would take them away (and with them the Account API that the
+# front-end lists sign-ins through).
+resource "keycloak_default_roles" "metaos" {
+  realm_id = keycloak_realm.metaos.id
+  default_roles = [
+    "offline_access", "uma_authorization", "account/view-profile", "account/manage-account",
+    keycloak_role.metaos_member.name,
+  ]
 }
 
 resource "keycloak_user" "dev" {

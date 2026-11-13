@@ -155,7 +155,7 @@ usePageMeta(() => ({
 
     <!-- Signed in, what's being made, and of it first what needs attention; at the side how many are at each stage, the
          releases and what the team did lately. Its place is kept while one who was signed in last time is checked. -->
-    <div v-if="auth.likelyMember" class="home">
+    <div v-if="auth.likelyTeam" class="home">
       <div class="main">
         <LoadError v-if="makingError" what="The upcoming recordings and what's in production" :error="makingError"
                    @retry="loadLists()"/>

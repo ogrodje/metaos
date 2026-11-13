@@ -7,7 +7,7 @@ output "registration_policies" {
 
 output "identity_providers" {
   description = "The sign-in providers there are, by alias"
-  value       = keys(local.gated)
+  value       = keys(local.post_login)
 }
 
 output "dev_user" {

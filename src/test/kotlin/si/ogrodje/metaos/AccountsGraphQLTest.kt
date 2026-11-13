@@ -86,6 +86,54 @@ class AccountsGraphQLTest @Autowired constructor(
             .andExpect(jsonPath("$.data.unlinkAccount.linkedHow").value(null as Any?))
     }
 
+    // Anyone who signs in through MetaOS's pages, as Keycloak signs them in: a member, whose token has every scope of
+    // metaos-ui's, metaos:read and metaos:write too. Keycloak doesn't keep a client's default scopes from users without
+    // their roles (seen on a real token), so the role is what keeps a member out (approvedFor in Security.kt)
+    private fun member(username: String, email: String? = null, verified: Boolean = true) = jwt().jwt {
+        it.subject("$username-id").claim("preferred_username", username).claim("azp", "metaos-ui")
+            .claim("realm_access", MEMBER)
+            .claim("scope", "openid profile email $API_ACCOUNT_SCOPE $API_READ_SCOPE $API_WRITE_SCOPE")
+        if (email != null) it.claim("email", email).claim("email_verified", verified)
+    }
+
+    @Test
+    fun `a member is signed in, with their account and the person they are, and nothing more`() {
+        val person = people.save(Person(name = "Maja Član", email = "maja.member@example.com"))
+
+        graphql("{ me { username member staff person { name } account { username linkedHow } } }",
+            member("agq-maja", email = "maja.member@example.com"))
+            .andExpect(jsonPath("$.errors").doesNotExist())
+            .andExpect(jsonPath("$.data.me.member").value(true))
+            .andExpect(jsonPath("$.data.me.staff").value(false))
+            .andExpect(jsonPath("$.data.me.person.name").value("Maja Član"))
+            .andExpect(jsonPath("$.data.me.account.username").value("agq-maja"))
+            .andExpect(jsonPath("$.data.me.account.linkedHow").value("EMAIL"))
+        graphql("{ me { member staff } }", user("agq-staff", API_READ_SCOPE))
+            .andExpect(jsonPath("$.data.me.member").value(true))
+            .andExpect(jsonPath("$.data.me.staff").value(true))
+
+        // None of the team's data, and no changes
+        graphql("{ ideas { id } }", member("agq-maja", email = "maja.member@example.com"))
+            .andExpect(jsonPath("$.errors[0].extensions.classification").value("FORBIDDEN"))
+        graphql("{ accounts { id } }", member("agq-maja", email = "maja.member@example.com"))
+            .andExpect(jsonPath("$.errors[0].extensions.classification").value("FORBIDDEN"))
+        graphql("""mutation { createSession(date: "2026-12-01") { id } }""", member("agq-maja", email = "maja.member@example.com"))
+            .andExpect(jsonPath("$.errors[0].extensions.classification").value("FORBIDDEN"))
+        // Not on a released episode, so not public: not even to herself
+        graphql("""{ person(id: "${person.id}") { name } }""", member("agq-maja", email = "maja.member@example.com"))
+            .andExpect(jsonPath("$.data.person").value(null as Any?))
+    }
+
+    // Keycloak has them verify it before they're through; were one through without, they'd be no member (Security.kt)
+    @Test
+    fun `isn't a member without a verified email, and gets no account`() {
+        graphql("{ me { member staff account { id } } }", member("agq-unverified", email = "unverified@example.com", verified = false))
+            .andExpect(jsonPath("$.errors").doesNotExist())
+            .andExpect(jsonPath("$.data.me.member").value(false))
+            .andExpect(jsonPath("$.data.me.staff").value(false))
+            .andExpect(jsonPath("$.data.me.account").value(null as Any?))
+    }
+
     @Test
     fun `keeps accounts from anyone not signed in`() {
         graphql("{ accounts { id } }")

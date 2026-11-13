@@ -37,7 +37,7 @@ const error = ref<string>()
 // Only the latest load counts: an earlier one may answer after it
 let loads = 0
 
-// The team's, so they load only for an approved user. Quietly as they change (live updates, which their rows send as
+// The team's, so they load only for staff. Quietly as they change (live updates, which their rows send as
 // they go): what's shown stays until the new ones are there, and stays if they don't come.
 async function load(quietly = false) {
   const load = ++loads
@@ -128,8 +128,8 @@ const parts = computed(() => split(shown.value))
         </template>
       </PageHeader>
 
-      <!-- Signed in, but not approved yet, as the note under the header says -->
-      <p v-if="auth.ready && !auth.team" class="note">The transcriptions are here once an admin has approved your account.</p>
+      <!-- Signed in as a member, not staff -->
+      <p v-if="auth.ready && !auth.team" class="note">The transcriptions are for Ogrodje's staff.</p>
 
       <template v-else>
         <!-- Opened from the heading, as the page is a list like the others first -->
