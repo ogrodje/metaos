@@ -92,8 +92,9 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   - The messages are in [`fe/src/locales`](fe/src/locales): `sl.json` and `en-GB.json`, the same keys in both, by
     area (`episode.*`, `lists.*`, ...). `locales.spec.ts` fails on a key missing in either, or one the code asks for
     that neither has. Slovenian has four plural forms (`"{n} epizoda | {n} epizodi | {n} epizode | {n} epizod"`,
-    `slovenianPlural` in `i18n.ts`), English two; a count is `t(key, { n }, n)`. Slovenian addresses the user
-    formally (*Poskusite znova*), and avoids a gender where it would need one (MetaOS doesn't know it).
+    `slovenianPlural` in `i18n.ts`), English two; a count is `t(key, { n }, n)`. Slovenian's sentences address the user
+    formally (*Poskusite znova čez trenutek*), its buttons are in the singular imperative (*Shrani*, *Poskusi znova*),
+    an episode's code is its *koda*, and it avoids a gender where it would need one (MetaOS doesn't know it).
   - The language switch (`LanguageSwitch.vue`) is in the footer and the user menu: links to the same page in the other
     language. The choice is kept in the browser (`metaos.locale`, `localeChoice.ts`) and applied once the page is
     hydrated (`plugins/locale.client.ts`), so a Slovenian address still renders in Slovenian for Cloudflare. Every
