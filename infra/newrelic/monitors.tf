@@ -7,7 +7,7 @@ resource "newrelic_synthetics_monitor" "pages" {
   period           = "EVERY_5_MINUTES"
   status           = "ENABLED"
   type             = "SIMPLE"
-  uri              = "https://metaos.ogrodje.si/healthz"
+  uri              = "https://ogrodje.si/healthz"
   verify_ssl       = false
 }
 
@@ -17,7 +17,7 @@ resource "newrelic_synthetics_monitor" "api" {
   period           = "EVERY_5_MINUTES"
   status           = "ENABLED"
   type             = "SIMPLE"
-  uri              = "https://metaos.ogrodje.si/readyz"
+  uri              = "https://ogrodje.si/readyz"
   verify_ssl       = false
 }
 

@@ -13,8 +13,8 @@ Status (2026-10-19): everything is written and verified locally. Nothing is depl
 
 | Piece                       | Where                                         | Notes                                                                                   |
 |-----------------------------|-----------------------------------------------|-----------------------------------------------------------------------------------------|
-| App                         | `https://metaos.ogrodje.si`                   | `/mcp` is the MCP endpoint; `/graphql`, `/events` and the thumbnails are the front-end's |
-| Front-end                   | `https://metaos.ogrodje.si`, all other paths  | `metaos-web`: Nuxt on Node, renders the pages anyone may see; Cloudflare caches them    |
+| App                         | `https://ogrodje.si`                          | `/mcp` is the MCP endpoint; `/graphql`, `/events` and the thumbnails are the front-end's |
+| Front-end                   | `https://ogrodje.si`, all other paths         | `metaos-web`: Nuxt on Node, renders the pages anyone may see; Cloudflare caches them    |
 | Keycloak                    | `https://metaos-auth.ogrodje.si`              | Own instance, realm `metaos` baked into the image and imported on first start           |
 | Postgres                    | `main-cluster` in namespace `pg`              | Databases `metaos` and `metaos_keycloak`, each owned by a role of the same name         |
 | Images                      | `registry.folk-decibel.ts.net/metaos/...`     | `metaos`, `metaos-web`, `keycloak`, `patreon-gateway`; deployed by digest               |
@@ -46,7 +46,7 @@ justfile                     the same steps by hand: just push, just deploy, jus
 - **Public URLs in one place.** `kustomization.yaml` generates a `public-urls` ConfigMap (Keycloak hostname, issuer,
   MCP URL) that both Deployments read. Its name carries a content hash, so changing a URL rolls both.
 - **Proxy headers.** The app trusts ingress-nginx's `X-Forwarded-*` headers, so its OAuth metadata advertises
-  `https://metaos.ogrodje.si/mcp` rather than the pod's own address.
+  `https://ogrodje.si/mcp` rather than the pod's own address.
 - **Streaming.** The app's Ingress turns off nginx buffering and raises the timeouts to an hour, because Streamable
   HTTP responses can be long-lived SSE streams. `/events`, the front-end's stream of changes, is one too; it also says
   `X-Accel-Buffering: no`, and sends a heartbeat every 25 s, as Cloudflare hangs up after 100 s of silence.
@@ -86,7 +86,7 @@ justfile                     the same steps by hand: just push, just deploy, jus
 - **App image**, run against the local compose Postgres with the production settings:
   - liveness, readiness and `/actuator/prometheus` answer on 9090;
   - actuator returns 401 on the public port 8080;
-  - with proxy headers, the protected resource metadata is `https://metaos.ogrodje.si/mcp` with authorization server
+  - with proxy headers, the protected resource metadata is `https://ogrodje.si/mcp` with authorization server
     `https://metaos-auth.ogrodje.si/realms/metaos`, and anonymous `/mcp` gets a 401 pointing at it.
 - **Keycloak image**, run against a throwaway Postgres:
   - realm `metaos` is imported;
@@ -232,7 +232,7 @@ could read it eventually; link previews (Discord, Slack, X, ...) and most other 
 server and hydrates them into the same single-page app (CLAUDE.md, Front-end).
 
 - **Two services on one host.** `metaos-web` (`deployment-web.yaml`, two pods) serves everything on
-  `metaos.ogrodje.si` but MetaOS's own paths, which `metaos-ingress` keeps for the app: `/graphql`, `/events`, `/mcp`,
+  `ogrodje.si` but MetaOS's own paths, which `metaos-ingress` keeps for the app: `/graphql`, `/events`, `/mcp`,
   `/.well-known`, `/koofr`, `/dropbox`, `/livez` and `/readyz` (ingress-nginx takes the longest matching path). The
   browser still sees one origin, so there's no CORS, and Keycloak's silent check works as before. The app serves no
   pages and has no `/config.json` any more: the front-end's runtime config comes from `public-urls`.
@@ -255,6 +255,36 @@ server and hydrates them into the same single-page app (CLAUDE.md, Front-end).
 - **Not yet verified:** the images, the Ingress split and the Cloudflare rule in production, and real crawlers and
   link previews (Google's Rich Results Test, a link posted in Discord).
 
+## ogrodje.si (OG-59)
+
+MetaOS took over `ogrodje.si` from Netlify's old site, which `www.ogrodje.si` redirects to; the old site's paths it
+doesn't have (`/epizode/...`, `/ljudje`, `/strategija`) answer 404, as any page it doesn't have. Keycloak stays at
+`metaos-auth.ogrodje.si`. It went in two pull requests, as the switch shouldn't depend on which of the deploy and
+Terraform's applies lands first:
+
+1. **Both hosts.** The Ingresses take `ogrodje.si` beside `metaos.ogrodje.si`, tokens carry both hosts' `/mcp` and
+   `/graphql` (Keycloak's `metaos_other_urls`) and the app takes both (`METAOS_OTHER_AUDIENCES`), `metaos-ui` signs in
+   from both, and Cloudflare imports the apex's and www's records as Netlify had them. By hand, before the switch:
+   `just infra gcp apply`, for the private bucket's CORS (uploads from `ogrodje.si`).
+2. **The switch.** The apex points at the node (an A record, its address, so it changes in place rather than being
+   deleted and made again), www too, behind a Single Redirect to the apex (`redirects.tf`), the pages' cache rule
+   covers both hosts, `public-urls` and Keycloak's URLs become `ogrodje.si`'s with `metaos.ogrodje.si` as the other,
+   and the monitors, the smoke test and the User-Agents follow. Before merging it:
+   - `CLOUDFLARE_API_TOKEN` gets **Single Redirect: Edit** (in 1Password, which CI reads too), or the apply fails;
+   - Google's OAuth consent screen (project `ogrodje-metaos`, Branding) gets home page `https://ogrodje.si` and privacy
+     policy `https://ogrodje.si/zasebnost`, and the app is published, not in Testing, so members can sign in with
+     Google.
+
+`metaos.ogrodje.si` keeps working, whole, so the MCP connectors added there keep theirs; the Usage page asks whoever
+added one there to add it again at `https://ogrodje.si/mcp` by 30 November 2026 (`MCP_MOVED` in `fe/src/usage.ts`).
+Then it redirects to `ogrodje.si`, and the second host goes from Keycloak, the app, the Ingresses, CORS and the cache
+rule (OG-60).
+
+**Rolling back** is pointing DNS at Netlify again: in `infra/cloudflare/dns.tf`, the apex's A record `75.2.60.5` and
+www's CNAME `ogrodje.netlify.app`, and the redirect rule out, as Netlify redirects www itself. MetaOS is still whole at
+`metaos.ogrodje.si`, and Keycloak takes both, so nothing else has to go back first; `public-urls` and Keycloak's URLs
+go back after, for the canonical addresses and the MCP address the Usage page gives.
+
 ## Next steps
 
 1. [ ] **DNS.** Add `metaos.ogrodje.si` and `metaos-auth.ogrodje.si` as proxied Cloudflare CNAMEs to
@@ -275,4 +305,4 @@ server and hydrates them into the same single-page app (CLAUDE.md, Front-end).
     - in the Tailscale access policy, add `metaos-deployers` to the groups `tag:ci` impersonates on
       `tag:k8s-operator`, next to `bongbong-deployers`.
 6. [ ] **Check it.** Run the commands in [`k8s/README.md`](k8s/README.md#checking-it), then
-   `claude mcp add --transport http metaos https://metaos.ogrodje.si/mcp`.
+   `claude mcp add --transport http metaos https://ogrodje.si/mcp`.

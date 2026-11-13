@@ -1,4 +1,4 @@
-# Production: https://metaos-auth.ogrodje.si. Its state is in Cloud Storage (../../gcp), as it has the realm in it,
+# Production: https://metaos-auth.ogrodje.si, for MetaOS at https://ogrodje.si. Its state is in Cloud Storage (../../gcp), as it has the realm in it,
 # with any secret that was set.
 terraform {
   required_version = ">= 1.9"
@@ -32,11 +32,12 @@ provider "keycloak" {
 module "realm" {
   source = "../realm"
 
-  metaos_mcp_url = "https://metaos.ogrodje.si/mcp"
-  metaos_api_url = "https://metaos.ogrodje.si/graphql"
-  metaos_ui_url  = "https://metaos.ogrodje.si"
-  # Moving to ogrodje.si (OG-59): Keycloak's tokens are good there too, and its front-end there signs in
-  metaos_other_urls = ["https://ogrodje.si"]
+  metaos_mcp_url = "https://ogrodje.si/mcp"
+  metaos_api_url = "https://ogrodje.si/graphql"
+  metaos_ui_url  = "https://ogrodje.si"
+  # Where MetaOS was until OG-59: its tokens are good there too, for MCP clients that still connect there, and its
+  # front-end there signs in, till it redirects to ogrodje.si (OG-60)
+  metaos_other_urls = ["https://metaos.ogrodje.si"]
 
   # Google's "Web application" OAuth client "Keycloak" (project ogrodje-metaos), and the Discord application's
   google = {

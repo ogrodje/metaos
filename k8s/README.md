@@ -26,7 +26,7 @@ docker/patreon-gateway.Dockerfile  patreon-gateway's boot jar on distroless java
 
 | Host                     | What                                                                       |
 |--------------------------|----------------------------------------------------------------------------|
-| `metaos.ogrodje.si`      | the front-end's pages; the app's `/graphql`, `/events`, `/mcp`, ...        |
+| `ogrodje.si`             | the front-end's pages; the app's `/graphql`, `/events`, `/mcp`, ...        |
 | `metaos-auth.ogrodje.si` | Keycloak; realm `metaos` issues the tokens, `/admin` is the admin console |
 | `metaos-temporal.folk-decibel.ts.net` | Temporal's UI, on the tailnet only (nothing signs in to it): workflows and their histories |
 | `metaos-unleash.folk-decibel.ts.net` | Unleash's UI, on the tailnet only, with its own sign-in: the feature flags |
@@ -90,7 +90,7 @@ just gateway-logs  # follow patreon-gateway
 
 3. **Cloudflare caches the pages** anyone may see, as their `Cache-Control` says (`s-maxage=60,
    stale-while-revalidate=600`), but only with a Cache Rule, as it doesn't cache HTML by default: for host
-   `metaos.ogrodje.si`, *Eligible for cache*, Edge TTL *Use cache-control header if present, bypass cache if not*,
+   `ogrodje.si`, *Eligible for cache*, Edge TTL *Use cache-control header if present, bypass cache if not*,
    Browser TTL *Respect origin*. The team's pages say `no-store`, and the API's answers aren't cacheable, so they pass
    through. It's `metaos: pages`, Terraform's ([infra/cloudflare](../infra/cloudflare/caching.tf)), which also
    leaves MetaOS's own paths (`/graphql`, `/events`, `/mcp`, ...) uncached, whatever they say.
@@ -136,10 +136,10 @@ just gateway-logs  # follow patreon-gateway
 ## Checking it
 
 ```bash
-curl -s https://metaos.ogrodje.si/.well-known/oauth-protected-resource/mcp   # resource + authorization server
+curl -s https://ogrodje.si/.well-known/oauth-protected-resource/mcp   # resource + authorization server
 curl -s https://metaos-auth.ogrodje.si/realms/metaos/.well-known/openid-configuration
-curl -sI https://metaos.ogrodje.si/episodes | grep -i 'cf-cache-status\|cache-control'   # HIT on the second try
-curl -s https://metaos.ogrodje.si/episodes | grep -c 'href="/episodes/S'               # rendered on the server
+curl -sI https://ogrodje.si/episodes | grep -i 'cf-cache-status\|cache-control'   # HIT on the second try
+curl -s https://ogrodje.si/episodes | grep -c 'href="/episodes/S'               # rendered on the server
 kubectl -n metaos-prod get pods,svc,ingress
 kubectl -n metaos-prod port-forward deploy/metaos 9090 &
 curl -s localhost:9090/actuator/health
@@ -153,8 +153,8 @@ kubectl -n metaos-prod port-forward deploy/metaos-web 3000 &
 curl -s 'localhost:3000/flags?appName=check'                         # the flags on, as the front-end has them
 ```
 
-Then point an MCP client at `https://metaos.ogrodje.si/mcp`, e.g.
-`claude mcp add --transport http metaos https://metaos.ogrodje.si/mcp`.
+Then point an MCP client at `https://ogrodje.si/mcp`, e.g.
+`claude mcp add --transport http metaos https://ogrodje.si/mcp`.
 
 ## Notes
 
