@@ -9,10 +9,12 @@ name: Terraform
 # policy file is private, never in this public repository; Keycloak's development realm is each developer's own.
 #
 # Terraform reaches the states in Cloud Storage as metaos-terraform-ci, through Workload Identity Federation, so with
-# no key to keep (infra/gcp/ci.tf), and each stack's provider with the production environment's secrets:
-# KEYCLOAK_ADMIN_USERNAME and KEYCLOAK_ADMIN_PASSWORD, NEW_RELIC_API_KEY (a User API key) and CLOUDFLARE_API_TOKEN. Only
-# an apply is a deployment to production; a plan uses the secrets without being one (`deployment: false`). Pull
-# requests from forks and Dependabot get no secrets, so they aren't planned.
+# no key to keep (infra/gcp/ci.tf), and each stack's provider with production's secrets, from 1Password
+# (.github/actions/secrets, secretspec.toml's scope `terraform`, with the repository's OP_SERVICE_ACCOUNT_TOKEN):
+# KEYCLOAK_ADMIN_USERNAME and KEYCLOAK_ADMIN_PASSWORD, NEW_RELIC_USER_KEY (a User API key, passed on as
+# NEW_RELIC_API_KEY, as the justfile does) and CLOUDFLARE_API_TOKEN. Only an apply is a deployment to production; a plan
+# uses the secrets without being one (`deployment: false`). Pull requests from forks and Dependabot get no secrets, so
+# they aren't planned.
 on:
   pull_request:
     paths:
@@ -119,12 +121,27 @@ jobs:
       APPLY: ${{ github.event_name == 'push' || inputs.apply }}
       TF_IN_AUTOMATION: "true"
       TF_INPUT: "false"
-      TF_VAR_keycloak_admin_username: ${{ secrets.KEYCLOAK_ADMIN_USERNAME }}
-      TF_VAR_keycloak_admin_password: ${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}
-      NEW_RELIC_API_KEY: ${{ secrets.NEW_RELIC_API_KEY }}
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
       - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/secrets
+        with:
+          scope: terraform
+          token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+
+      # As the providers and variables.tf name them (the justfile does the same)
+      - name: Pass the secrets on under the providers' names
+        working-directory: .
+        run: |
+          {
+            echo "TF_VAR_keycloak_admin_username=$KEYCLOAK_ADMIN_USERNAME"
+            echo "TF_VAR_keycloak_admin_password=$KEYCLOAK_ADMIN_PASSWORD"
+            echo "TF_VAR_smtp_host=$KEYCLOAK_SMTP_HOST"
+            echo "TF_VAR_smtp_port=$KEYCLOAK_SMTP_PORT"
+            echo "TF_VAR_smtp_email=$KEYCLOAK_SMTP_EMAIL"
+            echo "TF_VAR_smtp_password=$KEYCLOAK_SMTP_PASSWORD"
+            echo "NEW_RELIC_API_KEY=$NEW_RELIC_USER_KEY"
+          } >> "$GITHUB_ENV"
 
       # devenv.nix's Terraform, the same version
       - uses: hashicorp/setup-terraform@v4

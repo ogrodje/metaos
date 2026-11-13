@@ -151,9 +151,10 @@ function reload() {
   <footer>
     <div class="wrapper">
       <span class="name">Ogrodje MetaOS</span>
-      <!-- How to connect to MetaOS over MCP or GraphQL, then where Ogrodje is elsewhere -->
+      <!-- How to connect to MetaOS over MCP or GraphQL, the privacy policy, then where Ogrodje is elsewhere -->
       <div class="links">
-        <RouterLink class="usage" to="/usage">API and MCP usage</RouterLink>
+        <RouterLink class="page-link" to="/usage">API and MCP usage</RouterLink>
+        <RouterLink class="page-link" to="/zasebnost">Zasebnost / Privacy</RouterLink>
         <nav class="elsewhere" aria-label="Ogrodje elsewhere">
           <a class="icon-link" href="https://github.com/ogrodje/metaos" title="MetaOS on GitHub" aria-label="MetaOS on GitHub">
             <FontAwesomeIcon :icon="faGithub"/>
@@ -389,13 +390,15 @@ footer {
 
   .links {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     align-items: center;
     gap: 8px;
     margin-left: auto;
   }
 
-  // Quiet as the name, in a hit area as tall as the icons' beside it
-  .usage {
+  // Quiet as the name, in a hit area as tall as the icons' beside it: API and MCP usage, and the privacy policy
+  .page-link {
     display: inline-flex;
     align-items: center;
     min-height: var(--icon-link);
