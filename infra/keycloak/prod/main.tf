@@ -35,6 +35,8 @@ module "realm" {
   metaos_mcp_url = "https://metaos.ogrodje.si/mcp"
   metaos_api_url = "https://metaos.ogrodje.si/graphql"
   metaos_ui_url  = "https://metaos.ogrodje.si"
+  # Moving to ogrodje.si (OG-59): Keycloak's tokens are good there too, and its front-end there signs in
+  metaos_other_urls = ["https://ogrodje.si"]
 
   # Google's "Web application" OAuth client "Keycloak" (project ogrodje-metaos), and the Discord application's
   google = {

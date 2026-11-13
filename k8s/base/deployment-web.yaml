@@ -95,8 +95,8 @@ spec:
   ports:
     - { name: http, port: 80, targetPort: http }
 ---
-# Everything on metaos.ogrodje.si that isn't MetaOS's own (metaos-ingress, deployment-metaos.yaml): the pages, their
-# assets, robots.txt and the sitemap. ingress-nginx takes the longest matching path of the two.
+# Everything on metaos.ogrodje.si and ogrodje.si that isn't MetaOS's own (metaos-ingress, deployment-metaos.yaml): the
+# pages, their assets, robots.txt and the sitemap. ingress-nginx takes the longest matching path of the two.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -111,6 +111,16 @@ spec:
   ingressClassName: nginx
   rules:
     - host: metaos.ogrodje.si
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: metaos-web
+                port: { number: 80 }
+    # The same on ogrodje.si, where MetaOS moves (OG-59)
+    - host: ogrodje.si
       http:
         paths:
           - path: /

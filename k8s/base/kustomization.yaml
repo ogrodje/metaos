@@ -18,6 +18,8 @@ configMapGenerator:
   - METAOS_MCP_URL=https://metaos.ogrodje.si/mcp
   - METAOS_API_URL=https://metaos.ogrodje.si/graphql
   - METAOS_UI_URL=https://metaos.ogrodje.si
+  # Where else MetaOS takes tokens for, while it moves to ogrodje.si (OG-59): Keycloak's metaos_other_urls
+  - METAOS_OTHER_AUDIENCES=https://ogrodje.si/mcp,https://ogrodje.si/graphql
   name: public-urls
   namespace: metaos-prod
 
