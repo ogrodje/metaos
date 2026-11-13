@@ -54,6 +54,14 @@ as `**********`, which Keycloak takes as "keep the one you have", so a plan or a
 one to change it; a new realm or sign-in provider needs its real one. The plan after one was set says it changes back to
 `**********`: applying that keeps the secret, and the plans after it say "No changes".
 
+But not the SMTP password, once the state has `**********` for it, as a realm `adopt`ed does (Keycloak answers every
+secret so): the provider ignores a change from `**********` to anything, so the plans say "No changes" and the applies
+keep the password the realm had, however wrong. Production's did, until a Discord user's verification mail failed
+(`535 authentication failed`, OG-62). `just keycloak smtp-password dev|prod` ([`smtp-password.sh`](smtp-password.sh))
+sends it: it puts another value in the state, so the plan changes it to `TF_VAR_smtp_password`, and applies the realm
+alone; after that, plans compare the real one. After a few failed sign-ins the mail server seems to refuse the
+cluster's address for a while: Keycloak's mail then fails with `Connection refused`.
+
 The state has the realm in it, with any secret that was set: production's is in the bucket `ogrodje-metaos-tfstate`,
 which only the project's owners and CI can read, and development's in `dev/terraform.tfstate`, not committed.
 
