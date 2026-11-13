@@ -43,6 +43,43 @@ module "realm" {
   google_client_secret = var.google_client_secret
 
   dev_user = true
+
+  # Ogrodje's mail server, as production's Keycloak (OG-61): development's sends real email too, e.g. the links to
+  # verify an address, as "Iva (dev)". With it, Keycloak has users verify their email, as in production. Server, port,
+  # address and password are secretspec.toml's KEYCLOAK_SMTP_*, which the devenv shell has (justfile)
+  smtp = {
+    host                  = var.smtp_host
+    port                  = var.smtp_port
+    starttls              = true
+    from                  = var.smtp_email
+    from_display_name     = "Iva (dev)"
+    reply_to              = var.smtp_email
+    reply_to_display_name = "Iva"
+    username              = var.smtp_email
+  }
+  smtp_password = var.smtp_password
+}
+
+variable "smtp_host" {
+  description = "The SMTP server (TF_VAR_smtp_host, from KEYCLOAK_SMTP_HOST)"
+  type        = string
+}
+
+variable "smtp_port" {
+  description = "Its port, with STARTTLS (TF_VAR_smtp_port, from KEYCLOAK_SMTP_PORT)"
+  type        = string
+}
+
+variable "smtp_email" {
+  description = "The address Keycloak sends from and signs in as (TF_VAR_smtp_email, from KEYCLOAK_SMTP_EMAIL)"
+  type        = string
+}
+
+variable "smtp_password" {
+  description = "Its SMTP password (TF_VAR_smtp_password, from KEYCLOAK_SMTP_PASSWORD)"
+  type        = string
+  sensitive   = true
+  default     = null
 }
 
 variable "google_client_secret" {

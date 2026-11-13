@@ -304,6 +304,11 @@ just keycloak apply dev         # and after each change to infra/keycloak/realm;
   put the `/graphql` URL into `aud` (and don't get them into `/mcp`). They're the client's own scopes, not realm
   defaults, as MCP clients registering themselves could ask for any realm default.
 - Dev login: `dev` / `dev`.
+- Every Keycloak sends its email (e.g. the links to verify an address) through Ogrodje's mail server as
+  `iva@ogrodje.si`, which forwards to the bot's Gmail (OG-61): production's and development's alike, so a dev
+  Keycloak's mail is real mail, from "Iva (dev)". Server, port, address and password are secretspec.toml's
+  `KEYCLOAK_SMTP_*`, in both vaults; `just keycloak apply dev|prod` and CI pass them to Terraform. With it, the realm
+  has users verify their email (`verify_email`).
 - A sign-in lasts 7 days without use and 30 days at most (`sso_session_idle_timeout`, `sso_session_max_lifespan`),
   and refresh tokens as long. Access tokens
   last 5 minutes; keycloak-js keeps them in memory and refreshes them before each request (`fe/src/stores/auth.ts`),
