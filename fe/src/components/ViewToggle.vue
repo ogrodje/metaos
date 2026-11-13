@@ -1,19 +1,22 @@
 <script setup lang="ts">
 import { faList, faTableCellsLarge } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { useLocale } from '@/useLocale'
 
 /** How a list of episodes is shown: a line each, or a grid of their thumbnails */
 export type ListView = 'list' | 'grid'
 
 const view = defineModel<ListView>({ required: true })
+
+const { t } = useLocale()
 </script>
 
 <template>
-  <div class="toggle" role="group" aria-label="Show as">
-    <button type="button" :aria-pressed="view === 'list'" title="List" aria-label="List" @click="view = 'list'">
+  <div class="toggle" role="group" :aria-label="t('ui.showAs')">
+    <button type="button" :aria-pressed="view === 'list'" :title="t('ui.list')" :aria-label="t('ui.list')" @click="view = 'list'">
       <FontAwesomeIcon :icon="faList"/>
     </button>
-    <button type="button" :aria-pressed="view === 'grid'" title="Grid" aria-label="Grid" @click="view = 'grid'">
+    <button type="button" :aria-pressed="view === 'grid'" :title="t('ui.grid')" :aria-label="t('ui.grid')" @click="view = 'grid'">
       <FontAwesomeIcon :icon="faTableCellsLarge"/>
     </button>
   </div>

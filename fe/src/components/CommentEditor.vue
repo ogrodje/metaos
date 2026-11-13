@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, ref, useId, watch } from 'vue'
 import MarkdownText from '@/components/MarkdownText.vue'
 import { commentText, editorShortcut, lengthNote, postable } from '@/comments'
+import { useLocale } from '@/useLocale'
 
 // A comment box, as on GitHub: Write, and Preview, which shows the text as the discussion will (MarkdownText). For a
 // new comment and for editing one in place. ⌘↵ or Ctrl+↵ sends it from either; Ctrl+Shift+P (⌘⇧P) switches them.
@@ -29,6 +30,7 @@ const emit = defineEmits<{
 
 type Tab = 'write' | 'preview'
 
+const { t, dateLocale } = useLocale()
 const id = useId()
 const tab = ref<Tab>('write')
 const textarea = ref<HTMLTextAreaElement>()
@@ -42,7 +44,7 @@ const mac = ref(false)
 
 // What will be posted, as MetaOS keeps it
 const preview = computed(() => commentText(text.value))
-const length = computed(() => lengthNote(text.value))
+const length = computed(() => lengthNote(text.value, t, dateLocale.value))
 const ready = computed(() => !props.busy && postable(text.value))
 
 function show(to: Tab, focus?: 'tab' | 'text') {
@@ -98,10 +100,10 @@ onMounted(() => {
       <div class="tabs" role="tablist" :aria-label="label" @keydown="onTabKeydown">
         <button :id="`${id}-write`" ref="writeTab" type="button" role="tab" :aria-selected="tab === 'write'"
                 :aria-controls="`${id}-write-panel`" :tabindex="tab === 'write' ? 0 : -1"
-                aria-keyshortcuts="Control+Shift+P Meta+Shift+P" @click="show('write', 'text')">Write</button>
+                aria-keyshortcuts="Control+Shift+P Meta+Shift+P" @click="show('write', 'text')">{{ t('comments.writeTab') }}</button>
         <button :id="`${id}-preview`" ref="previewTab" type="button" role="tab" :aria-selected="tab === 'preview'"
                 :aria-controls="`${id}-preview-panel`" :tabindex="tab === 'preview' ? 0 : -1"
-                aria-keyshortcuts="Control+Shift+P Meta+Shift+P" @click="show('preview')">Preview</button>
+                aria-keyshortcuts="Control+Shift+P Meta+Shift+P" @click="show('preview')">{{ t('comments.previewTab') }}</button>
       </div>
 
       <!-- Hidden rather than gone while it's previewed, so the text keeps its undo history -->
@@ -113,15 +115,15 @@ onMounted(() => {
            :aria-labelledby="`${id}-preview`" tabindex="0" :style="{ minHeight: previewHeight ? `${previewHeight}px` : undefined }">
         <template v-if="tab === 'preview'">
           <MarkdownText v-if="preview" :source="preview"/>
-          <p v-else class="nothing">Nothing to preview</p>
+          <p v-else class="nothing">{{ t('comments.nothingToPreview') }}</p>
         </template>
       </div>
 
       <div class="foot">
-        <span>Markdown is supported</span>
+        <span>{{ t('comments.markdown') }}</span>
         <span class="aside">
           <span v-if="length" :id="`${id}-length`" :class="{ over: length.over }">{{ length.text }}</span>
-          <span class="keys">{{ mac ? '⌘↵' : 'Ctrl+↵' }} to {{ submitLabel.toLowerCase() }}</span>
+          <span class="keys">{{ t('comments.keys', { keys: mac ? '⌘↵' : 'Ctrl+↵', action: submitLabel.toLowerCase() }) }}</span>
         </span>
       </div>
     </div>
@@ -129,7 +131,7 @@ onMounted(() => {
     <div class="actions">
       <!-- What went wrong, beside the buttons -->
       <div class="message"><slot/></div>
-      <button v-if="cancellable" type="button" class="button" :disabled="busy" @click="emit('cancel')">Cancel</button>
+      <button v-if="cancellable" type="button" class="button" :disabled="busy" @click="emit('cancel')">{{ t('common.cancel') }}</button>
       <!-- Not disabled, which would lose the focus while it's sent, but said to be -->
       <button type="submit" class="button primary" :aria-disabled="!ready" aria-keyshortcuts="Meta+Enter Control+Enter">
         {{ busy ? busyLabel ?? submitLabel : submitLabel }}

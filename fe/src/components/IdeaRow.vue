@@ -1,16 +1,20 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { I18nT } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
 import FileLinks from '@/components/FileLinks.vue'
 import MarkdownText from '@/components/MarkdownText.vue'
 import ShowBadge from '@/components/ShowBadge.vue'
 import { candidates, episodePath, formatDate, guests, type Idea, sessionPath } from '@/episodes'
 import { personPath } from '@/people'
+import { useLocale } from '@/useLocale'
 
 // An idea in a list, a row as an episode in the works is on the Episodes page (EpisodeRow): its title and show; who it's
 // with, its guests, or who might be (its candidates), who recommended it and when it was added, in a line; its tiny
 // summary; then when it's to be recorded and its files, in columns of their own. On phones, a block of lines.
 const props = defineProps<{ idea: Idea }>()
+
+const { t, dateLocale, path } = useLocale()
 
 const guestNames = computed(() => guests(props.idea).join(', '))
 const candidateNames = computed(() => candidates(props.idea).join(', '))
@@ -25,23 +29,29 @@ const recording = computed(() => props.idea.recordingDate ?? props.idea.session?
   <li class="idea">
     <div class="main">
       <p class="title">
-        <RouterLink :to="episodePath(idea)" lang="sl">{{ idea.title }}</RouterLink>
+        <RouterLink :to="path(episodePath(idea))" lang="sl">{{ idea.title }}</RouterLink>
         <ShowBadge v-if="idea.show" :name="idea.show" :color="idea.showColor"/>
       </p>
       <p class="who">
         <span v-if="guestNames" class="people" lang="sl">{{ guestNames }}</span>
-        <span v-else-if="candidateNames" class="people" lang="sl">Maybe {{ candidateNames }}</span>
-        <span v-if="idea.recommendedBy" class="part">{{ people ? 'recommended by' : 'Recommended by' }}
-          <RouterLink class="person" :to="personPath(idea.recommendedBy)">{{ idea.recommendedBy.name }}</RouterLink></span>
-        <span class="part">{{ people || idea.recommendedBy ? 'added' : 'Added' }} <time :datetime="idea.addedDate">{{ formatDate(idea.addedDate) }}</time></span>
+        <I18nT v-else-if="candidateNames" keypath="ideas.row.maybe" scope="global" tag="span" class="people">
+          <template #names><span lang="sl">{{ candidateNames }}</span></template>
+        </I18nT>
+        <I18nT v-if="idea.recommendedBy" :keypath="people ? 'ideas.row.recommendedByAfter' : 'ideas.row.recommendedBy'" scope="global"
+               tag="span" class="part">
+          <template #name><RouterLink class="person" :to="path(personPath(idea.recommendedBy))">{{ idea.recommendedBy.name }}</RouterLink></template>
+        </I18nT>
+        <I18nT :keypath="people || idea.recommendedBy ? 'ideas.row.addedAfter' : 'ideas.row.added'" scope="global" tag="span" class="part">
+          <template #date><time :datetime="idea.addedDate">{{ formatDate(idea.addedDate, dateLocale) }}</time></template>
+        </I18nT>
       </p>
       <MarkdownText v-if="idea.tinySummary" class="summary" :source="idea.tinySummary" lang="sl"/>
     </div>
     <span class="date">
       <template v-if="recording">
-        <span class="label">Recording </span>
-        <RouterLink v-if="idea.session" :to="sessionPath(idea.session)"><time :datetime="recording">{{ formatDate(recording) }}</time></RouterLink>
-        <time v-else :datetime="recording">{{ formatDate(recording) }}</time>
+        <span class="label">{{ t('ideas.row.recording') }} </span>
+        <RouterLink v-if="idea.session" :to="path(sessionPath(idea.session))"><time :datetime="recording">{{ formatDate(recording, dateLocale) }}</time></RouterLink>
+        <time v-else :datetime="recording">{{ formatDate(recording, dateLocale) }}</time>
       </template>
     </span>
     <span class="files"><FileLinks :of="idea"/></span>

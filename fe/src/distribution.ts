@@ -7,6 +7,7 @@ import {
   faXTwitter, faYoutube,
 } from '@fortawesome/free-brands-svg-icons'
 import { faEnvelope, faGlobe, faNewspaper, faPodcast } from '@fortawesome/free-solid-svg-icons'
+import type { Translate } from '@/i18n'
 import { type Image, IMAGE_FIELDS } from '@/images'
 
 /** Where it is, by its URL's host, else as someone said (Channel in the schema) */
@@ -55,35 +56,37 @@ export const DISTRIBUTION_ENTRY_FIELDS = `id platform channel url title note pos
 /** An episode's distribution, for a query */
 export const DISTRIBUTION_FIELDS = `distributions { ${DISTRIBUTION_ENTRY_FIELDS} }`
 
-/** Each channel by name, with its logo in its colours, in the order they're chosen from */
-export const CHANNELS: Record<Channel, { label: string, icon: IconDefinition, color: string }> = {
-  YOUTUBE: { label: 'YouTube', icon: faYoutube, color: '#FF0000' },
-  PATREON: { label: 'Patreon', icon: faPatreon, color: '#FF424D' },
-  SPOTIFY: { label: 'Spotify', icon: faSpotify, color: '#1DB954' },
-  APPLE_PODCASTS: { label: 'Apple Podcasts', icon: faPodcast, color: '#9933CC' },
-  DISCORD: { label: 'Discord', icon: faDiscord, color: '#5865F2' },
-  LINKEDIN: { label: 'LinkedIn', icon: faLinkedin, color: '#0A66C2' },
-  FACEBOOK: { label: 'Facebook', icon: faFacebook, color: '#0866FF' },
-  INSTAGRAM: { label: 'Instagram', icon: faInstagram, color: '#E4405F' },
-  REDDIT: { label: 'Reddit', icon: faReddit, color: '#FF4500' },
-  X: { label: 'X', icon: faXTwitter, color: '#000000' },
-  BLUESKY: { label: 'Bluesky', icon: faBluesky, color: '#1185FE' },
-  MASTODON: { label: 'Mastodon', icon: faMastodon, color: '#6364FF' },
-  THREADS: { label: 'Threads', icon: faThreads, color: '#000000' },
-  MONITOR: { label: 'Monitor', icon: faNewspaper, color: 'var(--secondary)' },
-  NEWSLETTER: { label: 'Newsletter', icon: faEnvelope, color: 'var(--secondary)' },
-  OTHER: { label: 'Other', icon: faGlobe, color: 'var(--secondary)' },
+/**
+ * Each channel with its logo in its colours, in the order they're chosen from, and its brand's name, which is the same
+ * in every language; those that aren't brands are named by their messages (channelName)
+ */
+export const CHANNELS: Record<Channel, { brand?: string, icon: IconDefinition, color: string }> = {
+  YOUTUBE: { brand: 'YouTube', icon: faYoutube, color: '#FF0000' },
+  PATREON: { brand: 'Patreon', icon: faPatreon, color: '#FF424D' },
+  SPOTIFY: { brand: 'Spotify', icon: faSpotify, color: '#1DB954' },
+  APPLE_PODCASTS: { brand: 'Apple Podcasts', icon: faPodcast, color: '#9933CC' },
+  DISCORD: { brand: 'Discord', icon: faDiscord, color: '#5865F2' },
+  LINKEDIN: { brand: 'LinkedIn', icon: faLinkedin, color: '#0A66C2' },
+  FACEBOOK: { brand: 'Facebook', icon: faFacebook, color: '#0866FF' },
+  INSTAGRAM: { brand: 'Instagram', icon: faInstagram, color: '#E4405F' },
+  REDDIT: { brand: 'Reddit', icon: faReddit, color: '#FF4500' },
+  X: { brand: 'X', icon: faXTwitter, color: '#000000' },
+  BLUESKY: { brand: 'Bluesky', icon: faBluesky, color: '#1185FE' },
+  MASTODON: { brand: 'Mastodon', icon: faMastodon, color: '#6364FF' },
+  THREADS: { brand: 'Threads', icon: faThreads, color: '#000000' },
+  MONITOR: { brand: 'Monitor', icon: faNewspaper, color: 'var(--secondary)' },
+  NEWSLETTER: { icon: faEnvelope, color: 'var(--secondary)' },
+  OTHER: { icon: faGlobe, color: 'var(--secondary)' },
 }
 
-/** What each of the episode's links is, as its row says it */
-export const LINK_NAMES: Record<LinkPlatform, string> = {
-  YOUTUBE: 'YouTube',
-  SPOTIFY: 'Spotify',
-  APPLE_PODCASTS: 'Apple Podcasts',
-  PATREON: 'Patreon, the full episode',
-  PATREON_AUDIO: 'Patreon, the full episode as audio',
-  PATREON_BONUS: 'Patreon, the bonus',
-  PATREON_BONUS_AUDIO: 'Patreon, the bonus as audio',
+/** A channel's name in the page's language: its brand's, else its message's, e.g. Newsletter */
+export function channelName(channel: Channel, t: Translate) {
+  return CHANNELS[channel].brand ?? t(`distribution.channels.${channel}`)
+}
+
+/** What each of the episode's links is, as its row says it, e.g. Patreon, the bonus as audio */
+export function linkName(platform: LinkPlatform, t: Translate) {
+  return t(`distribution.links.${platform}`)
 }
 
 // The hosts MetaOS tells channels by, as Channel in Distributions.kt has them
@@ -135,18 +138,21 @@ export function distributedAt(entry: Pick<Distribution, 'postedAt' | 'preview' |
 }
 
 /** The folded part's line: how many posts, and where, e.g. "3 posts: LinkedIn ×2, Discord", after its links */
-export function distributionLine(entries: Distribution[]): string {
+export function distributionLine(entries: Distribution[], t: Translate): string {
   const posts = entries.filter((entry) => !entry.platform)
-  const links = new Set(entries.filter((entry) => entry.platform).map((entry) => CHANNELS[entry.channel].label))
+  const links = new Set(entries.filter((entry) => entry.platform).map((entry) => channelName(entry.channel, t)))
   const parts: string[] = []
-  if (links.size) parts.push(`On ${[...links].join(', ')}`)
+  if (links.size) parts.push(t('distribution.line.on', { where: [...links].join(', ') }))
   if (posts.length) {
     const counts = new Map<string, number>()
-    for (const post of posts) counts.set(CHANNELS[post.channel].label, (counts.get(CHANNELS[post.channel].label) ?? 0) + 1)
+    for (const post of posts) {
+      const name = channelName(post.channel, t)
+      counts.set(name, (counts.get(name) ?? 0) + 1)
+    }
     const where = [...counts].sort((a, b) => b[1] - a[1]).map(([label, n]) => (n > 1 ? `${label} ×${n}` : label))
-    parts.push(`${posts.length} ${posts.length === 1 ? 'post' : 'posts'}: ${where.join(', ')}`)
+    parts.push(t('distribution.line.posts', { n: posts.length, where: where.join(', ') }, posts.length))
   } else {
-    parts.push('Not shared yet')
+    parts.push(t('distribution.line.none'))
   }
   return parts.join(' · ')
 }

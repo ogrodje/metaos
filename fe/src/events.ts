@@ -1,7 +1,9 @@
-import { TIME_ZONE } from '@/episodes'
+import type { DateLocale } from '@/i18n'
+import { TIME_ZONE } from '@/i18n'
 
 // Slovenia's tech, developer and startup events, from Goo through MetaOS's API (Goo.kt), as ogrodje.si's Dogodki page
-// listed them: by week, Monday to Sunday, then by day, in Slovenian and in Ljubljana's time, whatever the browser's.
+// listed them: by week, Monday to Sunday, then by day, in Ljubljana's time, whatever the browser's. Their dates are in
+// the page's language: in Slovenian as ogrodje.si wrote them (9. 11. – 15. 11. 2026), or in English (9 – 15 Nov 2026).
 
 /** Who an event is by, with its logo and its colours, the text's (mainColor) and its badge's */
 export interface Meetup {
@@ -29,9 +31,6 @@ export interface GooEvent {
 export const EVENT_FIELDS = `id title url start end hasStartTime hasEndTime locationName locationAddress promoted
   meetup { name logo mainColor backgroundColor }`
 
-// The events are in Slovenian, as they are on ogrodje.si
-export const EVENT_LOCALE = 'sl-SI'
-
 // A day in Ljubljana, as YYYY-MM-DD, e.g. for an event that starts at 23:30 UTC, the next day's
 const dayFormat = new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: TIME_ZONE })
 export const dayOf = (at: string) => dayFormat.format(new Date(at))
@@ -47,42 +46,52 @@ export function weekOf(day: string) {
   return dayString(date)
 }
 
-const capitalized = (text: string) => text.charAt(0).toLocaleUpperCase(EVENT_LOCALE) + text.slice(1)
+const capitalized = (text: string, dateLocale: DateLocale) => text.charAt(0).toLocaleUpperCase(dateLocale) + text.slice(1)
 
-/** [day]'s name, e.g. Torek */
-export function weekdayName(day: string) {
-  return capitalized(utc(day).toLocaleDateString(EVENT_LOCALE, { weekday: 'long', timeZone: 'UTC' }))
+/** [day]'s name, e.g. Torek, or Tuesday */
+export function weekdayName(day: string, dateLocale: DateLocale) {
+  return capitalized(utc(day).toLocaleDateString(dateLocale, { weekday: 'long', timeZone: 'UTC' }), dateLocale)
 }
 
-// e.g. 9. 11.
+// e.g. 9. 11., as ogrodje.si wrote it, rather than Intl's 9.–15. 11.
 const dayAndMonth = (date: Date) => `${date.getUTCDate()}. ${date.getUTCMonth() + 1}.`
 
-/** A week by its Monday, e.g. 9. 11. – 15. 11. 2026 */
-export function weekRange(monday: string) {
+/** A week by its Monday, e.g. 9. 11. – 15. 11. 2026, or 9 – 15 Nov 2026 */
+export function weekRange(monday: string, dateLocale: DateLocale) {
   const sunday = utc(monday)
   sunday.setUTCDate(sunday.getUTCDate() + 6)
-  return `${dayAndMonth(utc(monday))} – ${dayAndMonth(sunday)} ${sunday.getUTCFullYear()}`
+  if (dateLocale === 'sl-SI') return `${dayAndMonth(utc(monday))} – ${dayAndMonth(sunday)} ${sunday.getUTCFullYear()}`
+  return new Intl.DateTimeFormat(dateLocale, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+    .formatRange(utc(monday), sunday)
 }
 
-/** [day] as a short date, e.g. 10. 11. */
-export const shortDay = (day: string) => dayAndMonth(utc(day))
+/** [day] as a short date, e.g. 10. 11., or 10 Nov */
+export function shortDay(day: string, dateLocale: DateLocale) {
+  if (dateLocale === 'sl-SI') return dayAndMonth(utc(day))
+  return utc(day).toLocaleDateString(dateLocale, { day: 'numeric', month: 'short', timeZone: 'UTC' })
+}
 
-const date = (at: string) => new Date(at).toLocaleDateString(EVENT_LOCALE, { dateStyle: 'medium', timeZone: TIME_ZONE })
-const time = (at: string) => new Date(at).toLocaleTimeString(EVENT_LOCALE, { hour: '2-digit', minute: '2-digit', timeZone: TIME_ZONE })
+const date = (at: string, dateLocale: DateLocale) =>
+  new Date(at).toLocaleDateString(dateLocale, { dateStyle: 'medium', timeZone: TIME_ZONE })
+const time = (at: string, dateLocale: DateLocale) =>
+  new Date(at).toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit', timeZone: TIME_ZONE })
 
 /**
  * When an event is, as ogrodje.si said it: its start's date, with its time where it has one, and its end's time, with
  * its date when it's another day's, e.g. 10. nov. 2026 11:00 – 12:00, or 11. nov. 2026 15:00 – 25. nov. 2026 17:30. An
  * end without a time shows only when it's another day, as its date, e.g. 23. nov. 2026 – 25. nov. 2026; an end the
  * same as the start doesn't. Unlike ogrodje.si, which took every time for summer time's (UTC+2), in Ljubljana's time.
+ * In English, e.g. 10 Nov 2026 11:00 – 12:00.
  */
-export function eventTime(event: Pick<GooEvent, 'start' | 'end' | 'hasStartTime' | 'hasEndTime'>) {
-  const start = event.hasStartTime ? `${date(event.start)} ${time(event.start)}` : date(event.start)
+export function eventTime(event: Pick<GooEvent, 'start' | 'end' | 'hasStartTime' | 'hasEndTime'>, dateLocale: DateLocale) {
+  const day = (at: string) => date(at, dateLocale)
+  const hour = (at: string) => time(at, dateLocale)
+  const start = event.hasStartTime ? `${day(event.start)} ${hour(event.start)}` : day(event.start)
   const { end } = event
   if (!end || end === event.start) return start
   const sameDay = dayOf(end) === dayOf(event.start)
-  if (event.hasEndTime) return `${start} – ${sameDay ? time(end) : `${date(end)} ${time(end)}`}`
-  return sameDay ? start : `${start} – ${date(end)}`
+  if (event.hasEndTime) return `${start} – ${sameDay ? hour(end) : `${day(end)} ${hour(end)}`}`
+  return sameDay ? start : `${start} – ${day(end)}`
 }
 
 /** A colour of its own for a meetup without one, from its name, the same everywhere */

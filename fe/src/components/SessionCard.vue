@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 import EpisodeRow from '@/components/EpisodeRow.vue'
 import FileLinks from '@/components/FileLinks.vue'
 import { formatDate, relativeDate, sessionName, sessionPath, type SessionGroup, TIME_ZONE } from '@/episodes'
+import { useLocale } from '@/useLocale'
 
 // A recording session on the home page and its episodes: the day as on a calendar, where, how far away, its files, and
 // its episodes a line each. Episodes without a session are rows of their own, without the head.
@@ -13,11 +14,13 @@ const props = defineProps<{
   overdue?: boolean
 }>()
 
+const { dateLocale, path } = useLocale()
+
 const day = computed(() => {
   const date = props.group.session ? new Date(props.group.session.date) : null
   return date && {
-    month: date.toLocaleDateString('en-GB', { month: 'short', timeZone: TIME_ZONE }),
-    day: date.toLocaleDateString('en-GB', { day: 'numeric', timeZone: TIME_ZONE }),
+    month: date.toLocaleDateString(dateLocale.value, { month: 'short', timeZone: TIME_ZONE }),
+    day: date.toLocaleDateString(dateLocale.value, { day: 'numeric', timeZone: TIME_ZONE }),
   }
 })
 </script>
@@ -27,10 +30,10 @@ const day = computed(() => {
     <h3 v-if="group.session" class="head">
       <span class="calendar" aria-hidden="true"><span class="month">{{ day?.month }}</span><span class="day">{{ day?.day }}</span></span>
       <span class="where">
-        <RouterLink :to="sessionPath(group.session)">{{ sessionName(group.session) ?? formatDate(group.session.date) }}</RouterLink>
-        <time class="date" :datetime="group.session.date">{{ formatDate(group.session.date) }}</time>
+        <RouterLink :to="path(sessionPath(group.session))">{{ sessionName(group.session) ?? formatDate(group.session.date, dateLocale) }}</RouterLink>
+        <time class="date" :datetime="group.session.date">{{ formatDate(group.session.date, dateLocale) }}</time>
       </span>
-      <span class="when" :class="{ overdue }">{{ relativeDate(group.session.date) }}</span>
+      <span class="when" :class="{ overdue }">{{ relativeDate(group.session.date, dateLocale) }}</span>
       <span class="files"><FileLinks :of="group.session"/></span>
     </h3>
     <ul class="episodes">

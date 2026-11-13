@@ -40,11 +40,13 @@ import { useFirstLoad } from '@/ssr'
 import { useAuthStore } from '@/stores/auth'
 import { usePageTitle } from '@/title'
 import { EPISODE_TRANSCRIPT_FIELDS } from '@/transcriptions'
+import { useLocale } from '@/useLocale'
 
 const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 const siteUrl = useSiteUrl()
+const { t, dateLocale, path } = useLocale()
 
 // The page is for the episode in the path when it opens: going to another episode opens another page
 const episodeRef = String(route.params.ref)
@@ -81,11 +83,11 @@ async function loadEpisode(ref: string, quietly = false) {
     episode.value = keepUnchanged(episode.value, loaded)
     error.value = undefined
     // It got another code, which the path follows
-    if (quietly && loaded && !names(loaded, route.params.ref)) void router.replace(episodePath(loaded))
+    if (quietly && loaded && !names(loaded, route.params.ref)) void router.replace(path(episodePath(loaded)))
   } catch (e) {
     if (load !== loads) return
     if (quietly) throw e
-    error.value = errorMessage(e)
+    error.value = errorMessage(e, t)
   }
 }
 
@@ -113,7 +115,7 @@ usePageMeta(() => {
   if (!shown) return {}
   const about = shown.tinySummary ?? shown.summary
   return {
-    path: episodePath(shown),
+    path: path(episodePath(shown)),
     description: about ? shorten(plainText(about)) : null,
     image: shown.thumbnail,
     structured: shown.status === 'PUBLISHED' ? episodeData(shown, siteUrl) : null,
@@ -143,7 +145,7 @@ const photos = computed<KoofrPhoto[]>((previous) =>
 // What needs the team's attention, by the home page's rules, e.g. recorded months ago and not out yet, and in its video
 // and audio
 const concerns = computed(() => (team.value && episode.value
-  ? [...episodeConcerns(episode.value), ...mediaConcerns(episode.value.media)]
+  ? [...episodeConcerns(episode.value, t), ...mediaConcerns(episode.value.media, t)]
   : []))
 
 // Its thumbnail, large; the team also sees those it's A/B tested with, B and C, and switches between them
@@ -158,14 +160,15 @@ const tested = computed(() => (team.value ? variants.value : variants.value.filt
 const letter = ref('A')
 const picture = computed(() => (tested.value.find((variant) => variant.letter === letter.value) ?? tested.value[0]) ?? null)
 
-// What it's spoken in, by name, e.g. Slovenian
-const languages = new Intl.DisplayNames('en-GB', { type: 'language' })
-const spokenIn = computed(() => (episode.value ? languages.of(episode.value.language.split('-')[0]!) : undefined))
+// What it's spoken in, by name in the page's language, e.g. Slovenian (slovenščina)
+const spokenIn = computed(() => (episode.value
+  ? new Intl.DisplayNames(dateLocale.value, { type: 'language' }).of(episode.value.language.split('-')[0]!)
+  : undefined))
 
 // For anyone not on the team, where on the page to go, when there's more than one place
 const contents = computed(() => [
-  ...(episode.value?.summary ? [{ id: 'summary', title: 'Summary' }] : []),
-  ...(episode.value?.machineSummary ? [{ id: 'ai-summary', title: 'AI summary' }] : []),
+  ...(episode.value?.summary ? [{ id: 'summary', title: t('episode.summary') }] : []),
+  ...(episode.value?.machineSummary ? [{ id: 'ai-summary', title: t('episode.aiSummary') }] : []),
 ])
 
 // Once its title has scrolled away, the panel says what the page is about
@@ -175,18 +178,13 @@ const pastTitle = useScrolledPast(titleBlock)
 
 <template>
   <main class="content">
-    <LoadError v-if="error" what="The episode" :error="error" @retry="loadEpisode(episodeRef)"/>
+    <LoadError v-if="error" :what="t('episode.what')" :error="error" @retry="loadEpisode(episodeRef)"/>
     <!-- None so far, while it's checked whether the user is on the team, who may see it although it isn't released -->
     <LoadingRows v-else-if="episode === undefined || (episode === null && auth.likelyTeam && !auth.ready)" :rows="6"
-                 label="Loading the episode"/>
-    <NotFound v-else-if="episode === null" :title="`There's no episode ${episodeRef}`" :search="episodeRef">
-      <template v-if="auth.team">
-        It may have another code now, or have been deleted. Search for it, or find it among the episodes.
-      </template>
-      <template v-else>
-        It may not be released yet, have another code now, or have been deleted. Find it among the episodes, or sign in if
-        you're on Ogrodje's team.
-      </template>
+                 :label="t('episode.loading')"/>
+    <NotFound v-else-if="episode === null" :title="t('episode.notFound.title', { ref: episodeRef })" :search="episodeRef">
+      <template v-if="auth.team">{{ t('episode.notFound.team') }}</template>
+      <template v-else>{{ t('episode.notFound.public') }}</template>
     </NotFound>
 
     <!-- What it is and its thumbnail; at the right, for the team, what needs doing and the conversation, then the facts;
@@ -208,11 +206,11 @@ const pastTitle = useScrolledPast(titleBlock)
           <a :href="picture.image!.url" target="_blank" rel="noopener"
              :title="`${picture.image!.name}, ${picture.image!.width} × ${picture.image!.height}`">
             <img :src="src(picture.image!, 1280)" :srcset="srcset(picture.image!)" sizes="(max-width: 960px) 100vw, 800px"
-                 :width="picture.image!.width" :height="picture.image!.height" :alt="`Thumbnail ${picture.letter}`">
+                 :width="picture.image!.width" :height="picture.image!.height" :alt="t('episode.hero.alt', { letter: picture.letter })">
           </a>
-          <div v-if="tested.length > 1" class="tested" role="group" aria-label="Thumbnails it's tested with">
+          <div v-if="tested.length > 1" class="tested" role="group" :aria-label="t('episode.hero.tested')">
             <FontAwesomeIcon class="lock" :icon="faLock"/>
-            <span class="label" aria-hidden="true">Tested as</span>
+            <span class="label" aria-hidden="true">{{ t('episode.hero.testedAs') }}</span>
             <button v-for="variant in tested" :key="variant.letter" type="button" :aria-pressed="variant.letter === picture.letter"
                     :title="variant.title ?? undefined" @click="letter = variant.letter">
               {{ variant.letter }}<span class="visually-hidden">: {{ variant.title }}</span>
@@ -221,85 +219,85 @@ const pastTitle = useScrolledPast(titleBlock)
         </figure>
       </div>
 
-      <FactPanel label="About the episode" tall>
+      <FactPanel :label="t('episode.panel.label')" tall>
         <PanelTitle :title="episode.title" :code="episode.code" :picture="listPicture(episode)" :shown="pastTitle"/>
 
         <p v-if="asPublic" class="seen-as">
-          Seen as the public does.
-          <button type="button" class="text-button" @click="asPublic = false">Back to the team's view</button>
+          {{ t('episode.panel.seenAsPublic') }}
+          <button type="button" class="text-button" @click="asPublic = false">{{ t('episode.panel.backToTeam') }}</button>
         </p>
 
         <!-- The team's, as are their comments and history, which no one else gets; kept a place while the user who
              was on the team here last time is checked -->
         <template v-if="team">
-          <ul v-if="concerns.length" class="concerns" aria-label="Needs attention">
+          <ul v-if="concerns.length" class="concerns" :aria-label="t('episode.panel.needsAttention')">
             <li v-for="concern in concerns" :key="concern">{{ concern }}</li>
           </ul>
           <ActivityPanel :comments="episode.comments" :changes="episode.history" :episode-id="episode.id"
                          @changed="reloadQuietly(episode.id)"/>
         </template>
-        <section v-else-if="auth.likelyTeam && !auth.ready" class="loading" aria-label="Activity">
-          <LoadingRows :rows="3" label="Loading the activity"/>
+        <section v-else-if="auth.likelyTeam && !auth.ready" class="loading" :aria-label="t('episode.panel.activity')">
+          <LoadingRows :rows="3" :label="t('episode.panel.loadingActivity')"/>
         </section>
 
-        <FactGroup title="Episode">
+        <FactGroup :title="t('episode.facts.title')">
           <dl>
-            <Fact v-if="episode.airedDate" label="Aired">
-              <time :datetime="episode.airedDate">{{ formatDate(episode.airedDate) }}</time>
-              <span v-if="team" class="aside"> · {{ relativeDate(episode.airedDate) }}</span>
+            <Fact v-if="episode.airedDate" :label="t('episode.facts.aired')">
+              <time :datetime="episode.airedDate">{{ formatDate(episode.airedDate, dateLocale) }}</time>
+              <span v-if="team" class="aside"> · {{ relativeDate(episode.airedDate, dateLocale) }}</span>
             </Fact>
-            <Fact v-if="episode.recordingDate" label="Recording">
-              <time :datetime="episode.recordingDate">{{ formatDate(episode.recordingDate) }}</time>
-              <span v-if="team" class="aside"> · {{ relativeDate(episode.recordingDate) }}</span>
+            <Fact v-if="episode.recordingDate" :label="t('episode.facts.recording')">
+              <time :datetime="episode.recordingDate">{{ formatDate(episode.recordingDate, dateLocale) }}</time>
+              <span v-if="team" class="aside"> · {{ relativeDate(episode.recordingDate, dateLocale) }}</span>
             </Fact>
             <!-- A session's page is the team's -->
-            <Fact v-if="episode.session" label="Session">
+            <Fact v-if="episode.session" :label="t('episode.facts.session')">
               <FontAwesomeIcon class="session-icon" :icon="faCalendar" aria-hidden="true"/>
-              <RouterLink v-if="team" :to="sessionPath(episode.session)">{{ sessionTitle(episode.session) }}</RouterLink>
-              <template v-else>{{ sessionTitle(episode.session) }}</template>
+              <RouterLink v-if="team" :to="path(sessionPath(episode.session))">{{ sessionTitle(episode.session, dateLocale) }}</RouterLink>
+              <template v-else>{{ sessionTitle(episode.session, dateLocale) }}</template>
             </Fact>
-            <Fact v-if="episode.recommendedBy" label="Recommended by">
-              <RouterLink :to="personPath(episode.recommendedBy)">{{ episode.recommendedBy.name }}</RouterLink>
+            <Fact v-if="episode.recommendedBy" :label="t('episode.facts.recommendedBy')">
+              <RouterLink :to="path(personPath(episode.recommendedBy))">{{ episode.recommendedBy.name }}</RouterLink>
             </Fact>
-            <Fact v-if="spokenIn" label="Spoken in">{{ spokenIn }}</Fact>
-            <Fact v-if="team" label="Added">
-              <time :datetime="episode.addedDate">{{ formatDate(episode.addedDate) }}</time>
-              <FontAwesomeIcon class="lock" :icon="faLock" title="Only the team sees this"/>
+            <Fact v-if="spokenIn" :label="t('episode.facts.spokenIn')">{{ spokenIn }}</Fact>
+            <Fact v-if="team" :label="t('episode.facts.added')">
+              <time :datetime="episode.addedDate">{{ formatDate(episode.addedDate, dateLocale) }}</time>
+              <FontAwesomeIcon class="lock" :icon="faLock" :title="t('episode.facts.teamOnly')"/>
             </Fact>
           </dl>
         </FactGroup>
 
-        <FactGroup v-if="!team && contents.length > 1" title="On this page">
+        <FactGroup v-if="!team && contents.length > 1" :title="t('episode.contents')">
           <ol class="contents">
             <li v-for="part in contents" :key="part.id"><a :href="`#${part.id}`">{{ part.title }}</a></li>
           </ol>
         </FactGroup>
 
         <p v-if="team && released" class="see-as">
-          <button type="button" class="text-button" @click="asPublic = true">See it as the public does</button>
+          <button type="button" class="text-button" @click="asPublic = true">{{ t('episode.seeAsPublic') }}</button>
         </p>
       </FactPanel>
 
       <div class="main">
         <div v-if="episode.people.length || links(episode, allPatreon).length" class="credits">
           <section v-if="episode.people.length" aria-labelledby="people">
-            <h2 id="people">People</h2>
+            <h2 id="people">{{ t('episode.people') }}</h2>
             <div class="people">
               <PersonLine v-for="person in episode.people" :id="person.personId" :key="person.personId" :name="person.name"
-                          :avatar="person.avatar" :role="person.roles.map(roleName).join(', ')"/>
+                          :avatar="person.avatar" :role="person.roles.map((role) => roleName(role, t)).join(', ')"/>
             </div>
           </section>
           <section v-if="links(episode, allPatreon).length" aria-labelledby="listen">
-            <h2 id="listen">Listen</h2>
+            <h2 id="listen">{{ t('episode.listenTitle') }}</h2>
             <div class="listen" :class="{ copyable: team }"><ListenLinks :episode="episode" labelled :copyable="team" :all-patreon="allPatreon"/></div>
           </section>
         </div>
 
-        <FoldedText v-if="episode.summary" id="summary" title="Summary" :source="episode.summary"/>
-        <FoldedText v-if="episode.machineSummary" id="ai-summary" title="AI summary" :source="episode.machineSummary"/>
+        <FoldedText v-if="episode.summary" id="summary" :title="t('episode.summary')" :source="episode.summary"/>
+        <FoldedText v-if="episode.machineSummary" id="ai-summary" :title="t('episode.aiSummary')" :source="episode.machineSummary"/>
 
-        <SignInPrompt v-if="auth.ready && !auth.authenticated" compact title="On Ogrodje's team?">
-          This is the page the team works on: its transcript, pictures, files and history are theirs.
+        <SignInPrompt v-if="auth.ready && !auth.authenticated" compact :title="t('episode.signIn.title')">
+          {{ t('episode.signIn.text') }}
         </SignInPrompt>
 
         <BehindEpisode v-if="team" :episode="episode" :artwork="artwork" :photos="photos" @changed="reloadQuietly(episode.id)"/>

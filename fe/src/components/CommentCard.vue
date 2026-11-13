@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, useId } from 'vue'
+import { I18nT } from 'vue-i18n'
 import { RouterLink, useRoute } from 'vue-router'
 import CommentEditor from '@/components/CommentEditor.vue'
 import MarkdownText from '@/components/MarkdownText.vue'
@@ -8,6 +9,7 @@ import { type Comment, commentAnchor, commentText, DELETE_COMMENT, EDIT_COMMENT,
 import { formatDate } from '@/episodes'
 import { errorMessage, graphql } from '@/graphql'
 import { personPath } from '@/people'
+import { useLocale } from '@/useLocale'
 
 // A comment in a discussion: who wrote it, when and how, and what. Its author edits it in place, and deletes it once
 // they've said so here, rather than in a dialog.
@@ -24,6 +26,7 @@ const emit = defineEmits<{
   fold: []
 }>()
 
+const { t, dateLocale, path } = useLocale()
 const id = useId()
 const editing = ref(false)
 // Kept here while it's edited, so it stays while the page shows MetaOS's changes
@@ -70,7 +73,7 @@ async function save() {
     emit('edited', comment)
     stopEditing()
   } catch (e) {
-    error.value = errorMessage(e)
+    error.value = errorMessage(e, t)
   } finally {
     busy.value = false
   }
@@ -96,7 +99,7 @@ async function remove() {
     await graphql(DELETE_COMMENT, { id: props.comment.id })
     emit('deleted', props.comment.id)
   } catch (e) {
-    error.value = errorMessage(e)
+    error.value = errorMessage(e, t)
   } finally {
     busy.value = false
   }
@@ -109,41 +112,42 @@ async function remove() {
 
     <div class="main">
       <!-- Edited in its place, as on GitHub -->
-      <CommentEditor v-if="editing" v-model="draft" label="Edit your comment" submit-label="Save" busy-label="Saving…"
-                     :busy="busy" cancellable autofocus @submit="save" @cancel="stopEditing">
-        <p v-if="error" class="error" role="alert">The comment wasn't saved: {{ error }}</p>
+      <CommentEditor v-if="editing" v-model="draft" :label="t('comments.editLabel')" :submit-label="t('common.save')"
+                     :busy-label="t('comments.saving')" :busy="busy" cancellable autofocus @submit="save" @cancel="stopEditing">
+        <p v-if="error" class="error" role="alert">{{ t('comments.notSaved', { error }) }}</p>
       </CommentEditor>
 
       <article v-else class="card">
         <header class="head">
-          <RouterLink v-if="comment.author.person" class="author" :to="personPath(comment.author.person)">{{ comment.author.name }}</RouterLink>
+          <RouterLink v-if="comment.author.person" class="author" :to="path(personPath(comment.author.person))">{{ comment.author.name }}</RouterLink>
           <b v-else class="author">{{ comment.author.name }}</b>
-          <RouterLink class="permalink" :to="{ hash: `#${anchor}` }" :aria-current="linked ? 'location' : undefined">commented <time :datetime="comment.createdAt" :title="fullDateTime(comment.createdAt)">{{ formatDate(comment.createdAt) }}</time></RouterLink>
-          <span v-if="via" class="via" :title="`Written through MCP, with the ${comment.tool} tool`">{{ via }}</span>
-          <time v-if="comment.editedAt" class="edited" :datetime="comment.editedAt" :title="`Edited ${fullDateTime(comment.editedAt)}`">edited</time>
+          <RouterLink class="permalink" :to="{ hash: `#${anchor}` }" :aria-current="linked ? 'location' : undefined"><I18nT keypath="comments.commented" scope="global"><template #date><time :datetime="comment.createdAt" :title="fullDateTime(comment.createdAt, dateLocale)">{{ formatDate(comment.createdAt, dateLocale) }}</time></template></I18nT></RouterLink>
+          <span v-if="via" class="via" :title="t('comments.via', { tool: comment.tool })">{{ via }}</span>
+          <time v-if="comment.editedAt" class="edited" :datetime="comment.editedAt"
+                :title="t('comments.editedAt', { when: fullDateTime(comment.editedAt, dateLocale) })">{{ t('comments.edited') }}</time>
           <span v-if="(comment.mine || foldable) && !confirming" class="actions">
             <template v-if="comment.mine">
-              <button ref="editButton" type="button" @click="edit">Edit</button>
-              <button ref="deleteButton" type="button" @click="askToDelete">Delete</button>
+              <button ref="editButton" type="button" @click="edit">{{ t('common.edit') }}</button>
+              <button ref="deleteButton" type="button" @click="askToDelete">{{ t('comments.delete') }}</button>
             </template>
-            <button v-if="foldable" type="button" @click="emit('fold')">Fold</button>
+            <button v-if="foldable" type="button" @click="emit('fold')">{{ t('comments.fold') }}</button>
           </span>
         </header>
 
         <MarkdownText class="body" :source="comment.body"/>
 
         <div v-if="confirming" class="confirm" role="group" :aria-labelledby="`${id}-confirm`" @keydown.esc="keep">
-          <span :id="`${id}-confirm`" class="question">Delete this comment?</span>
+          <span :id="`${id}-confirm`" class="question">{{ t('comments.confirmDelete') }}</span>
           <span class="buttons">
             <button type="button" class="button delete" :aria-disabled="busy || undefined" @click="remove">
-              {{ busy ? 'Deleting…' : 'Delete' }}
+              {{ busy ? t('comments.deleting') : t('comments.delete') }}
             </button>
-            <button ref="keepButton" type="button" class="button" :disabled="busy" @click="keep">Cancel</button>
+            <button ref="keepButton" type="button" class="button" :disabled="busy" @click="keep">{{ t('common.cancel') }}</button>
           </span>
         </div>
       </article>
 
-      <p v-if="error && !editing" class="error" role="alert">The comment wasn't deleted: {{ error }}</p>
+      <p v-if="error && !editing" class="error" role="alert">{{ t('comments.notDeleted', { error }) }}</p>
     </div>
   </li>
 </template>

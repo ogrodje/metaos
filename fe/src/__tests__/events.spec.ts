@@ -1,23 +1,24 @@
 import { describe, expect, it } from 'vitest'
-import { badgeColors, byWeek, colorOf, dayOf, eventTime, weekdayName, weekOf, weekRange } from '@/events'
+import { badgeColors, byWeek, colorOf, dayOf, eventTime, shortDay, weekdayName, weekOf, weekRange } from '@/events'
+import { t, tSl } from './i18n'
 
 const at = (start: string, end: string | null, hasStartTime = true, hasEndTime = true) => ({ start, end, hasStartTime, hasEndTime })
 
 describe('eventTime', () => {
   it('says the end time alone on the same day, and its date on another', () => {
-    expect(eventTime(at('2026-11-10T10:00:00Z', '2026-11-10T11:00:00Z'))).toBe('10. nov. 2026 11:00 – 12:00')
-    expect(eventTime(at('2026-11-11T14:00:00Z', '2026-11-25T16:30:00Z'))).toBe('11. nov. 2026 15:00 – 25. nov. 2026 17:30')
+    expect(eventTime(at('2026-11-10T10:00:00Z', '2026-11-10T11:00:00Z'), 'sl-SI')).toBe('10. nov. 2026 11:00 – 12:00')
+    expect(eventTime(at('2026-11-11T14:00:00Z', '2026-11-25T16:30:00Z'), 'sl-SI')).toBe('11. nov. 2026 15:00 – 25. nov. 2026 17:30')
   })
 
   it('leaves out an end without a time, an end the same as the start, and one there is none of', () => {
-    expect(eventTime(at('2026-11-11T13:00:00Z', '2026-11-11T15:00:00Z', true, false))).toBe('11. nov. 2026 14:00')
-    expect(eventTime(at('2026-11-11T13:00:00Z', '2026-11-12T15:00:00Z', true, false))).toBe('11. nov. 2026 14:00 – 12. nov. 2026')
-    expect(eventTime(at('2026-11-10T17:00:00Z', '2026-11-10T17:00:00Z'))).toBe('10. nov. 2026 18:00')
-    expect(eventTime(at('2026-11-17T17:00:00Z', null))).toBe('17. nov. 2026 18:00')
+    expect(eventTime(at('2026-11-11T13:00:00Z', '2026-11-11T15:00:00Z', true, false), 'sl-SI')).toBe('11. nov. 2026 14:00')
+    expect(eventTime(at('2026-11-11T13:00:00Z', '2026-11-12T15:00:00Z', true, false), 'sl-SI')).toBe('11. nov. 2026 14:00 – 12. nov. 2026')
+    expect(eventTime(at('2026-11-10T17:00:00Z', '2026-11-10T17:00:00Z'), 'sl-SI')).toBe('10. nov. 2026 18:00')
+    expect(eventTime(at('2026-11-17T17:00:00Z', null), 'sl-SI')).toBe('17. nov. 2026 18:00')
   })
 
   it('says the days of one without times, in Ljubljana', () => {
-    expect(eventTime(at('2026-11-22T23:00:00Z', '2026-11-24T23:00:00Z', false, false))).toBe('23. nov. 2026 – 25. nov. 2026')
+    expect(eventTime(at('2026-11-22T23:00:00Z', '2026-11-24T23:00:00Z', false, false), 'sl-SI')).toBe('23. nov. 2026 – 25. nov. 2026')
   })
 })
 
@@ -38,9 +39,23 @@ describe('byWeek', () => {
   it('names the weeks and days in Slovenian', () => {
     expect(dayOf('2026-11-15T23:30:00Z')).toBe('2026-11-16')
     expect(weekOf('2026-11-15')).toBe('2026-11-09')
-    expect(weekRange('2026-11-30')).toBe('30. 11. – 6. 12. 2026')
-    expect(weekdayName('2026-11-10')).toBe('Torek')
-    expect(weekdayName('2026-11-12')).toBe('Četrtek')
+    expect(weekRange('2026-11-30', 'sl-SI')).toBe('30. 11. – 6. 12. 2026')
+    expect(weekRange('2026-11-09', 'sl-SI')).toBe('9. 11. – 15. 11. 2026')
+    expect(tSl('events.week', { range: weekRange('2026-11-09', 'sl-SI') })).toBe('Teden / 9. 11. – 15. 11. 2026')
+    expect(weekdayName('2026-11-10', 'sl-SI')).toBe('Torek')
+    expect(weekdayName('2026-11-12', 'sl-SI')).toBe('Četrtek')
+    expect(shortDay('2026-11-10', 'sl-SI')).toBe('10. 11.')
+  })
+
+  it('names them in English too', () => {
+    // Intl puts thin spaces around the dash
+    const spaced = (text: string) => text.replace(/\s/g, ' ')
+    expect(spaced(weekRange('2026-11-09', 'en-GB'))).toBe('9 – 15 Nov 2026')
+    expect(spaced(weekRange('2026-11-30', 'en-GB'))).toBe('30 Nov – 6 Dec 2026')
+    expect(spaced(t('events.week', { range: weekRange('2026-11-09', 'en-GB') }))).toBe('Week of 9 – 15 Nov 2026')
+    expect(weekdayName('2026-11-10', 'en-GB')).toBe('Tuesday')
+    expect(shortDay('2026-11-10', 'en-GB')).toBe('10 Nov')
+    expect(eventTime(at('2026-11-10T10:00:00Z', '2026-11-10T11:00:00Z'), 'en-GB')).toBe('10 Nov 2026 11:00 – 12:00')
   })
 })
 

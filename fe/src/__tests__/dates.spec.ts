@@ -13,10 +13,18 @@ describe('daysFrom', () => {
 
 describe('relativeDate', () => {
   it('says days, then weeks, then months', () => {
-    expect(relativeDate('2026-10-24', today)).toBe('tomorrow')
-    expect(relativeDate('2026-10-22', today)).toBe('yesterday')
-    expect(relativeDate('2026-10-28', today)).toBe('in 5 days')
-    expect(relativeDate('2026-11-13', today)).toBe('in 3 weeks')
-    expect(relativeDate('2026-07-09', today)).toBe('3 months ago')
+    expect(relativeDate('2026-10-24', 'en-GB', today)).toBe('tomorrow')
+    expect(relativeDate('2026-10-22', 'en-GB', today)).toBe('yesterday')
+    expect(relativeDate('2026-10-28', 'en-GB', today)).toBe('in 5 days')
+    expect(relativeDate('2026-11-13', 'en-GB', today)).toBe('in 3 weeks')
+    expect(relativeDate('2026-07-09', 'en-GB', today)).toBe('3 months ago')
+  })
+})
+
+describe('relativeDate in Slovenian', () => {
+  it('says it as Slovenian does', () => {
+    const today = new Date(2026, 9, 23)
+    expect(relativeDate('2026-10-24', 'sl-SI', today)).toBe('jutri')
+    expect(relativeDate('2026-10-28', 'sl-SI', today)).toBe('čez 5 dni')
   })
 })

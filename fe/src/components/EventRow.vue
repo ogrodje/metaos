@@ -3,10 +3,12 @@ import { faArrowUpRightFromSquare, faLocationDot } from '@fortawesome/free-solid
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { computed } from 'vue'
 import { badgeColors, eventTime, type GooEvent } from '@/events'
+import { useLocale } from '@/useLocale'
 
 const props = defineProps<{ event: GooEvent }>()
+const { t, dateLocale } = useLocale()
 
-const when = computed(() => eventTime(props.event))
+const when = computed(() => eventTime(props.event, dateLocale.value))
 const badge = computed(() => (props.event.meetup ? badgeColors(props.event.meetup) : null))
 // Where it is, when Goo knows both the place and its address, as ogrodje.si showed it
 const where = computed(() => {
@@ -24,10 +26,10 @@ const where = computed(() => {
     <div class="main">
       <p class="title">
         <a v-if="event.url" :href="event.url" target="_blank" rel="noopener">
-          {{ event.title }}<FontAwesomeIcon class="external" :icon="faArrowUpRightFromSquare"/><span class="visually-hidden"> (odpre se v novem zavihku)</span>
+          {{ event.title }}<FontAwesomeIcon class="external" :icon="faArrowUpRightFromSquare"/><span class="visually-hidden"> {{ t('events.newTab') }}</span>
         </a>
         <span v-else>{{ event.title }}</span>
-        <span v-if="event.promoted" class="tag">Izpostavljeno</span>
+        <span v-if="event.promoted" class="tag">{{ t('events.promoted') }}</span>
       </p>
       <p v-if="event.meetup || where" class="details">
         <span v-if="event.meetup && badge" class="meetup" :style="{ color: badge.color, background: badge.background }">

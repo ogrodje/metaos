@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
+import { I18nT } from 'vue-i18n'
 import { RouterLink, useRoute } from 'vue-router'
 import { keepUnchanged, useLiveRefresh } from '@/changes'
 import { COMMENT_FIELDS } from '@/comments'
@@ -23,17 +24,20 @@ import {
   DROPBOX_FIELDS, EPISODE_FIELDS, formatDate, HISTORY_FIELDS, KOOFR_FIELDS, type KoofrPhoto, photosOf, relativeDate,
   type Session, type SessionDetails, sessionName, sessionPlace, sessionTitle,
 } from '@/episodes'
-import { errorMessage, graphql } from '@/graphql'
+import { graphql } from '@/graphql'
 import { useScrolledPast } from '@/scroll'
 import { useAuthStore } from '@/stores/auth'
 import { usePageTitle } from '@/title'
+import { useLocale } from '@/useLocale'
 
 const auth = useAuthStore()
 const route = useRoute()
+const { t, dateLocale, path } = useLocale()
 
 // Undefined while it loads; null when there's no such session
 const session = ref<SessionDetails | null>()
-const error = ref<string>()
+// What went wrong, said in the page's language as it's shown (LoadError)
+const error = ref<unknown>()
 
 // Only the latest load counts: an earlier one may answer after it
 let loads = 0
@@ -59,7 +63,7 @@ async function loadSession(id: string, quietly = false) {
   } catch (e) {
     if (load !== loads) return
     if (quietly) throw e
-    error.value = errorMessage(e)
+    error.value = e
   }
 }
 
@@ -67,7 +71,7 @@ async function loadSession(id: string, quietly = false) {
 watch([() => route.params.id, () => auth.authenticated], ([id]) => void loadSession(String(id)), { immediate: true })
 useLiveRefresh(() => loadSession(String(route.params.id), true))
 
-usePageTitle(() => (session.value ? sessionTitle(session.value) : undefined))
+usePageTitle(() => (session.value ? sessionTitle(session.value, dateLocale.value) : undefined))
 
 // After a comment was written here: the live updates would bring it too, a moment later
 function reloadQuietly(id: string) {
@@ -106,16 +110,14 @@ const hasFiles = computed(() => !!session.value
 
 <template>
   <main class="content">
-    <SignInPrompt v-if="auth.ready && !auth.authenticated" title="Sign in to see this session">
-      A recording session's details and history are for Ogrodje's team. Sign in with Discord or Google, or use MetaOS
-      from your AI assistant over MCP:
-      <RouterLink class="usage" to="/usage">API and MCP usage</RouterLink> shows how to connect it.
+    <SignInPrompt v-if="auth.ready && !auth.authenticated" :title="t('sessions.signInTitle')">
+      <I18nT keypath="sessions.signIn" scope="global">
+        <template #usage><RouterLink class="usage" :to="path('/usage')">{{ t('app.usage') }}</RouterLink></template>
+      </I18nT>
     </SignInPrompt>
-    <LoadError v-else-if="error" what="The session" :error="error" @retry="loadSession(String(route.params.id))"/>
-    <NotFound v-else-if="session === null" title="There's no such recording session">
-      It may have been deleted. The home page lists the upcoming recordings, and each episode's page its session.
-    </NotFound>
-    <LoadingRows v-else-if="!session" :rows="6" label="Loading the session"/>
+    <LoadError v-else-if="error" :what="t('sessions.what')" :error="error" @retry="loadSession(String(route.params.id))"/>
+    <NotFound v-else-if="session === null" :title="t('sessions.notFoundTitle')">{{ t('sessions.notFound') }}</NotFound>
+    <LoadingRows v-else-if="!session" :rows="6" :label="t('sessions.loading')"/>
 
     <!-- What it is, and where and when at the right, its episodes and activity under it; on phones the facts after its
          name -->
@@ -126,35 +128,35 @@ const hasFiles = computed(() => !!session.value
           <RenameSession v-if="renaming" :session="session" @renamed="renamed" @close="stopRenaming"/>
           <div v-else class="named">
             <h1 v-if="sessionName(session)" lang="sl">{{ sessionName(session) }}</h1>
-            <h1 v-else><time :datetime="session.date">{{ formatDate(session.date) }}</time></h1>
+            <h1 v-else><time :datetime="session.date">{{ formatDate(session.date, dateLocale) }}</time></h1>
             <button v-if="auth.team" ref="renameButton" type="button" class="text-button rename" @click="renaming = true">
-              {{ session.name ? 'Rename' : 'Name it' }}
+              {{ session.name ? t('sessions.rename') : t('sessions.nameIt') }}
             </button>
           </div>
           <p class="meta">
-            <span>Recording session<template v-if="sessionName(session)">
-              · <time :datetime="session.date">{{ formatDate(session.date) }}</time>
+            <span>{{ t('sessions.kind') }}<template v-if="sessionName(session)">
+              · <time :datetime="session.date">{{ formatDate(session.date, dateLocale) }}</time>
               <template v-if="sessionPlace(session)"> · {{ sessionPlace(session) }}</template>
             </template></span>
           </p>
         </header>
       </div>
 
-      <FactPanel label="About the session">
-        <PanelTitle :title="sessionTitle(session)" :shown="pastTitle"/>
+      <FactPanel :label="t('sessions.about')">
+        <PanelTitle :title="sessionTitle(session, dateLocale)" :shown="pastTitle"/>
         <FactGroup>
           <dl>
-            <Fact label="When">
-              <time :datetime="session.date">{{ formatDate(session.date) }}</time>
-              <span class="aside"> · {{ relativeDate(session.date) }}</span>
+            <Fact :label="t('sessions.when')">
+              <time :datetime="session.date">{{ formatDate(session.date, dateLocale) }}</time>
+              <span class="aside"> · {{ relativeDate(session.date, dateLocale) }}</span>
             </Fact>
-            <Fact v-if="session.location" label="Location">{{ session.location }}</Fact>
-            <Fact v-if="session.address" label="Address">{{ session.address }}</Fact>
+            <Fact v-if="session.location" :label="t('sessions.location')">{{ session.location }}</Fact>
+            <Fact v-if="session.address" :label="t('sessions.address')">{{ session.address }}</Fact>
           </dl>
         </FactGroup>
-        <FactGroup v-if="hasFiles" title="Files">
+        <FactGroup v-if="hasFiles" :title="t('sessions.files')">
           <dl>
-            <Fact v-if="session.documents.length" label="Docs"><span class="icons"><DocLinks :documents="session.documents"/></span></Fact>
+            <Fact v-if="session.documents.length" :label="t('sessions.docs')"><span class="icons"><DocLinks :documents="session.documents"/></span></Fact>
             <Fact v-if="session.koofrFolders.length" label="Koofr" stacked><KoofrFolderList :folders="session.koofrFolders"/></Fact>
             <Fact v-if="session.dropboxFolders.length" label="Dropbox" stacked><DropboxFolderList :folders="session.dropboxFolders"/></Fact>
           </dl>
@@ -164,10 +166,10 @@ const hasFiles = computed(() => !!session.value
       <div class="main">
         <section aria-labelledby="episodes">
           <div class="heading">
-            <h2 id="episodes">Episodes</h2>
+            <h2 id="episodes">{{ t('sessions.episodes') }}</h2>
             <span class="count">{{ session.episodes.length }}</span>
           </div>
-          <p v-if="!session.episodes.length" class="note">No episodes are in this session yet.</p>
+          <p v-if="!session.episodes.length" class="note">{{ t('sessions.noEpisodes') }}</p>
           <!-- Each as the other lists have it: a line while it's in the works, its summary once it's released -->
           <ul v-else class="episodes">
             <template v-for="episode in session.episodes" :key="episode.id">
@@ -177,7 +179,7 @@ const hasFiles = computed(() => !!session.value
           </ul>
         </section>
 
-        <PhotoStrip v-if="photos.length" title="Photos" :photos="photos" :folder="session.koofrFolders[0]?.url" service="Koofr"/>
+        <PhotoStrip v-if="photos.length" :title="t('sessions.photos')" :photos="photos" :folder="session.koofrFolders[0]?.url" service="Koofr"/>
 
         <ActivityFeed :comments="session.comments" :changes="session.history" :session-id="session.id"
                       @changed="reloadQuietly(session.id)"/>

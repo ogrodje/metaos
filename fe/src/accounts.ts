@@ -1,6 +1,8 @@
 // Accounts as MetaOS's GraphQL API has them (src/main/resources/graphql/schema.graphqls): the Keycloak users it has seen,
 // each linked to the person it is (Accounts.kt)
 
+import type { DateLocale, Translate } from '@/i18n'
+import { TIME_ZONE } from '@/i18n'
 import { fold, searchWords } from '@/search'
 
 /** How an account was linked to its person: by its verified email, or by someone */
@@ -29,51 +31,54 @@ export const LINK_ACCOUNT = `mutation ($id: ID!, $person: ID!) { account: linkAc
 export const UNLINK_ACCOUNT = `mutation ($id: ID!) { account: unlinkAccount(id: $id) { ${ACCOUNT_FIELDS} } }`
 
 /** A sign-in's name: Keycloak's username, or else its email or name */
-export function accountName(account: Pick<Account, 'username' | 'email' | 'name'>) {
-  return account.username ?? account.email ?? account.name ?? 'A sign-in'
+export function accountName(account: Pick<Account, 'username' | 'email' | 'name'>, t: Translate) {
+  return account.username ?? account.email ?? account.name ?? t('accounts.aSignIn')
 }
 
 /** A day as the sign-ins say it, e.g. 23 Oct; with its year when it's not this year's, e.g. 19 Oct 2025 */
-export function shortDate(at: string, now = new Date(), locale?: string) {
+export function shortDate(at: string, dateLocale: DateLocale, now = new Date()) {
   const date = new Date(at)
-  return date.toLocaleDateString(locale, {
+  return date.toLocaleDateString(dateLocale, {
     day: 'numeric',
     month: 'short',
+    timeZone: TIME_ZONE,
     ...(date.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {}),
   })
 }
 
 /** How and when an account was linked to its person, e.g. linked by email, 23 Oct; null while it isn't */
-export function howLinked(account: Pick<Account, 'linkedHow' | 'linkedAt' | 'linkedBy'>, now = new Date(), locale?: string) {
+export function howLinked(account: Pick<Account, 'linkedHow' | 'linkedAt' | 'linkedBy'>, t: Translate, dateLocale: DateLocale, now = new Date()) {
   if (!account.linkedHow) return null
-  const how = account.linkedHow === 'EMAIL' ? 'linked by email' : `linked by ${account.linkedBy ?? 'someone'}`
-  return account.linkedAt ? `${how}, ${shortDate(account.linkedAt, now, locale)}` : how
+  const how = account.linkedHow === 'EMAIL'
+    ? t('accounts.linkedByEmail')
+    : account.linkedBy ? t('accounts.linkedBy', { name: account.linkedBy }) : t('accounts.linkedBySomeone')
+  return account.linkedAt ? t('accounts.howOn', { how, date: shortDate(account.linkedAt, dateLocale, now) }) : how
 }
 
 /** When MetaOS first saw an account, e.g. first seen 21 Oct */
-export function firstSeen(account: Pick<Account, 'createdAt'>, now = new Date(), locale?: string) {
-  return `first seen ${shortDate(account.createdAt, now, locale)}`
+export function firstSeen(account: Pick<Account, 'createdAt'>, t: Translate, dateLocale: DateLocale, now = new Date()) {
+  return t('accounts.firstSeen', { date: shortDate(account.createdAt, dateLocale, now) })
 }
 
 /**
  * What a person's page says of one of their sign-ins besides its name: its email, when that isn't its name, and how
  * and when it was linked, e.g. dev@metaos.local · linked by Oto Brglez, 19 Oct
  */
-export function signInDetails(account: Account, now = new Date(), locale?: string) {
-  const shown = accountName(account)
-  return [account.email !== shown ? account.email : null, howLinked(account, now, locale)].filter(Boolean).join(' · ')
+export function signInDetails(account: Account, t: Translate, dateLocale: DateLocale, now = new Date()) {
+  const shown = accountName(account, t)
+  return [account.email !== shown ? account.email : null, howLinked(account, t, dateLocale, now)].filter(Boolean).join(' · ')
 }
 
 /**
  * What the People page says of a sign-in nobody's linked to besides its name: Keycloak's name for it and its email,
  * when they aren't that, and when MetaOS first saw it, e.g. Maja Kovač · maja@example.com · first seen 21 Oct
  */
-export function unlinkedDetails(account: Account, now = new Date(), locale?: string) {
-  const shown = accountName(account)
+export function unlinkedDetails(account: Account, t: Translate, dateLocale: DateLocale, now = new Date()) {
+  const shown = accountName(account, t)
   return [
     account.name !== shown ? account.name : null,
     account.email !== shown ? account.email : null,
-    firstSeen(account, now, locale),
+    firstSeen(account, t, dateLocale, now),
   ].filter(Boolean).join(' · ')
 }
 
@@ -179,10 +184,15 @@ export function linkedAlias(action: string | undefined) {
   return action?.startsWith(LINK_ACTION) ? action.slice(LINK_ACTION.length) || null : null
 }
 
-/** What the page says once it's back from linking an identity provider: whether it's linked, in words for the user */
+/**
+ * How linking an identity provider went, once the page is back from Keycloak: whether it's linked, and if not, whether
+ * the user cancelled it or what Keycloak said went wrong ([detail], in Keycloak's words); linkOutcomeText says it
+ */
 export interface LinkOutcome {
   linked: boolean
-  text: string
+  provider: string
+  cancelled: boolean
+  detail: string | null
 }
 
 /**
@@ -190,8 +200,16 @@ export interface LinkOutcome {
  * instead ([detail], its error_description)
  */
 export function linkOutcome(status: string | undefined, provider: string, detail?: string | null): LinkOutcome {
-  if (status === 'success') return { linked: true, text: `${provider} is linked: you can sign in with it too.` }
-  if (status === 'cancelled') return { linked: false, text: `${provider} wasn't linked, as you cancelled it.` }
-  if (detail) return { linked: false, text: `${provider} wasn't linked: ${detail.replace(/\.?$/, '.')}` }
-  return { linked: false, text: `${provider} wasn't linked: that ${provider} account may be linked to another sign-in already.` }
+  if (status === 'success') return { linked: true, provider, cancelled: false, detail: null }
+  if (status === 'cancelled') return { linked: false, provider, cancelled: true, detail: null }
+  return { linked: false, provider, cancelled: false, detail: detail || null }
+}
+
+/** How linking went, in words for the user */
+export function linkOutcomeText(outcome: LinkOutcome, t: Translate) {
+  const { provider, detail } = outcome
+  if (outcome.linked) return t('accounts.outcome.linked', { provider })
+  if (outcome.cancelled) return t('accounts.outcome.cancelled', { provider })
+  if (detail) return t('accounts.outcome.failedBecause', { provider, detail: detail.replace(/\.?$/, '.') })
+  return t('accounts.outcome.failed', { provider })
 }

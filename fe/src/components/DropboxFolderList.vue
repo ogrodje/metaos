@@ -2,9 +2,12 @@
 import { faFolder } from '@fortawesome/free-regular-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { DropboxFolder } from '@/episodes'
+import { useLocale } from '@/useLocale'
 
 // Each opens in Dropbox's web app; a missing one, gone from its shared folder, is only named
 defineProps<{ folders: DropboxFolder[] }>()
+
+const { t } = useLocale()
 </script>
 
 <template>
@@ -15,7 +18,7 @@ defineProps<{ folders: DropboxFolder[] }>()
         <FontAwesomeIcon :icon="faFolder" class="icon"/>
         <span v-if="folder.placeName">{{ folder.placeName }}</span>
         <span class="path">{{ folder.path }}</span>
-        <span v-if="folder.missing" class="missing">missing</span>
+        <span v-if="folder.missing" class="missing">{{ t('files.missing') }}</span>
       </component>
     </li>
   </ul>

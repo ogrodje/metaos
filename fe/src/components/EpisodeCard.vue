@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 import ShowBadge from '@/components/ShowBadge.vue'
 import { type Episode, episodePath, formatDate, guests } from '@/episodes'
 import { src, srcset } from '@/images'
+import { useLocale } from '@/useLocale'
 
 // A released episode in a grid: its thumbnail, or its code on its show's colour without one, then when it aired, its
 // title and its guests, or what someone was on it, e.g. as host on a person's page. On phones, a row with a small
@@ -13,12 +14,14 @@ const props = defineProps<{
   role?: string
 }>()
 
+const { dateLocale, path } = useLocale()
+
 const guestNames = computed(() => guests(props.episode).join(', '))
 </script>
 
 <template>
   <li class="episode-card">
-    <RouterLink class="shot" :to="episodePath(episode)" tabindex="-1" aria-hidden="true">
+    <RouterLink class="shot" :to="path(episodePath(episode))" tabindex="-1" aria-hidden="true">
       <img v-if="episode.thumbnail" :src="src(episode.thumbnail, 640)" :srcset="srcset(episode.thumbnail)"
            sizes="(max-width: 640px) 128px, 280px" :width="episode.thumbnail.width" :height="episode.thumbnail.height"
            alt="" loading="lazy">
@@ -27,10 +30,10 @@ const guestNames = computed(() => guests(props.episode).join(', '))
     <div class="text">
       <p class="meta">
         <span v-if="episode.code" class="code">{{ episode.code }}</span>
-        <time v-if="episode.airedDate" :datetime="episode.airedDate">{{ formatDate(episode.airedDate) }}</time>
+        <time v-if="episode.airedDate" :datetime="episode.airedDate">{{ formatDate(episode.airedDate, dateLocale) }}</time>
         <ShowBadge v-if="episode.show" :name="episode.show" :color="episode.showColor"/>
       </p>
-      <h3 class="title"><RouterLink :to="episodePath(episode)" lang="sl">{{ episode.title }}</RouterLink></h3>
+      <h3 class="title"><RouterLink :to="path(episodePath(episode))" lang="sl">{{ episode.title }}</RouterLink></h3>
       <p v-if="role" class="who">{{ role }}</p>
       <p v-else-if="guestNames" class="who" lang="sl">{{ guestNames }}</p>
     </div>

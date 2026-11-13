@@ -6,11 +6,11 @@ describe('a session', () => {
 
   it('goes by its name, else its location, else its date', () => {
     expect(sessionName(session)).toBe('AWS Community Day Adria')
-    expect(sessionTitle(session)).toBe('22 Oct 2026 · AWS Community Day Adria')
+    expect(sessionTitle(session, 'en-GB')).toBe('22 Oct 2026 · AWS Community Day Adria')
     expect(sessionName({ ...session, name: null })).toBe('Kino Šiška')
-    expect(sessionTitle({ ...session, name: null })).toBe('22 Oct 2026 · Kino Šiška')
+    expect(sessionTitle({ ...session, name: null }, 'en-GB')).toBe('22 Oct 2026 · Kino Šiška')
     expect(sessionName({ ...session, name: null, location: null })).toBeNull()
-    expect(sessionTitle({ ...session, name: null, location: null })).toBe('22 Oct 2026')
+    expect(sessionTitle({ ...session, name: null, location: null }, 'en-GB')).toBe('22 Oct 2026')
   })
 
   it('says where it is only when its name doesn\'t', () => {

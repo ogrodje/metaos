@@ -1,0 +1,1252 @@
+{
+  "accounts": {
+    "aSignIn": "A sign-in",
+    "claim": "Nobody signs in as {person} yet. Is that you? Your sign-in, {account}, isn't linked to anyone.",
+    "claimFailed": "Your sign-in wasn't linked: {error}",
+    "confirmUnlink": "Unlink {account} from {person}?",
+    "confirmUnlinkNote": "Its comments and history will show its username instead.",
+    "firstSeen": "first seen {date}",
+    "howOn": "{how}, {date}",
+    "linkAccountTo": "Link {account} to",
+    "linkFailed": "It wasn't linked: {error}",
+    "linkTo": "Link to…",
+    "linkToPerson": "Link {account} to a person",
+    "linkedBy": "linked by {name}",
+    "linkedByEmail": "linked by email",
+    "linkedBySomeone": "linked by someone",
+    "linkedTo": "{account} is linked to {person}.",
+    "linking": "Linking…",
+    "outcome": {
+      "cancelled": "{provider} wasn't linked, as you cancelled it.",
+      "failed": "{provider} wasn't linked: that {provider} account may be linked to another sign-in already.",
+      "failedBecause": "{provider} wasn't linked: {detail}",
+      "linked": "{provider} is linked: you can sign in with it too."
+    },
+    "picker": {
+      "matching": "Matching {name}:",
+      "noOne": "No one by that name.",
+      "placeholder": "Find a person by name",
+      "typeName": "Type a name."
+    },
+    "signIns": "Sign-ins",
+    "thisIsMe": "This is me",
+    "unlink": "Unlink",
+    "unlinkAccount": "Unlink {account}",
+    "unlinkFailed": "The sign-in wasn't unlinked: {error}",
+    "unlinked": {
+      "linker": "Sign-ins MetaOS has seen that aren't anyone's yet. Link each to the person it is, and its comments and history get their name.",
+      "others": "Sign-ins MetaOS has seen that aren't anyone's yet. Oto links them to the people they are, and their comments and history then get those names.",
+      "title": "Not linked to anyone"
+    },
+    "unlinking": "Unlinking…",
+    "you": "you"
+  },
+  "activity": {
+    "addedPeople": "added {n} person | added {n} people",
+    "andMore": "and {n} more | and {n} more",
+    "changed": "changed",
+    "changedRoles": "changed roles",
+    "changes": "{n} change | {n} changes",
+    "fields": {
+      "added": "Added",
+      "address": "Address",
+      "aired": "Aired",
+      "code": "Code",
+      "cover": "Cover",
+      "date": "Date",
+      "location": "Location",
+      "machineSummary": "AI summary",
+      "name": "Name",
+      "patreonAudio": "Patreon (audio only)",
+      "patreonBonus": "Patreon bonus",
+      "patreonBonusAudio": "Patreon bonus (audio only)",
+      "recommendedBy": "Recommended by",
+      "recordingDate": "Recording date",
+      "session": "Session",
+      "show": "Show",
+      "status": "Status",
+      "summary": "Summary",
+      "thumbnail": "Thumbnail",
+      "thumbnailB": "Thumbnail B",
+      "thumbnailC": "Thumbnail C",
+      "tinySummary": "Tiny summary",
+      "title": "Title",
+      "titleB": "Title B",
+      "titleC": "Title C",
+      "web": "Web picture"
+    },
+    "filter": {
+      "all": "All",
+      "changes": "Changes",
+      "comments": "Comments"
+    },
+    "fold": "Fold",
+    "moreChanges": "{n} more change | {n} more changes",
+    "new": "new",
+    "newCount": "{n} new",
+    "noChanges": "No changes yet.",
+    "noComments": "No comments yet.",
+    "nothing": "Nothing yet.",
+    "onlyLatest": "Only the latest",
+    "outside": "Outside MetaOS",
+    "recent": {
+      "changed": {
+        "EPISODE": "Changed {n} episode | Changed {n} episodes",
+        "PERSON": "Changed {n} person | Changed {n} people",
+        "SESSION": "Changed {n} session | Changed {n} sessions",
+        "several": "Changed {list}"
+      },
+      "count": {
+        "EPISODE": "{n} episode | {n} episodes",
+        "PERSON": "{n} person | {n} people",
+        "SESSION": "{n} session | {n} sessions"
+      },
+      "created": {
+        "EPISODE": "Created {n} episode | Created {n} episodes",
+        "PERSON": "Created {n} person | Created {n} people",
+        "SESSION": "Created {n} session | Created {n} sessions",
+        "several": "Created {list}"
+      }
+    },
+    "removedPeople": "removed {n} person | removed {n} people",
+    "removedWas": "removed (was {from})",
+    "show": "Show",
+    "showAll": "Show all {n}",
+    "times": "{what} {n} times",
+    "title": "Activity",
+    "today": "today, {time}",
+    "twice": "{what} twice",
+    "yesterday": "yesterday, {time}"
+  },
+  "app": {
+    "checking": "Checking your sign-in…",
+    "discord": "Ogrodje on Discord",
+    "elsewhere": "Ogrodje elsewhere",
+    "github": "MetaOS on GitHub",
+    "logo": "Ogrodje MetaOS, home",
+    "privacy": "Privacy",
+    "skip": "Skip to content",
+    "unconfirmed": "Couldn't confirm your sign-in, as the sign-in service didn't answer, so you see what everyone sees.",
+    "usage": "API and MCP usage"
+  },
+  "attention": {
+    "guestNotConfirmed": "Guest not confirmed",
+    "noDoc": "No doc",
+    "notDistributed": "Released {n} day ago, not on YouTube or Patreon | Released {n} days ago, not on YouTube or Patreon",
+    "notReleased": "Recorded {n} day ago, not released yet | Recorded {n} days ago, not released yet",
+    "passed": "Recording date passed, still {status}"
+  },
+  "auth": {
+    "refreshFailed": "couldn't refresh the sign-in with Keycloak; try again in a moment",
+    "signInWith": "Sign in with {provider}"
+  },
+  "comments": {
+    "commented": "commented {date}",
+    "confirmDelete": "Delete this comment?",
+    "delete": "Delete",
+    "deleting": "Deleting…",
+    "editLabel": "Edit your comment",
+    "edited": "edited",
+    "editedAt": "Edited {when}",
+    "fold": "Fold",
+    "goOn": "Go on with your comment…",
+    "keys": "{keys} to {action}",
+    "label": "Comment",
+    "left": "{count} character left | {count} characters left",
+    "markdown": "Markdown is supported",
+    "notDeleted": "The comment wasn't deleted: {error}",
+    "notPosted": "The comment wasn't posted: {error}",
+    "notSaved": "The comment wasn't saved: {error}",
+    "nothingToPreview": "Nothing to preview",
+    "placeholder": "Leave a comment",
+    "posting": "Commenting…",
+    "previewTab": "Preview",
+    "saving": "Saving…",
+    "submit": "Comment",
+    "tooMany": "{count} character too many | {count} characters too many",
+    "via": "Written through MCP, with the {tool} tool",
+    "write": "Write a comment…",
+    "writeTab": "Write"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "close": "Close",
+    "edit": "Edit",
+    "loading": "Loading…",
+    "remove": "Remove",
+    "save": "Save",
+    "showAll": "Show all",
+    "showLess": "Show less",
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "tryAgain": "Try again"
+  },
+  "distribution": {
+    "add": {
+      "adding": "Adding…",
+      "byLink": "By its link",
+      "detected": "{channel}, by its link",
+      "hint": "MetaOS fetches its preview from the page. The episode's links are here by themselves.",
+      "notePlaceholder": "e.g. posted by Iva in #announcements",
+      "submit": "Add",
+      "title": "Log where it went out",
+      "url": "Link to the post"
+    },
+    "channels": {
+      "NEWSLETTER": "Newsletter",
+      "OTHER": "Other"
+    },
+    "confirmRemove": "Remove it?",
+    "confirmRemoveLink": "Remove it, and clear the episode's {link} link?",
+    "fetching": "Fetching its preview…",
+    "form": {
+      "link": "Link",
+      "note": "Note",
+      "on": "On",
+      "title": "Title",
+      "titlePlaceholder": "As its page says",
+      "when": "When"
+    },
+    "line": {
+      "none": "Not shared yet",
+      "on": "On {where}",
+      "posts": "{n} post: {where} | {n} posts: {where}"
+    },
+    "links": {
+      "APPLE_PODCASTS": "Apple Podcasts",
+      "PATREON": "Patreon, the full episode",
+      "PATREON_AUDIO": "Patreon, the full episode as audio",
+      "PATREON_BONUS": "Patreon, the bonus",
+      "PATREON_BONUS_AUDIO": "Patreon, the bonus as audio",
+      "SPOTIFY": "Spotify",
+      "YOUTUBE": "YouTube"
+    },
+    "noPreview": "No preview: {error}",
+    "notAdded": "It wasn't added: {error}",
+    "notRefreshed": "Its preview wasn't fetched again: {error}",
+    "notRemoved": "It wasn't removed: {error}",
+    "notSaved": "It wasn't saved: {error}",
+    "posts": "Posts",
+    "refresh": "Refresh",
+    "refreshLabel": "Fetch the preview of {title} again",
+    "refreshTitle": "Fetch its preview again",
+    "releasedOn": "Released on",
+    "removing": "Removing…",
+    "saving": "Saving…"
+  },
+  "episode": {
+    "aiSummary": "AI summary",
+    "behind": {
+      "distribution": "Distribution",
+      "media": "Video and audio",
+      "noneYet": "None yet",
+      "notTranscribed": "Not transcribed yet: {link} on the Transcriptions page.",
+      "pictures": "Pictures",
+      "teamOnly": "Only the team sees this part.",
+      "title": "Behind the episode",
+      "transcribeIt": "transcribe it",
+      "transcript": "Transcript"
+    },
+    "contents": "On this page",
+    "facts": {
+      "added": "Added",
+      "aired": "Aired",
+      "recommendedBy": "Recommended by",
+      "recording": "Recording",
+      "session": "Session",
+      "spokenIn": "Spoken in",
+      "teamOnly": "Only the team sees this",
+      "title": "Episode"
+    },
+    "folded": {
+      "fold": "Fold it",
+      "paragraphs": "{n} paragraph | {n} paragraphs",
+      "readAll": "Read all of it",
+      "words": "{n} word | {n} words"
+    },
+    "hero": {
+      "alt": "Thumbnail {letter}",
+      "tested": "Thumbnails it's tested with",
+      "testedAs": "Tested as"
+    },
+    "listen": {
+      "copied": "Copied",
+      "copiedLink": "Copied the {platform} link",
+      "copy": "Copy link",
+      "copyLink": "Copy the {platform} link",
+      "patreonAudio": "Patreon audio",
+      "patreonBonus": "Patreon bonus",
+      "patreonBonusAudio": "Patreon bonus audio"
+    },
+    "listenTitle": "Listen",
+    "loading": "Loading the episode",
+    "notFound": {
+      "public": "It may not be released yet, have another code now, or have been deleted. Find it among the episodes, or sign in if you're on Ogrodje's team.",
+      "team": "It may have another code now, or have been deleted. Search for it, or find it among the episodes.",
+      "title": "There's no episode {ref}"
+    },
+    "panel": {
+      "activity": "Activity",
+      "backToTeam": "Back to the team's view",
+      "label": "About the episode",
+      "loadingActivity": "Loading the activity",
+      "needsAttention": "Needs attention",
+      "seenAsPublic": "Seen as the public does.",
+      "toTop": "Back to the top: {title}"
+    },
+    "people": "People",
+    "seeAsPublic": "See it as the public does",
+    "signIn": {
+      "text": "This is the page the team works on: its transcript, pictures, files and history are theirs.",
+      "title": "On Ogrodje's team?"
+    },
+    "summary": "Summary",
+    "transcript": {
+      "allLines": "Show all {n} lines | Show all {n} lines",
+      "allTurns": "Show all {n} turns | Show all {n} turns",
+      "heard": "Heard by {provider} on {date} from {file}, as a machine hears it: names may be misspelt.",
+      "heardUnnamed": "Heard by {provider} on {date} from {file}, as a machine hears it: names may be misspelt, and speakers aren't named yet.",
+      "label": "Transcript",
+      "loading": "Loading the transcript",
+      "nothing": "Nothing was heard.",
+      "onlyStart": "Only the start",
+      "openAt": "Open it on YouTube at {at}",
+      "removed": "It was removed",
+      "what": "The transcript"
+    },
+    "what": "The episode"
+  },
+  "episodes": {
+    "pictures": {
+      "artwork": "{n} artwork file | {n} artwork files",
+      "cover": "cover",
+      "noCover": "no cover",
+      "noThumbnail": "no thumbnail",
+      "noThumbnailOf": "no thumbnail {letter}",
+      "noWeb": "no web picture",
+      "photos": "{n} photo | {n} photos",
+      "thumbnail": "thumbnail",
+      "titlesTested": "{n} titles tested",
+      "web": "web picture"
+    },
+    "role": {
+      "CANDIDATE": "candidate",
+      "CONSULTANT": "consultant",
+      "CO_HOST": "co-host",
+      "DESIGNER": "designer",
+      "GUEST": "guest",
+      "HOST": "host",
+      "PRODUCER": "producer"
+    },
+    "status": {
+      "CANCELLED": "Cancelled",
+      "EARLY_ACCESS": "Early access",
+      "IDEA": "Idea",
+      "IN_PRODUCTION": "In production",
+      "ON_HOLD": "On hold",
+      "PLANNED": "Planned",
+      "PUBLISHED": "Published",
+      "READY": "Ready",
+      "RECORDED": "Recorded",
+      "SCHEDULED": "Scheduled"
+    }
+  },
+  "errors": {
+    "graphql": "{detail}",
+    "restarting": "MetaOS isn't answering ({status}); it may be restarting",
+    "staffOnly": "this is for Ogrodje's staff; an admin makes an account staff",
+    "status": "MetaOS answered {status}",
+    "unreachable": "MetaOS can't be reached; check the connection"
+  },
+  "events": {
+    "api": "The events are also available {api}. They're refreshed every 12 hours.",
+    "apiLink": "in machine-readable form, through an API",
+    "description": "Slovenia's tech, developer and startup events and conferences that Ogrodje follows, by week.",
+    "disclaimer": "⚠️ The system that gathers events and conferences is still being built, so please check the details on the organisers' pages. Ogrodje is {not} the organiser. The events and conference details are gathered from public sources. Bugs, wishes and pull requests are welcome at {github}.",
+    "discord": "Discord server",
+    "intro": "Ogrodje follows over 60 tech, developer and startup events, conferences and organisers. You can also follow the events on our {discord}, in the {channel} channel.",
+    "loading": "Loading the events",
+    "newTab": "(opens in a new tab)",
+    "none": "There are no upcoming events at the moment.",
+    "not": "not",
+    "promoted": "Featured",
+    "week": "Week of {range}",
+    "what": "The events"
+  },
+  "files": {
+    "doc": "Google Doc",
+    "docN": "Google Doc {n}",
+    "docs": "Docs",
+    "dropboxFolder": "Dropbox folder {path}",
+    "koofrFolder": "Koofr folder {path}",
+    "missing": "missing",
+    "title": "Files"
+  },
+  "home": {
+    "allClear": "Nothing right now. The recordings in the next {soon} days have their guests and docs, and nothing recorded {long} days ago or more is waiting to be released.",
+    "allEpisodes": "All episodes",
+    "byStage": "By stage",
+    "description": "MetaOS runs Ogrodje: the podcast's latest episodes, the people on them and where to listen.",
+    "inProduction": "In production",
+    "lately": "Lately",
+    "latestReleases": "Latest releases",
+    "latestWhat": "The latest releases",
+    "loadingLatest": "Loading the latest releases",
+    "loadingMaking": "Loading what's being made",
+    "loadingRecent": "Loading what the team did lately",
+    "loadingStages": "Loading how many episodes are at each stage",
+    "makingWhat": "The upcoming recordings and what's in production",
+    "needsAttention": "Needs attention",
+    "recentActivity": "Recent activity",
+    "stagesLabel": "Episodes by stage",
+    "teamPrompt": "Sign in to see what's being recorded and produced, and what needs attention.",
+    "teamTitle": "On Ogrodje's team?",
+    "upcoming": "Upcoming recordings"
+  },
+  "ideas": {
+    "anyone": "Anyone",
+    "find": "Find by title, guest or recommender",
+    "groupBy": "Group by",
+    "grouping": {
+      "none": "Newest first",
+      "readiness": "How far along",
+      "recommender": "Who recommended"
+    },
+    "lede": "Episodes that might be. Once an idea is planned, it gets a code and moves to Episodes.",
+    "loading": "Loading the ideas",
+    "noMatch": "No ideas match",
+    "nobody": "Nobody",
+    "none": "No ideas yet.",
+    "recommendedByName": "Recommended by {name}",
+    "recommendedByNobody": "Recommended by nobody",
+    "recommender": "Recommended by",
+    "row": {
+      "added": "Added {date}",
+      "addedAfter": "added {date}",
+      "maybe": "Maybe {names}",
+      "recommendedBy": "Recommended by {name}",
+      "recommendedByAfter": "recommended by {name}",
+      "recording": "Recording"
+    },
+    "signIn": "Episode ideas are for Ogrodje's team. Sign in with Discord or Google, or use MetaOS from your AI assistant over MCP: {usage} shows how to connect it.",
+    "signInTitle": "Sign in to see the ideas",
+    "staffOnly": "The ideas are for Ogrodje's staff.",
+    "what": "The ideas"
+  },
+  "language": {
+    "en": "English",
+    "label": "Language",
+    "sl": "Slovenščina"
+  },
+  "lists": {
+    "episodes": {
+      "description": "Every released episode of Ogrodje's podcast, by season, with where to listen.",
+      "find": "Find by title, guest or code",
+      "inTheWorks": "In the works",
+      "lede": "Every released episode of Ogrodje's podcast, by season.",
+      "ledeGuest": "Every released episode of Ogrodje's podcast. Signed in, you also see what's being recorded and produced.",
+      "ledeTeam": "What's being made, by stage, then what's released, by season.",
+      "loading": "Loading the episodes",
+      "noMatch": "No episodes match",
+      "setAside": "On hold or cancelled",
+      "what": "The episodes"
+    },
+    "everySeason": "Every season",
+    "everyShow": "Every show",
+    "fold": "Fold",
+    "noShow": "No show",
+    "readiness": {
+      "candidates": "With candidates",
+      "guest": "With a guest",
+      "none": "No one yet",
+      "session": "In a session"
+    },
+    "season": "Season",
+    "seasonTitle": {
+      "bonus": "Bonus",
+      "none": "Without a code",
+      "season": "Season {n}"
+    },
+    "show": "Show",
+    "showAllN": "Show all {n}",
+    "stage": "Stage",
+    "teamSummary": {
+      "and": "{list} and {last}",
+      "as": "{episodes} as {roles}",
+      "episodes": "{n} episode | {n} episodes"
+    }
+  },
+  "media": {
+    "bonuses": {
+      "BONUS_AUDIO": "Bonus audios",
+      "BONUS_VIDEO": "Bonus videos"
+    },
+    "concerns": {
+      "audioLonger": "The full audio is {length} longer than the full video",
+      "audioShorter": "The full audio is {length} shorter than the full video"
+    },
+    "kind": {
+      "BONUS_AUDIO": "Bonus audio",
+      "BONUS_VIDEO": "Bonus video",
+      "FULL_AUDIO": "Full audio",
+      "FULL_VIDEO": "Full video"
+    },
+    "kindName": {
+      "BONUS_AUDIO": "bonus audio",
+      "BONUS_VIDEO": "bonus video",
+      "FULL_AUDIO": "full audio",
+      "FULL_VIDEO": "full video"
+    },
+    "list": {
+      "ask": "Remove it, and delete the file?",
+      "download": "Download",
+      "downloadFailed": "It didn't download: {error}",
+      "gone": "The file isn't there anymore",
+      "removeFailed": "It wasn't removed: {error}",
+      "removing": "Removing…",
+      "uploadKind": "Upload the {name}"
+    },
+    "parts": {
+      "bonus": "a bonus",
+      "bonuses": "{n} bonus | {n} bonuses",
+      "fullAudio": "Full audio",
+      "fullVideo": "Full video",
+      "noAudio": "no audio",
+      "noVideo": "no video",
+      "withLength": "{what}, {length}"
+    },
+    "refusal": {
+      "empty": "There's neither video nor audio in it.",
+      "format": "It isn't MP4 or MOV, or MP3, M4A, WAV or FLAC.",
+      "movWithoutVideo": "It's a MOV without video; audio is MP3, M4A, WAV or FLAC.",
+      "size": "It's {size}; a file is up to {max}.",
+      "videoAsAudio": "It has video, but its name says audio."
+    },
+    "upload": {
+      "addMore": "Add more…",
+      "afterPrevious": "after the one before it",
+      "announce": {
+        "added": "{n} added",
+        "failed": "{name} didn't upload: {message}",
+        "refused": "{n} refused",
+        "uploaded": "{name} uploaded"
+      },
+      "answer": {
+        "keep": "Keep the current one | Keep the current ones",
+        "replace": "Replace and upload {n}",
+        "uploadAndKeep": "Upload {n}, keep the current one | Upload {n}, keep the current ones"
+      },
+      "answered": "Google Cloud Storage answered {status}",
+      "as": "As",
+      "ask": "Replace a file {episode} already has? | Replace {n} files {episode} already has?",
+      "askOne": "Replace the {name} {episode} already has?",
+      "back": "Back",
+      "broke": "The connection broke while it was being sent",
+      "checking": "Checking",
+      "checkingWhat": "reading what's in it",
+      "choose": "Choose files",
+      "chooseFolder": "Choose a folder",
+      "chooseKind": "Choose the {name}",
+      "done": "Done",
+      "drop": "Drop the episode's video and audio here",
+      "dropKind": "Drop the {name} here",
+      "dropTouch": "Choose the episode's video and audio",
+      "expired": "The upload expired; send the file again",
+      "failed": "Didn't upload",
+      "failedCount": "{n} didn't",
+      "files": "{n} file | {n} files",
+      "fitsNone": "Can't be any of them",
+      "formats": "Video MP4 or MOV · audio MP3, M4A, WAV or FLAC · up to {max} a file",
+      "history": "The episode's history keeps which file it was. The bucket keeps the one replaced for 30 days, where only an administrator gets it back.",
+      "keptBreaking": "The connection kept breaking while it was being sent",
+      "leave": "Video or audio is still being uploaded. Leave, and stop it?",
+      "leaveOut": "Leave {name} out",
+      "leftOut": "{n} other file left out | {n} other files left out",
+      "list": "Files to upload",
+      "new": "New",
+      "notTaken": "Google Cloud Storage didn't take it ({status})",
+      "nothingChosen": "Nothing chosen yet",
+      "nothingToUpload": "Nothing to upload",
+      "open": "Upload video and audio",
+      "reading": "Reading a file… | Reading {n} files…",
+      "refused": "Refused",
+      "refusedCount": "{n} refused",
+      "replaces": "Replaces",
+      "sending": "{n} file | {n} files",
+      "stop": "Stop",
+      "summary": {
+        "busy": "Uploading {files} · {done} uploaded",
+        "replacing": "{n} to upload, {size}, replacing one | {n} to upload, {size}, replacing {r}",
+        "toUpload": "{n} to upload, {size}"
+      },
+      "theEpisode": "the episode",
+      "title": "Upload video and audio",
+      "titleOf": "Title of {name}",
+      "titlePlaceholder": "Title, e.g. what the bonus is",
+      "toUpload": "{n} to upload",
+      "unreachable": "Google Cloud Storage can't be reached; check the connection",
+      "upload": "Upload",
+      "uploadN": "Upload {n}",
+      "uploaded": "Uploaded",
+      "uploadedCount": "{n} uploaded",
+      "uploading": "Uploading {percent}%",
+      "waiting": "Waiting"
+    },
+    "warning": {
+      "longerThan": {
+        "FULL_AUDIO": "{length} longer than the full audio",
+        "FULL_VIDEO": "{length} longer than the full video"
+      },
+      "noAudio": "It has no audio",
+      "sampleRate": "Its audio is {rate}, not 44.1 or 48 kHz",
+      "shorterThan": {
+        "FULL_AUDIO": "{length} shorter than the full audio",
+        "FULL_VIDEO": "{length} shorter than the full video"
+      },
+      "under1080p": "Under 1080p: it's {width} × {height}"
+    }
+  },
+  "menu": {
+    "dismiss": "Dismiss",
+    "link": "Link",
+    "linkProvider": "Link {provider}",
+    "linked": "(linked)",
+    "manageSignIns": "Manage sign-ins",
+    "member": "Member",
+    "opensKeycloak": "(opens Keycloak in a new tab)",
+    "signInWith": "Sign in with",
+    "staff": "Staff",
+    "thisOne": "this one",
+    "toggle": "{name}: your page, your sign-ins and signing out",
+    "unlinked": "You aren't linked to a person in MetaOS yet. Oto links sign-ins to people: ask him to link yours.",
+    "whichPerson": "Which person are you?",
+    "you": "You",
+    "yourPage": "Your page"
+  },
+  "nav": {
+    "episodes": "Episodes",
+    "events": "Events",
+    "home": "Home",
+    "ideas": "Ideas",
+    "main": "Main",
+    "people": "People",
+    "transcriptions": "Transcriptions"
+  },
+  "pages": {
+    "episode": "Episode",
+    "episodes": "Episodes",
+    "events": "Events and conferences",
+    "home": "Home",
+    "ideas": "Ideas",
+    "notFound": "Page not found",
+    "people": "People",
+    "person": "Person",
+    "privacy": "Privacy",
+    "search": "Search",
+    "session": "Recording session",
+    "transcriptions": "Transcriptions",
+    "usage": "API and MCP usage"
+  },
+  "people": {
+    "andMore": "and {n} more",
+    "byLetter": "Guests by letter",
+    "candidatesNote": "Who the team has in mind for an idea, as its guest.",
+    "description": "The hosts and guests of Ogrodje's podcast, who they are and where they're online.",
+    "episodes": "{n} episode | {n} episodes",
+    "find": "Find by name or what they do",
+    "fold": "Fold",
+    "kinds": {
+      "all": "Everyone",
+      "candidates": "Candidates",
+      "guests": "Guests",
+      "team": "The team"
+    },
+    "lead": {
+      "everyone": "The hosts, guests and everyone else on Ogrodje's released episodes.",
+      "guest": "The hosts, guests and everyone else on Ogrodje's released episodes. Signed in, you see everyone, also on what's being made.",
+      "team": "Ogrodje's team, the guests on its episodes, and who could be one."
+    },
+    "links": {
+      "on": "{name} on {network}",
+      "website": "{name}'s website"
+    },
+    "loading": "Loading the people",
+    "noMatch": "No one matches",
+    "noOne": "No one yet.",
+    "show": "Show",
+    "showAll": "Show {n} | Show all {n}",
+    "unlinkedFailed": "The sign-ins nobody's linked to didn't load: {error}",
+    "what": "The people"
+  },
+  "person": {
+    "about": "About {name}",
+    "as": "as {roles}",
+    "byRole": "Show their episodes as",
+    "comingUp": "Coming up",
+    "firstOn": "First on",
+    "loading": "Loading the person",
+    "noEpisodes": "Not on any episode yet.",
+    "notFound": {
+      "everyone": "They may not be on a released episode yet, or have been deleted. The People page lists everyone who is.",
+      "team": "They may have been deleted, or merged with someone else. The People page lists everyone.",
+      "title": "There's no such person"
+    },
+    "onEpisodes": "On episodes",
+    "onOgrodje": "{roles} on Ogrodje",
+    "online": "Online",
+    "recommended": "Recommended",
+    "recommendedRole": "recommended",
+    "released": "Released",
+    "showFirstFew": "Show the first few",
+    "website": "Website",
+    "what": "The person"
+  },
+  "pictures": {
+    "missing": {
+      "cover": "Upload the cover",
+      "thumbnail": "Upload thumbnail {letter}",
+      "web": "Upload the web picture"
+    },
+    "noTitle": "No title {letter}",
+    "refusal": {
+      "anySize": "It's {width} × {height}; thumbnails and the web picture are 1920 × 1080, the cover 3000 × 3000.",
+      "anyType": "It isn't PNG or JPEG.",
+      "size": "It's {width} × {height}; the {name} has to be {size}.",
+      "type": "It isn't PNG or JPEG, which the {name} has to be."
+    },
+    "slot": {
+      "COVER": "Podcast cover",
+      "THUMBNAIL": "Thumbnail A",
+      "THUMBNAIL_B": "Thumbnail B",
+      "THUMBNAIL_C": "Thumbnail C",
+      "WEB": "Web picture"
+    },
+    "slotName": {
+      "COVER": "podcast cover",
+      "THUMBNAIL": "thumbnail A",
+      "THUMBNAIL_B": "thumbnail B",
+      "THUMBNAIL_C": "thumbnail C",
+      "WEB": "web picture"
+    },
+    "strip": {
+      "next": "{title}: next",
+      "notUsed": "Not used",
+      "open": "Open on {service}",
+      "previous": "{title}: previous"
+    },
+    "tabs": {
+      "artwork": "Artwork",
+      "label": "Show",
+      "photos": "Photos",
+      "titles": "Titles and thumbnails"
+    },
+    "titleOf": "Title {letter}:",
+    "upload": {
+      "announce": {
+        "failed": "{label} didn't upload: {message}",
+        "placed": "{n} placed",
+        "refused": "{n} refused",
+        "refusedOne": "{label}: refused. {reason}",
+        "unplaced": "{n} not placed",
+        "uploaded": "{label} uploaded"
+      },
+      "ask": "Replace a picture {episode} already has? | Replace {n} pictures {episode} already has?",
+      "byName": "placed by its name",
+      "bySize": "placed by its size",
+      "choose": "Choose pictures",
+      "chooseAnother": "Choose another…",
+      "chooseOne": "Choose…",
+      "chosen": "chosen for it",
+      "copies": "320 to 1920 px wide",
+      "current": "Current",
+      "currentOf": "Current {name}",
+      "drop": "Drop the episode's folder or pictures here",
+      "dropTouch": "Choose the episode's pictures or its folder",
+      "dropbox": {
+        "error": "not in Dropbox: {error}",
+        "saved": "saved in Dropbox",
+        "savedAs": "saved in Dropbox as {name}",
+        "there": "already in Dropbox"
+      },
+      "formats": "PNG or JPEG · thumbnails and web {wide}, cover {square}",
+      "history": "The episode's history keeps which picture it was.",
+      "new": "New",
+      "newOf": "New {name}",
+      "none": "None yet",
+      "nothingToSend": "nothing to send",
+      "open": "Upload artwork",
+      "pictures": "{n} picture | {n} pictures",
+      "publishing": "Making copies",
+      "reading": "Reading the files…",
+      "rowHint": "Drop a picture on this row, or choose one",
+      "same": "Already this picture",
+      "sending": "{n} picture | {n} pictures",
+      "slots": "The episode's pictures",
+      "summary": {
+        "busy": "Uploading {pictures} · {done} uploaded",
+        "replacingOne": "1 to upload, replacing a picture",
+        "replacingSome": "{n} to upload, {r} of them replacing a picture | {n} to upload, {r} of them replacing pictures"
+      },
+      "title": "Upload artwork",
+      "unplaced": "Not placed",
+      "unplacedOne": "Not placed",
+      "unplacedWhy": "its name doesn't say where",
+      "useAs": "Use {name} as",
+      "useAsPrompt": "Use as…",
+      "webHint": "The thumbnail without its words, for ogrodje.si"
+    },
+    "use": {
+      "cover": "Cover"
+    }
+  },
+  "privacy": {
+    "description": "Which personal data Ogrodje processes on ogrodje.si, when you sign in and in Ogrodje's email, and for how long it keeps it."
+  },
+  "search": {
+    "best": "The best {n}; more words find fewer.",
+    "close": "Close search",
+    "codes": "A code, {a}, {b} or {c}, finds its episode; {season} lists a season.",
+    "codesHint": "{a}, {b} or {c} goes to an episode; {season} lists a season.",
+    "episode": "Episode {code}",
+    "episodeOne": "Episode",
+    "failed": "Search didn't work: {error}",
+    "hint": "Type a code, a name or a topic. Case and diacritics don't matter, and the start of a word is enough.",
+    "intro": "Search the episodes, ideas too, the people on them and the recording sessions: by title, name, show, summary, or place.",
+    "noEpisodes": "On no episode yet",
+    "nothing": "Nothing found for “{q}”.",
+    "nothingHint": "Search looks in titles, names, shows, summaries and places. Try fewer words, or the start of one: jezikov finds jezikovni and jezikovnega.",
+    "of": "{shown} of {total}",
+    "palettePlaceholder": "Search episodes, people and sessions",
+    "placeholder": "A code, a name or a topic",
+    "results": "Results",
+    "searching": "Searching…",
+    "season": "Season {n}",
+    "seeAll": "See {n} result | See all {n} results",
+    "sessions": "Recording sessions",
+    "show": "Show",
+    "signIn": {
+      "text": "Search finds Ogrodje's episodes, ideas too, the people on them and the recording sessions, which are for Ogrodje's team. Sign in with Discord or Google, or use MetaOS from your AI assistant over MCP: {usage} shows how to connect it.",
+      "title": "Sign in to search"
+    },
+    "snippet": {
+      "alsoTitled": "Also titled",
+      "summary": "From the summary",
+      "tinySummary": "From the short summary"
+    },
+    "tabs": {
+      "all": "All",
+      "episodes": "Episodes",
+      "people": "People",
+      "sessions": "Sessions"
+    },
+    "titleFor": "Search: {q}",
+    "toMove": "{keys} to move",
+    "toOpen": "{key} to open",
+    "what": "The results",
+    "with": "With"
+  },
+  "sessions": {
+    "about": "About the session",
+    "address": "Address",
+    "docs": "Docs",
+    "episodes": "Episodes",
+    "files": "Files",
+    "form": {
+      "byDate": "Without a name, it goes by its date.",
+      "byLocation": "Without a name, it goes by its location, {location}.",
+      "name": "Name",
+      "placeholder": "e.g. AWS Community Day Adria 2026",
+      "saving": "Saving…"
+    },
+    "kind": "Recording session",
+    "loading": "Loading the session",
+    "location": "Location",
+    "nameIt": "Name it",
+    "noEpisodes": "No episodes are in this session yet.",
+    "notFound": "It may have been deleted. The home page lists the upcoming recordings, and each episode's page its session.",
+    "notFoundTitle": "There's no such recording session",
+    "photos": "Photos",
+    "rename": "Rename",
+    "signIn": "A recording session's details and history are for Ogrodje's team. Sign in with Discord or Google, or use MetaOS from your AI assistant over MCP: {usage} shows how to connect it.",
+    "signInTitle": "Sign in to see this session",
+    "what": "The session",
+    "when": "When"
+  },
+  "tools": {
+    "descriptions": {
+      "add_episode_distribution": "Log a post that promotes an episode, by its URL, e.g. on Discord, LinkedIn or Reddit; MetaOS fetches its preview",
+      "assign_person_to_episode": "Give a person a role on an episode: host, co-host, guest, producer, consultant, designer, or candidate for someone who could be its guest",
+      "cancel_transcription": "Stop a transcription that's on, and the provider's with it",
+      "comment_on_episode": "Comment on an episode or idea as you, in Markdown",
+      "comment_on_session": "Comment on a recording session as you, in Markdown",
+      "confirm_guest": "Make a candidate an episode's guest, once they've said yes",
+      "create_dropbox_folder": "Create a folder",
+      "create_episode": "Add an episode; it starts as an idea, which can do without a code, recommended by you unless you name someone else",
+      "create_koofr_folder": "Create a folder",
+      "create_patreon_draft": "Make a draft post, for everyone, every patron or some tiers; only the team sees it",
+      "create_person": "Add a person",
+      "create_session": "Add a session: its date, name, location and address",
+      "create_show": "Add a show, its episodes in Slovenian unless you give another language",
+      "delete_comment": "Delete one of your comments; the history keeps that it was there",
+      "delete_episode": "Delete an episode; it can be restored",
+      "delete_patreon_post": "Delete a post, e.g. a draft that isn't needed",
+      "delete_person": "Delete a person; they drop off their episodes, and those they recommended, until they are restored",
+      "delete_session": "Delete a session; its episodes are kept",
+      "delete_show": "Delete a show; its episodes are kept",
+      "edit_comment": "Change the text of one of your comments; it shows as edited",
+      "get_episode": "An episode by its code or ID, with its summaries",
+      "get_episode_transcript": "An episode's transcripts, by each provider, with timestamps and speakers where told apart, and how its transcriptions that are on are going",
+      "get_history": "Every change to an episode, person, session or show, its discussion too, with when and by whom",
+      "get_patreon_job": "How a change in Patreon is going, e.g. an upload: done, failed and why, or waiting its turn or to try again",
+      "get_patreon_post": "A post, published or a draft, with its text and who may see it",
+      "get_patreon_post_media": "Download links for a post's audio (the MP3 as uploaded) or video (its best MP4), for a day or so",
+      "get_person_avatar": "A person's avatar, with its URLs",
+      "get_show": "A show by its name",
+      "get_transcription": "One transcription by its ID, as it is now, to watch it till it's done",
+      "link_account": "Link an account to the person it is, so its comments and changes go by their name, past ones too; only Oto may",
+      "link_episode_document": "Link a Google Doc to an episode, e.g. its preparation doc",
+      "link_episode_dropbox_folder": "Link a Dropbox folder to an episode, e.g. the one with its artwork",
+      "link_episode_koofr_folder": "Link a Koofr folder to an episode, e.g. the one with its recordings",
+      "link_session_document": "Link a Google Doc to a recording session, e.g. its recording day plan",
+      "link_session_dropbox_folder": "Link a Dropbox folder to a recording session",
+      "link_session_koofr_folder": "Link a Koofr folder to a recording session",
+      "list_accounts": "The accounts MetaOS has seen and the people they are, or only those not linked to anyone",
+      "list_deleted": "The deleted episodes, people, sessions and shows, with when and by whom, to restore",
+      "list_distributions": "Where every episode went out, the latest first, e.g. this week, or on LinkedIn",
+      "list_drive_folder": "What is in a folder",
+      "list_dropbox_folder": "What is in a folder",
+      "list_dropbox_places": "The folders shared with Ogrodje's bot, and whether it may change them",
+      "list_episode_comments": "An episode's or idea's comments, oldest first, with who wrote them and when",
+      "list_episode_distributions": "Where an episode went out: its links, then its posts, each with its page's preview",
+      "list_episode_documents": "The Google Docs of an episode and of its recording session",
+      "list_episode_dropbox_folders": "The Dropbox folders of an episode and of its recording session",
+      "list_episode_images": "An episode's thumbnails, web picture and cover, with their URLs",
+      "list_episode_koofr_folders": "The Koofr folders of an episode and of its recording session",
+      "list_episode_media": "An episode's video and audio files, with what's in each (length, codecs, resolution) and a link that downloads it for an hour",
+      "list_episode_people": "The people on an episode and their roles",
+      "list_episodes": "List episodes, latest first, optionally only those with a given status",
+      "list_koofr_folder": "What is in a folder",
+      "list_koofr_places": "The folders shared with Ogrodje's bot, and whether it may change them",
+      "list_patreon_drafts": "The drafts, scheduled ones too, last edited first, with where to edit them",
+      "list_patreon_members": "The members, patrons first: their status, tiers, pledge, what they gave in all and their last charge",
+      "list_patreon_posts": "The published posts, newest first, or those with words in their titles",
+      "list_patreon_tiers": "The tiers, cheapest first, with their prices and patrons",
+      "list_people": "List all people",
+      "list_person_episodes": "The episodes a person is on, and their roles",
+      "list_recent_changes": "The latest changes to everything",
+      "list_session_comments": "A recording session's comments, oldest first",
+      "list_session_documents": "The Google Docs of a recording session",
+      "list_session_dropbox_folders": "The Dropbox folders of a recording session",
+      "list_session_episodes": "The episodes of a session",
+      "list_session_koofr_folders": "The Koofr folders of a recording session",
+      "list_sessions": "List all sessions, newest first",
+      "list_show_episodes": "The episodes of a show",
+      "list_shows": "List all shows",
+      "list_transcriptions": "Transcriptions, the latest first: queued, on, done, failed or cancelled, by provider or episode",
+      "match_episode_documents": "Link the docs in a folder to episodes by the code in their titles; only reports, unless told to link",
+      "move_dropbox_file": "Move or rename a file or folder",
+      "move_koofr_file": "Move or rename a file or folder; what it is linked to stays linked",
+      "my_episodes": "The episodes you're on, and your roles",
+      "prepare_patreon_post": "Check a draft is ready for a person to publish in Patreon: its title, and its audio or video processed",
+      "read_document": "Read a Google Doc, as Markdown",
+      "read_dropbox_file": "Read a text file: txt, md, csv, json, srt and the like",
+      "read_koofr_file": "Read a text file: txt, md, csv, json, srt and the like",
+      "refresh_distribution_preview": "Fetch a post's preview again, e.g. after it changed",
+      "remove_episode_distribution": "Take a post off an episode; one of its links is cleared on the episode too",
+      "remove_episode_image": "Take one of its pictures off an episode",
+      "remove_episode_media": "Take a video or audio file off its episode, and delete it",
+      "remove_person_avatar": "Take a person's avatar off them",
+      "remove_person_from_episode": "Take a person off an episode: one of their roles, or all of them",
+      "remove_transcript": "Remove one of an episode's transcripts, and what it says",
+      "restore_episode": "Bring back a deleted episode, with its people, links, session and show; under a new code if its own is taken",
+      "restore_link": "Bring back a removed role, Google Doc, Koofr or Dropbox folder, from the change that removed it",
+      "restore_person": "Bring back a deleted person, with their roles and the episodes they recommended; with another email, or none, if theirs is taken",
+      "restore_session": "Bring back a deleted session, with its episodes",
+      "restore_show": "Bring back a deleted show, with its episodes; under a new name if its own is taken",
+      "search": "Find episodes, people and sessions by a code, a name or words in their titles and summaries; a code finds its episode on its own",
+      "search_documents": "Search Google Docs by the words in their title or text",
+      "search_dropbox": "Search for files and folders by name",
+      "search_koofr": "Search for files and folders by name",
+      "set_episode_image": "Make a picture from Dropbox or Koofr an episode's thumbnail, thumbnail B or C (for its alternative titles) or web picture, 1920 × 1080, or its cover, 3000 × 3000",
+      "set_episode_link": "Set or clear its YouTube, Spotify or Apple Podcasts link, or one of its four on Patreon: the full episode or its bonus, as video or audio only; each is in its distribution too",
+      "set_episode_recommended_by": "Set or clear who recommended an episode",
+      "set_episode_session": "Move an episode into a session, or out of one",
+      "set_episode_show": "Move an episode into a show, or out of one",
+      "set_episode_status": "Move an episode through its lifecycle, from idea to published, one step at a time",
+      "set_patreon_post_image": "Set a post's thumbnail, one of the episode's pictures in MetaOS",
+      "set_patreon_post_media": "Upload one of an episode's files in MetaOS to a draft, as a podcast or video post",
+      "set_person_avatar": "Make a picture from Hygraph, Dropbox or Koofr a person's avatar",
+      "set_person_bio": "Set or clear the line about who a person is, e.g. their role and company",
+      "set_person_email": "Set or clear a person's email; accounts that sign in with it are linked to them",
+      "set_person_link": "Set or clear their homepage, LinkedIn, Twitter/X, Instagram or Facebook",
+      "transcribe_episode": "Transcribe an episode's full audio or video, or another of its files, with Google's Speech-to-Text or Soniox; it waits its turn when the provider is busy",
+      "unlink_account": "Unlink an account from its person, e.g. one linked to the wrong person; only Oto may",
+      "unlink_episode_document": "Unlink a Google Doc from an episode; the doc stays in Drive",
+      "unlink_episode_dropbox_folder": "Unlink a Dropbox folder from an episode; the folder stays in Dropbox",
+      "unlink_episode_koofr_folder": "Unlink a Koofr folder from an episode; the folder stays in Koofr",
+      "unlink_session_document": "Unlink a Google Doc from a recording session; the doc stays in Drive",
+      "unlink_session_dropbox_folder": "Unlink a Dropbox folder from a recording session; the folder stays in Dropbox",
+      "unlink_session_koofr_folder": "Unlink a Koofr folder from a recording session; the folder stays in Koofr",
+      "update_episode": "Change an episode's code, title, alternative titles for A/B tests, summaries or dates",
+      "update_episode_distribution": "Change a post's URL, channel, note, title or when it went out",
+      "update_episode_media": "Change a file's title, or what it is, e.g. a bonus video that's the full video",
+      "update_patreon_post": "Change a post's title, text or who may see it",
+      "update_session": "Change a session's date, name, location or address",
+      "update_show": "Rename a show, or change its color or the language its episodes are spoken in",
+      "upload_dropbox_file": "Upload a file; one of the same name is only replaced when asked",
+      "upload_koofr_file": "Upload a file; one of the same name is only replaced when asked",
+      "view_dropbox_image": "Look at a picture, e.g. artwork for an episode",
+      "whoami": "Who you're signed in as: your account and the person it's linked to; and the version of MetaOS's tools"
+    },
+    "groups": {
+      "discussion": {
+        "about": "comments on episodes, ideas and recording sessions, in Markdown, as on GitHub",
+        "title": "Discussion"
+      },
+      "distribution": {
+        "about": "where an episode went out once it was released: its links, and posts that promote it",
+        "title": "Distribution"
+      },
+      "drive": {
+        "about": "Ogrodje's folder",
+        "title": "Google Drive"
+      },
+      "dropbox": {
+        "about": "the folders shared with Ogrodje's bot, like Artwork",
+        "title": "Dropbox"
+      },
+      "episodes": {
+        "about": "from idea to release",
+        "title": "Episodes"
+      },
+      "history": {
+        "about": "who changed what, and when, and bringing back what was deleted",
+        "title": "History"
+      },
+      "koofr": {
+        "about": "the folders shared with Ogrodje's bot",
+        "title": "Koofr"
+      },
+      "media": {
+        "about": "an episode's full video and audio and its bonuses, uploaded on its page, for the team only",
+        "title": "Video and audio"
+      },
+      "patreon": {
+        "about": "Ogrodje's Patreon: drafts and an episode's audio or video, which a person publishes in Patreon",
+        "title": "Patreon"
+      },
+      "people": {
+        "about": "hosts, guests, producers and you",
+        "title": "People"
+      },
+      "pictures": {
+        "about": "thumbnails, covers and avatars for everyone to see, at media.ogrodje.si",
+        "title": "Pictures"
+      },
+      "search": {
+        "about": "episodes, ideas, people and recording sessions at once",
+        "title": "Search"
+      },
+      "sessions": {
+        "about": "days on which episodes are recorded",
+        "title": "Recording sessions"
+      },
+      "shows": {
+        "about": "series of episodes, such as Borderless",
+        "title": "Shows"
+      },
+      "transcripts": {
+        "about": "what's said in an episode's video and audio, by Google's Speech-to-Text or Soniox, in a durable workflow",
+        "title": "Transcripts"
+      }
+    }
+  },
+  "transcriptions": {
+    "about": "Episodes' video and audio, as Google's Speech-to-Text or Soniox heard it.",
+    "alsoBy": "also by {providers}",
+    "earlier": "Earlier",
+    "filter": {
+      "all": "All",
+      "anyProvider": "Any",
+      "cancelled": "Cancelled",
+      "done": "Done",
+      "failed": "Failed",
+      "find": "Find by episode or file",
+      "on": "On",
+      "provider": "Provider",
+      "status": "Status"
+    },
+    "form": {
+      "batch": "In a batch: within a day, for a fifth of the price",
+      "episode": "Episode",
+      "episodePlaceholder": "e.g. S05E07",
+      "file": "File",
+      "find": "Find its files",
+      "finding": "Finding…",
+      "hint": "A provider transcribes a few files at once; the rest wait their turn.",
+      "language": "Language",
+      "noEpisode": "No episode {code}",
+      "noMedia": "{episode} has no video or audio yet; upload them on its page",
+      "provider": "Provider",
+      "replace": "Replace the transcript {provider} made of it already",
+      "starting": "Starting…",
+      "transcribe": "Transcribe"
+    },
+    "languages": {
+      "en": "English",
+      "sl": "Slovenian"
+    },
+    "lineCount": "{n} line | {n} lines",
+    "lines": {
+      "loading": "Loading the transcript",
+      "none": "Nothing was heard.",
+      "removed": "it was removed",
+      "what": "The transcript"
+    },
+    "loading": "Loading the transcriptions",
+    "noMatch": "No transcriptions match",
+    "none": "Nothing's been transcribed yet.",
+    "noneYet": "None yet",
+    "onNow": "On now",
+    "row": {
+      "batch": "batch",
+      "cancelling": "Cancelling…",
+      "deletedEpisode": "A deleted episode",
+      "for": "for {duration}",
+      "hide": "Hide",
+      "keep": "Keep",
+      "read": "Read",
+      "removeAsk": "Remove its transcript?",
+      "removing": "Removing…",
+      "took": "took {duration}",
+      "transcriptGone": "Its transcript was removed or replaced"
+    },
+    "signIn": {
+      "text": "Transcriptions are for Ogrodje's team. Sign in with Discord or Google, or use MetaOS from your AI assistant over MCP: {usage} shows how to connect it.",
+      "title": "Sign in to see the transcriptions"
+    },
+    "speaker": "Speaker {label}",
+    "speakers": "{n} speaker | {n} speakers",
+    "status": {
+      "cancelled": "Cancelled",
+      "done": "Done",
+      "failed": "Failed",
+      "heard": "Being heard",
+      "heardPercent": "Being heard · {percent}%",
+      "inLine": "{place} in line",
+      "next": "Next in line",
+      "starting": "Starting",
+      "waiting": "Waiting its turn"
+    },
+    "teamOnly": "The transcriptions are for Ogrodje's staff.",
+    "transcribeEpisode": "Transcribe an episode",
+    "what": "The transcriptions",
+    "words": "{n} word | {n} words"
+  },
+  "ui": {
+    "clearFilters": "Clear filters",
+    "grid": "Grid",
+    "list": "List",
+    "loadError": "{what} didn't load: {error}",
+    "loading": "Loading",
+    "loadingLabel": "{label}…",
+    "notFound": "Nothing in MetaOS is at {path}. The link may be mistyped, or the page may have moved.",
+    "notFoundTitle": "There's no such page",
+    "quoted": "“{text}”",
+    "removeFilter": "{label}: {value}. Remove this filter",
+    "searchFor": "Search for “{search}”",
+    "showAs": "Show as",
+    "shownOf": "{shown} of {count}"
+  },
+  "usage": {
+    "chatgpt": {
+      "add": "On chatgpt.com, in a browser: ChatGPT's apps can't add MCP servers. Under {plugins}, choose {add}. Name it {name}, with {url} as its URL and {oauth} as its authentication. In the OAuth settings, keep {dcr}; that CIMD is unavailable is expected. Where there's no Plugins, turn on {developer} in {settings} and create it in {apps}. Which plans may add one is up to OpenAI.",
+      "signIn": "Creating it opens MetaOS's sign-in, where you sign in with Discord or Google and allow ChatGPT access. In a new chat, type {at} and pick {name} for ChatGPT to use it."
+    },
+    "claude": {
+      "add": "On claude.ai or in Claude's desktop app, in {connectors}, choose {add}. Name it {name}, with {url} as its URL, and leave the advanced settings empty. In a Team or Enterprise organization, an owner adds it for everyone in the organization's settings, and you connect it in yours.",
+      "signIn": "Choose {connect} next to it: MetaOS's sign-in opens, where you sign in with Discord or Google. Claude's phone apps use it too, once it's connected. In a chat, turn it on in the {plus} menu, under {connectors}."
+    },
+    "claudeCode": {
+      "add": "In a terminal; {scope} makes it available in all your projects.",
+      "signIn": "In Claude Code, run {mcp}, pick {ogrodje} and choose Authenticate. Your browser opens MetaOS's sign-in, where you sign in with Discord or Google."
+    },
+    "codex": {
+      "add": "In a terminal. It goes into your own {config}, so it's in all your projects, in the CLI, Codex's IDE extension and its app.",
+      "signIn": "Adding it opens MetaOS's sign-in in your browser, where you sign in with Discord or Google. Codex keeps the sign-in and refreshes it; to sign in again, e.g. once you're staff:"
+    },
+    "copy": {
+      "copied": "Copied",
+      "copy": "Copy",
+      "copyCommand": "Copy the command",
+      "selected": "Selected, to copy with ⌘C or Ctrl+C",
+      "terminal": "Terminal"
+    },
+    "description": "Use MetaOS from your AI assistant over MCP: how to connect Claude Code, Claude, Codex or ChatGPT, and what it can do.",
+    "graphql": {
+      "commentExample": "A comment on S05E08, its text in variables so nothing needs escaping",
+      "endpoint": "Endpoint",
+      "endpointDetails": "{endpoint}, with JSON: a {query} and its {variables}",
+      "errors": "Errors",
+      "errorsDetails": "In the answer's body, with a 200",
+      "intro": "MetaOS's pages get what they show from its GraphQL API, and your scripts and apps can ask it too.",
+      "limits": "Limits",
+      "limitsDetails": "15 levels deep and 300 fields a query",
+      "meExample": "Who MetaOS takes you for",
+      "public": "Without a token",
+      "publicDetails": "What's public works for anyone: the released episodes, and the people on them. That's also all that {episodes} and {people} give anyone without a token.",
+      "publicExample": "The latest three releases",
+      "schema": "Schema",
+      "schemaDetails": "By introspection, for GraphQL clients, and described field by field in {schema} on GitHub",
+      "withToken": "With a token",
+      "withTokenDetails": "The rest is the team's. It takes a staff user's token, with {read}, and {write} for changes. Scripts have no sign-in of their own yet, so it's one from MetaOS's sign-in, which has both."
+    },
+    "mcp": {
+      "add": "Add MetaOS to {client}",
+      "ask": "Ask",
+      "askDetails": "For example: “Which episodes are in production?” or “Who's on the next recording day?” The assistant picks the tools it needs from the ones below and, unless you've allowed them, asks you before it uses one.",
+      "assistant": "Assistant",
+      "intro": "MetaOS is an MCP server. Connect an AI assistant such as Claude, Codex or ChatGPT to it, and the assistant can look up and manage Ogrodje's episodes, people, recording sessions and shows, its Google Docs and its files in Koofr, as you.",
+      "otherClients": "Other MCP clients that sign in with OAuth, such as MCP Inspector, connect to {url}.",
+      "signIn": "Sign in",
+      "team": "Be on the staff",
+      "teamDetails": "MCP is for Ogrodje's staff. Signing in makes you a member; an Ogrodje admin makes your account staff, and until then MetaOS turns the assistant's sign-in down. Once you're staff, sign in again."
+    },
+    "refresh": {
+      "chatgpt": "ChatGPT keeps them as they were when MetaOS was added, or in a workspace approved: there, an admin refreshes them in the workspace's settings, under {apps}. One you added yourself, add again.",
+      "claude": "Claude keeps them until you refresh them: in {connectors}, open {name}, choose {refresh}, and start a new chat.",
+      "claudeCode": "Claude Code gets them again in a new session, or in {mcp}: pick {ogrodje} and choose Reconnect.",
+      "codex": "Codex gets them as a session starts, so start a new one.",
+      "details": "MetaOS's tools are at version {version}, and change as MetaOS does. An assistant keeps those it was given, so when it can't find one listed below, or MetaOS turns down how it calls one, it has older ones.",
+      "title": "Keep its tools up to date"
+    },
+    "subtitle": "Use MetaOS from your AI assistant over MCP, or from your own code over GraphQL.",
+    "token": {
+      "copied": "Copied",
+      "copiedStatus": "Copied; it lasts 5 minutes.",
+      "copy": "Copy a token",
+      "keep": "It's you to MetaOS, so keep it to yourself. Put it in {token} for the commands here, and copy a new one once it's run out.",
+      "lasts": "lasts 5 minutes",
+      "none": "There's no token: {error}",
+      "notCopied": "The browser didn't let the page copy it, so here it is to copy yourself:",
+      "signIn": "Sign in, at the top right, and this is where you copy yours.",
+      "signedOut": "You're no longer signed in: sign in again to get one.",
+      "title": "Your token"
+    },
+    "tools": {
+      "filter": "Filter the tools",
+      "filterPlaceholder": "Filter by name or what it does",
+      "intro": "What an assistant can do over MCP, as you, at version {version}. It picks the ones it needs, and asks you first unless you've allowed them.",
+      "noMatch": "No tools match “{filter}”.",
+      "shown": "{shown} of {total} tool | {shown} of {total} tools",
+      "title": "Tools"
+    },
+    "ways": {
+      "ask": "Ask the API",
+      "connect": "Connect an assistant",
+      "graphql": "For scripts and apps",
+      "mcp": "For AI assistants: Claude Code, Claude, Codex, ChatGPT",
+      "tools": "{n} tool | {n} tools"
+    }
+  }
+}

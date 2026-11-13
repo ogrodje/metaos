@@ -1,14 +1,17 @@
 <script setup lang="ts">
+import { I18nT } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import NotFound from '@/components/NotFound.vue'
+import { useLocale } from '@/useLocale'
 
 const route = useRoute()
+const { t } = useLocale()
 </script>
 
 <template>
   <main class="content">
-    <NotFound title="There's no such page">
-      Nothing in MetaOS is at <code>{{ route.path }}</code>. The link may be mistyped, or the page may have moved.
+    <NotFound :title="t('ui.notFoundTitle')">
+      <I18nT keypath="ui.notFound" scope="global"><template #path><code>{{ route.path }}</code></template></I18nT>
     </NotFound>
   </main>
 </template>

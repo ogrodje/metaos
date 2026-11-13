@@ -1,18 +1,20 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, useId } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { I18nT } from 'vue-i18n'
 import { faCopy } from '@fortawesome/free-regular-svg-icons'
 import { faArrowDown, faCheck, faCode, faKey, faMagnifyingGlass, faRobot } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useRuntimeConfig } from '#imports'
 import CopyCommand from '@/components/CopyCommand.vue'
 import MarkedText from '@/components/MarkedText.vue'
-import { errorMessage } from '@/graphql'
+import { errorMessage, UserError } from '@/graphql'
 import { searchWords } from '@/search'
 import { usePageMeta } from '@/seo'
 import { useAuthStore } from '@/stores/auth'
-import { TOOL_GROUPS, TOOLS_VERSION } from '@/tools'
+import { toolGroups, TOOLS_VERSION } from '@/tools'
 import { type Client, CLIENTS, clientFrom, curlCommand, filterTools, tabAfter, toolCount, withTimeout } from '@/usage'
+import { useLocale } from '@/useLocale'
 
 // API and MCP usage: the two ways into MetaOS, MCP for AI assistants and GraphQL for scripts and apps, and the tools
 // an assistant gets
@@ -21,17 +23,16 @@ const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 const id = useId()
+const { t } = useLocale()
 
 // Where MCP clients connect, and the site, from the runtime config (nuxt.config.ts), so the server's page says them too
 const { mcpUrl, siteUrl } = useRuntimeConfig().public
 
-usePageMeta(() => ({
-  description: 'Use MetaOS from your AI assistant over MCP: how to connect Claude Code, Claude, Codex or ChatGPT, and '
-    + 'what it can do.',
-}))
+usePageMeta(() => ({ description: t('usage.description') }))
 
 // The assistant whose steps are shown, kept in the address (?client=), as search keeps what's searched
 const client = computed(() => clientFrom(route.query.client))
+const clientName = computed(() => CLIENTS.find((c) => c.id === client.value)?.name)
 
 function tabId(client: Client) {
   return `${id}-tab-${client}`
@@ -91,7 +92,7 @@ async function copyToken() {
   tokenError.value = undefined
   clearTimeout(tokenTimer)
   const pending = auth.token().then((token) => {
-    if (!token) throw new Error("You're no longer signed in: sign in again to get one.")
+    if (!token) throw new UserError('usage.token.signedOut')
     return token
   })
   try {
@@ -105,20 +106,23 @@ async function copyToken() {
       await nextTick()
       tokenField.value?.select()
     } catch (error) {
-      tokenError.value = errorMessage(error)
+      tokenError.value = errorMessage(error, t)
     }
   }
 }
 
-// The tools, narrowed as a filter's typed, with the words it found marked
+// The tools, in the page's language, narrowed as a filter's typed, with the words it found marked
 const filter = ref('')
 const filterWords = computed(() => searchWords(filter.value))
-const shownGroups = computed(() => filterTools(TOOL_GROUPS, filter.value))
-const total = toolCount(TOOL_GROUPS)
+const groups = computed(() => toolGroups(t))
+const shownGroups = computed(() => filterTools(groups.value, filter.value))
+const total = computed(() => toolCount(groups.value))
 const shownCount = computed(() => toolCount(shownGroups.value))
 const matches = computed(() => {
   if (!filterWords.value.length) return ''
-  return shownCount.value ? `${shownCount.value} of ${total} tools` : `No tools match “${filter.value.trim()}”.`
+  return shownCount.value
+    ? t('usage.tools.shown', { shown: shownCount.value, total: total.value }, total.value)
+    : t('usage.tools.noMatch', { filter: filter.value.trim() })
 })
 </script>
 
@@ -126,8 +130,8 @@ const matches = computed(() => {
   <main class="content">
     <header class="top">
       <div class="title">
-        <h1>API and MCP usage</h1>
-        <p class="subtitle">Use MetaOS from your AI assistant over MCP, or from your own code over GraphQL.</p>
+        <h1>{{ t('pages.usage') }}</h1>
+        <p class="subtitle">{{ t('usage.subtitle') }}</p>
       </div>
 
       <!-- The two ways in, each leading down to its section -->
@@ -135,16 +139,16 @@ const matches = computed(() => {
         <div class="way">
           <span class="way-icon" aria-hidden="true"><FontAwesomeIcon :icon="faRobot"/></span>
           <p class="way-name">MCP</p>
-          <p class="way-for">For AI assistants: Claude Code, Claude, Codex, ChatGPT</p>
-          <p class="way-meta">{{ total }} tools</p>
-          <a class="way-link" href="#mcp">Connect an assistant<FontAwesomeIcon :icon="faArrowDown"/></a>
+          <p class="way-for">{{ t('usage.ways.mcp') }}</p>
+          <p class="way-meta">{{ t('usage.ways.tools', { n: total }, total) }}</p>
+          <a class="way-link" href="#mcp">{{ t('usage.ways.connect') }}<FontAwesomeIcon :icon="faArrowDown"/></a>
         </div>
         <div class="way">
           <span class="way-icon" aria-hidden="true"><FontAwesomeIcon :icon="faCode"/></span>
           <p class="way-name">GraphQL</p>
-          <p class="way-for">For scripts and apps</p>
+          <p class="way-for">{{ t('usage.ways.graphql') }}</p>
           <p class="way-meta"><code>POST /graphql</code></p>
-          <a class="way-link" href="#graphql">Ask the API<FontAwesomeIcon :icon="faArrowDown"/></a>
+          <a class="way-link" href="#graphql">{{ t('usage.ways.ask') }}<FontAwesomeIcon :icon="faArrowDown"/></a>
         </div>
       </div>
     </header>
@@ -153,13 +157,9 @@ const matches = computed(() => {
       <div class="heading">
         <h2 id="mcp">MCP</h2>
       </div>
-      <p class="intro">
-        MetaOS is an MCP server. Connect an AI assistant such as Claude, Codex or ChatGPT to it, and the assistant
-        can look up and manage Ogrodje's episodes, people, recording sessions and shows, its Google Docs and its files
-        in Koofr, as you.
-      </p>
+      <p class="intro">{{ t('usage.mcp.intro') }}</p>
 
-      <div class="tabs" role="tablist" aria-label="Assistant">
+      <div class="tabs" role="tablist" :aria-label="t('usage.mcp.assistant')">
         <button v-for="(c, index) in CLIENTS" :id="tabId(c.id)" :key="c.id" type="button" role="tab"
                 :aria-selected="client === c.id" :aria-controls="`${id}-panel`" :tabindex="client === c.id ? 0 : -1"
                 @click="choose(c.id)" @keydown="onTabKeydown($event, index)">
@@ -170,261 +170,211 @@ const matches = computed(() => {
       <div :id="`${id}-panel`" class="panel" role="tabpanel" :aria-labelledby="tabId(client)" tabindex="0">
         <!-- A sequence, on a rail as the history's -->
         <ol class="steps">
-            <template v-if="client === 'claude-code'">
-              <li class="step">
-                <span class="marker" aria-hidden="true">1</span>
-                <div>
-                  <p class="step-title">Add MetaOS to Claude Code</p>
-                  <p class="step-details">In a terminal; <code>--scope user</code> makes it available in all your projects.</p>
+            <li class="step">
+              <span class="marker" aria-hidden="true">1</span>
+              <div>
+                <p class="step-title">{{ t('usage.mcp.add', { client: clientName }) }}</p>
+                <template v-if="client === 'claude-code'">
+                  <I18nT keypath="usage.claudeCode.add" tag="p" class="step-details" scope="global">
+                    <template #scope><code>--scope user</code></template>
+                  </I18nT>
                   <CopyCommand :command="claudeCommand"/>
-                </div>
-              </li>
-              <li class="step">
-                <span class="marker" aria-hidden="true">2</span>
-                <div>
-                  <p class="step-title">Sign in</p>
-                  <p class="step-details">
-                    In Claude Code, run <code>/mcp</code>, pick <strong>ogrodje</strong> and choose Authenticate. Your
-                    browser opens MetaOS's sign-in, where you sign in with Discord or Google.
-                  </p>
-                </div>
-              </li>
-            </template>
-
-            <template v-else-if="client === 'claude'">
-              <li class="step">
-                <span class="marker" aria-hidden="true">1</span>
-                <div>
-                  <p class="step-title">Add MetaOS to Claude</p>
-                  <p class="step-details">
-                    On claude.ai or in Claude's desktop app, in <strong>Customize → Connectors</strong>, choose <strong>Add →
-                    Add custom connector</strong>. Name it <strong>Ogrodje</strong>, with <code>{{ mcpUrl }}</code> as its URL,
-                    and leave the advanced settings empty. In a Team or Enterprise organization, an owner adds it for
-                    everyone in the organization's settings, and you connect it in yours.
-                  </p>
-                </div>
-              </li>
-              <li class="step">
-                <span class="marker" aria-hidden="true">2</span>
-                <div>
-                  <p class="step-title">Sign in</p>
-                  <p class="step-details">
-                    Choose <strong>Connect</strong> next to it: MetaOS's sign-in opens, where you sign in with Discord or
-                    Google. Claude's phone apps use it too, once it's connected. In a chat, turn it on in the
-                    <strong>+</strong> menu, under <strong>Connectors</strong>.
-                  </p>
-                </div>
-              </li>
-            </template>
-
-            <template v-else-if="client === 'codex'">
-              <li class="step">
-                <span class="marker" aria-hidden="true">1</span>
-                <div>
-                  <p class="step-title">Add MetaOS to Codex</p>
-                  <p class="step-details">
-                    In a terminal. It goes into your own <code>~/.codex/config.toml</code>, so it's in all your projects, in
-                    the CLI, Codex's IDE extension and its app.
-                  </p>
+                </template>
+                <I18nT v-else-if="client === 'claude'" keypath="usage.claude.add" tag="p" class="step-details" scope="global">
+                  <template #connectors><strong>Customize → Connectors</strong></template>
+                  <template #add><strong>Add → Add custom connector</strong></template>
+                  <template #name><strong>Ogrodje</strong></template>
+                  <template #url><code>{{ mcpUrl }}</code></template>
+                </I18nT>
+                <template v-else-if="client === 'codex'">
+                  <I18nT keypath="usage.codex.add" tag="p" class="step-details" scope="global">
+                    <template #config><code>~/.codex/config.toml</code></template>
+                  </I18nT>
                   <CopyCommand :command="codexCommand"/>
-                </div>
-              </li>
-              <li class="step">
-                <span class="marker" aria-hidden="true">2</span>
-                <div>
-                  <p class="step-title">Sign in</p>
-                  <p class="step-details">
-                    Adding it opens MetaOS's sign-in in your browser, where you sign in with Discord or Google. Codex keeps
-                    the sign-in and refreshes it; to sign in again, e.g. once you're staff:
-                  </p>
+                </template>
+                <I18nT v-else keypath="usage.chatgpt.add" tag="p" class="step-details" scope="global">
+                  <template #plugins><strong>Plugins</strong></template>
+                  <template #add><strong>Add → Add custom MCP server</strong></template>
+                  <template #name><strong>Ogrodje</strong></template>
+                  <template #url><code>{{ mcpUrl }}</code></template>
+                  <template #oauth><strong>OAuth</strong></template>
+                  <template #dcr><strong>Dynamic Client Registration (DCR)</strong></template>
+                  <template #developer><strong>Developer mode</strong></template>
+                  <template #settings><strong>Settings → Apps → Advanced settings</strong></template>
+                  <template #apps><strong>Apps</strong></template>
+                </I18nT>
+              </div>
+            </li>
+            <li class="step">
+              <span class="marker" aria-hidden="true">2</span>
+              <div>
+                <p class="step-title">{{ t('usage.mcp.signIn') }}</p>
+                <I18nT v-if="client === 'claude-code'" keypath="usage.claudeCode.signIn" tag="p" class="step-details" scope="global">
+                  <template #mcp><code>/mcp</code></template>
+                  <template #ogrodje><strong>ogrodje</strong></template>
+                </I18nT>
+                <I18nT v-else-if="client === 'claude'" keypath="usage.claude.signIn" tag="p" class="step-details" scope="global">
+                  <template #connect><strong>Connect</strong></template>
+                  <template #plus><strong>+</strong></template>
+                  <template #connectors><strong>Connectors</strong></template>
+                </I18nT>
+                <template v-else-if="client === 'codex'">
+                  <p class="step-details">{{ t('usage.codex.signIn') }}</p>
                   <CopyCommand :command="codexLogin"/>
-                </div>
-              </li>
-            </template>
-
-            <template v-else>
-              <li class="step">
-                <span class="marker" aria-hidden="true">1</span>
-                <div>
-                  <p class="step-title">Add MetaOS to ChatGPT</p>
-                  <p class="step-details">
-                    On chatgpt.com, in a browser: ChatGPT's apps can't add MCP servers. Under <strong>Plugins</strong>,
-                    choose <strong>Add → Add custom MCP server</strong>. Name it <strong>Ogrodje</strong>, with
-                    <code>{{ mcpUrl }}</code> as its URL and <strong>OAuth</strong> as its authentication. In the OAuth
-                    settings, keep <strong>Dynamic Client Registration (DCR)</strong>; that CIMD is unavailable is expected.
-                    Where there's no Plugins, turn on <strong>Developer mode</strong> in <strong>Settings → Apps → Advanced
-                    settings</strong> and create it in <strong>Apps</strong>. Which plans may add one is up to OpenAI.
-                  </p>
-                </div>
-              </li>
-              <li class="step">
-                <span class="marker" aria-hidden="true">2</span>
-                <div>
-                  <p class="step-title">Sign in</p>
-                  <p class="step-details">
-                    Creating it opens MetaOS's sign-in, where you sign in with Discord or Google and allow ChatGPT access.
-                    In a new chat, type <strong>@</strong> and pick <strong>Ogrodje</strong> for ChatGPT to use it.
-                  </p>
-                </div>
-              </li>
-            </template>
+                </template>
+                <I18nT v-else keypath="usage.chatgpt.signIn" tag="p" class="step-details" scope="global">
+                  <template #at><strong>@</strong></template>
+                  <template #name><strong>Ogrodje</strong></template>
+                </I18nT>
+              </div>
+            </li>
 
             <li class="step">
               <span class="marker" aria-hidden="true">3</span>
               <div>
-                <p class="step-title">Be on the staff</p>
-                <p class="step-details">
-                  MCP is for Ogrodje's staff. Signing in makes you a member; an Ogrodje admin makes your account staff,
-                  and until then MetaOS turns the assistant's sign-in down. Once you're staff, sign in again.
-                </p>
+                <p class="step-title">{{ t('usage.mcp.team') }}</p>
+                <p class="step-details">{{ t('usage.mcp.teamDetails') }}</p>
               </div>
             </li>
             <li class="step">
               <span class="marker" aria-hidden="true">4</span>
               <div>
-                <p class="step-title">Ask</p>
-                <p class="step-details">
-                  For example: “Which episodes are in production?” or “Who's on the next recording day?” The assistant picks
-                  the tools it needs from the ones below and, unless you've allowed them, asks you before it uses one.
-                </p>
+                <p class="step-title">{{ t('usage.mcp.ask') }}</p>
+                <p class="step-details">{{ t('usage.mcp.askDetails') }}</p>
               </div>
             </li>
             <!-- The address MetaOS gives an assistant whose tools are older than its own (McpVersion.kt) -->
             <li id="refresh" class="step">
               <span class="marker" aria-hidden="true">5</span>
               <div>
-                <p class="step-title">Keep its tools up to date</p>
+                <p class="step-title">{{ t('usage.refresh.title') }}</p>
                 <p class="step-details">
-                  MetaOS's tools are at version <code>{{ TOOLS_VERSION }}</code>, and change as MetaOS does. An assistant
-                  keeps those it was given, so when it can't find one listed below, or MetaOS turns down how it calls one,
-                  it has older ones.
-                  <template v-if="client === 'claude-code'">
-                    Claude Code gets them again in a new session, or in <code>/mcp</code>: pick <strong>ogrodje</strong>
-                    and choose Reconnect.
-                  </template>
-                  <template v-else-if="client === 'claude'">
-                    Claude keeps them until you refresh them: in <strong>Customize → Connectors</strong>, open
-                    <strong>Ogrodje</strong>, choose <strong>… → Refresh tools list</strong>, and start a new chat.
-                  </template>
-                  <template v-else-if="client === 'codex'">
-                    Codex gets them as a session starts, so start a new one.
-                  </template>
-                  <template v-else>
-                    ChatGPT keeps them as they were when MetaOS was added, or in a workspace approved: there, an admin
-                    refreshes them in the workspace's settings, under <strong>Apps</strong>. One you added yourself, add
-                    again.
-                  </template>
+                  <I18nT keypath="usage.refresh.details" scope="global">
+                    <template #version><code>{{ TOOLS_VERSION }}</code></template>
+                  </I18nT>
+                  {{ ' ' }}
+                  <I18nT v-if="client === 'claude-code'" keypath="usage.refresh.claudeCode" scope="global">
+                    <template #mcp><code>/mcp</code></template>
+                    <template #ogrodje><strong>ogrodje</strong></template>
+                  </I18nT>
+                  <I18nT v-else-if="client === 'claude'" keypath="usage.refresh.claude" scope="global">
+                    <template #connectors><strong>Customize → Connectors</strong></template>
+                    <template #name><strong>Ogrodje</strong></template>
+                    <template #refresh><strong>… → Refresh tools list</strong></template>
+                  </I18nT>
+                  <template v-else-if="client === 'codex'">{{ t('usage.refresh.codex') }}</template>
+                  <I18nT v-else keypath="usage.refresh.chatgpt" scope="global">
+                    <template #apps><strong>Apps</strong></template>
+                  </I18nT>
                 </p>
               </div>
             </li>
         </ol>
       </div>
 
-      <p class="note">
-        Other MCP clients that sign in with OAuth, such as MCP Inspector, connect to <code>{{ mcpUrl }}</code>.
-      </p>
+      <I18nT keypath="usage.mcp.otherClients" tag="p" class="note" scope="global">
+        <template #url><code>{{ mcpUrl }}</code></template>
+      </I18nT>
     </section>
 
     <section aria-labelledby="graphql">
       <div class="heading">
         <h2 id="graphql">GraphQL</h2>
       </div>
-      <p class="intro">
-        MetaOS's pages get what they show from its GraphQL API, and your scripts and apps can ask it too.
-      </p>
+      <p class="intro">{{ t('usage.graphql.intro') }}</p>
 
       <dl class="details">
         <div>
-          <dt>Endpoint</dt>
-          <dd><code>POST {{ graphqlUrl }}</code>, with JSON: a <code>query</code> and its <code>variables</code></dd>
+          <dt>{{ t('usage.graphql.endpoint') }}</dt>
+          <I18nT keypath="usage.graphql.endpointDetails" tag="dd" scope="global">
+            <template #endpoint><code>POST {{ graphqlUrl }}</code></template>
+            <template #query><code>query</code></template>
+            <template #variables><code>variables</code></template>
+          </I18nT>
         </div>
         <div>
-          <dt>Errors</dt>
-          <dd>In the answer's body, with a 200</dd>
+          <dt>{{ t('usage.graphql.errors') }}</dt>
+          <dd>{{ t('usage.graphql.errorsDetails') }}</dd>
         </div>
         <div>
-          <dt>Schema</dt>
-          <dd>
-            By introspection, for GraphQL clients, and described field by field in
-            <a class="link" :href="SCHEMA_URL">schema.graphqls</a> on GitHub
-          </dd>
+          <dt>{{ t('usage.graphql.schema') }}</dt>
+          <I18nT keypath="usage.graphql.schemaDetails" tag="dd" scope="global">
+            <template #schema><a class="link" :href="SCHEMA_URL">schema.graphqls</a></template>
+          </I18nT>
         </div>
         <div>
-          <dt>Limits</dt>
-          <dd>15 levels deep and 300 fields a query</dd>
+          <dt>{{ t('usage.graphql.limits') }}</dt>
+          <dd>{{ t('usage.graphql.limitsDetails') }}</dd>
         </div>
       </dl>
 
       <!-- Each case: what it is on the left, an example on the right -->
       <div class="case">
         <div class="explain">
-          <h3>Without a token</h3>
-          <p>
-            What's public works for anyone: the released episodes, and the people on them. That's also all that
-            <code>episodes</code> and <code>people</code> give anyone without a token.
-          </p>
+          <h3>{{ t('usage.graphql.public') }}</h3>
+          <I18nT keypath="usage.graphql.publicDetails" tag="p" scope="global">
+            <template #episodes><code>episodes</code></template>
+            <template #people><code>people</code></template>
+          </I18nT>
         </div>
         <div class="examples">
-          <CopyCommand label="The latest three releases" :command="publicCommand"/>
+          <CopyCommand :label="t('usage.graphql.publicExample')" :command="publicCommand"/>
         </div>
       </div>
 
       <div class="case">
         <div class="explain">
-          <h3>With a token</h3>
-          <p>
-            The rest is the team's. It takes a staff user's token, with <code>metaos:read</code>, and
-            <code>metaos:write</code> for changes. Scripts have no sign-in of their own yet, so it's one from MetaOS's
-            sign-in, which has both.
-          </p>
+          <h3>{{ t('usage.graphql.withToken') }}</h3>
+          <I18nT keypath="usage.graphql.withTokenDetails" tag="p" scope="global">
+            <template #read><code>metaos:read</code></template>
+            <template #write><code>metaos:write</code></template>
+          </I18nT>
 
           <div class="token-card">
             <p class="token-head">
               <FontAwesomeIcon :icon="faKey"/>
-              <b>Your token</b>
-              <span class="lasts">lasts 5 minutes</span>
+              <b>{{ t('usage.token.title') }}</b>
+              <span class="lasts">{{ t('usage.token.lasts') }}</span>
             </p>
             <template v-if="auth.authenticated">
-              <p>
-                It's you to MetaOS, so keep it to yourself. Put it in <code>TOKEN</code> for the commands here, and copy
-                a new one once it's run out.
-              </p>
+              <I18nT keypath="usage.token.keep" tag="p" scope="global">
+                <template #token><code>TOKEN</code></template>
+              </I18nT>
               <div class="token-actions">
                 <button type="button" class="button" @click="copyToken">
-                  <FontAwesomeIcon :icon="tokenCopied ? faCheck : faCopy"/>{{ tokenCopied ? 'Copied' : 'Copy a token' }}
+                  <FontAwesomeIcon :icon="tokenCopied ? faCheck : faCopy"/>{{ tokenCopied ? t('usage.token.copied') : t('usage.token.copy') }}
                 </button>
-                <span class="token-status" role="status">{{ tokenCopied ? 'Copied; it lasts 5 minutes.' : '' }}</span>
+                <span class="token-status" role="status">{{ tokenCopied ? t('usage.token.copiedStatus') : '' }}</span>
               </div>
               <template v-if="shownToken">
-                <p>The browser didn't let the page copy it, so here it is to copy yourself:</p>
+                <p>{{ t('usage.token.notCopied') }}</p>
                 <textarea ref="tokenField" class="token-field" readonly rows="4" spellcheck="false"
-                          aria-label="Your token" :value="shownToken" @focus="tokenField?.select()"></textarea>
+                          :aria-label="t('usage.token.title')" :value="shownToken" @focus="tokenField?.select()"></textarea>
               </template>
-              <p v-if="tokenError" class="error" role="alert">There's no token: {{ tokenError }}</p>
+              <p v-if="tokenError" class="error" role="alert">{{ t('usage.token.none', { error: tokenError }) }}</p>
             </template>
-            <p v-else>Sign in, at the top right, and this is where you copy yours.</p>
+            <p v-else>{{ t('usage.token.signIn') }}</p>
           </div>
         </div>
         <div class="examples">
-          <CopyCommand label="Who MetaOS takes you for" :command="meCommand"/>
-          <CopyCommand label="A comment on S05E08, its text in variables so nothing needs escaping" :command="commentCommand"/>
+          <CopyCommand :label="t('usage.graphql.meExample')" :command="meCommand"/>
+          <CopyCommand :label="t('usage.graphql.commentExample')" :command="commentCommand"/>
         </div>
       </div>
     </section>
 
     <section aria-labelledby="tools">
       <div class="heading">
-        <h2 id="tools">Tools</h2>
+        <h2 id="tools">{{ t('usage.tools.title') }}</h2>
         <span class="count">{{ total }}</span>
       </div>
-      <p class="intro">
-        What an assistant can do over MCP, as you, at version <code>{{ TOOLS_VERSION }}</code>. It picks the ones it
-        needs, and asks you first unless you've allowed them.
-      </p>
+      <I18nT keypath="usage.tools.intro" tag="p" class="intro" scope="global">
+        <template #version><code>{{ TOOLS_VERSION }}</code></template>
+      </I18nT>
 
       <div class="filter">
         <FontAwesomeIcon class="glass" :icon="faMagnifyingGlass"/>
-        <input v-model="filter" type="search" aria-label="Filter the tools" placeholder="Filter by name or what it does"
+        <input v-model="filter" type="search" :aria-label="t('usage.tools.filter')" :placeholder="t('usage.tools.filterPlaceholder')"
                autocomplete="off" spellcheck="false" :aria-describedby="`${id}-matches`"/>
       </div>
       <p :id="`${id}-matches`" class="matches" :class="{ none: filterWords.length && !shownCount }" role="status">{{ matches }}</p>

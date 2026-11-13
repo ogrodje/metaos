@@ -5,6 +5,7 @@ import PersonAvatar from '@/components/PersonAvatar.vue'
 import SocialLinks from '@/components/SocialLinks.vue'
 import { teamSummary } from '@/lists'
 import { type Person, personPath } from '@/people'
+import { useLocale } from '@/useLocale'
 
 // Someone on the People page. On the team, a card: their picture, large, and beside it their name, who they are, and
 // what they do on how many episodes. Anyone else, a line: picture, name, who they are, their latest episode and how
@@ -14,8 +15,10 @@ const props = defineProps<{
   team?: boolean
 }>()
 
+const { t, dateLocale, path } = useLocale()
+
 // 37 episodes as co-host, host and consultant
-const roles = computed(() => teamSummary(props.person))
+const roles = computed(() => teamSummary(props.person, t, dateLocale.value))
 
 const latest = computed(() => props.person.episodes[0]?.episode)
 </script>
@@ -24,7 +27,7 @@ const latest = computed(() => props.person.episodes[0]?.episode)
   <li v-if="team" class="team-card">
     <PersonAvatar :image="person.avatar" :name="person.name" :size="72"/>
     <div class="text">
-      <RouterLink class="name" :to="personPath(person)">{{ person.name }}</RouterLink>
+      <RouterLink class="name" :to="path(personPath(person))">{{ person.name }}</RouterLink>
       <p v-if="person.bio" class="about">{{ person.bio }}</p>
       <p class="roles">{{ roles }}</p>
     </div>
@@ -33,10 +36,10 @@ const latest = computed(() => props.person.episodes[0]?.episode)
   <li v-else class="person-card">
     <PersonAvatar :image="person.avatar" :name="person.name" :size="40"/>
     <div class="text">
-      <RouterLink class="name" :to="personPath(person)">{{ person.name }}</RouterLink>
+      <RouterLink class="name" :to="path(personPath(person))">{{ person.name }}</RouterLink>
       <p v-if="person.bio" class="bio">{{ person.bio }}</p>
       <p v-if="latest" class="episodes">
-        <template v-if="person.episodes.length > 1">{{ person.episodes.length }} episodes · </template>
+        <template v-if="person.episodes.length > 1">{{ t('people.episodes', { n: person.episodes.length }, person.episodes.length) }} · </template>
         <span lang="sl">{{ latest.title }}</span>
       </p>
     </div>

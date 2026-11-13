@@ -6,6 +6,7 @@ import { faCheck } from '@fortawesome/free-solid-svg-icons'
 import { brands } from '@/brands'
 import { type Linked, type Platform, links } from '@/episodes'
 import { withTimeout } from '@/usage'
+import { useLocale } from '@/useLocale'
 
 // Where to listen to an episode, each in its brand's colour when pointed at: icons in a list, or buttons that also say
 // where, e.g. on its page, where the team also copies each link with the icon beside it (copyable); on Patreon its
@@ -17,6 +18,16 @@ defineProps<{
   allPatreon?: boolean
 }>()
 
+const { t } = useLocale()
+
+// A platform's name as the page says it: brands as they are, Patreon's audio and bonus in the page's language
+const PLATFORM_NAMES: Partial<Record<Platform, string>> = {
+  'Patreon audio': 'episode.listen.patreonAudio',
+  'Patreon bonus': 'episode.listen.patreonBonus',
+  'Patreon bonus audio': 'episode.listen.patreonBonusAudio',
+}
+const platformName = (platform: Platform) => (PLATFORM_NAMES[platform] ? t(PLATFORM_NAMES[platform]) : platform)
+
 // The link just copied, for its check, and what was done, for screen readers
 const copied = ref<Platform>()
 const status = ref('')
@@ -27,12 +38,12 @@ async function copy(platform: Platform, url: string) {
   try {
     await withTimeout(navigator.clipboard.writeText(url))
     copied.value = platform
-    status.value = `Copied the ${platform} link`
+    status.value = t('episode.listen.copiedLink', { platform: platformName(platform) })
   } catch (error) {
     // Shown instead, to copy by hand
     console.error(`The ${platform} link was not copied`, error)
     copied.value = undefined
-    window.prompt(`Copy the ${platform} link`, url)
+    window.prompt(t('episode.listen.copyLink', { platform: platformName(platform) }), url)
   }
   timer = setTimeout(() => {
     copied.value = undefined
@@ -45,11 +56,11 @@ async function copy(platform: Platform, url: string) {
   <template v-if="labelled">
     <div v-for="link in links(episode, allPatreon)" :key="link.platform" :class="{ cell: copyable }">
       <a class="button listen-button" :href="link.url" :style="{ '--brand': brands[link.platform].color }">
-        <FontAwesomeIcon :icon="brands[link.platform].icon"/>{{ link.platform }}
+        <FontAwesomeIcon :icon="brands[link.platform].icon"/>{{ platformName(link.platform) }}
       </a>
       <button v-if="copyable" type="button" class="copy" :class="{ copied: copied === link.platform }"
-              :aria-label="copied === link.platform ? 'Copied' : `Copy the ${link.platform} link`"
-              :title="copied === link.platform ? 'Copied' : 'Copy link'" @click="copy(link.platform, link.url)">
+              :aria-label="copied === link.platform ? t('episode.listen.copied') : t('episode.listen.copyLink', { platform: platformName(link.platform) })"
+              :title="copied === link.platform ? t('episode.listen.copied') : t('episode.listen.copy')" @click="copy(link.platform, link.url)">
         <FontAwesomeIcon :icon="copied === link.platform ? faCheck : faCopy"/>
       </button>
     </div>
@@ -57,7 +68,7 @@ async function copy(platform: Platform, url: string) {
   </template>
   <template v-else>
     <a v-for="link in links(episode, allPatreon)" :key="link.platform" class="icon-link brand-link" :href="link.url"
-       :title="link.platform" :aria-label="link.platform" :style="{ '--brand': brands[link.platform].color }">
+       :title="platformName(link.platform)" :aria-label="platformName(link.platform)" :style="{ '--brand': brands[link.platform].color }">
       <FontAwesomeIcon :icon="brands[link.platform].icon"/>
     </a>
   </template>

@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, useId, watch } from 'vue'
 import { RouterLink } from 'vue-router'
+import { I18nT } from 'vue-i18n'
 import PersonPicker, { type Pickable } from '@/components/PersonPicker.vue'
 import { type Account, accountName, LINK_ACCOUNT, unlinkedDetails } from '@/accounts'
 import { errorMessage, graphql } from '@/graphql'
 import { personPath } from '@/people'
+import { useLocale } from '@/useLocale'
 
 // The sign-ins MetaOS has seen that nobody's linked to, for the People page. For the one user who may link accounts
 // (canLinkAccounts), each has Link to…, which picks the person it is from those the page lists; the page loads its data
@@ -23,6 +25,7 @@ const emit = defineEmits<{
   changed: []
 }>()
 
+const { t, dateLocale, path } = useLocale()
 const id = useId()
 
 // Those linked here, as MetaOS answered, left out until the page's accounts change: its reload a moment later has
@@ -65,13 +68,13 @@ async function link(account: Account, person: Pickable) {
   try {
     await graphql<{ account: Account }>(LINK_ACCOUNT, { id: account.id, person: person.id })
     linked.value = [...linked.value, account.id]
-    done.value = { account: accountName(account), person: { id: person.id, name: person.name } }
+    done.value = { account: accountName(account, t), person: { id: person.id, name: person.name } }
     picking.value = undefined
     emit('changed')
     // Its row went with it: the section has the focus instead, where it is
     heading.value?.focus({ preventScroll: true })
   } catch (e) {
-    error.value = { account: account.id, text: `It wasn't linked: ${errorMessage(e)}` }
+    error.value = { account: account.id, text: t('accounts.linkFailed', { error: errorMessage(e, t) }) }
   } finally {
     busy.value = false
   }
@@ -81,31 +84,25 @@ async function link(account: Account, person: Pickable) {
 <template>
   <section v-if="shown.length || done" :aria-labelledby="`${id}-heading`">
     <div class="heading">
-      <h2 :id="`${id}-heading`" ref="heading" tabindex="-1">Not linked to anyone</h2>
+      <h2 :id="`${id}-heading`" ref="heading" tabindex="-1">{{ t('accounts.unlinked.title') }}</h2>
       <span class="count">{{ shown.length }}</span>
     </div>
-    <p v-if="canLink" class="note">
-      Sign-ins MetaOS has seen that aren't anyone's yet. Link each to the person it is, and its comments and history
-      get their name.
-    </p>
-    <p v-else class="note">
-      Sign-ins MetaOS has seen that aren't anyone's yet. Oto links them to the people they are, and their comments and
-      history then get those names.
-    </p>
+    <p v-if="canLink" class="note">{{ t('accounts.unlinked.linker') }}</p>
+    <p v-else class="note">{{ t('accounts.unlinked.others') }}</p>
 
     <ul v-if="shown.length" class="sign-ins">
       <li v-for="account in shown" :key="account.id" class="sign-in">
         <div class="row">
           <p class="what">
-            <span class="name">{{ accountName(account) }}</span>
-            <span v-if="account.id === me" class="you">you</span>
-            <span class="how">{{ unlinkedDetails(account) }}</span>
+            <span class="name">{{ accountName(account, t) }}</span>
+            <span v-if="account.id === me" class="you">{{ t('accounts.you') }}</span>
+            <span class="how">{{ unlinkedDetails(account, t, dateLocale) }}</span>
           </p>
           <button v-if="canLink && picking !== account.id" :id="linkButton(account)" type="button" class="small"
-                  :aria-label="`Link ${accountName(account)} to a person`" @click="pick(account)">Link to…</button>
+                  :aria-label="t('accounts.linkToPerson', { account: accountName(account, t) })" @click="pick(account)">{{ t('accounts.linkTo') }}</button>
         </div>
         <PersonPicker v-if="picking === account.id" :people="people" :suggest="account.name"
-                      :label="`Link ${accountName(account)} to`" :busy="busy" @pick="link(account, $event)"
+                      :label="t('accounts.linkAccountTo', { account: accountName(account, t) })" :busy="busy" @pick="link(account, $event)"
                       @cancel="stopPicking(account)"/>
         <p v-if="error?.account === account.id" class="error" role="alert">{{ error.text }}</p>
       </li>
@@ -113,7 +110,10 @@ async function link(account: Account, person: Pickable) {
 
     <p class="done" role="status">
       <template v-if="done">
-        {{ done.account }} is linked to <RouterLink class="link" :to="personPath(done.person)">{{ done.person.name }}</RouterLink>.
+        <I18nT keypath="accounts.linkedTo" scope="global">
+          <template #account>{{ done.account }}</template>
+          <template #person><RouterLink class="link" :to="path(personPath(done.person))">{{ done.person.name }}</RouterLink></template>
+        </I18nT>
       </template>
     </p>
   </section>

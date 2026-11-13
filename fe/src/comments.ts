@@ -1,5 +1,6 @@
 // Episodes' and sessions' discussions as MetaOS's GraphQL API has them (src/main/resources/graphql/schema.graphqls)
 
+import { type DateLocale, TIME_ZONE, type Translate } from '@/i18n'
 import { type Image, IMAGE_FIELDS } from '@/images'
 
 /** Who wrote a comment: their person's name, or else their username */
@@ -81,12 +82,14 @@ const COUNT_FROM = 2_000
  * What a comment box says of its length once it's near the most a comment may say: how many characters are left, or
  * how many too many. Counted as Comments.kt counts them, in UTF-16 units, so an emoji may be two.
  */
-export function lengthNote(body: string): { text: string, over: boolean } | null {
+export function lengthNote(body: string, t: Translate, dateLocale: DateLocale): { text: string, over: boolean } | null {
   const left = MAX_COMMENT_LENGTH - commentText(body).length
   if (left > COUNT_FROM) return null
-  const count = Math.abs(left)
-  const characters = `${count.toLocaleString()} ${count === 1 ? 'character' : 'characters'}`
-  return left < 0 ? { text: `${characters} too many`, over: true } : { text: `${characters} left`, over: false }
+  const n = Math.abs(left)
+  const count = n.toLocaleString(dateLocale)
+  return left < 0
+    ? { text: t('comments.tooMany', { count }, n), over: true }
+    : { text: t('comments.left', { count }, n), over: false }
 }
 
 /** What a key does in a comment box, as on GitHub */
@@ -122,9 +125,9 @@ export function toolLabel(comment: Pick<Comment, 'tool'>) {
   return comment.tool ? `MCP · ${comment.tool}` : null
 }
 
-/** When, in full, for a title, e.g. Thursday, 22 October 2026 at 18:40 */
-export function fullDateTime(at: string) {
-  return new Date(at).toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'short' })
+/** When, in full, for a title, e.g. Thursday, 22 October 2026 at 18:40, in Ogrodje's time zone */
+export function fullDateTime(at: string, dateLocale: DateLocale) {
+  return new Date(at).toLocaleString(dateLocale, { dateStyle: 'full', timeStyle: 'short', timeZone: TIME_ZONE })
 }
 
 /**

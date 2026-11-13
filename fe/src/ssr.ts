@@ -1,4 +1,4 @@
-import { useAsyncData } from '#imports'
+import { useAsyncData, useI18n } from '#imports'
 import { errorMessage } from '@/graphql'
 
 /** What a page first shows: its data, or why it didn't load */
@@ -14,6 +14,15 @@ export interface FirstLoad<T> {
  * to be on the team (stores/auth.ts). Going to the page in the browser, it's loaded there, as the signed-in user.
  */
 export async function useFirstLoad<T>(key: string, load: () => Promise<T>): Promise<FirstLoad<T>> {
-  const { data, error } = await useAsyncData(key, load)
-  return { data: data.value, error: error.value ? errorMessage(error.value) : undefined }
+  // Why it didn't load is said where it's loaded, in the page's language: an error passed on with the page would come
+  // as its message alone, which for a UserError is its message key (graphql.ts)
+  const { t } = useI18n()
+  const { data } = await useAsyncData(key, async (): Promise<FirstLoad<T>> => {
+    try {
+      return { data: await load() }
+    } catch (error) {
+      return { error: errorMessage(error, t) }
+    }
+  })
+  return data.value ?? {}
 }

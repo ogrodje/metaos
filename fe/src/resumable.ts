@@ -1,6 +1,8 @@
 // Sending a big file to a resumable upload of Cloud Storage's (SignedUpload in Storage.kt) a chunk at a time, going on
 // from where it was after the connection broke: https://cloud.google.com/storage/docs/performing-resumable-uploads
 
+import { UserError } from '@/graphql'
+
 /** A chunk of what's sent at a time: Cloud Storage takes multiples of 256 KiB, but for the last */
 export const CHUNK_BYTES = 16 * 1024 * 1024
 
@@ -53,12 +55,12 @@ export async function sendInChunks(
       onSent(offset)
       continue
     }
-    if (answer.status === 404 || answer.status === 410) throw new Error('The upload expired; send the file again')
+    if (answer.status === 404 || answer.status === 410) throw new UserError('media.upload.expired')
     // Anything else but a broken connection or Cloud Storage not managing, which a while later may go
     if (answer.status && answer.status !== 408 && answer.status !== 429 && answer.status < 500) {
-      throw new Error(`Google Cloud Storage answered ${answer.status}`)
+      throw new UserError('media.upload.answered', { status: answer.status })
     }
-    if (++failures > RETRIES) throw new Error('The connection kept breaking while it was being sent')
+    if (++failures > RETRIES) throw new UserError('media.upload.keptBreaking')
     await pause(failures)
     asking = true
   }
@@ -83,7 +85,7 @@ function put(url: string, range: string, body: Blob | null, onLoaded: (bytes: nu
     request.setRequestHeader('Content-Range', range)
     request.upload.onprogress = (event) => onLoaded(event.loaded)
     request.onload = () => resolve({ status: request.status, range: request.getResponseHeader('Range') })
-    request.onerror = () => reject(new Error('The connection broke while it was being sent'))
+    request.onerror = () => reject(new UserError('media.upload.broke'))
     request.onabort = () => reject(new DOMException('Stopped', 'AbortError'))
     signal.addEventListener('abort', () => request.abort(), { once: true })
     request.send(body)

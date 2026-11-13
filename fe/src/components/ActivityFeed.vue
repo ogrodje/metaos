@@ -7,10 +7,12 @@ import CommentCard from '@/components/CommentCard.vue'
 import CommentEditor from '@/components/CommentEditor.vue'
 import PersonAvatar from '@/components/PersonAvatar.vue'
 import { type Comment, commentAnchor, commentOn, linkedComment, nothingWritten, withWritten, type Written } from '@/comments'
-import { type Change, DATE_LOCALE, TIME_ZONE } from '@/episodes'
+import type { Change } from '@/episodes'
 import { errorMessage, graphql } from '@/graphql'
+import { TIME_ZONE } from '@/i18n'
 import { type Image, IMAGE_FIELDS } from '@/images'
 import { useAuthStore } from '@/stores/auth'
+import { useLocale } from '@/useLocale'
 
 // An episode's or a recording session's activity, as on GitHub: its comments and its history in one feed by day,
 // oldest first, with one person's changes made close together as one entry (activity.ts), and a box at the end to
@@ -29,6 +31,7 @@ const emit = defineEmits<{
 }>()
 
 const auth = useAuthStore()
+const { t, dateLocale } = useLocale()
 
 // What was written here, as MetaOS answered, shown until the page's comments change: its reload a moment later brings
 // them, and anything newer would too
@@ -38,17 +41,18 @@ watch(() => props.comments, () => {
 })
 
 const comments = computed(() => withWritten(props.comments, written.value))
-const entries = computed(() => activity(props.changes, comments.value))
+const entries = computed(() => activity(props.changes, comments.value, t, dateLocale.value))
 
 const filter = ref<ActivityFilter>('all')
 const filters = computed(() => [
-  { value: 'all' as ActivityFilter, title: 'All', count: entries.value.length },
-  { value: 'comments' as ActivityFilter, title: 'Comments', count: comments.value.length },
-  { value: 'changes' as ActivityFilter, title: 'Changes', count: entries.value.length - comments.value.length },
+  { value: 'all' as ActivityFilter, title: t('activity.filter.all'), count: entries.value.length },
+  { value: 'comments' as ActivityFilter, title: t('activity.filter.comments'), count: comments.value.length },
+  { value: 'changes' as ActivityFilter, title: t('activity.filter.changes'), count: entries.value.length - comments.value.length },
 ])
 
-const day = (at: string) => new Date(at).toLocaleDateString(DATE_LOCALE, { dateStyle: 'medium', timeZone: TIME_ZONE })
-const time = (at: string) => new Date(at).toLocaleTimeString(DATE_LOCALE, { hour: '2-digit', minute: '2-digit', timeZone: TIME_ZONE })
+const day = (at: string) => new Date(at).toLocaleDateString(dateLocale.value, { dateStyle: 'medium', timeZone: TIME_ZONE })
+const time = (at: string) =>
+  new Date(at).toLocaleTimeString(dateLocale.value, { hour: '2-digit', minute: '2-digit', timeZone: TIME_ZONE })
 
 // The entries shown, each day's date before its first
 const shown = computed(() => {
@@ -103,7 +107,7 @@ async function post() {
     if (filter.value === 'changes') filter.value = 'all'
     emit('changed')
   } catch (e) {
-    error.value = errorMessage(e)
+    error.value = errorMessage(e, t)
   } finally {
     posting.value = false
   }
@@ -144,11 +148,11 @@ onMounted(async () => {
 <template>
   <section aria-labelledby="activity">
     <div class="heading">
-      <h2 id="activity" ref="heading" tabindex="-1">Activity</h2>
-      <ChipGroup v-model="filter" class="filters" label="Show" :options="filters"/>
+      <h2 id="activity" ref="heading" tabindex="-1">{{ t('activity.title') }}</h2>
+      <ChipGroup v-model="filter" class="filters" :label="t('activity.show')" :options="filters"/>
     </div>
 
-    <p v-if="!shown.length" class="note">{{ filter === 'changes' ? 'No changes yet.' : 'No comments yet.' }}</p>
+    <p v-if="!shown.length" class="note">{{ filter === 'changes' ? t('activity.noChanges') : t('activity.noComments') }}</p>
     <ol v-else class="feed">
       <template v-for="{ entry, day: date } in shown" :key="entry.key">
         <li v-if="date" class="day"><time :datetime="entry.at.slice(0, 10)">{{ date }}</time></li>
@@ -166,9 +170,9 @@ onMounted(async () => {
             <!-- Who and how, as the history said it: outside MetaOS when neither, e.g. a migration -->
             <p class="meta">
               <template v-if="entry.actor || entry.how">{{ [entry.actor, entry.how].filter(Boolean).join(' · ') }}</template>
-              <template v-else>Outside MetaOS</template>
+              <template v-else>{{ t('activity.outside') }}</template>
               · <time :datetime="entry.at">{{ when(entry) }}</time>
-              <template v-if="entry.count > 1"> · {{ entry.count }} changes</template>
+              <template v-if="entry.count > 1"> · {{ t('activity.changes', { n: entry.count }, entry.count) }}</template>
             </p>
           </div>
         </li>
@@ -177,9 +181,9 @@ onMounted(async () => {
 
     <div v-if="filter !== 'changes'" class="composer">
       <PersonAvatar v-if="me" :image="me.avatar" :name="me.name" :size="32"/>
-      <CommentEditor v-model="draft" label="Comment" placeholder="Leave a comment" submit-label="Comment"
-                     busy-label="Commenting…" :busy="posting" @submit="post">
-        <p v-if="error" class="error" role="alert">The comment wasn't posted: {{ error }}</p>
+      <CommentEditor v-model="draft" :label="t('comments.label')" :placeholder="t('comments.placeholder')"
+                     :submit-label="t('comments.submit')" :busy-label="t('comments.posting')" :busy="posting" @submit="post">
+        <p v-if="error" class="error" role="alert">{{ t('comments.notPosted', { error }) }}</p>
       </CommentEditor>
     </div>
   </section>

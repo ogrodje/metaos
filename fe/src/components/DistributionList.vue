@@ -2,11 +2,15 @@
 import { computed, nextTick, ref, useId } from 'vue'
 import { faArrowRotateRight } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { type Channel, CHANNELS, channelOf, distributedAt, type Distribution, distributionTitle, LINK_NAMES } from '@/distribution'
+import {
+  type Channel, channelName, CHANNELS, channelOf, distributedAt, type Distribution, distributionTitle, linkName,
+} from '@/distribution'
 import { addDistribution, refreshPreview, removeDistribution, updateDistribution } from '@/distributionChanges'
-import { formatDate, TIME_ZONE } from '@/episodes'
+import { formatDate } from '@/episodes'
 import { errorMessage } from '@/graphql'
+import { TIME_ZONE } from '@/i18n'
 import { src, srcset } from '@/images'
+import { useLocale } from '@/useLocale'
 
 // Where an episode went out, for the team: first its own links, which follow the episode's (Released on), then the
 // posts that promote it, the latest first, each as its page's preview says it (its picture, title and site), with when
@@ -24,7 +28,11 @@ const emit = defineEmits<{
   changed: []
 }>()
 
+const { t, dateLocale } = useLocale()
 const id = useId()
+
+// The channels as they're chosen from, by name
+const channels = computed(() => (Object.keys(CHANNELS) as Channel[]).map((key) => ({ key, name: channelName(key, t) })))
 
 // Those changed here, as they are now, until the page has loaded again; and those removed, gone at once
 const changed = ref<Record<string, Distribution>>({})
@@ -46,8 +54,8 @@ function day(at: string | null) {
 }
 
 function siteOf(entry: Distribution) {
-  if (entry.platform) return LINK_NAMES[entry.platform]
-  return entry.channel === 'OTHER' && entry.preview.site ? entry.preview.site : CHANNELS[entry.channel].label
+  if (entry.platform) return linkName(entry.platform, t)
+  return entry.channel === 'OTHER' && entry.preview.site ? entry.preview.site : channelName(entry.channel, t)
 }
 
 // A new post, its channel as its URL says it, unless chosen
@@ -75,7 +83,7 @@ async function add() {
     note.value = ''
     emit('changed')
   } catch (e) {
-    addError.value = `It wasn't added: ${errorMessage(e)}`
+    addError.value = t('distribution.notAdded', { error: errorMessage(e, t) })
   } finally {
     adding.value = false
   }
@@ -116,7 +124,7 @@ async function save(entry: Distribution) {
     stopEditing(entry)
     emit('changed')
   } catch (e) {
-    error.value = { id: entry.id, message: `It wasn't saved: ${errorMessage(e)}` }
+    error.value = { id: entry.id, message: t('distribution.notSaved', { error: errorMessage(e, t) }) }
   } finally {
     busy.value = undefined
   }
@@ -129,7 +137,7 @@ async function refresh(entry: Distribution) {
   try {
     kept(await refreshPreview(entry.id))
   } catch (e) {
-    error.value = { id: entry.id, message: `Its preview wasn't fetched again: ${errorMessage(e)}` }
+    error.value = { id: entry.id, message: t('distribution.notRefreshed', { error: errorMessage(e, t) }) }
   } finally {
     busy.value = undefined
   }
@@ -156,15 +164,15 @@ async function remove(entry: Distribution) {
     confirming.value = undefined
     emit('changed')
   } catch (e) {
-    error.value = { id: entry.id, message: `It wasn't removed: ${errorMessage(e)}` }
+    error.value = { id: entry.id, message: t('distribution.notRemoved', { error: errorMessage(e, t) }) }
   } finally {
     busy.value = undefined
   }
 }
 
 const groups = computed(() => [
-  { key: 'links', title: 'Released on', entries: links.value },
-  { key: 'posts', title: 'Posts', entries: posts.value },
+  { key: 'links', title: t('distribution.releasedOn'), entries: links.value },
+  { key: 'posts', title: t('distribution.posts'), entries: posts.value },
 ].filter((group) => group.entries.length))
 </script>
 
@@ -188,101 +196,101 @@ const groups = computed(() => [
             <a class="title" :href="entry.url" target="_blank" rel="noopener">{{ distributionTitle(entry) }}</a>
             <span v-if="entry.preview.description" class="description">{{ entry.preview.description }}</span>
             <span class="by">
-              <time :datetime="distributedAt(entry, airedDate)">{{ formatDate(distributedAt(entry, airedDate)) }}</time><template
+              <time :datetime="distributedAt(entry, airedDate)">{{ formatDate(distributedAt(entry, airedDate), dateLocale) }}</time><template
                 v-if="entry.addedBy"> · {{ entry.addedBy }}</template><template v-if="entry.note"> · {{ entry.note }}</template>
             </span>
-            <span v-if="entry.preview.status === 'PENDING'" class="state">Fetching its preview…</span>
-            <span v-else-if="entry.preview.status === 'UNAVAILABLE'" class="state">No preview: {{ entry.preview.error }}</span>
+            <span v-if="entry.preview.status === 'PENDING'" class="state">{{ t('distribution.fetching') }}</span>
+            <span v-else-if="entry.preview.status === 'UNAVAILABLE'" class="state">{{ t('distribution.noPreview', { error: entry.preview.error }) }}</span>
             <span v-if="error?.id === entry.id" class="error" role="alert">{{ error.message }}</span>
 
             <form v-if="editing === entry.id" class="edit" @submit.prevent="save(entry)" @keydown.esc="stopEditing(entry)">
               <label>
-                <span class="label">Title</span>
+                <span class="label">{{ t('distribution.form.title') }}</span>
                 <input :id="`${id}-title-${entry.id}`" v-model="form.title" class="input small" type="text"
-                       :placeholder="entry.preview.title ?? 'As its page says'">
+                       :placeholder="entry.preview.title ?? t('distribution.form.titlePlaceholder')">
               </label>
               <label>
-                <span class="label">Link</span>
+                <span class="label">{{ t('distribution.form.link') }}</span>
                 <input v-model="form.url" class="input small" type="url" required>
               </label>
               <label v-if="!entry.platform">
-                <span class="label">On</span>
+                <span class="label">{{ t('distribution.form.on') }}</span>
                 <select v-model="form.channel" class="input small">
-                  <option v-for="(about, key) in CHANNELS" :key="key" :value="key">{{ about.label }}</option>
+                  <option v-for="about in channels" :key="about.key" :value="about.key">{{ about.name }}</option>
                 </select>
               </label>
               <label>
-                <span class="label">When</span>
+                <span class="label">{{ t('distribution.form.when') }}</span>
                 <input v-model="form.postedAt" class="input small" type="date">
               </label>
               <label class="note">
-                <span class="label">Note</span>
+                <span class="label">{{ t('distribution.form.note') }}</span>
                 <input v-model="form.note" class="input small" type="text" maxlength="2000">
               </label>
               <span class="buttons">
                 <button type="submit" class="button small primary" :aria-disabled="busy === entry.id || undefined">
-                  {{ busy === entry.id ? 'Saving…' : 'Save' }}
+                  {{ busy === entry.id ? t('distribution.saving') : t('common.save') }}
                 </button>
-                <button type="button" class="button small quiet" @click="stopEditing(entry)">Cancel</button>
+                <button type="button" class="button small quiet" @click="stopEditing(entry)">{{ t('common.cancel') }}</button>
               </span>
             </form>
           </span>
           <span v-if="confirming === entry.id" class="confirm" role="group" :aria-labelledby="`${id}-ask-${entry.id}`"
                 @keydown.esc="keep(entry)">
             <span :id="`${id}-ask-${entry.id}`" class="question">
-              {{ entry.platform ? `Remove it, and clear the episode's ${LINK_NAMES[entry.platform]} link?` : 'Remove it?' }}
+              {{ entry.platform ? t('distribution.confirmRemoveLink', { link: linkName(entry.platform, t) }) : t('distribution.confirmRemove') }}
             </span>
             <button type="button" class="button small danger" :aria-disabled="busy === entry.id || undefined" @click="remove(entry)">
-              {{ busy === entry.id ? 'Removing…' : 'Remove' }}
+              {{ busy === entry.id ? t('distribution.removing') : t('common.remove') }}
             </button>
-            <button :id="`${id}-keep-${entry.id}`" type="button" class="button small" :disabled="busy === entry.id" @click="keep(entry)">Cancel</button>
+            <button :id="`${id}-keep-${entry.id}`" type="button" class="button small" :disabled="busy === entry.id" @click="keep(entry)">{{ t('common.cancel') }}</button>
           </span>
           <span v-else-if="editing !== entry.id" class="actions">
             <button type="button" class="button small quiet" :aria-disabled="busy === entry.id || undefined"
-                    :aria-label="`Fetch the preview of ${distributionTitle(entry)} again`" title="Fetch its preview again"
-                    @click="refresh(entry)">
-              <FontAwesomeIcon :icon="faArrowRotateRight"/>Refresh
+                    :aria-label="t('distribution.refreshLabel', { title: distributionTitle(entry) })"
+                    :title="t('distribution.refreshTitle')" @click="refresh(entry)">
+              <FontAwesomeIcon :icon="faArrowRotateRight"/>{{ t('distribution.refresh') }}
             </button>
-            <button :id="`${id}-edit-${entry.id}`" type="button" class="button small quiet" @click="edit(entry)">Edit</button>
-            <button :id="`${id}-remove-${entry.id}`" type="button" class="button small quiet" @click="askToRemove(entry)">Remove</button>
+            <button :id="`${id}-edit-${entry.id}`" type="button" class="button small quiet" @click="edit(entry)">{{ t('common.edit') }}</button>
+            <button :id="`${id}-remove-${entry.id}`" type="button" class="button small quiet" @click="askToRemove(entry)">{{ t('common.remove') }}</button>
           </span>
         </li>
       </ul>
     </section>
 
     <form class="add" :aria-labelledby="`${id}-add`" @submit.prevent="add">
-      <h3 :id="`${id}-add`">Log where it went out</h3>
+      <h3 :id="`${id}-add`">{{ t('distribution.add.title') }}</h3>
       <div class="fields">
         <label class="url">
-          <span class="label">Link to the post</span>
+          <span class="label">{{ t('distribution.add.url') }}</span>
           <span class="with-channel">
             <input v-model="url" class="input" type="url" inputmode="url" placeholder="https://www.linkedin.com/posts/…"
                    autocomplete="off" required>
             <FontAwesomeIcon v-if="chosen && url.trim()" class="detected" :icon="CHANNELS[chosen].icon"
-                             :style="{ color: CHANNELS[chosen].color }" :title="CHANNELS[chosen].label"/>
+                             :style="{ color: CHANNELS[chosen].color }" :title="channelName(chosen, t)"/>
           </span>
         </label>
         <label>
-          <span class="label">On</span>
+          <span class="label">{{ t('distribution.form.on') }}</span>
           <select v-model="channel" class="input">
-            <option value="">{{ detected ? `${CHANNELS[detected].label}, by its link` : 'By its link' }}</option>
-            <option v-for="(about, key) in CHANNELS" :key="key" :value="key">{{ about.label }}</option>
+            <option value="">{{ detected ? t('distribution.add.detected', { channel: channelName(detected, t) }) : t('distribution.add.byLink') }}</option>
+            <option v-for="about in channels" :key="about.key" :value="about.key">{{ about.name }}</option>
           </select>
         </label>
         <label>
-          <span class="label">When</span>
+          <span class="label">{{ t('distribution.form.when') }}</span>
           <input v-model="postedAt" class="input" type="date">
         </label>
         <label class="note">
-          <span class="label">Note</span>
-          <input v-model="note" class="input" type="text" placeholder="e.g. posted by Iva in #announcements" maxlength="2000">
+          <span class="label">{{ t('distribution.form.note') }}</span>
+          <input v-model="note" class="input" type="text" :placeholder="t('distribution.add.notePlaceholder')" maxlength="2000">
         </label>
         <button type="submit" class="button primary" :aria-disabled="adding || !url.trim() || undefined">
-          {{ adding ? 'Adding…' : 'Add' }}
+          {{ adding ? t('distribution.add.adding') : t('distribution.add.submit') }}
         </button>
       </div>
       <p v-if="addError" class="error" role="alert">{{ addError }}</p>
-      <p class="hint">MetaOS fetches its preview from the page. The episode's links are here by themselves.</p>
+      <p class="hint">{{ t('distribution.add.hint') }}</p>
     </form>
   </div>
 </template>

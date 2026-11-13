@@ -17,8 +17,9 @@ MetaOS was designed for scaling, optimising and helping grow the [Ogrodje] organ
 - Services and infrastructure is deployed via Kubernetes
 - **MCP tools and the Usage page stay in sync.** Whenever an MCP tool (`@McpTool`) is added, renamed, removed or
   changes what it does, update the front-end's Usage page in the same change: the tool's entry in
-  [`fe/src/tools.ts`](fe/src/tools.ts) (name, group and one-line description). `UsageToolsTest` fails on a missing
-  or extra name, but can't tell when a description no longer fits.
+  [`fe/src/tools.ts`](fe/src/tools.ts) (name and group), and its one-line description in both languages, in
+  `fe/src/locales/sl.json` and `en-GB.json` (`tools.descriptions.<name>`). `UsageToolsTest` fails on a missing or
+  extra name, and `usage.spec.ts` on a missing description, but neither can tell when a description no longer fits.
 - **Every MCP tool has a title and all four hints.** Its `McpTool.McpAnnotations` gives its title (also the tool's own)
   and says whether it only reads, destroys what's there, can be repeated and reaches the open world. Spring AI's
   defaults are the cautious ones, and are sent when left out. `ToolHintsTest` says what each means here and checks every
@@ -77,6 +78,27 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   [`fe/server/middleware/api.ts`](fe/server/middleware/api.ts) passes `/graphql`, `/events`, `/koofr` and `/dropbox`
   on to MetaOS (`NUXT_METAOS_URL`, by default `:8080`), so in development too the browser sees one origin; in the
   cluster the Ingress sends them to MetaOS before they get there.
+- **The UI is in Slovenian, and in English (UK) to switch to** (OG-58, [`@nuxtjs/i18n`](https://i18n.nuxtjs.org)).
+  Routes, the API, MCP and code stay in English; content (titles, summaries, names) stays as it is, until it has fields
+  per language. The address says the language: Slovenian at a page's own path, English under `/en` (`/en/episodes`),
+  never a cookie or `Accept-Language`, as Cloudflare keeps pages by their address. `router/index.ts` lists every page
+  once and gives each language its route, named as the module names its own (`episode___sl`, `episode___en`), so
+  `useLocalePath` and `useSwitchLocalePath` work; `nuxt.config.ts`'s `routeRules` have each page's `/en` address too.
+  - A component takes `t`, `dateLocale` (`sl-SI` or `en-GB`) and `path` from `useLocale()` (`fe/src/useLocale.ts`):
+    text is `t('ns.key')`, every internal link `path('/episodes')`, every date or number in `dateLocale`. A module
+    that makes text or dates (`episodes.ts`, `activity.ts`, ...) takes `t` and `dateLocale` as arguments
+    (`fe/src/i18n.ts`, their types, with no Nuxt in it), as the unit tests load it without Nuxt; its tests pass an
+    English translator (`__tests__/i18n.ts`'s `t`, or `tSl`).
+  - The messages are in [`fe/src/locales`](fe/src/locales): `sl.json` and `en-GB.json`, the same keys in both, by
+    area (`episode.*`, `lists.*`, ...). `locales.spec.ts` fails on a key missing in either, or one the code asks for
+    that neither has. Slovenian has four plural forms (`"{n} epizoda | {n} epizodi | {n} epizode | {n} epizod"`,
+    `slovenianPlural` in `i18n.ts`), English two; a count is `t(key, { n }, n)`. Slovenian addresses the user
+    formally (*Poskusite znova*), and avoids a gender where it would need one (MetaOS doesn't know it).
+  - The language switch (`LanguageSwitch.vue`) is in the footer and the user menu: links to the same page in the other
+    language. The choice is kept in the browser (`metaos.locale`, `localeChoice.ts`) and applied once the page is
+    hydrated (`plugins/locale.client.ts`), so a Slovenian address still renders in Slovenian for Cloudflare. Every
+    page names its other language's address (`hreflang`, `App.vue`) and says its own (`<html lang>`), and the sitemap
+    has both.
 - The front-end is a service of its own, `metaos-web` ([`docker/web.Dockerfile`](docker/web.Dockerfile),
   [`k8s/base/deployment-web.yaml`](k8s/base/deployment-web.yaml)): `./gradlew feBuild` (with `feInstall`, the
   devenv's Node and Yarn; CI runs `yarn build` itself) builds it into `fe/.output`, which Node runs. MetaOS itself serves no pages, only its API.
@@ -94,7 +116,7 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   a page loads again once the user is known to be on the team (`auth.team`: the realm role `metaos-user` is in their
   token), when what's the team's comes on top. Until then a page has to render in the browser as it did on the server:
   what depends on who's signed in waits for `auth.ready`, `auth.team`, `auth.member` or `auth.likelyTeam`, which are false there;
-  dates are in English and in Ogrodje's time zone (`DATE_LOCALE`, `TIME_ZONE`), whatever the browser's; and
+  dates are in the page's language and in Ogrodje's time zone (`dateLocale`, `TIME_ZONE`), whatever the browser's; and
   `navigator`, `location`, `document` and storage are read in `onMounted` or handlers only. Nothing may write
   module-level state on the server, which every request shares (`pageName` in `title.ts` is the browser's only).
 - The team's pages, `/ideas`, `/sessions/**`, `/search` and `/transcriptions`, render in the browser only
@@ -116,7 +138,8 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   `localStorage`, changes it too, in both languages, with the date it's effective from.
 - The API and MCP usage page (`/usage`) shows how to install the MCP server, and how each assistant gets its tools
   again once they've changed (`#refresh`, with their version), and lists its tools by hand, from
-  [`fe/src/tools.ts`](fe/src/tools.ts), which has to follow every change to the tools (see above). It also shows how to
+  [`fe/src/tools.ts`](fe/src/tools.ts) and their descriptions in the messages, which have to follow every change to
+  the tools (see above). It also shows how to
   use the GraphQL API with curl, with or without a token (a signed-in user copies theirs); its examples have to keep
   working as the schema changes.
 - Data comes from the GraphQL API at `/graphql` ([`schema.graphqls`](src/main/resources/graphql/schema.graphqls),
@@ -147,7 +170,7 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   region (`App.vue`); a skip link leads past the header. Anything else is a not-found page (`NotFound.vue`, also an episode, session or person that isn't
   there), with where to go instead.
 - A list loads behind rows like its own (`LoadingRows.vue`), so the page doesn't jump, and what didn't load says why
-  with Try again (`LoadError.vue`); `graphql.ts` words errors so they say what to do, e.g. that it's for staff. Dates are in English (`DATE_LOCALE`), whatever the browser's language.
+  with Try again (`LoadError.vue`); `graphql.ts` words errors so they say what to do, e.g. that it's for staff, as message keys (`UserError`) that `errorMessage(error, t)` says in the page's language. Dates are in the page's language (`dateLocale`), whatever the browser's.
 - Home is what's being made for the team, and the latest releases for everyone (as a grid of `EpisodeCard`s, two rows
   of four, with a line under them for the team to sign in). Signed in, two columns: first what needs attention
   ([`fe/src/attention.ts`](fe/src/attention.ts): recording dates that passed, recordings in the next two weeks with no

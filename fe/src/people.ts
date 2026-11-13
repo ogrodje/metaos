@@ -2,6 +2,7 @@
 
 import type { Account } from '@/accounts'
 import { type Episode, type Role, roleName } from '@/episodes'
+import type { Translate } from '@/i18n'
 import { type Image, IMAGE_FIELDS } from '@/images'
 
 /** An episode a person is on, with their roles in it */
@@ -60,8 +61,8 @@ export function socialLinks(person: Pick<Person, (typeof networks)[Network]>) {
 const roles: Role[] = ['HOST', 'CO_HOST', 'GUEST', 'PRODUCER', 'CONSULTANT', 'DESIGNER', 'CANDIDATE']
 
 /** What a person has been on any of their episodes, hosts first, e.g. Host, co-host, guest */
-export function rolesOf(person: Pick<Person, 'episodes'>) {
+export function rolesOf(person: Pick<Person, 'episodes'>, t: Translate) {
   const theirs = new Set(person.episodes.flatMap((episode) => episode.roles))
-  const names = roles.filter((role) => theirs.has(role)).map(roleName).join(', ')
+  const names = roles.filter((role) => theirs.has(role)).map((role) => roleName(role, t)).join(', ')
   return names.charAt(0).toUpperCase() + names.slice(1)
 }

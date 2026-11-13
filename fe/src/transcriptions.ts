@@ -1,4 +1,5 @@
-import { DATE_LOCALE, TIME_ZONE } from '@/episodes'
+import type { DateLocale, Translate } from '@/i18n'
+import { TIME_ZONE } from '@/i18n'
 import { formatDuration } from '@/media'
 
 // Episodes' transcriptions and the transcripts they make, as the Transcriptions page shows them: MetaOS's GraphQL
@@ -102,27 +103,31 @@ export function isOn(transcription: Pick<Transcription, 'status'>) {
 const ordinals = new Intl.PluralRules('en-GB', { type: 'ordinal' })
 const SUFFIXES: Record<string, string> = { one: 'st', two: 'nd', few: 'rd', other: 'th' }
 
-/** 1st, 2nd, 3rd, 4th, ... */
-export function ordinal(n: number) {
-  return `${n}${SUFFIXES[ordinals.select(n)]}`
+/** 1st, 2nd, 3rd, 4th, ... in English; 1., 2., 3., ... in Slovenian */
+export function ordinal(n: number, dateLocale: DateLocale) {
+  return dateLocale === 'en-GB' ? `${n}${SUFFIXES[ordinals.select(n)]}` : `${n}.`
 }
 
 /** How far it is, as people say it, e.g. Next in line, 3rd in line, Starting, Being heard · 40%, Done */
-export function statusText(transcription: Pick<Transcription, 'status' | 'queued' | 'percent'>) {
+export function statusText(transcription: Pick<Transcription, 'status' | 'queued' | 'percent'>, t: Translate, dateLocale: DateLocale) {
   switch (transcription.status) {
     case 'QUEUED':
-      if (transcription.queued === 1) return 'Next in line'
-      return transcription.queued ? `${ordinal(transcription.queued)} in line` : 'Waiting its turn'
+      if (transcription.queued === 1) return t('transcriptions.status.next')
+      return transcription.queued
+        ? t('transcriptions.status.inLine', { place: ordinal(transcription.queued, dateLocale) })
+        : t('transcriptions.status.waiting')
     case 'STARTING':
-      return 'Starting'
+      return t('transcriptions.status.starting')
     case 'RECOGNIZING':
-      return transcription.percent != null ? `Being heard · ${transcription.percent}%` : 'Being heard'
+      return transcription.percent != null
+        ? t('transcriptions.status.heardPercent', { percent: transcription.percent })
+        : t('transcriptions.status.heard')
     case 'DONE':
-      return 'Done'
+      return t('transcriptions.status.done')
     case 'FAILED':
-      return 'Failed'
+      return t('transcriptions.status.failed')
     case 'CANCELLED':
-      return 'Cancelled'
+      return t('transcriptions.status.cancelled')
   }
 }
 
@@ -140,13 +145,17 @@ export function took(transcription: Pick<Transcription, 'createdAt' | 'finishedA
   return to >= from ? formatDuration((to - from) / 1000) : null
 }
 
+// A count of [key]'s things, e.g. 7,585 words, its number as the language writes it
+const counted = (key: string, n: number, t: Translate, dateLocale: DateLocale) =>
+  t(key, { n: n.toLocaleString(dateLocale) }, n)
+
 /** What a transcript has, e.g. 187 lines · 7,585 words · 55:14 · 2 speakers */
-export function transcriptSummary(transcript: TranscriptSummary) {
+export function transcriptSummary(transcript: TranscriptSummary, t: Translate, dateLocale: DateLocale) {
   return [
-    `${transcript.segments.toLocaleString('en-GB')} ${transcript.segments === 1 ? 'line' : 'lines'}`,
-    `${transcript.words.toLocaleString('en-GB')} ${transcript.words === 1 ? 'word' : 'words'}`,
+    counted('transcriptions.lineCount', transcript.segments, t, dateLocale),
+    counted('transcriptions.words', transcript.words, t, dateLocale),
     transcript.duration != null ? formatDuration(transcript.duration) : null,
-    transcript.speakers.length ? `${transcript.speakers.length} ${transcript.speakers.length === 1 ? 'speaker' : 'speakers'}` : null,
+    transcript.speakers.length ? counted('transcriptions.speakers', transcript.speakers.length, t, dateLocale) : null,
   ].filter(Boolean).join(' · ')
 }
 
@@ -168,9 +177,9 @@ export function timestamp(seconds: number) {
 }
 
 /** Who said a line: their name once they're named, else Speaker 1, ...; null where the provider doesn't tell */
-export function speakerName(label: string | null, speakers: TranscriptSpeaker[]) {
+export function speakerName(label: string | null, speakers: TranscriptSpeaker[], t: Translate) {
   if (label == null) return null
-  return speakers.find((s) => s.label === label)?.name ?? `Speaker ${label}`
+  return speakers.find((s) => s.label === label)?.name ?? t('transcriptions.speaker', { label })
 }
 
 /** The file an episode is transcribed from unless another is chosen: its full audio, else its full video */
@@ -179,10 +188,12 @@ export function defaultFile(episode: Pick<EpisodeFiles, 'media'>) {
 }
 
 /** The languages an episode is transcribed as: Ogrodje's are in Slovenian, Borderless's in English, as the team had it */
-export const LANGUAGES = [
-  { value: 'sl-SI', title: 'Slovenian' },
-  { value: 'en-GB', title: 'English' },
-]
+export function languages(t: Translate) {
+  return [
+    { value: 'sl-SI', title: t('transcriptions.languages.sl') },
+    { value: 'en-GB', title: t('transcriptions.languages.en') },
+  ]
+}
 
 /** Which of them an episode is in, by its language: English for any English, else Slovenian */
 export function languageOf(episode: Pick<EpisodeFiles, 'language'>) {
@@ -247,21 +258,23 @@ export function firstTranscript<T extends Pick<TranscriptSummary, 'speakers'>>(t
 }
 
 /** What an episode's transcripts are, in a line, e.g. Soniox, 2 speakers, 8,445 words · also by Google Speech-to-Text */
-export function transcriptsLine(transcripts: EpisodeTranscript[]) {
+export function transcriptsLine(transcripts: EpisodeTranscript[], t: Translate, dateLocale: DateLocale) {
   const shown = firstTranscript(transcripts)
-  if (!shown) return 'None yet'
-  const others = [...new Set(transcripts.filter((t) => t.provider !== shown.provider).map((t) => providerName(t.provider)))]
+  if (!shown) return t('transcriptions.noneYet')
+  const others = [...new Set(transcripts.filter((each) => each.provider !== shown.provider).map((each) => providerName(each.provider)))]
   return [
     [
       providerName(shown.provider),
-      shown.speakers.length ? `${shown.speakers.length} ${shown.speakers.length === 1 ? 'speaker' : 'speakers'}` : null,
-      `${shown.words.toLocaleString('en-GB')} ${shown.words === 1 ? 'word' : 'words'}`,
+      shown.speakers.length ? counted('transcriptions.speakers', shown.speakers.length, t, dateLocale) : null,
+      counted('transcriptions.words', shown.words, t, dateLocale),
     ].filter(Boolean).join(', '),
-    others.length ? `also by ${others.join(' and ')}` : null,
+    others.length
+      ? t('transcriptions.alsoBy', { providers: new Intl.ListFormat(dateLocale, { type: 'conjunction' }).format(others) })
+      : null,
   ].filter(Boolean).join(' · ')
 }
 
-/** When, as the page says it, in English and Ogrodje's time zone, e.g. 28 Oct, 14:02 */
-export function formatWhen(at: string) {
-  return new Date(at).toLocaleString(DATE_LOCALE, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: TIME_ZONE })
+/** When, as the page says it, in its language and Ogrodje's time zone, e.g. 28 Oct, 14:02 */
+export function formatWhen(at: string, dateLocale: DateLocale) {
+  return new Date(at).toLocaleString(dateLocale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: TIME_ZONE })
 }

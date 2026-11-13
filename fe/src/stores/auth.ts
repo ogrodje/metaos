@@ -5,6 +5,7 @@ import {
   accountConsoleUrl, linkAction, linkedAlias, type LinkOutcome, linkOutcome, loadSignInProviders, providerName,
   type SignInProvider,
 } from '@/accounts'
+import { UserError } from '@/graphql'
 
 /** Realm metaos's identity providers (infra/keycloak/realm/identity_providers.tf) */
 export type IdentityProvider = 'discord' | 'google'
@@ -211,9 +212,10 @@ export const useAuthStore = defineStore('auth', () => {
     keycloak?.login({ idpHint })
   }
 
-  function logout() {
+  /** Signs out, and back to the home page, [home], in the page's language, e.g. /en/ */
+  function logout(home = '/') {
     rememberSignedIn(false)
-    keycloak?.logout({ redirectUri: `${location.origin}/` })
+    keycloak?.logout({ redirectUri: `${location.origin}${home}` })
   }
 
   /**
@@ -258,7 +260,7 @@ export const useAuthStore = defineStore('auth', () => {
         update(keycloak)
         return undefined
       }
-      throw new Error("Couldn't refresh the sign-in with Keycloak; try again in a moment", { cause: error })
+      throw new UserError('auth.refreshFailed', {}, { cause: error })
     }
     return keycloak.token
   }

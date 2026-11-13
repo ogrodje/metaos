@@ -7,12 +7,15 @@ import MarkedText from '@/components/MarkedText.vue'
 import ShowBadge from '@/components/ShowBadge.vue'
 import { type Episode, episodePath, formatDate, guests } from '@/episodes'
 import type { EpisodeMatch } from '@/search'
+import { useLocale } from '@/useLocale'
 
 const props = defineProps<{
   episode: Episode
   // Found by a search: the words to mark, and why it was found when the row doesn't show it
   match?: EpisodeMatch
 }>()
+
+const { dateLocale, path } = useLocale()
 
 const guestNames = computed(() => guests(props.episode).join(', '))
 </script>
@@ -24,13 +27,13 @@ const guestNames = computed(() => guests(props.episode).join(', '))
     <span class="code" :aria-hidden="!episode.code">{{ episode.code ?? '—' }}</span>
     <div class="main">
       <p class="title">
-        <RouterLink :to="episodePath(episode)" lang="sl"><MarkedText :text="episode.title" :words="match?.words"/></RouterLink>
+        <RouterLink :to="path(episodePath(episode))" lang="sl"><MarkedText :text="episode.title" :words="match?.words"/></RouterLink>
         <ShowBadge v-if="episode.show" :name="episode.show" :color="episode.showColor"/>
       </p>
       <MarkdownText v-if="episode.tinySummary" class="summary" :source="episode.tinySummary" lang="sl"/>
       <p v-if="match?.text" class="found"><span class="label">{{ match.label }}</span> <span lang="sl"><MarkedText :text="match.text" :words="match.words"/></span></p>
       <p v-if="episode.airedDate || guestNames" class="details">
-        <time v-if="episode.airedDate" :datetime="episode.airedDate">{{ formatDate(episode.airedDate) }}</time>
+        <time v-if="episode.airedDate" :datetime="episode.airedDate">{{ formatDate(episode.airedDate, dateLocale) }}</time>
         <span v-if="guestNames" class="guests"><MarkedText :text="guestNames" :words="match?.words"/></span>
       </p>
     </div>

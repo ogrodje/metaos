@@ -3,6 +3,7 @@ import {
   type Comment, commentAnchor, COMMENT_FIELDS, commentOn, commentText, editorShortcut, lengthNote, linkedComment,
   MAX_COMMENT_LENGTH, nothingWritten, postable, toolLabel, withWritten,
 } from '@/comments'
+import { t, tSl } from './i18n'
 
 function comment(id: string, body = `Comment ${id}`): Comment {
   return {
@@ -80,23 +81,25 @@ describe('postable', () => {
 
 describe('lengthNote', () => {
   it('says nothing while the text is short of the most', () => {
-    expect(lengthNote('Hello')).toBeNull()
-    expect(lengthNote('x'.repeat(MAX_COMMENT_LENGTH - 2001))).toBeNull()
+    expect(lengthNote('Hello', t, 'en-GB')).toBeNull()
+    expect(lengthNote('x'.repeat(MAX_COMMENT_LENGTH - 2001), t, 'en-GB')).toBeNull()
   })
 
   it('counts what is left once it is near', () => {
-    expect(lengthNote('x'.repeat(MAX_COMMENT_LENGTH - 2000))).toEqual({ text: `${(2000).toLocaleString()} characters left`, over: false })
-    expect(lengthNote('x'.repeat(MAX_COMMENT_LENGTH - 1))).toEqual({ text: '1 character left', over: false })
-    expect(lengthNote('x'.repeat(MAX_COMMENT_LENGTH))).toEqual({ text: '0 characters left', over: false })
+    expect(lengthNote('x'.repeat(MAX_COMMENT_LENGTH - 2000), t, 'en-GB')).toEqual({ text: `${(2000).toLocaleString('en-GB')} characters left`, over: false })
+    expect(lengthNote('x'.repeat(MAX_COMMENT_LENGTH - 1), t, 'en-GB')).toEqual({ text: '1 character left', over: false })
+    expect(lengthNote('x'.repeat(MAX_COMMENT_LENGTH), t, 'en-GB')).toEqual({ text: '0 characters left', over: false })
   })
 
   it('counts how many too many past it', () => {
-    expect(lengthNote('x'.repeat(MAX_COMMENT_LENGTH + 1))).toEqual({ text: '1 character too many', over: true })
-    expect(lengthNote('x'.repeat(MAX_COMMENT_LENGTH + 12))).toEqual({ text: '12 characters too many', over: true })
+    expect(lengthNote('x'.repeat(MAX_COMMENT_LENGTH + 1), t, 'en-GB')).toEqual({ text: '1 character too many', over: true })
+    expect(lengthNote('x'.repeat(MAX_COMMENT_LENGTH + 12), t, 'en-GB')).toEqual({ text: '12 characters too many', over: true })
+    expect(lengthNote('x'.repeat(MAX_COMMENT_LENGTH - 3), tSl, 'sl-SI')).toEqual({ text: 'Še 3 znaki', over: false })
+    expect(lengthNote('x'.repeat(MAX_COMMENT_LENGTH + 2), tSl, 'sl-SI')).toEqual({ text: '2 znaka preveč', over: true })
   })
 
   it('counts as MetaOS does, in UTF-16 units', () => {
-    expect(lengthNote('🎙'.repeat(MAX_COMMENT_LENGTH / 2 + 1))).toEqual({ text: '2 characters too many', over: true })
+    expect(lengthNote('🎙'.repeat(MAX_COMMENT_LENGTH / 2 + 1), t, 'en-GB')).toEqual({ text: '2 characters too many', over: true })
   })
 })
 

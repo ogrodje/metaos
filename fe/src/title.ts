@@ -1,6 +1,6 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { useHead } from '#imports'
+import { useHead, useI18n } from '#imports'
 
 // The browser tab's and history's name for a page, e.g. "Poletna vročica · Ogrodje MetaOS", also in the page the
 // server renders, for search engines and link previews
@@ -29,7 +29,9 @@ export function announcePage(name: string | undefined) {
  */
 export function usePageTitle(name: () => string | undefined) {
   const route = useRoute()
-  const title = () => name() ?? route.meta.title
+  const { t } = useI18n()
+  // The route's title is a message key (router/index.ts), in the page's language
+  const title = () => name() ?? (route.meta.title ? t(route.meta.title) : undefined)
   useHead({ title, meta: [{ property: 'og:title', content: title }] })
 
   // Announced once the page is there, rather than while it's hydrated, which has to match the server's

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, useId } from 'vue'
 import MarkdownText from '@/components/MarkdownText.vue'
+import { useLocale } from '@/useLocale'
 
 // Longer than this, a text shows its first lines until it's opened, so what comes after it is in reach
 const FOLD_WORDS = 120
@@ -12,6 +13,7 @@ const props = defineProps<{
   source: string
 }>()
 
+const { t, dateLocale } = useLocale()
 const id = useId()
 const open = ref(false)
 
@@ -19,8 +21,8 @@ const words = computed(() => props.source.split(/\s+/).filter(Boolean).length)
 const paragraphs = computed(() => props.source.split(/\n\s*\n/).filter((part) => part.trim()).length)
 const long = computed(() => words.value > FOLD_WORDS)
 const size = computed(() => [
-  paragraphs.value > 1 ? `${paragraphs.value} paragraphs` : null,
-  `${words.value.toLocaleString('en-GB')} words`,
+  paragraphs.value > 1 ? t('episode.folded.paragraphs', { n: paragraphs.value }, paragraphs.value) : null,
+  t('episode.folded.words', { n: words.value.toLocaleString(dateLocale.value) }, words.value),
 ].filter(Boolean).join(', '))
 </script>
 
@@ -32,7 +34,7 @@ const size = computed(() => [
     </div>
     <MarkdownText :id="`${id}-text`" :class="{ folded: long && !open }" :source="source" lang="sl"/>
     <button v-if="long" type="button" class="text-button fold" :aria-expanded="open" :aria-controls="`${id}-text`" @click="open = !open">
-      {{ open ? 'Fold it' : 'Read all of it' }}
+      {{ open ? t('episode.folded.fold') : t('episode.folded.readAll') }}
     </button>
   </section>
 </template>

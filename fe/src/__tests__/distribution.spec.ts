@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { channelOf, type Distribution, distributedAt, distributionLine, distributionTitle } from '@/distribution'
+import { t, tSl } from './i18n'
 
 function entry(fields: Partial<Distribution> = {}): Distribution {
   return {
@@ -46,13 +47,15 @@ describe('distributionLine', () => {
       entry({ id: 'p1', channel: 'DISCORD' }),
       entry({ id: 'p2' }),
       entry({ id: 'p3' }),
-    ])
+    ], t)
     expect(line).toBe('On YouTube, Patreon · 3 posts: LinkedIn ×2, Discord')
+    expect(distributionLine([entry(), entry({ id: 'p2' }), entry({ id: 'p3', channel: 'NEWSLETTER' })], tSl))
+      .toBe('3 objave: LinkedIn ×2, E-novice')
   })
 
   it('says when it has no posts yet', () => {
-    expect(distributionLine([])).toBe('Not shared yet')
-    expect(distributionLine([entry({ platform: 'SPOTIFY', channel: 'SPOTIFY' })])).toBe('On Spotify · Not shared yet')
-    expect(distributionLine([entry()])).toBe('1 post: LinkedIn')
+    expect(distributionLine([], t)).toBe('Not shared yet')
+    expect(distributionLine([entry({ platform: 'SPOTIFY', channel: 'SPOTIFY' })], t)).toBe('On Spotify · Not shared yet')
+    expect(distributionLine([entry()], t)).toBe('1 post: LinkedIn')
   })
 })

@@ -1,22 +1,41 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { useSwitchLocalePath } from '#imports'
+import { rememberLocale } from '@/localeChoice'
 import { usePageMeta } from '@/seo'
+import { useLocale } from '@/useLocale'
 
-// The privacy policy, at ogrodje.si's old address of it, which Google's sign-in consent screen links to: in Slovenian,
-// then in English, as the old site's was. What it says has to follow what MetaOS does with people's data, e.g. a new
-// service that gets some of it, or a new thing kept in the browser.
+// The privacy policy, at ogrodje.si's old address of it, which Google's sign-in consent screen links to: in Slovenian
+// at /zasebnost, and in English at /en/zasebnost, each linking to the other, as the old site had them one after the
+// other on one page. Its text is written in each language here, not in the messages, as it's legal text. What it says
+// has to follow what MetaOS does with people's data, e.g. a new service that gets some of it, or a new thing kept in
+// the browser, in both languages. Each links to the other, named in its own language, as the language switch names them.
 
-usePageMeta(() => ({
-  description: 'Katere osebne podatke Ogrodje obdeluje na ogrodje.si, ob prijavi in v e-pošti Ogrodja, in kako dolgo '
-    + 'jih hrani. Which personal data Ogrodje processes, and for how long it keeps it.',
-}))
+const { t, locale } = useLocale()
+const switchLocalePath = useSwitchLocalePath()
+const route = useRoute()
+const router = useRouter()
+
+usePageMeta(() => ({ description: t('privacy.description') }))
+
+// The English policy was #en of the Slovenian page, as links to it may still say
+onMounted(() => {
+  if (locale.value === 'sl' && route.hash === '#en') void router.replace(switchLocalePath('en'))
+})
 </script>
 
 <template>
   <main class="content">
-    <article class="policy" lang="sl" aria-labelledby="sl">
+    <article v-if="locale === 'sl'" class="policy" lang="sl" aria-labelledby="policy">
       <header>
-        <h1 id="sl">Politika zasebnosti</h1>
-        <p class="meta">Velja od 12. novembra 2026. <a class="link" href="#en" hreflang="en" lang="en">In English</a></p>
+        <h1 id="policy">Politika zasebnosti</h1>
+        <p class="meta">
+          Velja od 13. novembra 2026.
+          <RouterLink class="link" :to="switchLocalePath('en')" hreflang="en" lang="en" @click="rememberLocale('en')">
+            In English
+          </RouterLink>
+        </p>
       </header>
 
       <p>
@@ -40,7 +59,8 @@ usePageMeta(() => ({
         ne shrani ničesar, ne piškotkov ne drugih podatkov, podatke pa hrani v EU.
       </p>
       <p>
-        <strong>V brskalniku.</strong> Brez prijave stran sama v vašem brskalniku ne shrani ničesar. Ko se prijavite,
+        <strong>V brskalniku.</strong> Brez prijave stran sama v vašem brskalniku shrani le jezik, ki ste ga izbrali, da se
+        njene strani naslednjič odprejo v njem. Ko se prijavite,
         si strežnik za prijavo vašo prijavo zapomni v piškotku. Članom ekipe stran shrani še, da so bili prijavljeni
         (da ob vrnitvi ne utripa), in kdaj so nazadnje odprli posamezno epizodo, da vidijo, kaj je novega. Ti podatki
         ne zapustijo vaše naprave.
@@ -122,10 +142,15 @@ usePageMeta(() => ({
       <p>O spremembah te politike bomo obvestili na tej strani.</p>
     </article>
 
-    <article class="policy" lang="en" aria-labelledby="en">
+    <article v-else class="policy" lang="en" aria-labelledby="policy">
       <header>
-        <h2 id="en" class="title">Privacy policy</h2>
-        <p class="meta">Effective 12 November 2026.</p>
+        <h1 id="policy">Privacy policy</h1>
+        <p class="meta">
+          Effective 13 November 2026.
+          <RouterLink class="link" :to="switchLocalePath('sl')" hreflang="sl" lang="sl" @click="rememberLocale('sl')">
+            V slovenščini
+          </RouterLink>
+        </p>
       </header>
 
       <p>
@@ -134,7 +159,7 @@ usePageMeta(() => ({
         with, runs, when you sign in to it, and in Ogrodje’s email.
       </p>
 
-      <h3>The ogrodje.si website</h3>
+      <h2>The ogrodje.si website</h2>
       <p>We don’t use ads or tracking cookies.</p>
       <p>
         The site and MetaOS run on servers managed by Ogrodje. In front of them is Cloudflare, which serves the pages
@@ -149,13 +174,14 @@ usePageMeta(() => ({
         your browser, neither cookies nor anything else, and New Relic stores the data in the EU.
       </p>
       <p>
-        <strong>In your browser.</strong> Without signing in, the site itself keeps nothing in your browser. Once you
+        <strong>In your browser.</strong> Without signing in, the site itself keeps only the language you chose in your
+        browser, so its pages open in it next time. Once you
         sign in, the sign-in server remembers your sign-in in a cookie. For the team, the site also keeps that they
         were signed in (so it doesn’t flicker when they come back) and when they last opened each episode, to show
         what’s new. None of it leaves your device.
       </p>
 
-      <h3>Signing in</h3>
+      <h2>Signing in</h2>
       <p>
         You sign in through our sign-in server
         (<a class="link" href="https://metaos-auth.ogrodje.si">metaos-auth.ogrodje.si</a>), with a Google or Discord
@@ -187,7 +213,7 @@ usePageMeta(() => ({
         Data Policy</a>, including the Limited Use requirements.
       </p>
 
-      <h3>Ogrodje’s email</h3>
+      <h2>Ogrodje’s email</h2>
       <p>
         Ogrodje also writes from <a class="link" href="mailto:iva.ogrodje@gmail.com">iva.ogrodje@gmail.com</a>,
         Ogrodje’s Google account that MetaOS uses.
@@ -206,14 +232,14 @@ usePageMeta(() => ({
         adheres to the Limited Use requirements for them too.
       </p>
 
-      <h3>Who we share data with</h3>
+      <h2>Who we share data with</h2>
       <p>
         We don’t sell personal data or use it for advertising. MetaOS and the sign-in server run on servers managed by
         Ogrodje. Google or Discord, whichever you choose, take part in signing in; Google stores Ogrodje’s email and our
         files, requests to the site go through Cloudflare, and New Relic stores the data on how the site works.
       </p>
 
-      <h3>Retention and your rights</h3>
+      <h2>Retention and your rights</h2>
       <p>
         We keep a member’s account for as long as they’re a member; when you ask us to delete it, we delete it from the
         sign-in server and from MetaOS. The change history is kept as the record of work on episodes, also once an
@@ -238,7 +264,7 @@ usePageMeta(() => ({
   @include page.link;
 }
 
-// Running text, at its measure, a language after the other
+// Running text, at its measure
 .policy {
   display: grid;
   gap: 12px;
@@ -246,27 +272,20 @@ usePageMeta(() => ({
   font-size: var(--text-body);
   line-height: 22px;
 
-  & + .policy {
-    padding-top: 48px;
-    border-top: 1px solid var(--rule);
-  }
-
   header {
     display: grid;
     gap: 6px;
     padding-bottom: 8px;
   }
 
-  h1,
-  .title {
+  h1 {
     font-size: var(--text-page);
     line-height: 34px;
     font-weight: 600;
     letter-spacing: -0.02em;
   }
 
-  h2:not(.title),
-  h3 {
+  h2 {
     padding-top: 16px;
     font-size: var(--text-section);
     line-height: 26px;

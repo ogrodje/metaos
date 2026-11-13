@@ -2,15 +2,19 @@
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { networks } from '@/brands'
 import { type Network, type Person, socialLinks } from '@/people'
+import { useLocale } from '@/useLocale'
 
 // Where a person is online, each in its brand's colour when pointed at
 const props = defineProps<{
   person: Pick<Person, 'name' | 'homepageUrl' | 'linkedinUrl' | 'twitterUrl' | 'instagramUrl' | 'facebookUrl'>
 }>()
 
+const { t } = useLocale()
+
 // Named, as a list of people has a row of these icons each
 function label(network: Network) {
-  return network === 'Website' ? `${props.person.name}'s website` : `${props.person.name} on ${network}`
+  const name = props.person.name
+  return network === 'Website' ? t('people.links.website', { name }) : t('people.links.on', { name, network })
 }
 </script>
 

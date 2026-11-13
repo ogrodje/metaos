@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { ToolGroup } from '@/tools'
+import { TOOL_GROUPS, type ToolGroup, toolGroups } from '@/tools'
+import { en, type Messages, sl, t, tSl } from './i18n'
 import { clientFrom, curlCommand, filterTools, tabAfter, toolCount, withTimeout } from '@/usage'
 
 const GROUPS: ToolGroup[] = [
@@ -135,5 +136,29 @@ describe('withTimeout', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+describe('the tools', () => {
+  const toolNames = TOOL_GROUPS.flatMap((group) => group.tools.map((tool) => tool.name))
+
+  it('say what each group and tool is, in both languages', () => {
+    for (const messages of [en, sl]) {
+      const tools = messages.tools as Messages
+      expect(Object.keys(tools.groups as Messages).sort()).toEqual(TOOL_GROUPS.map((group) => group.id).sort())
+      expect(Object.keys(tools.descriptions as Messages).sort()).toEqual([...toolNames].sort())
+    }
+  })
+
+  it('are named as they are, whatever the language', () => {
+    const [search] = toolGroups(t)
+    expect(search).toEqual({
+      id: 'search',
+      title: 'Search',
+      about: 'episodes, ideas, people and recording sessions at once',
+      tools: [{ name: 'search', description: expect.stringMatching(/^Find episodes, people and sessions/) }],
+    })
+    expect(toolGroups(tSl)[0]?.title).toBe('Iskanje')
+    expect(toolGroups(tSl).flatMap((group) => group.tools.map((tool) => tool.name))).toEqual(toolNames)
   })
 })

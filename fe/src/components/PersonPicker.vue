@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, useId, watch } from 'vue'
 import { findPeople } from '@/accounts'
+import { useLocale } from '@/useLocale'
 
 /** Someone a picker offers: their name, and who they are, which tells two of the same name apart */
 export interface Pickable {
@@ -26,6 +27,7 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
+const { t } = useLocale()
 const id = useId()
 const input = ref<HTMLInputElement>()
 const text = ref('')
@@ -77,15 +79,15 @@ onMounted(() => input.value?.focus())
       <input ref="input" v-model="text" class="input" type="text" role="combobox" autocomplete="off" spellcheck="false"
              :aria-label="label" :aria-expanded="expanded" :aria-controls="`${id}-options`" aria-autocomplete="list"
              :aria-activedescendant="expanded ? optionId(active) : undefined" :aria-describedby="`${id}-hint`"
-             :readonly="busy" placeholder="Find a person by name" @keydown="onKeydown"/>
-      <button type="button" class="button" :disabled="busy" @click="emit('cancel')">Cancel</button>
+             :readonly="busy" :placeholder="t('accounts.picker.placeholder')" @keydown="onKeydown"/>
+      <button type="button" class="button" :disabled="busy" @click="emit('cancel')">{{ t('common.cancel') }}</button>
     </div>
 
     <p :id="`${id}-hint`" class="hint" aria-live="polite">
-      <template v-if="busy">Linking…</template>
-      <template v-else-if="typed && !options.length">No one by that name.</template>
-      <template v-else-if="!typed && options.length">Matching {{ suggest }}:</template>
-      <template v-else-if="!typed">Type a name.</template>
+      <template v-if="busy">{{ t('accounts.linking') }}</template>
+      <template v-else-if="typed && !options.length">{{ t('accounts.picker.noOne') }}</template>
+      <template v-else-if="!typed && options.length">{{ t('accounts.picker.matching', { name: suggest }) }}</template>
+      <template v-else-if="!typed">{{ t('accounts.picker.typeName') }}</template>
     </p>
 
     <ul v-show="expanded" :id="`${id}-options`" class="options" role="listbox" :aria-label="label">

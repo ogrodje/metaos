@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { type Image, src, srcset } from '@/images'
+import { useLocale } from '@/useLocale'
 
 // What a page is about, at the top of its FactPanel once its title has scrolled away (shown), so the panel says what
 // one is looking at or commenting on: a small picture, e.g. an episode's cover, its code and its title. It opens and
@@ -11,6 +12,8 @@ defineProps<{
   shown: boolean
 }>()
 
+const { t } = useLocale()
+
 function toTop() {
   const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches
   window.scrollTo({ top: 0, behavior: smooth ? 'smooth' : 'auto' })
@@ -20,7 +23,7 @@ function toTop() {
 <template>
   <div class="panel-title" :class="{ shown }" :aria-hidden="!shown">
     <div class="inner">
-      <button type="button" class="card" :tabindex="shown ? 0 : -1" :title="`Back to the top: ${title}`" @click="toTop">
+      <button type="button" class="card" :tabindex="shown ? 0 : -1" :title="t('episode.panel.toTop', { title })" @click="toTop">
         <img v-if="picture" :src="src(picture, 320)" :srcset="srcset(picture)" sizes="40px" alt="">
         <span class="text">
           <span v-if="code" class="code">{{ code }}</span>

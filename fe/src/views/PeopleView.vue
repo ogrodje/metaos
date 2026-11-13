@@ -17,8 +17,10 @@ import { useClearQuery, useQueryState } from '@/query'
 import { usePageMeta } from '@/seo'
 import { useFirstLoad } from '@/ssr'
 import { useAuthStore } from '@/stores/auth'
+import { useLocale } from '@/useLocale'
 
 const auth = useAuthStore()
+const { t } = useLocale()
 
 // Everyone, by name, for the team; for everyone else those on the released episodes
 const people = ref<Person[]>()
@@ -42,7 +44,7 @@ async function loadPeople(quietly = false) {
   } catch (e) {
     if (load !== loads) return
     if (quietly) throw e
-    error.value = errorMessage(e)
+    error.value = errorMessage(e, t)
   }
 }
 
@@ -79,7 +81,7 @@ async function loadUnlinked(quietly = false) {
   } catch (e) {
     if (load !== unlinkedLoads) return
     if (quietly) throw e
-    unlinkedError.value = errorMessage(e)
+    unlinkedError.value = errorMessage(e, t)
   }
 }
 
@@ -100,7 +102,7 @@ onMounted(() => {
 watch(() => auth.team, () => void loadAll())
 useLiveRefresh(() => loadAll(true))
 
-usePageMeta(() => ({ description: "The hosts and guests of Ogrodje's podcast, who they are and where they're online." }))
+usePageMeta(() => ({ description: t('people.description') }))
 
 // Who's shown, as the address says, e.g. ?show=team&q=sraka
 const shown = useQueryState<'all' | Kind>('show', 'all', ['all', 'team', 'guest', 'candidate'])
@@ -121,11 +123,11 @@ const guests = computed(() => ofKind('guest'))
 const candidates = computed(() => ofKind('candidate'))
 
 const kinds = computed(() => [
-  { value: 'all' as const, title: 'Everyone', count: everyone.value.length },
-  { value: 'team' as const, title: 'The team', count: everyone.value.filter((p) => kindOf(p) === 'team').length },
-  { value: 'guest' as const, title: 'Guests', count: everyone.value.filter((p) => kindOf(p) === 'guest').length },
+  { value: 'all' as const, title: t('people.kinds.all'), count: everyone.value.length },
+  { value: 'team' as const, title: t('people.kinds.team'), count: everyone.value.filter((p) => kindOf(p) === 'team').length },
+  { value: 'guest' as const, title: t('people.kinds.guests'), count: everyone.value.filter((p) => kindOf(p) === 'guest').length },
   ...(everyone.value.some((p) => kindOf(p) === 'candidate')
-    ? [{ value: 'candidate' as const, title: 'Candidates', count: everyone.value.filter((p) => kindOf(p) === 'candidate').length }]
+    ? [{ value: 'candidate' as const, title: t('people.kinds.candidates'), count: everyone.value.filter((p) => kindOf(p) === 'candidate').length }]
     : []),
 ])
 
@@ -146,19 +148,16 @@ const candidatesOpen = ref(false)
 
 <template>
   <main class="content">
-    <PageHeader title="People" :count="people?.length" :shown="filtering && people ? listed.length : undefined">
-      <template v-if="auth.team">Ogrodje's team, the guests on its episodes, and who could be one.</template>
-      <template v-else-if="auth.ready && !auth.authenticated">
-        The hosts, guests and everyone else on Ogrodje's released episodes. Signed in, you see everyone, also on what's
-        being made.
-      </template>
-      <template v-else>The hosts, guests and everyone else on Ogrodje's released episodes.</template>
+    <PageHeader :title="t('pages.people')" :count="people?.length" :shown="filtering && people ? listed.length : undefined">
+      <template v-if="auth.team">{{ t('people.lead.team') }}</template>
+      <template v-else-if="auth.ready && !auth.authenticated">{{ t('people.lead.guest') }}</template>
+      <template v-else>{{ t('people.lead.everyone') }}</template>
     </PageHeader>
 
-    <FilterBar v-model:find="find" placeholder="Find by name or what they do">
-      <ChipGroup v-model="shown" label="Show" :options="kinds"/>
+    <FilterBar v-model:find="find" :placeholder="t('people.find')">
+      <ChipGroup v-model="shown" :label="t('people.show')" :options="kinds"/>
       <template v-if="shown === 'all' || shown === 'guest'" #end>
-        <nav class="index" aria-label="Guests by letter">
+        <nav class="index" :aria-label="t('people.byLetter')">
           <template v-for="letter in ALPHABET" :key="letter">
             <a v-if="letters.has(letter)" :href="`#letter-${letter}`">{{ letter }}</a>
             <span v-else aria-hidden="true">{{ letter }}</span>
@@ -167,15 +166,15 @@ const candidatesOpen = ref(false)
       </template>
     </FilterBar>
 
-    <LoadError v-if="error" what="The people" :error="error" @retry="loadPeople()"/>
-    <LoadingRows v-else-if="!people" :rows="6" tall label="Loading the people"/>
-    <p v-else-if="!people.length" class="note">No one yet.</p>
-    <NoMatch v-else-if="!listed.length" :find="find" @clear="clear(['show', 'q'])">No one matches</NoMatch>
+    <LoadError v-if="error" :what="t('people.what')" :error="error" @retry="loadPeople()"/>
+    <LoadingRows v-else-if="!people" :rows="6" tall :label="t('people.loading')"/>
+    <p v-else-if="!people.length" class="note">{{ t('people.noOne') }}</p>
+    <NoMatch v-else-if="!listed.length" :find="find" @clear="clear(['show', 'q'])">{{ t('people.noMatch') }}</NoMatch>
 
     <template v-else>
       <section v-if="team.length && (shown === 'all' || shown === 'team')" aria-labelledby="the-team">
         <div class="heading">
-          <h2 id="the-team">The team</h2>
+          <h2 id="the-team">{{ t('people.kinds.team') }}</h2>
           <span class="count">{{ team.length }}</span>
         </div>
         <ul class="team">
@@ -185,11 +184,11 @@ const candidatesOpen = ref(false)
 
       <section v-if="guests.length && (shown === 'all' || shown === 'guest')" aria-labelledby="guests">
         <div class="heading">
-          <h2 id="guests">Guests</h2>
+          <h2 id="guests">{{ t('people.kinds.guests') }}</h2>
           <span class="count">{{ guests.length }}</span>
         </div>
         <!-- On phones, where the filters' index doesn't fit, the letters with anyone, over the guests as they scroll -->
-        <nav class="letters" aria-label="Guests by letter">
+        <nav class="letters" :aria-label="t('people.byLetter')">
           <a v-for="group in byLetter" :key="group.letter" :href="`#letter-${group.letter}`">{{ group.letter }}</a>
         </nav>
         <div class="guests">
@@ -205,21 +204,21 @@ const candidatesOpen = ref(false)
       <!-- The team's: who could be a guest, folded unless they're what's shown -->
       <section v-if="candidates.length && (shown === 'all' || shown === 'candidate')" aria-labelledby="candidates">
         <div class="heading">
-          <h2 id="candidates">Candidates</h2>
+          <h2 id="candidates">{{ t('people.kinds.candidates') }}</h2>
           <span class="count">{{ candidates.length }}</span>
           <button v-if="shown === 'all'" type="button" class="text-button more" :aria-expanded="candidatesOpen" aria-describedby="candidates"
-                  @click="candidatesOpen = !candidatesOpen">{{ candidatesOpen ? 'Fold' : `Show all ${candidates.length}` }}</button>
+                  @click="candidatesOpen = !candidatesOpen">{{ candidatesOpen ? t('people.fold') : t('people.showAll', { n: candidates.length }, candidates.length) }}</button>
         </div>
         <ul v-if="candidatesOpen || shown === 'candidate'" class="people">
           <PersonCard v-for="person in candidates" :key="person.id" :person="person"/>
         </ul>
-        <p v-else class="note">Who the team has in mind for an idea, as its guest.</p>
+        <p v-else class="note">{{ t('people.candidatesNote') }}</p>
       </section>
     </template>
 
     <!-- For the team, the sign-ins nobody's linked to, which whoever links accounts links -->
     <template v-if="people">
-      <p v-if="unlinkedError" class="note">The sign-ins nobody's linked to didn't load: {{ unlinkedError }}</p>
+      <p v-if="unlinkedError" class="note">{{ t('people.unlinkedFailed', { error: unlinkedError }) }}</p>
       <UnlinkedAccounts v-else-if="unlinked" :accounts="unlinked" :people="people" :me="myAccount"
                         :can-link="canLinkAccounts" @changed="reloadQuietly"/>
     </template>

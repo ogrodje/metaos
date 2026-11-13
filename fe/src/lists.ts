@@ -2,6 +2,7 @@
 // can be tested, and the pages filter in the browser on what they've loaded already
 
 import { candidates, type Episode, type EpisodeStatus, guests, type Role, roleName } from '@/episodes'
+import type { DateLocale, Translate } from '@/i18n'
 import type { Person } from '@/people'
 import { searchWords } from '@/search'
 
@@ -24,9 +25,10 @@ export function seasonOf(episode: Pick<Episode, 'code'>): number | null {
   return season ? Number(season) : null
 }
 
-export function seasonTitle(season: number | null) {
-  if (season === null) return 'Without a code'
-  return season === 99 ? 'Bonus' : `Season ${season}`
+/** A season as a heading, e.g. Season 5; Bonus for S99 */
+export function seasonTitle(season: number | null, t: Translate) {
+  if (season === null) return t('lists.seasonTitle.none')
+  return season === 99 ? t('lists.seasonTitle.bonus') : t('lists.seasonTitle.season', { n: season })
 }
 
 /** The stages an episode goes through while it's in the works, in their order */
@@ -55,12 +57,13 @@ export function readiness(idea: Pick<Episode, 'session' | 'recordingDate' | 'peo
   return 'none'
 }
 
-export const READINESS: { id: Readiness, title: string }[] = [
-  { id: 'session', title: 'In a session' },
-  { id: 'guest', title: 'With a guest' },
-  { id: 'candidates', title: 'With candidates' },
-  { id: 'none', title: 'No one yet' },
-]
+/** How far along ideas can be, the furthest first */
+export const READINESS: Readiness[] = ['session', 'guest', 'candidates', 'none']
+
+/** How far along an idea is, as a heading, e.g. With a guest (locales: lists.readiness) */
+export function readinessTitle(readiness: Readiness, t: Translate) {
+  return t(`lists.readiness.${readiness}`)
+}
 
 // What makes someone the team's on the People page, until profiles say so themselves
 const TEAM_ROLES: Role[] = ['HOST', 'CO_HOST', 'PRODUCER', 'CONSULTANT', 'DESIGNER']
@@ -92,12 +95,13 @@ export function roleCounts(person: Pick<Person, 'episodes'>): { role: Role, coun
 
 /**
  * What someone on the team does, and on how many episodes, for their card on the People page, e.g. 37 episodes as
- * co-host, host and consultant: every episode they're on but as a candidate, and their roles on the team, the most first
+ * co-host, host and consultant: every episode they're on but as a candidate, and their roles on the team, the most first;
+ * said with [t], the count in [dateLocale]'s numbers
  */
-export function teamSummary(person: Pick<Person, 'episodes'>) {
-  const roles = roleCounts(person).map(({ role }) => role).filter((role) => TEAM_ROLES.includes(role)).map(roleName)
-  const what = roles.length > 1 ? `${roles.slice(0, -1).join(', ')} and ${roles.at(-1)}` : roles[0]
+export function teamSummary(person: Pick<Person, 'episodes'>, t: Translate, dateLocale?: DateLocale) {
+  const roles = roleCounts(person).map(({ role }) => role).filter((role) => TEAM_ROLES.includes(role)).map((role) => roleName(role, t))
+  const what = roles.length > 1 ? t('lists.teamSummary.and', { list: roles.slice(0, -1).join(', '), last: roles.at(-1) }) : roles[0]
   const count = person.episodes.filter(({ roles }) => roles.some((role) => role !== 'CANDIDATE')).length
-  const episodes = `${count} ${count === 1 ? 'episode' : 'episodes'}`
-  return what ? `${episodes} as ${what}` : episodes
+  const episodes = t('lists.teamSummary.episodes', { n: dateLocale ? count.toLocaleString(dateLocale) : count }, count)
+  return what ? t('lists.teamSummary.as', { episodes, roles: what }) : episodes
 }

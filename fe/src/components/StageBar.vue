@@ -1,27 +1,30 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
 import { type EpisodeStatus, statusName } from '@/episodes'
+import { useLocale } from '@/useLocale'
 
 // How many episodes are at each stage, from idea to published, a line each at the side of the home page: those being
 // made marked, the empty ones quiet. Each leads to where they're listed: the ideas to Ideas, the rest to Episodes, with
 // only that stage (?status=).
 defineProps<{ counts: { status: EpisodeStatus, count: number }[] }>()
 
+const { t, path } = useLocale()
+
 const MAKING: EpisodeStatus[] = ['RECORDED', 'IN_PRODUCTION', 'READY', 'EARLY_ACCESS']
 
 function stagePath(status: EpisodeStatus) {
-  return status === 'IDEA' ? '/ideas' : { path: '/episodes', query: { status } }
+  return status === 'IDEA' ? path('/ideas') : { path: path('/episodes'), query: { status } }
 }
 </script>
 
 <template>
-  <ol class="stages" aria-label="Episodes by stage">
+  <ol class="stages" :aria-label="t('home.stagesLabel')">
     <li v-for="{ status, count } in counts" :key="status">
       <RouterLink v-if="count" :to="stagePath(status)" class="stage" :class="{ making: MAKING.includes(status) }">
-        <span class="name">{{ status === 'IDEA' ? 'Ideas' : statusName(status) }}</span><b>{{ count }}</b>
+        <span class="name">{{ status === 'IDEA' ? t('nav.ideas') : statusName(status, t) }}</span><b>{{ count }}</b>
       </RouterLink>
       <span v-else class="stage empty">
-        <span class="name">{{ status === 'IDEA' ? 'Ideas' : statusName(status) }}</span><b>0</b>
+        <span class="name">{{ status === 'IDEA' ? t('nav.ideas') : statusName(status, t) }}</span><b>0</b>
       </span>
     </li>
   </ol>

@@ -5,6 +5,7 @@
 
 import type { MediaInfoResult } from 'mediainfo.js'
 import type { LinePart } from '@/episodes'
+import type { DateLocale, Translate } from '@/i18n'
 
 export type MediaKind = 'FULL_VIDEO' | 'FULL_AUDIO' | 'BONUS_VIDEO' | 'BONUS_AUDIO'
 
@@ -52,7 +53,6 @@ export const MEDIA_FIELDS = `media { ${MEDIA_FILE_FIELDS} }`
 
 export interface Kind {
   kind: MediaKind
-  label: string
   video: boolean
   // One per episode; else any number
   full: boolean
@@ -60,13 +60,19 @@ export interface Kind {
 
 /** The kinds, as the episode's page and the dialog list them */
 export const KINDS: Kind[] = [
-  { kind: 'FULL_VIDEO', label: 'Full video', video: true, full: true },
-  { kind: 'FULL_AUDIO', label: 'Full audio', video: false, full: true },
-  { kind: 'BONUS_VIDEO', label: 'Bonus video', video: true, full: false },
-  { kind: 'BONUS_AUDIO', label: 'Bonus audio', video: false, full: false },
+  { kind: 'FULL_VIDEO', video: true, full: true },
+  { kind: 'FULL_AUDIO', video: false, full: true },
+  { kind: 'BONUS_VIDEO', video: true, full: false },
+  { kind: 'BONUS_AUDIO', video: false, full: false },
 ]
 
 export const kindOf = (kind: MediaKind) => KINDS.find((it) => it.kind === kind)!
+
+/** A kind's name, as a label, e.g. Full video */
+export const kindLabel = (kind: MediaKind, t: Translate) => t(`media.kind.${kind}`)
+
+/** A kind's name within a sentence, e.g. Upload the full video */
+export const kindName = (kind: MediaKind, t: Translate) => t(`media.kindName.${kind}`)
 
 /** The other kind of the same medium: a full video's is the bonus video */
 export const otherKind = (kind: MediaKind): MediaKind => KINDS.find((it) => it.video === kindOf(kind).video && it.kind !== kind)!.kind
@@ -82,8 +88,6 @@ const TYPES: Record<string, { type: string, video: boolean }> = {
   flac: { type: 'audio/flac', video: false },
 }
 
-export const VIDEO_FORMATS = 'MP4 or MOV'
-export const AUDIO_FORMATS = 'MP3, M4A, WAV or FLAC'
 /** For a file input: what may be chosen */
 export const ACCEPT = Object.keys(TYPES).map((extension) => `.${extension}`).join(',')
 
@@ -160,14 +164,16 @@ export function typeOf(name: string, probe: Probe | null): string | null {
 }
 
 /** Why a file can't be any of the episode's video or audio, or null when it can */
-export function refusal(picked: Picked): string | null {
-  if (!TYPES[extensionOf(picked.name)]) return `It isn't ${VIDEO_FORMATS}, or ${AUDIO_FORMATS}.`
-  if (picked.file.size > MAX_MEDIA_BYTES) return `It's ${formatSize(picked.file.size)}; a file is up to ${formatSize(MAX_MEDIA_BYTES)}.`
+export function refusal(picked: Picked, t: Translate, dateLocale: DateLocale): string | null {
+  if (!TYPES[extensionOf(picked.name)]) return t('media.refusal.format')
+  if (picked.file.size > MAX_MEDIA_BYTES) {
+    return t('media.refusal.size', { size: formatSize(picked.file.size, dateLocale), max: formatSize(MAX_MEDIA_BYTES, dateLocale) })
+  }
   if (!picked.probe) return null
-  if (!picked.probe.video && !picked.probe.audio) return "There's neither video nor audio in it."
+  if (!picked.probe.video && !picked.probe.audio) return t('media.refusal.empty')
   const video = TYPES[extensionOf(picked.name)]!.video
-  if (picked.probe.video && !video) return 'It has video, but its name says audio.'
-  if (!picked.probe.video && picked.type === 'video/quicktime') return `It's a MOV without video; audio is ${AUDIO_FORMATS}.`
+  if (picked.probe.video && !video) return t('media.refusal.videoAsAudio')
+  if (!picked.probe.video && picked.type === 'video/quicktime') return t('media.refusal.movWithoutVideo')
   return null
 }
 
@@ -189,11 +195,11 @@ export interface Placement {
  * bonuses are shorter, unless its name says it's a bonus or another one picked has that place already ([taken]); the
  * rest are bonuses.
  */
-export function placeAll(files: Picked[], taken: MediaKind[] = []): Placement {
+export function placeAll(files: Picked[], t: Translate, dateLocale: DateLocale, taken: MediaKind[] = []): Placement {
   const placement: Placement = { placed: [], refused: [] }
   const fitting: Picked[] = []
   for (const picked of [...files].sort((a, b) => a.name.localeCompare(b.name))) {
-    const reason = refusal(picked)
+    const reason = refusal(picked, t, dateLocale)
     if (reason) placement.refused.push({ picked, reason })
     else fitting.push(picked)
   }
@@ -217,12 +223,16 @@ export function placeAll(files: Picked[], taken: MediaKind[] = []): Placement {
 const SAMPLE_RATES = [44100, 48000]
 
 /** What looks wrong with a file as the [kind] it's to be, before it's sent: MetaOS takes it all the same */
-export function warnings(probe: Probe | null, kind: MediaKind): string[] {
+export function warnings(probe: Probe | null, kind: MediaKind, t: Translate, dateLocale: DateLocale): string[] {
   if (!probe) return []
   const found: string[] = []
-  if (kind === 'FULL_VIDEO' && probe.height && probe.height < 1080) found.push(`Under 1080p: it's ${probe.width} × ${probe.height}`)
-  if (probe.sampleRate && !SAMPLE_RATES.includes(probe.sampleRate)) found.push(`Its audio is ${formatRate(probe.sampleRate)}, not 44.1 or 48 kHz`)
-  if (kindOf(kind).video && !probe.audio) found.push('It has no audio')
+  if (kind === 'FULL_VIDEO' && probe.height && probe.height < 1080) {
+    found.push(t('media.warning.under1080p', { width: probe.width, height: probe.height }))
+  }
+  if (probe.sampleRate && !SAMPLE_RATES.includes(probe.sampleRate)) {
+    found.push(t('media.warning.sampleRate', { rate: formatRate(probe.sampleRate, dateLocale) }))
+  }
+  if (kindOf(kind).video && !probe.audio) found.push(t('media.warning.noAudio'))
   return found
 }
 
@@ -234,19 +244,32 @@ export function formatDuration(seconds: number): string {
   return hours ? `${hours}:${pad(minutes)}:${pad(rest)}` : `${minutes}:${pad(rest)}`
 }
 
-/** A size as the Finder says it, e.g. 4.2 GB or 820 MB */
-export function formatSize(bytes: number): string {
-  const units = ['bytes', 'KB', 'MB', 'GB', 'TB']
+/** A size as the Finder says it, in the page's language, e.g. 4.2 GB or 820 MB (4,2 GB in Slovenian) */
+export function formatSize(bytes: number, dateLocale: DateLocale): string {
+  const units = ['byte', 'kilobyte', 'megabyte', 'gigabyte', 'terabyte']
   let value = bytes
   let unit = 0
   while (value >= 1000 && unit < units.length - 1) {
     value /= 1000
     unit++
   }
-  return unit === 0 ? `${bytes} bytes` : `${value < 10 ? value.toFixed(1) : Math.round(value)} ${units[unit]}`
+  const digits = unit && value < 10 ? 1 : 0
+  return new Intl.NumberFormat(dateLocale, {
+    style: 'unit', unit: units[unit], unitDisplay: unit ? 'short' : 'long', minimumFractionDigits: digits, maximumFractionDigits: digits,
+  }).format(unit ? value : bytes)
 }
 
-const formatRate = (hertz: number) => `${Number((hertz / 1000).toFixed(1))} kHz`
+// A number with at most [digits] decimals, in the page's language, e.g. 29.97 (29,97 in Slovenian)
+const formatNumber = (value: number, digits: number, dateLocale: DateLocale) =>
+  new Intl.NumberFormat(dateLocale, { maximumFractionDigits: digits }).format(value)
+
+const formatRate = (hertz: number, dateLocale: DateLocale) => `${formatNumber(hertz / 1000, 1, dateLocale)} kHz`
+
+/** A frame rate, e.g. 29.97 fps */
+export const formatFrameRate = (rate: number, dateLocale: DateLocale) => `${formatNumber(rate, 2, dateLocale)} fps`
+
+/** A sample rate, e.g. 44.1 kHz */
+export const formatSampleRate = formatRate
 
 // ffprobe's names for codecs, as people know them
 const CODECS: Record<string, string> = {
@@ -262,14 +285,16 @@ export function codecName(codec: string): string {
 }
 
 /** What's in a file, on one line: 1:32:05 · 1920 × 1080 · 25 fps · H.264 · AAC 48 kHz · 4.2 GB */
-export function infoLine(info: MediaInfo, size: number): string {
+export function infoLine(info: MediaInfo, size: number, dateLocale: DateLocale): string {
   const parts: string[] = []
   if (info.duration) parts.push(formatDuration(info.duration))
   if (info.width && info.height) parts.push(`${info.width} × ${info.height}`)
-  if (info.frameRate) parts.push(`${Number(info.frameRate.toFixed(2))} fps`)
+  if (info.frameRate) parts.push(formatFrameRate(info.frameRate, dateLocale))
   if (info.videoCodec) parts.push(codecName(info.videoCodec))
-  if (info.audioCodec) parts.push([codecName(info.audioCodec), info.sampleRate && formatRate(info.sampleRate)].filter(Boolean).join(' '))
-  parts.push(formatSize(size))
+  if (info.audioCodec) {
+    parts.push([codecName(info.audioCodec), info.sampleRate && formatRate(info.sampleRate, dateLocale)].filter(Boolean).join(' '))
+  }
+  parts.push(formatSize(size, dateLocale))
   return parts.join(' · ')
 }
 
@@ -277,27 +302,30 @@ export function infoLine(info: MediaInfo, size: number): string {
 const LENGTHS_APART = 5
 
 /** What needs attention of an episode's video and audio, e.g. on its page: a full audio that's not as long as the video */
-export function mediaConcerns(files: Pick<MediaFile, 'kind' | 'info'>[]): string[] {
+export function mediaConcerns(files: Pick<MediaFile, 'kind' | 'info'>[], t: Translate): string[] {
   const video = files.find((file) => file.kind === 'FULL_VIDEO')?.info.duration
   const audio = files.find((file) => file.kind === 'FULL_AUDIO')?.info.duration
   if (!video || !audio || Math.abs(video - audio) <= LENGTHS_APART) return []
-  return [`The full audio is ${formatDuration(Math.abs(video - audio))} ${audio < video ? 'shorter' : 'longer'} than the full video`]
+  const length = formatDuration(Math.abs(video - audio))
+  return [t(audio < video ? 'media.concerns.audioShorter' : 'media.concerns.audioLonger', { length })]
 }
 
 /**
  * What an episode's video and audio are, in a line, e.g. Full audio, 55:14 · a bonus, 12:52 · no video: what's there,
  * then, once it's [recorded], what's missing
  */
-export function mediaParts(files: Pick<MediaFile, 'kind' | 'info'>[], recorded: boolean): LinePart[] {
-  const long = (file: Pick<MediaFile, 'info'>) => (file.info.duration ? `, ${formatDuration(file.info.duration)}` : '')
+export function mediaParts(files: Pick<MediaFile, 'kind' | 'info'>[], recorded: boolean, t: Translate): LinePart[] {
+  const long = (what: string, file: Pick<MediaFile, 'info'>) =>
+    (file.info.duration ? t('media.parts.withLength', { what, length: formatDuration(file.info.duration) }) : what)
   const video = files.find((file) => file.kind === 'FULL_VIDEO')
   const audio = files.find((file) => file.kind === 'FULL_AUDIO')
   const bonuses = files.filter((file) => file.kind === 'BONUS_VIDEO' || file.kind === 'BONUS_AUDIO')
+  const n = bonuses.length
   return [
-    ...(video ? [{ text: `Full video${long(video)}` }] : []),
-    ...(audio ? [{ text: `Full audio${long(audio)}` }] : []),
-    ...(bonuses.length === 1 ? [{ text: `a bonus${long(bonuses[0]!)}` }] : bonuses.length ? [{ text: `${bonuses.length} bonuses` }] : []),
-    ...(!video && recorded ? [{ text: 'no video', missing: true }] : []),
-    ...(!audio && recorded ? [{ text: 'no audio', missing: true }] : []),
+    ...(video ? [{ text: long(t('media.parts.fullVideo'), video) }] : []),
+    ...(audio ? [{ text: long(t('media.parts.fullAudio'), audio) }] : []),
+    ...(n === 1 ? [{ text: long(t('media.parts.bonus'), bonuses[0]!) }] : n ? [{ text: t('media.parts.bonuses', { n }, n) }] : []),
+    ...(!video && recorded ? [{ text: t('media.parts.noVideo'), missing: true }] : []),
+    ...(!audio && recorded ? [{ text: t('media.parts.noAudio'), missing: true }] : []),
   ]
 }
