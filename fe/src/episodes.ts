@@ -1,5 +1,6 @@
 // Episodes as MetaOS's GraphQL API has them (src/main/resources/graphql/schema.graphqls)
 
+import { TIME_ZONE, type DateLocale, type Translate } from '@/i18n'
 import type { Comment } from '@/comments'
 import type { Distribution } from '@/distribution'
 import { type Image, IMAGE_FIELDS } from '@/images'
@@ -291,14 +292,14 @@ export function links(episode: Linked, allPatreon = false) {
   })
 }
 
-// CO_HOST -> co-host
-export function roleName(role: Role) {
-  return role.toLowerCase().replace('_', '-')
+/** A role as a word in a sentence, e.g. co-host, sovoditelj (locales: episodes.role) */
+export function roleName(role: Role, t: Translate) {
+  return t(`episodes.role.${role}`)
 }
 
-// IN_PRODUCTION -> In production
-export function statusName(status: EpisodeStatus) {
-  return status.charAt(0) + status.slice(1).toLowerCase().replace('_', ' ')
+/** A stage as a label, e.g. In production, V produkciji (locales: episodes.status) */
+export function statusName(status: EpisodeStatus, t: Translate) {
+  return t(`episodes.status.${status}`)
 }
 
 const RECORDED: EpisodeStatus[] = ['RECORDED', 'IN_PRODUCTION', 'READY', 'EARLY_ACCESS', 'PUBLISHED']
@@ -320,7 +321,7 @@ type Pictured = Pick<EpisodeDetails, 'status' | 'title' | 'titleB' | 'titleC' | 
  * What an episode's pictures are, in a line, with what's missing once it's recorded, e.g. 3 titles tested · cover ·
  * no web picture · 4 artwork files · 9 photos; its titles only when it has more than one, as they're tested
  */
-export function pictureParts(episode: Pictured, artwork: number, photos: number): LinePart[] {
+export function pictureParts(episode: Pictured, artwork: number, photos: number, t: Translate): LinePart[] {
   const recorded = isRecorded(episode.status)
   const variants = [
     { letter: 'A', title: episode.title, image: episode.thumbnail },
@@ -329,12 +330,12 @@ export function pictureParts(episode: Pictured, artwork: number, photos: number)
   ].filter((variant) => variant.title)
   const tested = variants.length > 1
   return [
-    ...(tested ? [{ text: `${variants.length} titles tested` }] : episode.thumbnail ? [{ text: 'thumbnail' }] : []),
-    ...(recorded ? variants.filter((v) => !v.image).map((v) => ({ text: tested ? `no thumbnail ${v.letter}` : 'no thumbnail', missing: true })) : []),
-    ...(episode.cover ? [{ text: 'cover' }] : recorded ? [{ text: 'no cover', missing: true }] : []),
-    ...(episode.web ? [{ text: 'web picture' }] : recorded ? [{ text: 'no web picture', missing: true }] : []),
-    ...(artwork ? [{ text: `${artwork} artwork ${artwork === 1 ? 'file' : 'files'}` }] : []),
-    ...(photos ? [{ text: `${photos} ${photos === 1 ? 'photo' : 'photos'}` }] : []),
+    ...(tested ? [{ text: t('episodes.pictures.titlesTested', { n: variants.length }) }] : episode.thumbnail ? [{ text: t('episodes.pictures.thumbnail') }] : []),
+    ...(recorded ? variants.filter((v) => !v.image).map((v) => ({ text: tested ? t('episodes.pictures.noThumbnailOf', { letter: v.letter }) : t('episodes.pictures.noThumbnail'), missing: true })) : []),
+    ...(episode.cover ? [{ text: t('episodes.pictures.cover') }] : recorded ? [{ text: t('episodes.pictures.noCover'), missing: true }] : []),
+    ...(episode.web ? [{ text: t('episodes.pictures.web') }] : recorded ? [{ text: t('episodes.pictures.noWeb'), missing: true }] : []),
+    ...(artwork ? [{ text: t('episodes.pictures.artwork', { n: artwork }, artwork) }] : []),
+    ...(photos ? [{ text: t('episodes.pictures.photos', { n: photos }, photos) }] : []),
   ]
 }
 
@@ -352,13 +353,12 @@ export function candidates(episode: Pick<Episode, 'people'>) {
   return named(episode, 'CANDIDATE')
 }
 
-// Dates as the rest of the page is written, in English, e.g. 22 Oct 2026, whatever the browser's language, and in
-// Ogrodje's time zone, wherever the browser is: the server renders them so too, and the browser's have to match
-export const DATE_LOCALE = 'en-GB'
-export const TIME_ZONE = 'Europe/Ljubljana'
+// Dates in the page's language (dateLocale: 22 Oct 2026, 22. okt. 2026), whatever the browser's, and in Ogrodje's time
+// zone, wherever the browser is: the server renders them so too, and the browser's have to match
+export { TIME_ZONE }
 
-export function formatDate(date: string) {
-  return new Date(date).toLocaleDateString(DATE_LOCALE, { dateStyle: 'medium', timeZone: TIME_ZONE })
+export function formatDate(date: string, dateLocale: DateLocale) {
+  return new Date(date).toLocaleDateString(dateLocale, { dateStyle: 'medium', timeZone: TIME_ZONE })
 }
 
 const DAY = 24 * 60 * 60 * 1000
@@ -371,10 +371,9 @@ export function daysFrom(today: Date, date: string) {
   return Math.round((then - now) / DAY)
 }
 
-const relative = new Intl.RelativeTimeFormat(DATE_LOCALE, { numeric: 'auto' })
-
-/** How far [date] is from [today], e.g. tomorrow, in 5 days, 3 weeks ago, 4 months ago */
-export function relativeDate(date: string, today = new Date()) {
+/** How far [date] is from [today], e.g. tomorrow, in 5 days, 3 weeks ago, 4 months ago, in the page's language */
+export function relativeDate(date: string, dateLocale: DateLocale, today = new Date()) {
+  const relative = new Intl.RelativeTimeFormat(dateLocale, { numeric: 'auto' })
   const days = daysFrom(today, date)
   const size = Math.abs(days)
   if (size < 14) return relative.format(days, 'day')
@@ -393,8 +392,8 @@ export function sessionPlace(session: Pick<Session, 'name' | 'location'>) {
 }
 
 /** A session as people know it: when, and what it's called, e.g. 22 Oct 2026 · AWS Community Day Adria */
-export function sessionTitle(session: Pick<Session, 'date' | 'name' | 'location'>) {
-  return [formatDate(session.date), sessionName(session)].filter(Boolean).join(' · ')
+export function sessionTitle(session: Pick<Session, 'date' | 'name' | 'location'>, dateLocale: DateLocale) {
+  return [formatDate(session.date, dateLocale), sessionName(session)].filter(Boolean).join(' · ')
 }
 
 /** Renames a session (or clears its name, with ''), answering with what it's called now */

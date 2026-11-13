@@ -26,13 +26,29 @@ export default defineNuxtConfig({
   // Imports stay explicit, as they are in the rest of the code: composables from '#imports', components by their files
   imports: { autoImport: false },
   components: { dirs: [] },
-  modules: ['@pinia/nuxt'],
+  modules: ['@pinia/nuxt', '@nuxtjs/i18n'],
+  // The UI in Slovenian, at the root, or English (UK), under /en (OG-58): the address alone says which, as Cloudflare
+  // keeps the pages anyone may see by their address, so neither a cookie nor Accept-Language decides what's rendered
+  // (detectBrowserLanguage off). A visitor's choice is the browser's, applied once the page is hydrated
+  // (plugins/locale.client.ts). The routes are router/index.ts's, in both languages, named as the module names its
+  // own; the messages are in src/locales (restructureDir), with src/i18n.config.ts for Slovenian's plurals.
+  i18n: {
+    restructureDir: 'src',
+    langDir: 'locales',
+    locales: [
+      { code: 'sl', language: 'sl-SI', name: 'Slovenščina', file: 'sl.json' },
+      { code: 'en', language: 'en-GB', name: 'English', file: 'en-GB.json' },
+    ],
+    defaultLocale: 'sl',
+    strategy: 'prefix_except_default',
+    detectBrowserLanguage: false,
+    vueI18n: './i18n.config.ts',
+  },
   // Inter, served with the app rather than from Google; Font Awesome's CSS comes with it too, rather than being added
   // at runtime (plugins/fontawesome.ts), so icons don't show unstyled first
   css: ['@fontsource-variable/inter/opsz.css', '~/assets/main.scss', '@fortawesome/fontawesome-svg-core/styles.css'],
   app: {
     head: {
-      htmlAttrs: { lang: 'en' },
       link: [{ rel: 'icon', type: 'image/png', href: '/favicon.png' }],
       meta: [{ property: 'og:site_name', content: 'Ogrodje MetaOS' }],
     },
@@ -50,6 +66,19 @@ export default defineNuxtConfig({
     '/transcriptions': TEAM,
     '/search': TEAM,
     '/sessions/**': TEAM,
+    // The same pages in English
+    '/en': PUBLIC,
+    '/en/episodes': PUBLIC,
+    '/en/episodes/**': PUBLIC,
+    '/en/people': PUBLIC,
+    '/en/people/**': PUBLIC,
+    '/en/dogodki': PUBLIC,
+    '/en/usage': PUBLIC,
+    '/en/zasebnost': PUBLIC,
+    '/en/ideas': TEAM,
+    '/en/transcriptions': TEAM,
+    '/en/search': TEAM,
+    '/en/sessions/**': TEAM,
     '/sitemap.xml': DEV ? {} : { cache: { swr: true, maxAge: 3600 } },
     // keycloak-js asks Keycloak whether the user is signed in through a hidden iframe of silent-check-sso.html, so
     // MetaOS's pages may be framed - by MetaOS itself only

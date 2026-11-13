@@ -1,0 +1,97 @@
+{
+  "pages": {
+    "home": "Home",
+    "episodes": "Episodes",
+    "people": "People",
+    "person": "Person",
+    "events": "Events and conferences",
+    "search": "Search",
+    "ideas": "Ideas",
+    "transcriptions": "Transcriptions",
+    "episode": "Episode",
+    "session": "Recording session",
+    "usage": "API and MCP usage",
+    "privacy": "Privacy",
+    "notFound": "Page not found"
+  },
+  "nav": {
+    "main": "Main",
+    "home": "Home",
+    "episodes": "Episodes",
+    "ideas": "Ideas",
+    "people": "People",
+    "events": "Events",
+    "transcriptions": "Transcriptions"
+  },
+  "app": {
+    "skip": "Skip to content",
+    "logo": "Ogrodje MetaOS, home",
+    "checking": "Checking your sign-in…",
+    "unconfirmed": "Couldn't confirm your sign-in, as the sign-in service didn't answer, so you see what everyone sees.",
+    "usage": "API and MCP usage",
+    "privacy": "Privacy",
+    "elsewhere": "Ogrodje elsewhere",
+    "github": "MetaOS on GitHub",
+    "discord": "Ogrodje on Discord"
+  },
+  "language": {
+    "label": "Language",
+    "sl": "Slovenščina",
+    "en": "English"
+  },
+  "common": {
+    "tryAgain": "Try again",
+    "cancel": "Cancel",
+    "close": "Close",
+    "save": "Save",
+    "remove": "Remove",
+    "edit": "Edit",
+    "showAll": "Show all",
+    "showLess": "Show less",
+    "loading": "Loading…",
+    "signIn": "Sign in",
+    "signOut": "Sign out"
+  },
+  "episodes": {
+    "role": {
+      "HOST": "host",
+      "CO_HOST": "co-host",
+      "GUEST": "guest",
+      "PRODUCER": "producer",
+      "CONSULTANT": "consultant",
+      "DESIGNER": "designer",
+      "CANDIDATE": "candidate"
+    },
+    "status": {
+      "IDEA": "Idea",
+      "PLANNED": "Planned",
+      "SCHEDULED": "Scheduled",
+      "RECORDED": "Recorded",
+      "IN_PRODUCTION": "In production",
+      "READY": "Ready",
+      "EARLY_ACCESS": "Early access",
+      "PUBLISHED": "Published",
+      "ON_HOLD": "On hold",
+      "CANCELLED": "Cancelled"
+    },
+    "pictures": {
+      "titlesTested": "{n} titles tested",
+      "thumbnail": "thumbnail",
+      "noThumbnailOf": "no thumbnail {letter}",
+      "noThumbnail": "no thumbnail",
+      "cover": "cover",
+      "noCover": "no cover",
+      "web": "web picture",
+      "noWeb": "no web picture",
+      "artwork": "{n} artwork file | {n} artwork files",
+      "photos": "{n} photo | {n} photos"
+    }
+  },
+  "errors": {
+    "unreachable": "MetaOS can't be reached; check the connection",
+    "restarting": "MetaOS isn't answering ({status}); it may be restarting",
+    "status": "MetaOS answered {status}",
+    "staffOnly": "this is for Ogrodje's staff; an admin makes an account staff",
+    "graphql": "{detail}"
+  }
+}

@@ -5,30 +5,46 @@ import {faDiscord, faGithub} from '@fortawesome/free-brands-svg-icons'
 import {faCalendarDays, faClosedCaptioning, faHouse, faLightbulb, faMicrophone, faUserGroup} from '@fortawesome/free-solid-svg-icons'
 import {FontAwesomeIcon} from '@fortawesome/vue-fontawesome'
 import {NuxtPage} from '#components'
-import {useHead, useRuntimeConfig} from '#imports'
+import {useHead, useRuntimeConfig, useSwitchLocalePath} from '#imports'
 import {keepUnchanged, useLiveRefresh} from '@/changes'
+import LanguageSwitch from '@/components/LanguageSwitch.vue'
 import SearchPalette from '@/components/SearchPalette.vue'
 import UserMenu from '@/components/UserMenu.vue'
 import {graphql} from '@/graphql'
 import {useAuthStore} from '@/stores/auth'
 import {announcePage, fullTitle, pageName} from '@/title'
+import {useLocale} from '@/useLocale'
 
 const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
+const {t, dateLocale, path} = useLocale()
+const switchLocalePath = useSwitchLocalePath()
 
-// Every page: its title, by its route until it names itself (usePageTitle), and its one address, without the query, for
-// search engines and link previews; a page about one thing, e.g. an episode, adds what it is (seo.ts)
+// A route's title, its message key (router/index.ts), in the page's language
+const routeTitle = (key: string | undefined) => (key ? t(key) : undefined)
+
+// Every page: its title, by its route until it names itself (usePageTitle), its one address, without the query, for
+// search engines and link previews, and the same page in the other language (hreflang, OG-58); a page about one thing,
+// e.g. an episode, adds what it is (seo.ts). The address says the language, also the canonical one's.
 const {siteUrl} = useRuntimeConfig().public
 const address = computed(() => siteUrl + route.path)
+const alternate = (code: 'sl' | 'en') => siteUrl + switchLocalePath(code)
 useHead({
+  htmlAttrs: {lang: dateLocale},
   titleTemplate: fullTitle,
-  title: () => route.meta.title,
-  link: [{rel: 'canonical', href: address}],
+  title: () => routeTitle(route.meta.title),
+  link: [
+    {rel: 'canonical', href: address},
+    {rel: 'alternate', hreflang: 'sl-SI', href: () => alternate('sl')},
+    {rel: 'alternate', hreflang: 'en-GB', href: () => alternate('en')},
+    {rel: 'alternate', hreflang: 'x-default', href: () => alternate('sl')},
+  ],
   meta: [
-    {property: 'og:title', content: () => route.meta.title ?? 'Ogrodje MetaOS'},
+    {property: 'og:title', content: () => routeTitle(route.meta.title) ?? 'Ogrodje MetaOS'},
     {property: 'og:url', content: address},
     {property: 'og:type', content: 'website'},
+    {property: 'og:locale', content: () => dateLocale.value.replace('-', '_')},
   ],
 })
 
@@ -77,13 +93,13 @@ useLiveRefresh(() => (auth.authenticated ? loadMe(true) : undefined))
 // last time is checked, so they don't drop out and come back. A new section, e.g. Partners or Analytics, is another tab
 // here. API and MCP usage, how to connect to MetaOS, is in the footer.
 const pages = computed(() => [
-  {path: '/', title: 'Home', icon: faHouse},
-  {path: '/episodes', title: 'Episodes', icon: faMicrophone},
-  {path: '/ideas', title: 'Ideas', icon: faLightbulb, team: true},
-  {path: '/people', title: 'People', icon: faUserGroup},
-  {path: '/dogodki', title: 'Events', icon: faCalendarDays},
-  {path: '/transcriptions', title: 'Transcriptions', icon: faClosedCaptioning, team: true},
-].filter((page) => !page.team || auth.likelyTeam))
+  {path: '/', title: t('nav.home'), icon: faHouse},
+  {path: '/episodes', title: t('nav.episodes'), icon: faMicrophone},
+  {path: '/ideas', title: t('nav.ideas'), icon: faLightbulb, team: true},
+  {path: '/people', title: t('nav.people'), icon: faUserGroup},
+  {path: '/dogodki', title: t('nav.events'), icon: faCalendarDays},
+  {path: '/transcriptions', title: t('nav.transcriptions'), icon: faClosedCaptioning, team: true},
+].filter((page) => !page.team || auth.likelyTeam).map((page) => ({...page, to: path(page.path)})))
 
 // Going to another page, as a screen reader hears it: focus moves to the page, which starts there for the keyboard too,
 // and its name is said once it's known. Not on the first page, nor when only the query changes, e.g. while a search
@@ -92,15 +108,17 @@ const content = ref<HTMLElement>()
 
 router.afterEach((to, from, failure) => {
   if (failure || from.matched.length === 0 || to.path === from.path) return
-  announcePage(to.meta.title)
+  announcePage(routeTitle(to.meta.title))
   nextTick(() => {
     if (!content.value?.contains(document.activeElement)) content.value?.focus({preventScroll: true})
   })
 })
 
-// A page's tab is underlined on its own pages too: Episodes on an episode's, People on a person's
-function current(path: string) {
-  return path === '/' ? route.path === '/' : route.path === path || route.path.startsWith(`${path}/`)
+// A page's tab is underlined on its own pages too: Episodes on an episode's, People on a person's; by its address in the
+// page's language, e.g. /en/episodes
+function current(to: string) {
+  const home = path('/')
+  return to === home ? route.path === home : route.path === to || route.path.startsWith(`${to}/`)
 }
 
 // The sign-in check didn't get an answer: loading the page again asks again
@@ -110,16 +128,16 @@ function reload() {
 </script>
 
 <template>
-  <a class="skip" href="#page">Skip to content</a>
+  <a class="skip" href="#page">{{ t('app.skip') }}</a>
 
   <!-- One row: the logo, the pages as tabs, and at the right search and you; on narrower screens the tabs under them -->
   <header>
     <div class="bar">
-      <RouterLink class="logo" to="/" aria-label="Ogrodje MetaOS, home"><img src="/favicon.png" alt=""/></RouterLink>
+      <RouterLink class="logo" :to="path('/')" :aria-label="t('app.logo')"><img src="/favicon.png" alt=""/></RouterLink>
 
-      <nav class="pages" aria-label="Main">
-        <RouterLink v-for="page in pages" :key="page.path" :to="page.path" :class="{ current: current(page.path) }"
-                    :aria-current="current(page.path) ? 'page' : undefined">
+      <nav class="pages" :aria-label="t('nav.main')">
+        <RouterLink v-for="page in pages" :key="page.path" :to="page.to" :class="{ current: current(page.to) }"
+                    :aria-current="current(page.to) ? 'page' : undefined">
           <FontAwesomeIcon :icon="page.icon"/>{{ page.title }}
         </RouterLink>
       </nav>
@@ -134,10 +152,10 @@ function reload() {
 
   <!-- On the team last time, while Keycloak is slow to say so: that it's being asked, then that it didn't answer -->
   <div v-if="auth.checkingSlowly || auth.unconfirmed" class="notice" role="status">
-    <p v-if="auth.checkingSlowly">Checking your sign-in…</p>
+    <p v-if="auth.checkingSlowly">{{ t('app.checking') }}</p>
     <p v-else>
-      Couldn't confirm your sign-in, as the sign-in service didn't answer, so you see what everyone sees.
-      <button type="button" class="text-button" @click="reload">Try again</button>
+      {{ t('app.unconfirmed') }}
+      <button type="button" class="text-button" @click="reload">{{ t('common.tryAgain') }}</button>
     </p>
   </div>
 
@@ -153,13 +171,14 @@ function reload() {
       <span class="name">Ogrodje MetaOS</span>
       <!-- How to connect to MetaOS over MCP or GraphQL, the privacy policy, then where Ogrodje is elsewhere -->
       <div class="links">
-        <RouterLink class="page-link" to="/usage">API and MCP usage</RouterLink>
-        <RouterLink class="page-link" to="/zasebnost">Zasebnost / Privacy</RouterLink>
-        <nav class="elsewhere" aria-label="Ogrodje elsewhere">
-          <a class="icon-link" href="https://github.com/ogrodje/metaos" title="MetaOS on GitHub" aria-label="MetaOS on GitHub">
+        <RouterLink class="page-link" :to="path('/usage')">{{ t('app.usage') }}</RouterLink>
+        <RouterLink class="page-link" :to="path('/zasebnost')">{{ t('app.privacy') }}</RouterLink>
+        <LanguageSwitch/>
+        <nav class="elsewhere" :aria-label="t('app.elsewhere')">
+          <a class="icon-link" href="https://github.com/ogrodje/metaos" :title="t('app.github')" :aria-label="t('app.github')">
             <FontAwesomeIcon :icon="faGithub"/>
           </a>
-          <a class="icon-link" href="https://discord.gg/xV2Xc4VX9W" title="Ogrodje on Discord" aria-label="Ogrodje on Discord">
+          <a class="icon-link" href="https://discord.gg/xV2Xc4VX9W" :title="t('app.discord')" :aria-label="t('app.discord')">
             <FontAwesomeIcon :icon="faDiscord"/>
           </a>
         </nav>

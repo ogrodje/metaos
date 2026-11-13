@@ -4,7 +4,8 @@ import { episodePath } from '~/episodes'
 import { personPath } from '~/people'
 
 // Where search engines find the pages anyone may see: the lists, every released episode and everyone on them, as
-// MetaOS's API gives them to someone who isn't signed in. Kept for an hour (nuxt.config.ts).
+// MetaOS's API gives them to someone who isn't signed in, each in both languages, Slovenian at its address and English
+// under /en, which each names as the other's (hreflang, OG-58). Kept for an hour (nuxt.config.ts).
 
 interface Listed {
   episodes: { id: string, code: string | null, airedDate: string | null }[]
@@ -12,6 +13,12 @@ interface Listed {
 }
 
 const LISTS = ['/', '/episodes', '/people', '/dogodki', '/usage', '/zasebnost']
+
+// A page's address in each language: Slovenian's is its own, English's under /en
+const LANGUAGES = [
+  { hreflang: 'sl-SI', path: (path: string) => path },
+  { hreflang: 'en-GB', path: (path: string) => (path === '/' ? '/en' : `/en${path}`) },
+]
 
 // Addresses are ours, but an & would still break the XML
 function escape(text: string) {
@@ -37,9 +44,13 @@ export default defineEventHandler(async (event) => {
   setHeader(event, 'content-type', 'application/xml; charset=utf-8')
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
-    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-    ...urls.map(({ path, modified }) =>
-      `<url><loc>${escape(siteUrl + path)}</loc>${modified ? `<lastmod>${modified}</lastmod>` : ''}</url>`),
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">',
+    ...urls.flatMap(({ path, modified }) => {
+      const alternates = LANGUAGES.map((language) =>
+        `<xhtml:link rel="alternate" hreflang="${language.hreflang}" href="${escape(siteUrl + language.path(path))}"/>`).join('')
+      return LANGUAGES.map((language) =>
+        `<url><loc>${escape(siteUrl + language.path(path))}</loc>${modified ? `<lastmod>${modified}</lastmod>` : ''}${alternates}</url>`)
+    }),
     '</urlset>',
   ].join('\n')
 })

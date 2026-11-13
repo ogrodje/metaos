@@ -1,0 +1,97 @@
+{
+  "pages": {
+    "home": "Domov",
+    "episodes": "Epizode",
+    "people": "Ljudje",
+    "person": "Oseba",
+    "events": "Dogodki in konference",
+    "search": "Iskanje",
+    "ideas": "Ideje",
+    "transcriptions": "Prepisi",
+    "episode": "Epizoda",
+    "session": "Snemanje",
+    "usage": "Uporaba API-ja in MCP",
+    "privacy": "Zasebnost",
+    "notFound": "Strani ni"
+  },
+  "nav": {
+    "main": "Glavno",
+    "home": "Domov",
+    "episodes": "Epizode",
+    "ideas": "Ideje",
+    "people": "Ljudje",
+    "events": "Dogodki",
+    "transcriptions": "Prepisi"
+  },
+  "app": {
+    "skip": "Na vsebino",
+    "logo": "Ogrodje MetaOS, domov",
+    "checking": "Preverjamo vašo prijavo …",
+    "unconfirmed": "Vaše prijave ni bilo mogoče potrditi, ker storitev za prijavo ni odgovorila, zato vidite, kar vidijo vsi.",
+    "usage": "Uporaba API-ja in MCP",
+    "privacy": "Zasebnost",
+    "elsewhere": "Ogrodje drugje",
+    "github": "MetaOS na GitHubu",
+    "discord": "Ogrodje na Discordu"
+  },
+  "language": {
+    "label": "Jezik",
+    "sl": "Slovenščina",
+    "en": "English"
+  },
+  "common": {
+    "tryAgain": "Poskusite znova",
+    "cancel": "Prekliči",
+    "close": "Zapri",
+    "save": "Shrani",
+    "remove": "Odstrani",
+    "edit": "Uredi",
+    "showAll": "Pokaži vse",
+    "showLess": "Pokaži manj",
+    "loading": "Nalagamo …",
+    "signIn": "Prijava",
+    "signOut": "Odjava"
+  },
+  "episodes": {
+    "role": {
+      "HOST": "voditelj",
+      "CO_HOST": "sovoditelj",
+      "GUEST": "gost",
+      "PRODUCER": "producent",
+      "CONSULTANT": "svetovalec",
+      "DESIGNER": "oblikovalec",
+      "CANDIDATE": "kandidat"
+    },
+    "status": {
+      "IDEA": "Ideja",
+      "PLANNED": "Načrtovana",
+      "SCHEDULED": "Na urniku",
+      "RECORDED": "Posneta",
+      "IN_PRODUCTION": "V produkciji",
+      "READY": "Pripravljena",
+      "EARLY_ACCESS": "Zgodnji dostop",
+      "PUBLISHED": "Objavljena",
+      "ON_HOLD": "Na čakanju",
+      "CANCELLED": "Preklicana"
+    },
+    "pictures": {
+      "titlesTested": "naslovi v testu: {n}",
+      "thumbnail": "sličica",
+      "noThumbnailOf": "ni sličice {letter}",
+      "noThumbnail": "ni sličice",
+      "cover": "naslovnica",
+      "noCover": "ni naslovnice",
+      "web": "spletna slika",
+      "noWeb": "ni spletne slike",
+      "artwork": "{n} datoteka z grafiko | {n} datoteki z grafiko | {n} datoteke z grafiko | {n} datotek z grafiko",
+      "photos": "{n} fotografija | {n} fotografiji | {n} fotografije | {n} fotografij"
+    }
+  },
+  "errors": {
+    "unreachable": "MetaOS ni dosegljiv; preverite povezavo",
+    "restarting": "MetaOS ne odgovarja ({status}); morda se ponovno zaganja",
+    "status": "MetaOS je odgovoril s {status}",
+    "staffOnly": "to je za ekipo Ogrodja; v ekipo vas doda skrbnik",
+    "graphql": "{detail}"
+  }
+}
