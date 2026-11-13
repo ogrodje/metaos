@@ -284,8 +284,8 @@ just keycloak apply dev         # and after each change to infra/keycloak/realm;
   redirect URIs on `localhost`, `claude.ai`, `claude.com` and `chatgpt.com` only (`trusted_hosts`).
 - Members and staff: anyone who signs in with Discord or Google is a member (realm role `metaos-member`, one of the
   realm's default roles, so every user has it; `MEMBER_ROLE`), once Keycloak has verified their email: Google's it
-  trusts, Discord users follow a link Keycloak mails them (`verify_email`, with SMTP; Mailpit's in development,
-  http://localhost:8025) before the sign-in goes through. A member only signs in so far (`me`'s `member`). Staff, "approved
+  trusts, Discord users follow a link Keycloak mails them (`verify_email`, with SMTP: every Keycloak's, development's
+  too, goes through `iva@ogrodje.si`, OG-61) before the sign-in goes through. A member only signs in so far (`me`'s `member`). Staff, "approved
   users" in the code, are those an admin grants `metaos-user` (`APPROVED_ROLE`), which includes `metaos-member`: they
   get the team's data, changes and MCP (`me`'s `staff`; `auth.team` on the front-end, `auth.member` for members).
 - Tokens need the `mcp:tools` scope; it also puts the MCP URL into `aud`, which the server checks. They also need the

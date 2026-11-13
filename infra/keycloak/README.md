@@ -36,8 +36,8 @@ clients and scopes, its keys, and realm master.
 ## Members and staff
 
 Anyone who signs in with Google or Discord is a member, once their email is verified: Google's are, and Discord users
-follow the link Keycloak mails them (`verify_email`, which needs `smtp`; development's goes to compose's Mailpit,
-http://localhost:8025). Nobody approves members. To make one staff, in the admin console: Users, theirs, Role mapping:
+follow the link Keycloak mails them (`verify_email`, which needs `smtp`: development's and production's alike go through
+Ogrodje's mail server as `iva@ogrodje.si`, secretspec.toml's `KEYCLOAK_SMTP_*`, OG-61). Nobody approves members. To make one staff, in the admin console: Users, theirs, Role mapping:
 assign `metaos-user`. To take membership away, disable the user.
 
 "Email verified" is who they are in MetaOS: their account is linked to the person with that address (Accounts.kt), so a
