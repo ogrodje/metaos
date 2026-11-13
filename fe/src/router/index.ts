@@ -90,6 +90,14 @@ export const routes: RouteRecordRaw[] = [
     // Its own chunk, loaded when the page is first visited
     component: () => import('../views/UsageView.vue'),
   },
+  // The privacy policy, in Slovenian and English, at ogrodje.si's old address of it, which Google's sign-in consent
+  // screen links to
+  {
+    path: '/zasebnost',
+    name: 'privacy',
+    meta: { title: 'Zasebnost / Privacy' },
+    component: () => import('../views/PrivacyView.vue'),
+  },
   // Anything else: there's no such page, which says where to go instead
   {
     path: '/:path(.*)*',

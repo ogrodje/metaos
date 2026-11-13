@@ -83,7 +83,7 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
 - Its runtime config (`nuxt.config.ts`) says where users sign in (`NUXT_PUBLIC_ISSUER`, the Keycloak issuer) and as
   which client, where MCP clients connect (`NUXT_PUBLIC_MCP_URL`), the site's public address (`NUXT_PUBLIC_SITE_URL`)
   and where its server finds MetaOS (`NUXT_METAOS_URL`), so one build works in every environment.
-- The pages anyone may see (Home, Episodes, People, an episode's and a person's page, Usage) render on the server, as
+- The pages anyone may see (Home, Episodes, People, an episode's and a person's page, Events, Usage, Privacy) render on the server, as
   someone who isn't signed in sees them: the server asks the API without a token (`graphql.ts`), so every visitor gets
   the same page, which Cloudflare keeps for a minute and serves stale for ten while it's rendered again
   (`routeRules`'s `Cache-Control`; not in development). Not Nitro too: its swr serves what it kept however old, and
@@ -109,6 +109,11 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   `Person`). [`fe/server/routes`](fe/server/routes) has `/sitemap.xml`, with every page anyone may see, and
   `/robots.txt`, which keeps crawlers off the team's pages and the API; and `/healthz`, for the probes. A not-found
   page answers 404 (`NotFound.vue`).
+- The privacy policy, `/zasebnost` (ogrodje.si's address of it, which Google's sign-in consent screen links to;
+  `PrivacyView.vue`), is in Slovenian, then English, as the old site's was, linked from the footer. It says what MetaOS
+  does with people's data: who gets some of it (Cloudflare, Google, New Relic, Discord), what's kept in the browser,
+  members' accounts and how long they're kept. A change to any of that, e.g. a new service or a new thing in
+  `localStorage`, changes it too, in both languages, with the date it's effective from.
 - The API and MCP usage page (`/usage`) shows how to install the MCP server, and how each assistant gets its tools
   again once they've changed (`#refresh`, with their version), and lists its tools by hand, from
   [`fe/src/tools.ts`](fe/src/tools.ts), which has to follow every change to the tools (see above). It also shows how to
@@ -135,7 +140,7 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   People, Events and Transcriptions (the team's). A
   new section, e.g. Partners or Analytics, is another tab there. A tab is
   underlined on its own pages too, Episodes on an episode's. "API and MCP usage" isn't a tab: the footer links to it,
-  as do the sign-in prompts. The user menu is a button that shows and hides its links, not an ARIA menu.
+  as do the sign-in prompts, and to the privacy policy. The user menu is a button that shows and hides its links, not an ARIA menu.
 - Every page is named in the browser's tab and the server's page (`meta.title` in `fe/src/router/index.ts`, and
   `usePageTitle` from `fe/src/title.ts`, with `useHead`, for one about a thing, e.g. an episode's code and title) and
   has an `h1`, hidden where its tab names it. Going to another page moves focus to it and says its name in a live
