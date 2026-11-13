@@ -13,7 +13,6 @@ import { searchWords } from '@/search'
 import { usePageMeta } from '@/seo'
 import { useAuthStore } from '@/stores/auth'
 import { toolGroups, TOOLS_VERSION } from '@/tools'
-import { TIME_ZONE } from '@/i18n'
 import { type Client, CLIENTS, clientFrom, curlCommand, filterTools, movedFrom, tabAfter, toolCount, withTimeout } from '@/usage'
 import { useLocale } from '@/useLocale'
 
@@ -24,17 +23,13 @@ const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 const id = useId()
-const { t, dateLocale } = useLocale()
+const { t } = useLocale()
 
 // Where MCP clients connect, and the site, from the runtime config (nuxt.config.ts), so the server's page says them too
 const { mcpUrl, siteUrl } = useRuntimeConfig().public
 
-// Where MCP was before it moved to ogrodje.si (OG-59), and until when that answers, for those who added it there. In
-// Slovenian as 30. 11. 2026, as "do" wants the month's genitive (novembra), which Intl doesn't give
-const moved = movedFrom(mcpUrl)
-const movedUntil = computed(() => moved?.until.toLocaleDateString(dateLocale.value, {
-  day: 'numeric', month: dateLocale.value === 'sl-SI' ? 'numeric' : 'long', year: 'numeric', timeZone: TIME_ZONE,
-}))
+// Where MCP was before it moved to ogrodje.si (OG-59), for those who added it there
+const oldMcpUrl = movedFrom(mcpUrl)
 
 usePageMeta(() => ({ description: t('usage.description') }))
 
@@ -166,10 +161,9 @@ const matches = computed(() => {
         <h2 id="mcp">MCP</h2>
       </div>
       <p class="intro">{{ t('usage.mcp.intro') }}</p>
-      <I18nT v-if="moved" keypath="usage.mcp.moved" tag="p" class="moved" scope="global">
+      <I18nT v-if="oldMcpUrl" keypath="usage.mcp.moved" tag="p" class="moved" scope="global">
         <template #url><code>{{ mcpUrl }}</code></template>
-        <template #old><code>{{ moved.from }}</code></template>
-        <template #date>{{ movedUntil }}</template>
+        <template #old><code>{{ oldMcpUrl }}</code></template>
       </I18nT>
 
       <div class="tabs" role="tablist" :aria-label="t('usage.mcp.assistant')">

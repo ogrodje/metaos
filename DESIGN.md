@@ -152,8 +152,8 @@ of the page; the interface around them is neutral so they can.
 
 It's dense the way a desk is: lists of rows, a side panel of facts, counts beside every heading, nothing that only
 decorates. Space separates sections (56 px) more than lines do; inside a section, rows sit close under a hairline each.
-The signed-out side isn't a listener's site (ogrodje.si is): it leads with the latest releases and offers sign-in in a
-line.
+The signed-out side is ogrodje.si, where listeners come, and still the desk, with the team's parts left out: it leads
+with the latest releases and offers sign-in in a line.
 
 **Key Characteristics:**
 - A grey ramp and one accent; colour comes from the thumbnails, not the chrome.

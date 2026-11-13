@@ -22,5 +22,21 @@ resource "cloudflare_ruleset" "redirects" {
       }
       enabled = true
     },
+    {
+      # metaos.ogrodje.si, MetaOS's address until OG-59, to ogrodje.si, all of it, the same path and query, for good
+      # (OG-60): 308, not 301, so a POST stays a POST, e.g. an MCP client's to /mcp or a script's to /graphql
+      ref         = "metaos-to-apex"
+      description = "metaos: to ogrodje.si"
+      expression  = "(http.host eq \"metaos.ogrodje.si\")"
+      action      = "redirect"
+      action_parameters = {
+        from_value = {
+          status_code           = 308
+          target_url            = { expression = "concat(\"https://ogrodje.si\", http.request.uri.path)" }
+          preserve_query_string = true
+        }
+      }
+      enabled = true
+    },
   ]
 }

@@ -1207,7 +1207,7 @@
       "askDetails": "For example: “Which episodes are in production?” or “Who's on the next recording day?” The assistant picks the tools it needs from the ones below and, unless you've allowed them, asks you before it uses one.",
       "assistant": "Assistant",
       "intro": "MetaOS is an MCP server. Connect an AI assistant such as Claude, Codex or ChatGPT to it, and the assistant can look up and manage Ogrodje's episodes, people, recording sessions and shows, its Google Docs and its files in Koofr, as you.",
-      "moved": "MetaOS has moved to {url}. If you added it at {old}, remove it from your assistant and add it again as below: the old address works until {date}.",
+      "moved": "MetaOS has moved to {url}. If you added it at {old}, remove it from your assistant and add it again as below.",
       "otherClients": "Other MCP clients that sign in with OAuth, such as MCP Inspector, connect to {url}.",
       "signIn": "Sign in",
       "team": "Be on the staff",

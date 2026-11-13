@@ -362,8 +362,8 @@ just keycloak apply dev         # and after each change to infra/keycloak/realm;
   redirect URIs. `KEYCLOAK_ISSUER_URI` points the app at another realm. While MetaOS moves to another host, it's at
   both: the Ingresses have both hosts, Keycloak's `metaos_other_urls` puts the other's `/mcp` and `/graphql` into
   tokens too and lets its front-end sign in, the app takes them as well (`METAOS_OTHER_AUDIENCES`, in `public-urls`),
-  and the private bucket's CORS has both origins. So it is now, at `ogrodje.si` and, till OG-60 redirects it, at
-  `metaos.ogrodje.si`, where it was until OG-59 (DEPLOY.md, ogrodje.si).
+  and the private bucket's CORS has both origins. So it was from `metaos.ogrodje.si` to `ogrodje.si` (OG-59), which
+  Cloudflare now redirects to it (OG-60; DEPLOY.md, ogrodje.si); nothing's at another host now.
 - A change to the realm is a change to `infra/keycloak/realm`, planned and applied, never one made in the admin
   console, which the next apply would undo; only users and who has `metaos-user` are the console's. To start over in
   development (wipes all Keycloak data, including registered MCP clients):
@@ -1051,7 +1051,7 @@ takes nothing until the next, and one full user ([`NewRelic.kt`](src/main/kotlin
 ### Deployment
 
 Production runs on the ogrodje-one Kubernetes cluster, namespace `metaos-prod`: the app at `https://ogrodje.si`
-(which www redirects to; `https://metaos.ogrodje.si` till OG-60) and its Keycloak at `https://metaos-auth.ogrodje.si`. Pushes to `master` deploy through
+(which www and `metaos.ogrodje.si`, its address until OG-59, redirect to) and its Keycloak at `https://metaos-auth.ogrodje.si`. Pushes to `master` deploy through
 [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml); [`k8s/README.md`](k8s/README.md) has the manifests,
 the one-time setup and the `just` recipes for deploying by hand. [`DEPLOY.md`](DEPLOY.md) explains the setup, the
 decisions behind it and what is left to do.

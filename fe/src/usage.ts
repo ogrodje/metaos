@@ -82,13 +82,13 @@ export function withTimeout<T>(promise: Promise<T>, ms = 3000): Promise<T> {
 }
 
 /**
- * MCP moved from metaos.ogrodje.si to ogrodje.si (OG-59). Assistants keep the address they were given, and the old one
- * answers until [until], when it goes (OG-60), so the page asks whoever added it there to add it again
+ * MCP moved from metaos.ogrodje.si to ogrodje.si (OG-59), and the old address redirects (OG-60). Assistants keep the
+ * address they were given, and sign in again for the one they find, so the page asks whoever added it there to add it
+ * again
  */
-export const MCP_MOVED = { from: 'https://metaos.ogrodje.si/mcp', to: 'https://ogrodje.si/mcp', until: '2026-11-30' }
+export const MCP_MOVED = { from: 'https://metaos.ogrodje.si/mcp', to: 'https://ogrodje.si/mcp' }
 
 /** The old address, when [mcpUrl] is where MCP moved to, for the page to say; else none, e.g. in development */
-export function movedFrom(mcpUrl: string): { from: string, until: Date } | undefined {
-  if (mcpUrl !== MCP_MOVED.to) return undefined
-  return { from: MCP_MOVED.from, until: new Date(`${MCP_MOVED.until}T12:00:00Z`) }
+export function movedFrom(mcpUrl: string): string | undefined {
+  return mcpUrl === MCP_MOVED.to ? MCP_MOVED.from : undefined
 }

@@ -123,9 +123,7 @@ describe('curlCommand', () => {
 
 describe('movedFrom', () => {
   it('names the old address where MCP moved to', () => {
-    expect(movedFrom('https://ogrodje.si/mcp')).toEqual({
-      from: 'https://metaos.ogrodje.si/mcp', until: new Date('2026-11-30T12:00:00Z'),
-    })
+    expect(movedFrom('https://ogrodje.si/mcp')).toBe('https://metaos.ogrodje.si/mcp')
   })
 
   it('says nothing elsewhere, e.g. in development', () => {

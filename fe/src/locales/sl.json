@@ -1207,7 +1207,7 @@
       "askDetails": "Na primer: »Katere epizode so v produkciji?« ali »Kdo snema na naslednjem snemanju?« Asistent izmed spodnjih orodij izbere tista, ki jih potrebuje, in vas, razen če ste jih že dovolili, vpraša, preden katero uporabi.",
       "assistant": "Asistent",
       "intro": "MetaOS je strežnik MCP. Povežite z njim asistenta AI, na primer Claude, Codex ali ChatGPT, in asistent bo lahko v vašem imenu iskal in urejal epizode, ljudi, snemanja in oddaje Ogrodja ter njegove dokumente Google in datoteke v Koofru.",
-      "moved": "MetaOS je zdaj na {url}. Če ste ga dodali na {old}, ga v asistentu odstranite in dodajte znova, kot je opisano spodaj: stari naslov deluje do {date}.",
+      "moved": "MetaOS je zdaj na {url}. Če ste ga dodali na {old}, ga v asistentu odstranite in dodajte znova, kot je opisano spodaj.",
       "otherClients": "Drugi odjemalci MCP, ki se prijavljajo z OAuth, na primer MCP Inspector, se povežejo na {url}.",
       "signIn": "Prijavite se",
       "team": "Postanite del ekipe",
