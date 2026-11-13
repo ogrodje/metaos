@@ -11,6 +11,7 @@ locals {
       consent_screen      = true
       mapper              = "metaos-mcp-audience"
       audience            = var.metaos_mcp_url
+      path                = "/mcp"
       role                = keycloak_role.metaos_user.id
     }
     "metaos:read" = {
@@ -19,6 +20,7 @@ locals {
       consent_screen      = false
       mapper              = "metaos-api-audience"
       audience            = var.metaos_api_url
+      path                = "/graphql"
       role                = keycloak_role.metaos_user.id
     }
     "metaos:account" = {
@@ -27,6 +29,7 @@ locals {
       consent_screen      = false
       mapper              = "metaos-api-audience"
       audience            = var.metaos_api_url
+      path                = "/graphql"
       role                = keycloak_role.metaos_member.id
     }
     "metaos:write" = {
@@ -35,6 +38,7 @@ locals {
       consent_screen      = false
       mapper              = "metaos-api-audience"
       audience            = var.metaos_api_url
+      path                = "/graphql"
       role                = keycloak_role.metaos_user.id
     }
   }
@@ -56,6 +60,26 @@ resource "keycloak_openid_audience_protocol_mapper" "metaos" {
   realm_id                   = keycloak_realm.metaos.id
   client_scope_id            = keycloak_openid_client_scope.metaos[each.key].id
   name                       = each.value.mapper
+  included_custom_audience   = each.value.audience
+  add_to_access_token        = true
+  add_to_token_introspection = true
+  add_to_id_token            = false
+}
+
+# While MetaOS moves to another host, its URLs at the other are an audience too (metaos_other_urls), so a token is good
+# at both, whichever the client asked for, and MetaOS takes both (METAOS_OTHER_AUDIENCES, k8s/base/kustomization.yaml)
+resource "keycloak_openid_audience_protocol_mapper" "metaos_other" {
+  for_each = {
+    for pair in setproduct(keys(local.scopes), var.metaos_other_urls) : "${pair[0]} ${pair[1]}" => {
+      scope    = pair[0]
+      audience = "${pair[1]}${local.scopes[pair[0]].path}"
+      host     = replace(replace(pair[1], "https://", ""), "http://", "")
+    }
+  }
+
+  realm_id                   = keycloak_realm.metaos.id
+  client_scope_id            = keycloak_openid_client_scope.metaos[each.value.scope].id
+  name                       = "${local.scopes[each.value.scope].mapper}-${each.value.host}"
   included_custom_audience   = each.value.audience
   add_to_access_token        = true
   add_to_token_introspection = true

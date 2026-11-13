@@ -29,3 +29,23 @@ resource "cloudflare_dns_record" "media" {
   proxied = true
   ttl     = 1
 }
+
+# ogrodje.si itself, and www: Netlify's old site, until MetaOS takes them over (OG-59). Proxied already, so Cloudflare
+# holds their certificates, as for MetaOS's names
+resource "cloudflare_dns_record" "apex" {
+  zone_id = local.zone_id
+  name    = "ogrodje.si"
+  type    = "A"
+  content = "75.2.60.5" # Netlify's load balancer
+  proxied = true
+  ttl     = 1
+}
+
+resource "cloudflare_dns_record" "www" {
+  zone_id = local.zone_id
+  name    = "www.ogrodje.si"
+  type    = "CNAME"
+  content = "ogrodje.netlify.app"
+  proxied = true
+  ttl     = 1
+}

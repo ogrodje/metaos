@@ -188,6 +188,18 @@ spec:
           # The probes, public as before: they only say UP or DOWN
           - { path: /livez, pathType: Exact, backend: { service: { name: metaos, port: { number: 80 } } } }
           - { path: /readyz, pathType: Exact, backend: { service: { name: metaos, port: { number: 80 } } } }
+    # The same on ogrodje.si, where MetaOS moves (OG-59)
+    - host: ogrodje.si
+      http:
+        paths:
+          - { path: /graphql, pathType: Prefix, backend: { service: { name: metaos, port: { number: 80 } } } }
+          - { path: /events, pathType: Prefix, backend: { service: { name: metaos, port: { number: 80 } } } }
+          - { path: /mcp, pathType: Prefix, backend: { service: { name: metaos, port: { number: 80 } } } }
+          - { path: /.well-known, pathType: Prefix, backend: { service: { name: metaos, port: { number: 80 } } } }
+          - { path: /koofr, pathType: Prefix, backend: { service: { name: metaos, port: { number: 80 } } } }
+          - { path: /dropbox, pathType: Prefix, backend: { service: { name: metaos, port: { number: 80 } } } }
+          - { path: /livez, pathType: Exact, backend: { service: { name: metaos, port: { number: 80 } } } }
+          - { path: /readyz, pathType: Exact, backend: { service: { name: metaos, port: { number: 80 } } } }
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor

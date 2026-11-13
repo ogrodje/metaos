@@ -359,7 +359,10 @@ just keycloak apply dev         # and after each change to infra/keycloak/realm;
   `http://localhost:8080/graphql`) must be the public URLs of `/mcp` and `/graphql`; they are used by both Keycloak
   (token audience) and the app (audience check); Keycloak has them from `infra/keycloak/<env>/main.tf`, which has to
   change with them. `METAOS_UI_URL` (default `http://localhost:5173`) is where the front-end is, for `metaos-ui`'s
-  redirect URIs. `KEYCLOAK_ISSUER_URI` points the app at another realm.
+  redirect URIs. `KEYCLOAK_ISSUER_URI` points the app at another realm. While MetaOS moves to another host (OG-59:
+  `metaos.ogrodje.si` to `ogrodje.si`), it's at both: the Ingresses have both hosts, Keycloak's `metaos_other_urls`
+  puts the other's `/mcp` and `/graphql` into tokens too and lets its front-end sign in, the app takes them as well
+  (`METAOS_OTHER_AUDIENCES`, in `public-urls`), and the private bucket's CORS has both origins.
 - A change to the realm is a change to `infra/keycloak/realm`, planned and applied, never one made in the admin
   console, which the next apply would undo; only users and who has `metaos-user` are the console's. To start over in
   development (wipes all Keycloak data, including registered MCP clients):
