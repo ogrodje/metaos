@@ -19,12 +19,6 @@ variable "metaos_ui_other_urls" {
   default     = []
 }
 
-variable "metaos_other_urls" {
-  description = "Where else MetaOS is while it moves to another host, e.g. https://metaos.ogrodje.si: its /mcp and /graphql there are audiences too (scopes.tf), and its front-end there signs in as metaos-ui"
-  type        = list(string)
-  default     = []
-}
-
 variable "trusted_hosts" {
   description = "Hosts MCP clients may register themselves for (DCR), by their redirect URIs"
   type        = list(string)

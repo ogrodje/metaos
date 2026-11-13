@@ -275,11 +275,11 @@ Terraform's applies lands first:
      policy `https://ogrodje.si/zasebnost`, and the app is published, not in Testing, so members can sign in with
      Google.
 
-`metaos.ogrodje.si` kept working, whole, until it redirected to `ogrodje.si` the same day (OG-60, sooner than the 14
-days planned, as the team was told to reconnect): all of it, path and query kept, with 308, so a POST to `/mcp` or
-`/graphql` stays one. The second host went from Keycloak, the app, the Ingresses, CORS (`just infra gcp apply`) and the
-cache rule. MCP connectors added at `metaos.ogrodje.si` are added again at `https://ogrodje.si/mcp`, as the Usage page
-says (`MCP_MOVED` in `fe/src/usage.ts`).
+`metaos.ogrodje.si` kept working, whole, the same day only: then everything on it redirected to `ogrodje.si`'s home
+page, whatever its path, `/mcp` and `/graphql` too (OG-60). Nothing's kept for the old address: the second host went
+from Keycloak, the app, the Ingresses, CORS (`just infra gcp apply`) and the cache rule, and so did what let MetaOS be
+at two hosts. MCP connectors added at `metaos.ogrodje.si` are added again at `https://ogrodje.si/mcp`; the team was
+told so.
 
 **Rolling back** to Netlify would be pointing DNS at it again (the apex's A record `75.2.60.5`, www's CNAME
 `ogrodje.netlify.app`, which Netlify redirects itself), with MetaOS back at `metaos.ogrodje.si`: its redirect out,
@@ -289,7 +289,7 @@ domain.
 ## Next steps
 
 1. [x] **DNS.** Terraform's (`infra/cloudflare/dns.tf`): `ogrodje.si` and `metaos-auth.ogrodje.si` on the node,
-   `ogrodje-one.ogrodje.si`, proxied; `www` and `metaos.ogrodje.si` redirect to `ogrodje.si`.
+   `ogrodje-one.ogrodje.si`, proxied; `www` redirects to `ogrodje.si`, and `metaos.ogrodje.si` to its home page.
 2. [ ] **Secrets.** Add `PROD_METAOS_DB_PASSWORD`, `PROD_KEYCLOAK_DB_PASSWORD`, `PROD_KEYCLOAK_ADMIN_PASSWORD`
    (`openssl rand -hex 24` each), `DOCKER_REGISTRY_USERNAME` and
    `DOCKER_REGISTRY_PASSWORD` to `.envrc`, then run `./k8s/set_secrets.sh`.

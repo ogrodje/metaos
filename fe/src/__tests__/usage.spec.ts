@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { TOOL_GROUPS, type ToolGroup, toolGroups } from '@/tools'
 import { en, type Messages, sl, t, tSl } from './i18n'
-import { clientFrom, curlCommand, filterTools, movedFrom, tabAfter, toolCount, withTimeout } from '@/usage'
+import { clientFrom, curlCommand, filterTools, tabAfter, toolCount, withTimeout } from '@/usage'
 
 const GROUPS: ToolGroup[] = [
   {
@@ -118,17 +118,6 @@ describe('curlCommand', () => {
     expect(oneLine(command)).toBe(`curl -s ${URL} -H 'Content-Type: application/json' -H "Authorization: Bearer $TOKEN" `
       + `-d '{"query":"mutation ($ref: String!, $body: String!) { commentOnEpisode(ref: $ref, body: $body) { id createdAt } }",`
       + `"variables":{"ref":"S05E08","body":"Hello from the API"}}'`)
-  })
-})
-
-describe('movedFrom', () => {
-  it('names the old address where MCP moved to', () => {
-    expect(movedFrom('https://ogrodje.si/mcp')).toBe('https://metaos.ogrodje.si/mcp')
-  })
-
-  it('says nothing elsewhere, e.g. in development', () => {
-    expect(movedFrom('http://localhost:8080/mcp')).toBeUndefined()
-    expect(movedFrom('https://metaos.ogrodje.si/mcp')).toBeUndefined()
   })
 })
 

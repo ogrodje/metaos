@@ -1,5 +1,5 @@
 locals {
-  ui_urls = concat([var.metaos_ui_url], var.metaos_ui_other_urls, var.metaos_other_urls)
+  ui_urls = concat([var.metaos_ui_url], var.metaos_ui_other_urls)
 }
 
 # The front-end (fe/), signing users in with keycloak-js. Public, as a browser can't keep a secret, so with PKCE.

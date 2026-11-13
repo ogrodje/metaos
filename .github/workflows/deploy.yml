@@ -286,10 +286,10 @@ jobs:
             echo "::error::unexpected protected resource metadata: $meta"
             exit 1
           fi
-          # MetaOS's old address is Cloudflare's redirect to ogrodje.si, all of it, a POST staying a POST (OG-60)
+          # MetaOS's old address is Cloudflare's redirect to ogrodje.si's home page, whatever's asked for (OG-60)
           location=$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' --retry 6 --retry-delay 5 \
             'https://metaos.ogrodje.si/mcp?x=1')
-          if [ "$location" != '308 https://ogrodje.si/mcp?x=1' ]; then
+          if [ "$location" != '301 https://ogrodje.si/' ]; then
             echo "::error::metaos.ogrodje.si answers '$location'"
             exit 1
           fi

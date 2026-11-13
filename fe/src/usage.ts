@@ -80,15 +80,3 @@ export function withTimeout<T>(promise: Promise<T>, ms = 3000): Promise<T> {
   })
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
 }
-
-/**
- * MCP moved from metaos.ogrodje.si to ogrodje.si (OG-59), and the old address redirects (OG-60). Assistants keep the
- * address they were given, and sign in again for the one they find, so the page asks whoever added it there to add it
- * again
- */
-export const MCP_MOVED = { from: 'https://metaos.ogrodje.si/mcp', to: 'https://ogrodje.si/mcp' }
-
-/** The old address, when [mcpUrl] is where MCP moved to, for the page to say; else none, e.g. in development */
-export function movedFrom(mcpUrl: string): string | undefined {
-  return mcpUrl === MCP_MOVED.to ? MCP_MOVED.from : undefined
-}

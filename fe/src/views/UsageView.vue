@@ -13,7 +13,7 @@ import { searchWords } from '@/search'
 import { usePageMeta } from '@/seo'
 import { useAuthStore } from '@/stores/auth'
 import { toolGroups, TOOLS_VERSION } from '@/tools'
-import { type Client, CLIENTS, clientFrom, curlCommand, filterTools, movedFrom, tabAfter, toolCount, withTimeout } from '@/usage'
+import { type Client, CLIENTS, clientFrom, curlCommand, filterTools, tabAfter, toolCount, withTimeout } from '@/usage'
 import { useLocale } from '@/useLocale'
 
 // API and MCP usage: the two ways into MetaOS, MCP for AI assistants and GraphQL for scripts and apps, and the tools
@@ -27,9 +27,6 @@ const { t } = useLocale()
 
 // Where MCP clients connect, and the site, from the runtime config (nuxt.config.ts), so the server's page says them too
 const { mcpUrl, siteUrl } = useRuntimeConfig().public
-
-// Where MCP was before it moved to ogrodje.si (OG-59), for those who added it there
-const oldMcpUrl = movedFrom(mcpUrl)
 
 usePageMeta(() => ({ description: t('usage.description') }))
 
@@ -161,10 +158,6 @@ const matches = computed(() => {
         <h2 id="mcp">MCP</h2>
       </div>
       <p class="intro">{{ t('usage.mcp.intro') }}</p>
-      <I18nT v-if="oldMcpUrl" keypath="usage.mcp.moved" tag="p" class="moved" scope="global">
-        <template #url><code>{{ mcpUrl }}</code></template>
-        <template #old><code>{{ oldMcpUrl }}</code></template>
-      </I18nT>
 
       <div class="tabs" role="tablist" :aria-label="t('usage.mcp.assistant')">
         <button v-for="(c, index) in CLIENTS" :id="tabId(c.id)" :key="c.id" type="button" role="tab"
@@ -449,18 +442,6 @@ section, .step {
   font-size: var(--text-body);
   line-height: 22px;
   color: var(--secondary);
-}
-
-// That MCP moved (OG-59): a line to act on, so it stands apart from the intro, quietly
-.moved {
-  max-width: 68ch;
-  margin-bottom: 16px;
-  padding: 10px 12px;
-  border: 1px solid var(--hairline);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  font-size: var(--text-body);
-  line-height: 22px;
 }
 
 // The page's title, and the two ways in under it
