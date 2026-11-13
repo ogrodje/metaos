@@ -107,7 +107,8 @@ architecture:
       --screenshot="$PWD/architecture.png" "file://$PWD/architecture.svg"
 
 # Keycloak's realm metaos through Terraform (infra/keycloak/README.md): `just keycloak plan prod`, `just keycloak apply
-# dev`, and `just keycloak adopt dev` for a realm its state doesn't have yet, e.g. a new compose Keycloak's. Signs in to
+# dev`, `just keycloak adopt dev` for a realm its state doesn't have yet, e.g. a new compose Keycloak's, and `just
+# keycloak smtp-password prod` to send the SMTP password when a plain apply wouldn't (smtp-password.sh). Signs in to
 # production as KEYCLOAK_ADMIN_USERNAME with KEYCLOAK_ADMIN_PASSWORD (.envrc), and to compose.yml's as admin / admin.
 keycloak command env *ARGS:
     #!/usr/bin/env bash
@@ -126,6 +127,7 @@ keycloak command env *ARGS:
     cd infra/keycloak/{{env}}
     terraform init -input=false >/dev/null
     if [ "{{command}}" = adopt ]; then exec ../import.sh {{env}}; fi
+    if [ "{{command}}" = smtp-password ]; then exec ../smtp-password.sh {{env}}; fi
     terraform "{{command}}" {{ARGS}}
 
 # A stack in infra/ with no environments of its own (infra/README.md): `just infra newrelic plan`, `just infra gcp
