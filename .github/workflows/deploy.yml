@@ -6,10 +6,11 @@ name: Build and Deploy
 # Tailscale as tag:ci. Started by hand on another branch, it builds and pushes that branch's images (not as latest) and
 # deploys nothing.
 #
-# Repo secrets:
+# Secrets: the repository's only one is OP_SERVICE_ACCOUNT_TOKEN, 1Password service account "MetaOS CI"'s, with which
+# each job loads what it needs from 1Password (.github/actions/secrets, secretspec.toml's scope `registry`):
 #   TS_OAUTH_CLIENT_ID / TS_OAUTH_SECRET                Tailscale OAuth client for tag:ci
 #   DOCKER_REGISTRY_USERNAME / DOCKER_REGISTRY_PASSWORD  the registry
-#   KUBECONFIG                                           base64 of the Tailscale operator kubeconfig (k8s/README.md)
+# The kubeconfig is the Tailscale operator's, which has no credential (tag:ci's identity is), so the deploy writes it.
 
 on:
   push:
@@ -84,20 +85,25 @@ jobs:
           # `git describe` needs the tags, which a shallow clone omits
           fetch-depth: 0
 
+      - uses: ./.github/actions/secrets
+        with:
+          scope: registry
+          token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+
       # Before the build, which an image of the same sources spares
       - name: Connect to Tailscale
         uses: tailscale/github-action@v4
         with:
           ping: registry.folk-decibel.ts.net
-          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          oauth-client-id: ${{ env.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ env.TS_OAUTH_SECRET }}
           tags: tag:ci
 
       - uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
-          password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+          username: ${{ env.DOCKER_REGISTRY_USERNAME }}
+          password: ${{ env.DOCKER_REGISTRY_PASSWORD }}
 
       # The image's key: git's hashes of its sources and the digest its base image has now, so a new base (e.g. a fix
       # in distroless) builds it again too. An image built before is tagged src-<key>
@@ -194,20 +200,25 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - uses: ./.github/actions/secrets
+        with:
+          scope: registry
+          token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+
       - name: Connect to Tailscale
         uses: tailscale/github-action@v4
         with:
           ping: tailscale-operator.folk-decibel.ts.net,registry.folk-decibel.ts.net
-          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          oauth-client-id: ${{ env.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ env.TS_OAUTH_SECRET }}
           tags: tag:ci
 
       # To look up what the tag is
       - uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
-          password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+          username: ${{ env.DOCKER_REGISTRY_USERNAME }}
+          password: ${{ env.DOCKER_REGISTRY_PASSWORD }}
 
       - uses: azure/setup-kubectl@v5
 
@@ -221,10 +232,16 @@ jobs:
           sudo mv /tmp/kustomize /usr/local/bin/
           kustomize version
 
+      # The Tailscale operator's API proxy, as `tailscale configure kubeconfig tailscale-operator` writes it: it knows the
+      # runner by its tailnet identity (tag:ci), so the kubeconfig holds no credential, only a placeholder token
       - name: Configure kubectl
         run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+          kubectl config set-cluster tailscale-operator.folk-decibel.ts.net \
+            --server=https://tailscale-operator.folk-decibel.ts.net
+          kubectl config set-credentials tailscale-auth --token=unused
+          kubectl config set-context tailscale-operator.folk-decibel.ts.net \
+            --cluster=tailscale-operator.folk-decibel.ts.net --user=tailscale-auth
+          kubectl config use-context tailscale-operator.folk-decibel.ts.net
           chmod 600 ~/.kube/config
 
       # By digest, not tag: every commit gets a new tag, but an image that didn't change keeps its digest, so its

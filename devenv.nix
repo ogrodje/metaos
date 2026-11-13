@@ -54,13 +54,35 @@ in {
     # Terraform, for infra/; unfree (BUSL), which `unstable` allows. tflint checks it (infra/.tflint.hcl, just tflint)
     unstable.terraform
     unstable.tflint
+    # The secrets (secretspec.toml): secretspec reads them from 1Password through its CLI, `op`, which signs in with the
+    # 1Password app (Settings > Developer > Integrate with 1Password CLI)
+    unstable.secretspec
+    unstable._1password-cli
   ];
 
   env = {
     METAOS_ENV = "development";
     TESTCONTAINERS_REUSE_ENABLE = "true";
+    # secretspec.toml's one profile, also for `secretspec` run by hand in the shell
+    SECRETSPEC_PROFILE = "default";
   };
 
+  # The secrets come from 1Password as the shell starts, not through devenv.yaml's secretspec integration: that one
+  # hands them to Nix's evaluation, and `env` would then put them in /nix/store, which every user of the machine can
+  # read. The first call after a while sometimes fails at once, as 1Password's CLI session has lapsed, so it's tried
+  # twice. Without 1Password (locked, offline), the shell starts without them and says so: `direnv reload` tries again.
   enterShell = ''
+    # METAOS_SECRETS_SCOPE=dev on a machine that may only read Ogrodje-Dev, e.g. nuc8 (secretspec.toml's [scopes.dev])
+    _secretspec_load() {
+      secretspec export --profile default --format shell --reason "devenv shell" \
+        ''${METAOS_SECRETS_SCOPE:+--scope "$METAOS_SECRETS_SCOPE"} 2>/dev/null
+    }
+    if _secrets=$(_secretspec_load) || { sleep 1; _secrets=$(_secretspec_load); }; then
+      eval "$_secrets"
+    else
+      echo "secretspec: couldn't read MetaOS's secrets from 1Password (is the app unlocked?); see secretspec check" >&2
+    fi
+    unset _secrets
+    unset -f _secretspec_load
   '';
 }

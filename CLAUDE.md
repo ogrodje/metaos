@@ -7,6 +7,12 @@ MetaOS was designed for scaling, optimising and helping grow the [Ogrodje] organ
 ## Development && Infrastructure notes
 
 - This project uses Nix and devenv for dependency isolation and reproducability.
+- **Secrets are in 1Password, declared in [`secretspec.toml`](secretspec.toml).** Its names, never their values:
+  vault `Ogrodje-Prod` has what production (`k8s/set_secrets.sh`), CI and Terraform need, `Ogrodje-Dev` what only the
+  local setup does. devenv.nix's `enterShell` loads them as the shell starts, at runtime, so they never reach Nix's
+  evaluation or `/nix/store`. `.envrc` (not committed) keeps only what isn't secret, e.g. bucket names and URLs; where
+  these notes say a secret is "in `.envrc`", it's in secretspec.toml now. A new secret: declare it there, in the vault
+  its users can read, then `secretspec set NAME`.
 - The project is written in Kotlin and uses Spring Boot at its core.
 - Services and infrastructure is deployed via Kubernetes
 - **MCP tools and the Usage page stay in sync.** Whenever an MCP tool (`@McpTool`) is added, renamed, removed or
