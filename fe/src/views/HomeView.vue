@@ -10,6 +10,7 @@ import LoadingRows from '@/components/LoadingRows.vue'
 import RecentActivity from '@/components/RecentActivity.vue'
 import SessionCard from '@/components/SessionCard.vue'
 import SignInPrompt from '@/components/SignInPrompt.vue'
+import SupporterLogos from '@/components/SupporterLogos.vue'
 import StageBar from '@/components/StageBar.vue'
 import {
   bySession, type Change, CHANGE_FIELDS, daysFrom, type Episode, EPISODE_FIELDS, episodePath, type EpisodeStatus,
@@ -243,6 +244,9 @@ usePageMeta(() => ({
         {{ t('home.teamPrompt') }}
       </SignInPrompt>
     </template>
+
+    <!-- Who supports Ogrodje, for everyone, large, as the other pages have them in their footer -->
+    <SupporterLogos large class="supporters"/>
   </main>
 </template>
 
@@ -311,6 +315,10 @@ usePageMeta(() => ({
   .code {
     font-family: var(--font-mono);
   }
+}
+
+.supporters {
+  margin-top: 64px;
 }
 
 .all-clear {

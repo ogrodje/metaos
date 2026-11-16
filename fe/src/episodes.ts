@@ -136,13 +136,13 @@ export interface FieldChange {
 /** What a change is to (ChangeKind in the schema) */
 export type ChangeKind =
   | 'EPISODE' | 'SESSION' | 'PERSON' | 'DOCUMENT' | 'KOOFR_FOLDER' | 'DROPBOX_FOLDER' | 'COMMENT' | 'ACCOUNT' | 'MEDIA' | 'DISTRIBUTION'
-  | 'OTHER'
+  | 'ORGANISATION' | 'OTHER'
 
 /** The episode, session or person a change is to, e.g. on the home page's recent activity */
 export interface ChangeSubject {
-  kind: 'EPISODE' | 'SESSION' | 'PERSON'
+  kind: 'EPISODE' | 'SESSION' | 'PERSON' | 'ORGANISATION'
   id: string
-  // An episode's title, a session's date and place, a person's name
+  // An episode's title, a session's date and place, a person's or an organisation's name
   name: string
   code: string | null
 }
@@ -195,6 +195,8 @@ export interface EpisodeDetails extends Episode {
   recommendedBy: PersonName | null
   koofrFolders: KoofrFolder[]
   dropboxFolders: DropboxFolderWithPictures[]
+  // The organisations that supported its production, by name
+  supportedBy: { id: string, name: string, websiteUrl: string | null }[]
   history: Change[]
   comments: Comment[]
   // Its video and audio, and their transcripts, the latest first; none for anyone not on the team

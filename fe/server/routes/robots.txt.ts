@@ -12,6 +12,8 @@ export default defineEventHandler((event) => {
     'Disallow: /transcriptions',
     'Disallow: /search',
     'Disallow: /sessions/',
+    'Disallow: /organizacije',
+    'Disallow: /en/organisations',
     'Disallow: /graphql',
     'Disallow: /events',
     'Disallow: /mcp',

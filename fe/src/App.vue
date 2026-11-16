@@ -2,15 +2,19 @@
 import {computed, nextTick, ref, watch} from 'vue'
 import {RouterLink, useRoute, useRouter} from 'vue-router'
 import {faDiscord, faGithub} from '@fortawesome/free-brands-svg-icons'
-import {faCalendarDays, faClosedCaptioning, faHouse, faLightbulb, faMicrophone, faUserGroup} from '@fortawesome/free-solid-svg-icons'
+import {
+  faBuilding, faCalendarDays, faClosedCaptioning, faHouse, faLightbulb, faMicrophone, faUserGroup,
+} from '@fortawesome/free-solid-svg-icons'
 import {FontAwesomeIcon} from '@fortawesome/vue-fontawesome'
 import {NuxtPage} from '#components'
 import {useHead, useRuntimeConfig, useSwitchLocalePath} from '#imports'
 import {keepUnchanged, useLiveRefresh} from '@/changes'
 import LanguageSwitch from '@/components/LanguageSwitch.vue'
 import SearchPalette from '@/components/SearchPalette.vue'
+import SupporterLogos from '@/components/SupporterLogos.vue'
 import UserMenu from '@/components/UserMenu.vue'
 import {graphql} from '@/graphql'
+import {ORGANISATIONS_PATH} from '@/organisations'
 import {useAuthStore} from '@/stores/auth'
 import {announcePage, fullTitle, pageName} from '@/title'
 import {useLocale} from '@/useLocale'
@@ -91,15 +95,20 @@ useLiveRefresh(() => (auth.authenticated ? loadMe(true) : undefined))
 
 // The pages, as tabs in the order they're used; the team's only for signed-in users, and while one who was signed in
 // last time is checked, so they don't drop out and come back. A new section, e.g. Partners or Analytics, is another tab
-// here. API and MCP usage, how to connect to MetaOS, is in the footer.
+// here. API and MCP usage, how to connect to MetaOS, is in the footer. Organisations' address is another word in English,
+// so it goes by its route (organisations.ts).
 const pages = computed(() => [
-  {path: '/', title: t('nav.home'), icon: faHouse},
-  {path: '/episodes', title: t('nav.episodes'), icon: faMicrophone},
-  {path: '/ideas', title: t('nav.ideas'), icon: faLightbulb, team: true},
-  {path: '/people', title: t('nav.people'), icon: faUserGroup},
-  {path: '/dogodki', title: t('nav.events'), icon: faCalendarDays},
-  {path: '/transcriptions', title: t('nav.transcriptions'), icon: faClosedCaptioning, team: true},
-].filter((page) => !page.team || auth.likelyTeam).map((page) => ({...page, to: path(page.path)})))
+  {key: 'home', to: path('/'), title: t('nav.home'), icon: faHouse},
+  {key: 'episodes', to: path('/episodes'), title: t('nav.episodes'), icon: faMicrophone},
+  {key: 'ideas', to: path('/ideas'), title: t('nav.ideas'), icon: faLightbulb, team: true},
+  {key: 'people', to: path('/people'), title: t('nav.people'), icon: faUserGroup},
+  {key: 'organisations', to: path(ORGANISATIONS_PATH), title: t('nav.organisations'), icon: faBuilding, team: true},
+  {key: 'events', to: path('/dogodki'), title: t('nav.events'), icon: faCalendarDays},
+  {key: 'transcriptions', to: path('/transcriptions'), title: t('nav.transcriptions'), icon: faClosedCaptioning, team: true},
+].filter((page) => !page.team || auth.likelyTeam))
+
+// The home page has the supporters large; the others in the footer
+const home = computed(() => String(route.name ?? '').startsWith('home___'))
 
 // Going to another page, as a screen reader hears it: focus moves to the page, which starts there for the keyboard too,
 // and its name is said once it's known. Not on the first page, nor when only the query changes, e.g. while a search
@@ -136,7 +145,7 @@ function reload() {
       <RouterLink class="logo" :to="path('/')" :aria-label="t('app.logo')"><img src="/favicon.png" alt=""/></RouterLink>
 
       <nav class="pages" :aria-label="t('nav.main')">
-        <RouterLink v-for="page in pages" :key="page.path" :to="page.to" :class="{ current: current(page.to) }"
+        <RouterLink v-for="page in pages" :key="page.key" :to="page.to" :class="{ current: current(page.to) }"
                     :aria-current="current(page.to) ? 'page' : undefined">
           <FontAwesomeIcon :icon="page.icon"/>{{ page.title }}
         </RouterLink>
@@ -167,6 +176,9 @@ function reload() {
   <p class="visually-hidden" aria-live="polite" aria-atomic="true">{{ pageName }}</p>
 
   <footer>
+    <div v-if="!home" class="wrapper footer-supporters">
+      <SupporterLogos/>
+    </div>
     <div class="wrapper">
       <span class="name">Ogrodje MetaOS</span>
       <!-- How to connect to MetaOS over MCP or GraphQL, the privacy policy, then where Ogrodje is elsewhere -->
@@ -398,6 +410,21 @@ footer {
     align-items: center;
     align-content: center;
     gap: 0 24px;
+  }
+
+  // Ogrodje's supporters and partners, between rules, above the rest
+  .footer-supporters {
+    min-height: 0;
+    padding-top: 16px;
+    padding-bottom: 16px;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    justify-content: flex-start;
+
+    // When there are none
+    &:empty {
+      display: none;
+    }
   }
 
   .name {

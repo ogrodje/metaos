@@ -19,6 +19,7 @@ import { type Episode, EPISODE_FIELDS, episodePath, LIST_PICTURE_FIELDS, type Ro
 import { errorMessage, graphql } from '@/graphql'
 import { IMAGE_FIELDS } from '@/images'
 import { seasonOf, seasonTitle } from '@/lists'
+import { organisationPath, type Work, WORK_FIELDS, workPeriod } from '@/organisations'
 import { type Person, rolesOf, socialLinks } from '@/people'
 import { useQueryState } from '@/query'
 import { personData, shorten, usePageMeta, useSiteUrl } from '@/seo'
@@ -32,11 +33,13 @@ interface PersonDetails extends Omit<Person, 'episodes' | 'accounts'> {
   episodes: { episode: Episode, roles: Role[] }[]
   recommended: Episode[]
   accounts: Account[]
+  // Where they work or worked, the team's
+  organisations: (Work & { organisation: { id: string, name: string } })[]
 }
 
 const auth = useAuthStore()
 const route = useRoute()
-const { t, path } = useLocale()
+const { t, dateLocale, path } = useLocale()
 const siteUrl = useSiteUrl()
 
 // The page is for the person in the path when it opens: going to another person opens another page
@@ -63,6 +66,7 @@ async function fetchPerson(id: string) {
       episodes { episode { ${EPISODE_FIELDS} ${LIST_PICTURE_FIELDS} } roles }
       recommended { ${EPISODE_FIELDS} }
       accounts { ${ACCOUNT_FIELDS} }
+      organisations { ${WORK_FIELDS} organisation { id name } }
     }
     me { account { id username name email person { id } } canLinkAccounts }
   }`, { id })
@@ -214,6 +218,17 @@ const hasLinks = computed(() => (person.value ? socialLinks(person.value).length
             </li>
           </ul>
         </FactGroup>
+        <!-- Where they work now, then where they did, the team's -->
+        <FactGroup v-if="person.organisations.length" :title="t('person.worksAt')">
+          <ul class="work">
+            <li v-for="work in person.organisations" :key="work.id" :class="{ former: !work.current }">
+              <RouterLink :to="path(organisationPath(work.organisation))">{{ work.organisation.name }}</RouterLink>
+              <span v-if="work.title || workPeriod(work, t, dateLocale)" class="aside">
+                {{ [work.title, workPeriod(work, t, dateLocale)].filter(Boolean).join(' · ') }}
+              </span>
+            </li>
+          </ul>
+        </FactGroup>
         <FactGroup v-if="hasLinks || firstOn">
           <dl>
             <Fact v-if="hasLinks" :label="t('person.online')"><span class="icons"><SocialLinks :person="person"/></span></Fact>
@@ -353,6 +368,27 @@ const hasLinks = computed(() => (person.value ? socialLinks(person.value).length
 
 .aside {
   color: var(--muted);
+}
+
+.work {
+  display: grid;
+  gap: 4px;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 8px;
+  }
+
+  a {
+    @include page.link;
+  }
+
+  .former a {
+    color: var(--secondary);
+  }
 }
 
 dd a {

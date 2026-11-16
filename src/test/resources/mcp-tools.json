@@ -273,6 +273,41 @@
     },
     "title" : "Create Koofr folder"
   },
+  "create_organisation" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : false,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Create organisation"
+    },
+    "description" : "Create an organisation, e.g. a new supporter or the company a guest works at. set_organisation_logo gives it its logo",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "description" : {
+          "description" : "What it is, e.g. what it makes",
+          "type" : "string"
+        },
+        "name" : {
+          "description" : "Unique name (case-insensitive)",
+          "type" : "string"
+        },
+        "tier" : {
+          "description" : "How it supports Ogrodje: SUPPORTER (Podporniki) or PARTNER (Partnerji), listed with its logo on the home page and in the footer while it does, or NONE; NONE by default",
+          "enum" : [ "SUPPORTER", "PARTNER", "NONE" ],
+          "type" : "string"
+        },
+        "websiteUrl" : {
+          "description" : "Its website (http or https)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "name" ],
+      "type" : "object"
+    },
+    "title" : "Create organisation"
+  },
   "create_patreon_draft" : {
     "annotations" : {
       "destructiveHint" : false,
@@ -446,6 +481,29 @@
       "type" : "object"
     },
     "title" : "Delete episode"
+  },
+  "delete_organisation" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Delete organisation"
+    },
+    "description" : "Soft-delete an organisation. It's no longer listed, nor on its people and episodes, until it's restored",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "id" : {
+          "description" : "Organisation ID (list_organisations)",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "id" ],
+      "type" : "object"
+    },
+    "title" : "Delete organisation"
   },
   "delete_patreon_post" : {
     "annotations" : {
@@ -625,12 +683,12 @@
       "readOnlyHint" : true,
       "title" : "Get history"
     },
-    "description" : "List every change to an episode, person, session or show, oldest first: what changed, when, by whom, through which MCP client and tool. Includes people's roles on an episode, the documents, Koofr and Dropbox folders linked to an episode or session, the comments in an episode's or session's discussion, an episode's video and audio, the accounts linked to and unlinked from a person, episodes moving in and out of a session or show and the episodes a person is credited with recommending. Soft deletes show up as updates that set deleted_at; a removed link comes back with restore_link and the ID of the change that removed it",
+    "description" : "List every change to an episode, person, session, show or organisation, oldest first: what changed, when, by whom, through which MCP client and tool. Includes people's roles on an episode, the documents, Koofr and Dropbox folders linked to an episode or session, the comments in an episode's or session's discussion, an episode's video and audio, the accounts linked to and unlinked from a person, where people work, the organisations that supported an episode, episodes moving in and out of a session or show and the episodes a person is credited with recommending. Soft deletes show up as updates that set deleted_at; a removed link comes back with restore_link and the ID of the change that removed it",
     "inputSchema" : {
       "$schema" : "https://json-schema.org/draft/2020-12/schema",
       "properties" : {
         "id" : {
-          "description" : "ID of the episode, person, session or show",
+          "description" : "ID of the episode, person, session, show or organisation",
           "format" : "uuid",
           "type" : "string"
         }
@@ -639,6 +697,52 @@
       "type" : "object"
     },
     "title" : "Get history"
+  },
+  "get_organisation" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "Get organisation"
+    },
+    "description" : "An organisation, with the people who work or worked at it (those who still do first) and the episodes it supported, the latest first",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "id" : {
+          "description" : "Organisation ID (list_organisations)",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "id" ],
+      "type" : "object"
+    },
+    "title" : "Get organisation"
+  },
+  "get_organisation_logo" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "Get organisation logo"
+    },
+    "description" : "An organisation's logo, with its URLs; none when it has none",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "organisationId" : {
+          "description" : "Organisation ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "organisationId" ],
+      "type" : "object"
+    },
+    "title" : "Get organisation logo"
   },
   "get_patreon_job" : {
     "annotations" : {
@@ -888,6 +992,73 @@
     },
     "title" : "Link Koofr folder to episode"
   },
+  "link_episode_supporter" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Link episode supporter"
+    },
+    "description" : "Say that an organisation supported an episode's production; its page says Supported by it. Once",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        },
+        "organisationId" : {
+          "description" : "Organisation ID (list_organisations)",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code", "organisationId" ],
+      "type" : "object"
+    },
+    "title" : "Link episode supporter"
+  },
+  "link_person_to_organisation" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Link person to organisation"
+    },
+    "description" : "Say that a person works at an organisation, with their title and from when till when. Not again while they work there (without an end): update_person_organisation changes that",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "endedAt" : {
+          "description" : "Their last day there, a day, e.g. 2026-11-16; omit while they still work there",
+          "type" : "string"
+        },
+        "organisationId" : {
+          "description" : "Organisation ID (list_organisations)",
+          "format" : "uuid",
+          "type" : "string"
+        },
+        "personId" : {
+          "description" : "Person ID",
+          "format" : "uuid",
+          "type" : "string"
+        },
+        "startedAt" : {
+          "description" : "When they started, a day, e.g. 2026-11-16",
+          "type" : "string"
+        },
+        "title" : {
+          "description" : "Their title there, e.g. CTO",
+          "type" : "string"
+        }
+      },
+      "required" : [ "personId", "organisationId" ],
+      "type" : "object"
+    },
+    "title" : "Link person to organisation"
+  },
   "link_session_document" : {
     "annotations" : {
       "destructiveHint" : false,
@@ -1007,13 +1178,13 @@
       "readOnlyHint" : true,
       "title" : "List deleted"
     },
-    "description" : "List what has been soft-deleted and can be restored: episodes, people, recording sessions and shows, the most recently deleted first, with when and by whom. restore_episode takes an episode's code or ID, restore_person and restore_session an ID, restore_show a name",
+    "description" : "List what has been soft-deleted and can be restored: episodes, people, recording sessions, shows and organisations, the most recently deleted first, with when and by whom. restore_episode takes an episode's code or ID, restore_person, restore_session and restore_organisation an ID, restore_show a name",
     "inputSchema" : {
       "$schema" : "https://json-schema.org/draft/2020-12/schema",
       "properties" : {
         "kind" : {
           "description" : "Only list those of this kind",
-          "enum" : [ "EPISODE", "PERSON", "SESSION", "SHOW" ],
+          "enum" : [ "EPISODE", "PERSON", "SESSION", "SHOW", "ORGANISATION" ],
           "type" : "string"
         }
       },
@@ -1295,6 +1466,28 @@
     },
     "title" : "List episode people"
   },
+  "list_episode_supporters" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List episode supporters"
+    },
+    "description" : "List the organisations that supported an episode's production, by name",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code" ],
+      "type" : "object"
+    },
+    "title" : "List episode supporters"
+  },
   "list_episodes" : {
     "annotations" : {
       "destructiveHint" : false,
@@ -1360,6 +1553,28 @@
       "type" : "object"
     },
     "title" : "List Koofr places"
+  },
+  "list_organisations" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List organisations"
+    },
+    "description" : "List all organisations by name: Ogrodje's supporters and partners, and the companies people work at",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "supporting" : {
+          "description" : "Only those listed as supporters or partners today",
+          "type" : "boolean"
+        }
+      },
+      "required" : [ ],
+      "type" : "object"
+    },
+    "title" : "List organisations"
   },
   "list_patreon_drafts" : {
     "annotations" : {
@@ -1502,6 +1717,29 @@
       "type" : "object"
     },
     "title" : "List person episodes"
+  },
+  "list_person_organisations" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List person organisations"
+    },
+    "description" : "List where a person works or worked, with their title and when, where they still work first",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "personId" : {
+          "description" : "Person ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "personId" ],
+      "type" : "object"
+    },
+    "title" : "List person organisations"
   },
   "list_recent_changes" : {
     "annotations" : {
@@ -2035,6 +2273,29 @@
     },
     "title" : "Remove episode media"
   },
+  "remove_organisation_logo" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Remove organisation logo"
+    },
+    "description" : "Take an organisation's logo off it. Returns the one it had",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "organisationId" : {
+          "description" : "Organisation ID",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "organisationId" ],
+      "type" : "object"
+    },
+    "title" : "Remove organisation logo"
+  },
   "remove_person_avatar" : {
     "annotations" : {
       "destructiveHint" : true,
@@ -2147,7 +2408,7 @@
       "readOnlyHint" : false,
       "title" : "Restore link"
     },
-    "description" : "Bring back a link that was removed, as it was: a person's role on an episode, or a Google Doc, Koofr folder or Dropbox folder linked to an episode or session. Takes the ID of the change that removed it, from get_history or list_recent_changes",
+    "description" : "Bring back a link that was removed, as it was: a person's role on an episode, a Google Doc, Koofr folder or Dropbox folder linked to an episode or session, a person's work at an organisation, or an organisation's support of an episode. Takes the ID of the change that removed it, from get_history or list_recent_changes",
     "inputSchema" : {
       "$schema" : "https://json-schema.org/draft/2020-12/schema",
       "properties" : {
@@ -2161,6 +2422,33 @@
       "type" : "object"
     },
     "title" : "Restore link"
+  },
+  "restore_organisation" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Restore organisation"
+    },
+    "description" : "Bring back a soft-deleted organisation (list_deleted), with its people and the episodes it supported. Under a new name, if its own has been taken since",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "id" : {
+          "description" : "Organisation ID",
+          "format" : "uuid",
+          "type" : "string"
+        },
+        "newName" : {
+          "description" : "New unique name to restore it under, e.g. when its own has been taken since",
+          "type" : "string"
+        }
+      },
+      "required" : [ "id" ],
+      "type" : "object"
+    },
+    "title" : "Restore organisation"
   },
   "restore_person" : {
     "annotations" : {
@@ -2529,6 +2817,50 @@
     },
     "title" : "Set episode status"
   },
+  "set_organisation_logo" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : true,
+      "readOnlyHint" : false,
+      "title" : "Set organisation logo"
+    },
+    "description" : "Make a picture an organisation's logo, e.g. one in Dropbox or Koofr: PNG, JPEG, WebP or GIF, of any size, best see-through around it, as it's shown on the home page and in the footer. MetaOS copies it to its public bucket, where anyone can see it, with copies of it 320, 640, 1280 and 1920 px wide (those narrower than it), and returns their URLs. Up to 50 MB. The copy stays as it is when the picture changes where it came from; setting it again makes a new one",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "from" : {
+          "description" : "Where the picture is: DROPBOX or KOOFR, with place and path, or URL, with url",
+          "enum" : [ "DROPBOX", "KOOFR", "URL", "UPLOAD" ],
+          "type" : "string"
+        },
+        "name" : {
+          "description" : "For URL: the picture's file name, e.g. Hygraph's fileName, as its URL has none; the URL's last part when omitted",
+          "type" : "string"
+        },
+        "organisationId" : {
+          "description" : "Organisation ID",
+          "format" : "uuid",
+          "type" : "string"
+        },
+        "path" : {
+          "description" : "For DROPBOX or KOOFR: the picture's path in the place, e.g. /Season 5/S05E07 - vres gams/ogrodje-vresGams-thumb1.png",
+          "type" : "string"
+        },
+        "place" : {
+          "description" : "For DROPBOX or KOOFR: a folder shared with Ogrodje's bot there, by name or ID (list_dropbox_places, list_koofr_places)",
+          "type" : "string"
+        },
+        "url" : {
+          "description" : "For URL: an https URL of a picture in Hygraph, the CMS (*.graphassets.com)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "organisationId", "from" ],
+      "type" : "object"
+    },
+    "title" : "Set organisation logo"
+  },
   "set_patreon_post_image" : {
     "annotations" : {
       "destructiveHint" : true,
@@ -2893,6 +3225,56 @@
     },
     "title" : "Unlink Koofr folder from episode"
   },
+  "unlink_episode_supporter" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Unlink episode supporter"
+    },
+    "description" : "Take an organisation off the supporters of an episode. The history keeps it, and restore_link brings it back",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        },
+        "organisationId" : {
+          "description" : "Organisation ID (list_organisations)",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code", "organisationId" ],
+      "type" : "object"
+    },
+    "title" : "Unlink episode supporter"
+  },
+  "unlink_person_from_organisation" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Unlink person from organisation"
+    },
+    "description" : "Remove a person's work at an organisation, e.g. one added by mistake; to say they left, give it an end (update_person_organisation). The history keeps it, and restore_link brings it back",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "id" : {
+          "description" : "ID of their work there (list_person_organisations, get_organisation)",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "id" ],
+      "type" : "object"
+    },
+    "title" : "Unlink person from organisation"
+  },
   "unlink_session_document" : {
     "annotations" : {
       "destructiveHint" : true,
@@ -3123,6 +3505,86 @@
     },
     "title" : "Update episode media"
   },
+  "update_organisation" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Update organisation"
+    },
+    "description" : "Change an organisation: its name, description, tier and when it supported Ogrodje, its links, and its finance details (VAT ID, company ID, address, who to contact), which are the team's. Omitted fields are left as they are; empty text clears one. It's listed as a supporter or partner while its tier isn't NONE, from when its support started (or always, without a start) till when it ended (or for good, without an end)",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "address" : {
+          "description" : "Its registered address; empty to clear",
+          "type" : "string"
+        },
+        "companyId" : {
+          "description" : "Company ID in its registry, e.g. a matična številka; empty to clear",
+          "type" : "string"
+        },
+        "contactPerson" : {
+          "description" : "ID of the person to contact there; empty to clear",
+          "type" : "string"
+        },
+        "description" : {
+          "description" : "What it is, e.g. what it makes; empty to clear",
+          "type" : "string"
+        },
+        "facebookUrl" : {
+          "description" : "Its Facebook page (https); empty to clear",
+          "type" : "string"
+        },
+        "id" : {
+          "description" : "Organisation ID (list_organisations)",
+          "format" : "uuid",
+          "type" : "string"
+        },
+        "instagramUrl" : {
+          "description" : "Its Instagram profile (https); empty to clear",
+          "type" : "string"
+        },
+        "linkedinUrl" : {
+          "description" : "Its LinkedIn page (https); empty to clear",
+          "type" : "string"
+        },
+        "name" : {
+          "description" : "New unique name",
+          "type" : "string"
+        },
+        "supportEndedAt" : {
+          "description" : "The last day it supported Ogrodje, a day, e.g. 2026-11-16; empty to clear",
+          "type" : "string"
+        },
+        "supportStartedAt" : {
+          "description" : "When it started supporting Ogrodje, a day, e.g. 2026-11-16; empty to clear",
+          "type" : "string"
+        },
+        "tier" : {
+          "description" : "How it supports Ogrodje: SUPPORTER (Podporniki) or PARTNER (Partnerji), listed with its logo on the home page and in the footer while it does, or NONE",
+          "enum" : [ "SUPPORTER", "PARTNER", "NONE" ],
+          "type" : "string"
+        },
+        "twitterUrl" : {
+          "description" : "Its Twitter/X profile (https); empty to clear",
+          "type" : "string"
+        },
+        "vatId" : {
+          "description" : "VAT ID, e.g. SI12345678; empty to clear",
+          "type" : "string"
+        },
+        "websiteUrl" : {
+          "description" : "Its website (http or https); empty to clear",
+          "type" : "string"
+        }
+      },
+      "required" : [ "id" ],
+      "type" : "object"
+    },
+    "title" : "Update organisation"
+  },
   "update_patreon_post" : {
     "annotations" : {
       "destructiveHint" : true,
@@ -3164,6 +3626,41 @@
       "type" : "object"
     },
     "title" : "Update Patreon post"
+  },
+  "update_person_organisation" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Update person organisation"
+    },
+    "description" : "Change a person's work at an organisation: their title, or when they started or left. Omitted fields are left as they are; empty text clears one",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "endedAt" : {
+          "description" : "Their last day there, a day, e.g. 2026-11-16; empty to clear",
+          "type" : "string"
+        },
+        "id" : {
+          "description" : "ID of their work there (list_person_organisations, get_organisation)",
+          "format" : "uuid",
+          "type" : "string"
+        },
+        "startedAt" : {
+          "description" : "When they started, a day, e.g. 2026-11-16; empty to clear",
+          "type" : "string"
+        },
+        "title" : {
+          "description" : "Their title there, e.g. CTO; empty to clear",
+          "type" : "string"
+        }
+      },
+      "required" : [ "id" ],
+      "type" : "object"
+    },
+    "title" : "Update person organisation"
   },
   "update_session" : {
     "annotations" : {
