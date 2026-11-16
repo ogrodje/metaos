@@ -120,7 +120,7 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   dates are in the page's language and in Ogrodje's time zone (`dateLocale`, `TIME_ZONE`), whatever the browser's; and
   `navigator`, `location`, `document` and storage are read in `onMounted` or handlers only. Nothing may write
   module-level state on the server, which every request shares (`pageName` in `title.ts` is the browser's only).
-- The team's pages, `/ideas`, `/sessions/**`, `/search` and `/transcriptions`, render in the browser only
+- The team's pages, `/ideas`, `/sessions/**`, `/search`, `/transcriptions` and `/organizacije/**`, render in the browser only
   (`ssr: false`), with `no-store` and `noindex`. Members who aren't staff see what everyone does, with a note on those
   pages.
 - A page from a cache that's over 30 s old loads its data again once it's shown
@@ -161,7 +161,7 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   (`UserMenu.vue`: your initials, which open your name, your page, your sign-ins (see Accounts) and Sign out; or
   Sign in, which asks Discord or Google); on narrower screens the tabs go to a row of their own under them. The tabs
   are in the order they're used (`pages`), and scroll sideways when they don't fit: Home, Episodes, Ideas (the team's),
-  People, Events and Transcriptions (the team's). A
+  People, Organisations (the team's), Events and Transcriptions (the team's). A
   new section, e.g. Partners or Analytics, is another tab there. A tab is
   underlined on its own pages too, Episodes on an episode's. "API and MCP usage" isn't a tab: the footer links to it,
   as do the sign-in prompts, and to the privacy policy. The user menu is a button that shows and hides its links, not an ARIA menu.
@@ -173,7 +173,8 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
 - A list loads behind rows like its own (`LoadingRows.vue`), so the page doesn't jump, and what didn't load says why
   with Try again (`LoadError.vue`); `graphql.ts` words errors so they say what to do, e.g. that it's for staff, as message keys (`UserError`) that `errorMessage(error, t)` says in the page's language. Dates are in the page's language (`dateLocale`), whatever the browser's.
 - Home is what's being made for the team, and the latest releases for everyone (as a grid of `EpisodeCard`s, two rows
-  of four, with a line under them for the team to sign in). Signed in, two columns: first what needs attention
+  of four, with a line under them for the team to sign in), and at its end, for everyone, Ogrodje's supporters and
+  partners, large (`SupporterLogos.vue`'s `large`; see Organisations). Signed in, two columns: first what needs attention
   ([`fe/src/attention.ts`](fe/src/attention.ts): recording dates that passed, recordings in the next two weeks with no
   confirmed guest or doc, episodes recorded 60 days ago that aren't out, and episodes released 3 days ago that aren't on
   YouTube or Patreon), then the upcoming recordings and what's
@@ -298,6 +299,42 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   asked, the header keeps the team's tabs and pages their places, and the check waits longer before taking them for a
   guest. After 3 s a note under the header says it's checking (`checkingSlowly`), and when it gives up, that it
   couldn't confirm the sign-in, with Try again (`unconfirmed`), so the guest's page doesn't look like a sign-out.
+
+### Organisations
+
+Organisations ([`Organisations.kt`](src/main/kotlin/si/ogrodje/metaos/Organisations.kt),
+[`V35__organisations.sql`](src/main/resources/db/migration/V35__organisations.sql)) are Ogrodje's supporters and
+partners, and the companies people work at: the start of its CRM. Goo's meetups and finance are to build on them.
+
+- An organisation has a name (unique, case-insensitive), a description, links (website, LinkedIn, X, Instagram,
+  Facebook), a logo (`set_organisation_logo`, as an avatar is, Images), and its tier, as ogrodje.si's footer had them:
+  `SUPPORTER` (Podporniki), `PARTNER` (Partnerji) or `NONE`. It's listed (`supports`, the `supporters` query) while its
+  tier isn't `NONE`, from `support_started_at` (or always, without one) to `support_ended_at` (or for good), days in
+  Ljubljana, both included. Its finance details, VAT ID, company ID, address and the person to contact there, are the
+  team's. Soft-deleted, as people are (`list_deleted`, `restore_organisation`).
+- People work at them (`person_organisations`: a title, free text, and from when till when, days; again after they
+  left, not twice at once), and they support episodes (`episode_organisations`, once each). Unlinking deletes those
+  rows; the audit log keeps them, and `restore_link` brings them back. `History.kt` tells them on the episode's,
+  person's and organisation's histories (`ChangeKind.ORGANISATION`), and Home's recent activity names organisations.
+- [`OrganisationsMCP`](src/main/kotlin/si/ogrodje/metaos/OrganisationsMCP.kt) and
+  [`OrganisationsGraphQL`](src/main/kotlin/si/ogrodje/metaos/OrganisationsGraphQL.kt) have the same rules, in
+  `Organisations`. Public: `supporters` (name, tier, website, logo) and `Episode.supportedBy`; with an organisation's
+  released episodes only. The rest is the team's: `organisations`, `organisation`, `Person.organisations`,
+  `Organisation.people`, the support dates and finance details, and every mutation (`metaos:write`).
+- V35 seeded ogrodje.si's eight, by fixed IDs, and `OrganisationLogos` gives them their logos once the public bucket
+  is there, from ogrodje.si's files in `resources/organisations` (Kaldi's SVG as a PNG): only to one nobody has
+  changed, as its history has none, so a logo someone took off doesn't come back (`metaos.organisations.seed-logos`,
+  off in tests).
+- On the front-end ([`fe/src/organisations.ts`](fe/src/organisations.ts)): the supporters and partners large at the
+  end of Home, and small in the footer of every other page (`SupporterLogos.vue`, rendered on the server), each leading
+  to its website, its name beside its logo but for a word mark (twice as wide as tall), which has it. Organisations'
+  pages are the team's, in the browser only: `/organizacije` in Slovenian and `/en/organisations` in English, the one
+  page with another word in each language (`LOCAL_PATHS` in `router/index.ts`), so links to them go by route name
+  (`organisationPath`, `path({ name })`); the list by tier (`OrganisationsView.vue`), and an organisation's workspace
+  (`OrganisationView.vue`): its logo and name, who works and worked there, the episodes it supported, and in its panel
+  its support, links and finance details. A released episode's page says Supported by its organisations
+  (`SupportedBy.vue`: to their websites, for the team to their pages), and a person's panel where they work (the
+  team's).
 
 ### Authentication (Keycloak)
 

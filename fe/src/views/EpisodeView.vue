@@ -23,6 +23,7 @@ import PersonLine from '@/components/PersonLine.vue'
 import ShowBadge from '@/components/ShowBadge.vue'
 import SignInPrompt from '@/components/SignInPrompt.vue'
 import StatusLabel from '@/components/StatusLabel.vue'
+import SupportedBy from '@/components/SupportedBy.vue'
 import { DISTRIBUTION_FIELDS } from '@/distribution'
 import {
   ARTWORK_FIELDS, artworkOf, DROPBOX_FIELDS, type DropboxPicture, EPISODE_FIELDS, type EpisodeDetails, episodePath,
@@ -66,7 +67,7 @@ async function fetchEpisode(ref: string) {
     episode(ref: $ref) {
       ${EPISODE_FIELDS} ${PATREON_FIELDS} titleB titleC summary machineSummary addedDate language recommendedBy { id name } ${KOOFR_FIELDS}
       ${DROPBOX_FIELDS} ${ARTWORK_FIELDS} ${PICTURE_FIELDS} ${HISTORY_FIELDS} ${COMMENT_FIELDS} ${MEDIA_FIELDS}
-      ${EPISODE_TRANSCRIPT_FIELDS} ${DISTRIBUTION_FIELDS} people { avatar { ${IMAGE_FIELDS} } }
+      ${EPISODE_TRANSCRIPT_FIELDS} ${DISTRIBUTION_FIELDS} people { avatar { ${IMAGE_FIELDS} } } supportedBy { id name websiteUrl }
     }
   }`, { ref })).episode
 }
@@ -292,6 +293,8 @@ const pastTitle = useScrolledPast(titleBlock)
             <div class="listen" :class="{ copyable: team }"><ListenLinks :episode="episode" labelled :copyable="team" :all-patreon="allPatreon"/></div>
           </section>
         </div>
+
+        <SupportedBy :organisations="episode.supportedBy" :team="team"/>
 
         <FoldedText v-if="episode.summary" id="summary" :title="t('episode.summary')" :source="episode.summary"/>
         <FoldedText v-if="episode.machineSummary" id="ai-summary" :title="t('episode.aiSummary')" :source="episode.machineSummary"/>

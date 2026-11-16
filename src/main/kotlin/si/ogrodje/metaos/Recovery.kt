@@ -10,9 +10,9 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.OffsetDateTime
 import java.util.UUID
 
-enum class DeletedKind { EPISODE, PERSON, SESSION, SHOW }
+enum class DeletedKind { EPISODE, PERSON, SESSION, SHOW, ORGANISATION }
 
-/** Something soft-deleted: an episode by its title (and code), a person, a session by its date and name (else location), a show */
+/** Something soft-deleted: an episode by its title (and code), a person, a session by its date and name (else location), a show, an organisation */
 data class DeletedDto(
     val kind: DeletedKind,
     val id: UUID,
@@ -35,10 +35,12 @@ private val LINKS = mapOf(
     "session_koofr_folders" to listOf("session_id" to "sessions"),
     "episode_dropbox_folders" to listOf("episode_id" to "episodes"),
     "session_dropbox_folders" to listOf("session_id" to "sessions"),
+    "person_organisations" to listOf("person_id" to "people", "organisation_id" to "organisations"),
+    "episode_organisations" to listOf("episode_id" to "episodes", "organisation_id" to "organisations"),
 )
 
 // What a row of these tables is, as their restore tools have it (restore_episode, ...)
-private val LINKED = mapOf("episodes" to "episode", "people" to "person", "sessions" to "session")
+private val LINKED = mapOf("episodes" to "episode", "people" to "person", "sessions" to "session", "organisations" to "organisation")
 
 /**
  * Bringing back what was deleted. Episodes, people, sessions and shows are soft-deleted, and list_deleted finds them
@@ -66,9 +68,9 @@ class RecoveryMCP(private val jdbcTemplate: JdbcTemplate, private val auditLog: 
             title = "List deleted",
             readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
         ),
-        description = "List what has been soft-deleted and can be restored: episodes, people, recording sessions and " +
-            "shows, the most recently deleted first, with when and by whom. restore_episode takes an episode's code " +
-            "or ID, restore_person and restore_session an ID, restore_show a name"
+        description = "List what has been soft-deleted and can be restored: episodes, people, recording sessions, " +
+            "shows and organisations, the most recently deleted first, with when and by whom. restore_episode takes an " +
+            "episode's code or ID, restore_person, restore_session and restore_organisation an ID, restore_show a name"
     )
     fun listDeleted(
         @McpToolParam(description = "Only list those of this kind", required = false) kind: DeletedKind? = null,
@@ -87,7 +89,10 @@ class RecoveryMCP(private val jdbcTemplate: JdbcTemplate, private val auditLog: 
               select 'SESSION', 'sessions', id, concat_ws(' · ', to_char(date, 'YYYY-MM-DD'), coalesce(name, location)), null, deleted_at
               from sessions where deleted_at is not null
               union all
-              select 'SHOW', 'shows', id, cast(name as text), null, deleted_at from shows where deleted_at is not null) d
+              select 'SHOW', 'shows', id, cast(name as text), null, deleted_at from shows where deleted_at is not null
+              union all
+              select 'ORGANISATION', 'organisations', id, cast(name as text), null, deleted_at
+              from organisations where deleted_at is not null) d
         where cast(? as text) is null or d.kind = ?
         order by d.deleted_at desc
         """.trimIndent(),
@@ -102,8 +107,9 @@ class RecoveryMCP(private val jdbcTemplate: JdbcTemplate, private val auditLog: 
             title = "Restore link",
             readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false
         ),
-        description = "Bring back a link that was removed, as it was: a person's role on an episode, or a Google Doc, " +
-            "Koofr folder or Dropbox folder linked to an episode or session. Takes the ID of the change that removed " +
+        description = "Bring back a link that was removed, as it was: a person's role on an episode, a Google Doc, " +
+            "Koofr folder or Dropbox folder linked to an episode or session, a person's work at an organisation, or an " +
+            "organisation's support of an episode. Takes the ID of the change that removed " +
             "it, from get_history or list_recent_changes"
     )
     fun restoreLink(

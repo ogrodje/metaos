@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 import { recentActivity } from '@/activity'
 import { type Change, type ChangeSubject, episodePath, sessionPath } from '@/episodes'
 import { TIME_ZONE } from '@/i18n'
+import { organisationPath } from '@/organisations'
 import { personPath } from '@/people'
 import { useLocale } from '@/useLocale'
 
@@ -23,6 +24,7 @@ const shown = computed(() => (all.value ? entries.value : entries.value.slice(0,
 function pathOf(subject: ChangeSubject) {
   if (subject.kind === 'EPISODE') return path(episodePath(subject))
   if (subject.kind === 'SESSION') return path(sessionPath(subject))
+  if (subject.kind === 'ORGANISATION') return path(organisationPath(subject))
   return path(personPath(subject))
 }
 

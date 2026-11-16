@@ -29,6 +29,7 @@ class ImagesMCP(
     private val imagesRepository: ImagesRepository,
     private val episodes: EpisodesRepository,
     private val people: PeopleRepository,
+    private val organisations: Organisations,
 ) {
 
     private fun findEpisode(ref: String) = requireNotNull(episodes.findByRef(ref)) { "Episode $ref not found" }
@@ -158,4 +159,54 @@ class ImagesMCP(
     )
     fun getPersonAvatar(@McpToolParam(description = "Person ID") personId: UUID): ImageDto? =
         image(findPerson(personId).avatarImageId)
+
+    @Transactional
+    @McpTool(
+        name = "set_organisation_logo",
+        annotations = McpTool.McpAnnotations(
+            title = "Set organisation logo",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = true
+        ),
+        description = "Make a picture an organisation's logo, e.g. one in Dropbox or Koofr: PNG, JPEG, WebP or GIF, of any " +
+            "size, best see-through around it, as it's shown on the home page and in the footer. $PUBLISHED"
+    )
+    fun setOrganisationLogo(
+        @McpToolParam(description = "Organisation ID") organisationId: UUID,
+        @McpToolParam(description = IMAGE_FROM) from: ImageSource,
+        @McpToolParam(description = IMAGE_PLACE, required = false) place: String?,
+        @McpToolParam(description = IMAGE_PATH, required = false) path: String?,
+        @McpToolParam(description = IMAGE_URL, required = false) url: String?,
+        @McpToolParam(description = IMAGE_NAME, required = false) name: String? = null,
+    ): ImageDto {
+        val organisation = organisations.find(organisationId)
+        val image = publish(from, place, path, url, name)
+        organisation.logoImageId = image.id
+        return images.toDto(image)
+    }
+
+    @Transactional
+    @McpTool(
+        name = "remove_organisation_logo",
+        annotations = McpTool.McpAnnotations(
+            title = "Remove organisation logo",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
+        ),
+        description = "Take an organisation's logo off it. Returns the one it had"
+    )
+    fun removeOrganisationLogo(@McpToolParam(description = "Organisation ID") organisationId: UUID): ImageDto? {
+        val organisation = organisations.find(organisationId)
+        return image(organisation.logoImageId).also { organisation.logoImageId = null }
+    }
+
+    @Transactional(readOnly = true)
+    @McpTool(
+        name = "get_organisation_logo",
+        annotations = McpTool.McpAnnotations(
+            title = "Get organisation logo",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
+        description = "An organisation's logo, with its URLs; none when it has none"
+    )
+    fun getOrganisationLogo(@McpToolParam(description = "Organisation ID") organisationId: UUID): ImageDto? =
+        image(organisations.find(organisationId).logoImageId)
 }

@@ -93,6 +93,20 @@ type Query {
     distributions(channel: Channel, since: String, limit: Int! = 100): [Distribution!]!
 
     """
+    Ogrodje's supporters and partners as they're listed today, with their logos on the home page and in the footer:
+    supporters (SUPPORTER) first, then partners, each by name
+    """
+    supporters: [Organisation!]!
+
+    """
+    Every organisation, by name: supporters and partners, and the companies people work at. Needs a signed-in user.
+    """
+    organisations: [Organisation!]!
+
+    "An organisation by its ID; null if there's none. Needs a signed-in user."
+    organisation(id: ID!): Organisation
+
+    """
     Slovenia's tech, developer and startup events, from Goo (goo.ogrodje.si), that haven't ended yet (or started, when
     they have no end), the soonest first
     """
@@ -130,7 +144,8 @@ type Meetup {
 
 """
 Changes, as the signed-in user: each needs an approved user's token with metaos:write (CommentsGraphQL.kt, Artwork.kt,
-MediaFiles.kt, GraphQL.kt, SessionsGraphQL.kt, DistributionsGraphQL.kt)
+MediaFiles.kt, GraphQL.kt, SessionsGraphQL.kt, DistributionsGraphQL.kt,
+OrganisationsGraphQL.kt)
 """
 type Mutation {
     "Comment on an episode (ideas too) by its code or ID, in Markdown"
@@ -219,6 +234,116 @@ type Mutation {
     removeDistribution(id: ID!): ID!
     "Fetch the preview of where an episode went out again; it keeps the one it had until the new one is there"
     refreshDistributionPreview(id: ID!): Distribution!
+    """
+    Create an organisation, as create_organisation does over MCP, with what update_organisation sets; what's left out is
+    none
+    """
+    createOrganisation(input: OrganisationInput!): Organisation!
+    """
+    Change an organisation, as update_organisation does over MCP: what's left out stays as it is, and empty text clears
+    it. Days are days, e.g. 2026-11-16; contactPerson a person's ID.
+    """
+    updateOrganisation(id: ID!, input: OrganisationInput!): Organisation!
+    "Soft-delete an organisation; restore_organisation brings it back over MCP. Its ID."
+    deleteOrganisation(id: ID!): ID!
+    """
+    Say that a person works at an organisation, with their title and from when till when (days, e.g. 2026-11-16), as
+    link_person_to_organisation does; not again while they work there without an end
+    """
+    addPersonToOrganisation(person: ID!, organisation: ID!, title: String, startedAt: String, endedAt: String): OrganisationPerson!
+    "Change a person's work at an organisation: what's left out stays as it is, and empty text clears it"
+    updatePersonOrganisation(id: ID!, title: String, startedAt: String, endedAt: String): OrganisationPerson!
+    "Remove a person's work at an organisation, e.g. one added by mistake; the history keeps it. Its ID."
+    removePersonFromOrganisation(id: ID!): ID!
+    "Say that an organisation supported an episode's production, by the episode's code or ID; once"
+    addEpisodeSupporter(ref: String!, organisation: ID!): Episode!
+    "Take an organisation off the supporters of an episode"
+    removeEpisodeSupporter(ref: String!, organisation: ID!): Episode!
+}
+
+"""
+What an organisation is to be, for createOrganisation and updateOrganisation: what's left out is none, or stays as it
+is; empty text clears it
+"""
+input OrganisationInput {
+    name: String
+    description: String
+    tier: OrganisationTier
+    "When it started supporting Ogrodje, a day, e.g. 2026-11-16"
+    supportStartedAt: String
+    "The last day it supported Ogrodje"
+    supportEndedAt: String
+    websiteUrl: String
+    linkedinUrl: String
+    twitterUrl: String
+    instagramUrl: String
+    facebookUrl: String
+    vatId: String
+    companyId: String
+    address: String
+    "The ID of the person to contact there"
+    contactPerson: ID
+}
+
+"How an organisation supports Ogrodje, as ogrodje.si's footer had them, or not at all"
+enum OrganisationTier {
+    "Podporniki"
+    SUPPORTER
+    "Partnerji"
+    PARTNER
+    NONE
+}
+
+"""
+An organisation: one of Ogrodje's supporters or partners, or a company people work at. What's the team's is null, or
+empty, for anyone else.
+"""
+type Organisation {
+    id: ID!
+    name: String!
+    "What it is, e.g. what it makes"
+    description: String
+    tier: OrganisationTier!
+    "Whether it's listed as a supporter or partner today"
+    supporting: Boolean!
+    "When it started supporting Ogrodje, a day; null without a signed-in user"
+    supportStartedAt: String
+    "The last day it supported Ogrodje; null without a signed-in user"
+    supportEndedAt: String
+    websiteUrl: String
+    linkedinUrl: String
+    "On Twitter or X"
+    twitterUrl: String
+    instagramUrl: String
+    facebookUrl: String
+    "Its logo"
+    logo: Image
+    "Its VAT ID. Null without a signed-in user."
+    vatId: String
+    "Its company ID in its registry. Null without a signed-in user."
+    companyId: String
+    "Its registered address. Null without a signed-in user."
+    address: String
+    "Who to contact there. Null without a signed-in user."
+    contactPerson: Person
+    "Who works or worked there, those who still do first. None without a signed-in user."
+    people: [OrganisationPerson!]!
+    "The episodes it supported, the latest first. Anyone not signed in gets only the released ones."
+    episodes: [Episode!]!
+}
+
+"Someone's work at an organisation: their title, and from when till when (days)"
+type OrganisationPerson {
+    id: ID!
+    person: Person!
+    organisation: Organisation!
+    "e.g. CTO"
+    title: String
+    startedAt: String
+    "Their last day there; null while they still work there"
+    endedAt: String
+    "Whether they still work there"
+    current: Boolean!
 }
 
 "Where an episode went out, by its URL's host, else as someone said: its own links' platforms, and social networks"
@@ -591,6 +716,8 @@ type Episode {
     signed-in user.
     """
     distributions: [Distribution!]!
+    "The organisations that supported its production, by name"
+    supportedBy: [Organisation!]!
 }
 
 """
@@ -694,11 +821,11 @@ type Change {
     about: ChangeSubject
 }
 
-"The episode, session or person a change is to"
+"The episode, session, person or organisation a change is to"
 type ChangeSubject {
     kind: ChangeKind!
     id: ID!
-    "An episode's title, a session's date and name (or else place), a person's name"
+    "An episode's title, a session's date and name (or else place), a person's or organisation's name"
     name: String!
     "An episode's code, once it has one"
     code: String
@@ -858,6 +985,8 @@ enum ChangeKind {
     MEDIA
     "Where it went out: a post logged, changed or removed (its links are EPISODE's)"
     DISTRIBUTION
+    "An organisation itself, someone's work there, or its support of an episode"
+    ORGANISATION
     OTHER
 }
 
@@ -890,6 +1019,8 @@ type Person {
     avatar: Image
     "The accounts they sign in with. None without a signed-in user."
     accounts: [Account!]!
+    "Where they work or worked, where they still do first. None without a signed-in user."
+    organisations: [OrganisationPerson!]!
 }
 
 "An episode a person is on, with their roles in it"

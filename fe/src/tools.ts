@@ -6,7 +6,7 @@ import type { Translate } from '@/i18n'
 // names, but not the descriptions. The names are the tools' own, in every language.
 
 /** The tools' version, as MetaOS gives it to assistants, which `just mcp-tools` writes (McpToolsTest) */
-export const TOOLS_VERSION = '1.1.0'
+export const TOOLS_VERSION = '1.2.0'
 
 export interface Tool {
   name: string
@@ -73,6 +73,24 @@ export const TOOL_GROUPS: { id: string, tools: { name: string }[] }[] = [
       { name: 'list_accounts' },
       { name: 'link_account' },
       { name: 'unlink_account' },
+    ],
+  },
+  {
+    id: 'organisations',
+    tools: [
+      { name: 'list_organisations' },
+      { name: 'get_organisation' },
+      { name: 'create_organisation' },
+      { name: 'update_organisation' },
+      { name: 'delete_organisation' },
+      { name: 'restore_organisation' },
+      { name: 'list_person_organisations' },
+      { name: 'link_person_to_organisation' },
+      { name: 'update_person_organisation' },
+      { name: 'unlink_person_from_organisation' },
+      { name: 'list_episode_supporters' },
+      { name: 'link_episode_supporter' },
+      { name: 'unlink_episode_supporter' },
     ],
   },
   {
@@ -190,6 +208,9 @@ export const TOOL_GROUPS: { id: string, tools: { name: string }[] }[] = [
       { name: 'set_person_avatar' },
       { name: 'remove_person_avatar' },
       { name: 'get_person_avatar' },
+      { name: 'set_organisation_logo' },
+      { name: 'remove_organisation_logo' },
+      { name: 'get_organisation_logo' },
     ],
   },
   {

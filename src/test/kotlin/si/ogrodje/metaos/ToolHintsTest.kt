@@ -17,7 +17,7 @@ import kotlin.test.assertTrue
  * - destructiveHint: changes or removes what's there. Adding isn't, a comment included (add_episode_distribution is, as
  *   it changes the entry a URL has, or one of the episode's links), nor is restore_link, which only
  *   puts a removed link back as it was; the other restore_* can rename, recode or clear the email of what they bring back.
- * - idempotentHint: a second call changes nothing more. Only creating episodes, people, sessions and Patreon drafts,
+ * - idempotentHint: a second call changes nothing more. Only creating episodes, people, sessions, organisations and Patreon drafts,
  *   and commenting, isn't: the others find what's there (shows by name, folders and files by path, links) and fail or
  *   keep it.
  * - openWorldHint: reaches out to anyone. Only setting a picture is: it may fetch it from Hygraph and publishes it at
@@ -57,10 +57,10 @@ class ToolHintsTest {
     private val reads = Regex("^(list_|get_|read_|search|view_)|^(whoami|my_episodes|prepare_patreon_post)$")
     private val adds = Regex("^(create_|link_|assign_|comment_on_)|^(match_episode_documents|restore_link)$")
     private val repeatsAdd = setOf(
-        "create_episode", "create_person", "create_session", "comment_on_episode", "comment_on_session", "create_patreon_draft",
+        "create_episode", "create_person", "create_session", "create_organisation", "comment_on_episode", "comment_on_session", "create_patreon_draft",
     )
     private val openWorld = setOf(
-        "set_episode_image", "set_person_avatar", "set_episode_link", "add_episode_distribution", "update_episode_distribution",
+        "set_episode_image", "set_person_avatar", "set_organisation_logo", "set_episode_link", "add_episode_distribution", "update_episode_distribution",
         "refresh_distribution_preview",
     )
 

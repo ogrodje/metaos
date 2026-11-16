@@ -277,7 +277,7 @@ export interface RecentEntry {
 // How many of what a burst of changes was to an entry names
 const NAMED = 3
 
-const KINDS: ChangeSubject['kind'][] = ['EPISODE', 'SESSION', 'PERSON']
+const KINDS: ChangeSubject['kind'][] = ['EPISODE', 'SESSION', 'PERSON', 'ORGANISATION']
 
 /**
  * The latest [changes] to everything (recentChanges, oldest first) as entries, the newest first: one person's changes

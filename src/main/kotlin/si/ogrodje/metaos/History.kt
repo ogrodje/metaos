@@ -12,7 +12,9 @@ import java.util.UUID
 data class FieldChangeDto(val field: String, val from: String?, val to: String?)
 
 /** What a change is to, so the front-end can tell changes apart without reading their words, e.g. to group them */
-enum class ChangeKind { EPISODE, SESSION, PERSON, DOCUMENT, KOOFR_FOLDER, DROPBOX_FOLDER, COMMENT, ACCOUNT, MEDIA, DISTRIBUTION, OTHER }
+enum class ChangeKind {
+    EPISODE, SESSION, PERSON, DOCUMENT, KOOFR_FOLDER, DROPBOX_FOLDER, COMMENT, ACCOUNT, MEDIA, DISTRIBUTION, ORGANISATION, OTHER,
+}
 
 /** A change to an episode or session, or to what's linked to it, as the front-end shows it */
 data class HistoryEntryDto(
@@ -29,7 +31,7 @@ data class HistoryEntryDto(
     val about: ChangeSubjectDto? = null,
 )
 
-/** The episode, session or person a change is to, by name, e.g. Poletna vročica, with its code */
+/** The episode, session, person or organisation a change is to, by name, e.g. Poletna vročica, with its code */
 data class ChangeSubjectDto(val kind: ChangeKind, val id: UUID, val name: String, val code: String?)
 
 // Each table by what its changes are to; an episode moving in or out of a session is one to the episode
@@ -45,6 +47,7 @@ private fun kindOf(table: String) = when (table) {
     "episode_media", "transcripts" -> ChangeKind.MEDIA
     "distributions" -> ChangeKind.DISTRIBUTION
     "people" -> ChangeKind.PERSON
+    "organisations", "person_organisations", "episode_organisations" -> ChangeKind.ORGANISATION
     else -> ChangeKind.OTHER
 }
 
@@ -60,6 +63,8 @@ private fun AuditRow.subject(): Pair<ChangeKind, String>? {
         "session_documents", "session_koofr_folders", "session_dropbox_folders" -> id("session_id")?.let { ChangeKind.SESSION to it }
         "comments" -> id("episode_id")?.let { ChangeKind.EPISODE to it } ?: id("session_id")?.let { ChangeKind.SESSION to it }
         "accounts" -> id("person_id")?.let { ChangeKind.PERSON to it }
+        "organisations" -> ChangeKind.ORGANISATION to rowId.toString()
+        "person_organisations", "episode_organisations" -> id("organisation_id")?.let { ChangeKind.ORGANISATION to it }
         else -> null
     }
 }
@@ -84,6 +89,17 @@ private val PERSON_COLUMNS = linkedMapOf(
     "instagram_url" to "Instagram", "facebook_url" to "Facebook", "avatar_image_id" to "Avatar",
 )
 
+// An organisation's, its finance details too, as its history is the team's
+private val ORGANISATION_COLUMNS = linkedMapOf(
+    "name" to "Name", "description" to "Description", "tier" to "Tier", "support_started_at" to "Supporting since",
+    "support_ended_at" to "Supporting until", "website_url" to "Website", "linkedin_url" to "LinkedIn", "twitter_url" to "X",
+    "instagram_url" to "Instagram", "facebook_url" to "Facebook", "logo_image_id" to "Logo", "vat_id" to "VAT ID",
+    "company_id" to "Company ID", "address" to "Address", "contact_person_id" to "Contact",
+)
+
+// A person's work at an organisation
+private val WORK_COLUMNS = linkedMapOf("title" to "Title", "started_at" to "Started", "ended_at" to "Left")
+
 // A post's, as someone gave them
 private val DISTRIBUTION_COLUMNS = linkedMapOf(
     "channel" to "Channel", "url" to "URL", "title" to "Title", "note" to "Note", "posted_at" to "Posted",
@@ -91,12 +107,13 @@ private val DISTRIBUTION_COLUMNS = linkedMapOf(
 
 // Too long to show what they were and what they became
 private val LONG_COLUMNS = setOf("summary", "machine_summary")
-private val DATE_COLUMNS = setOf("recording_date", "aired_date", "added_date", "date")
+private val DATE_COLUMNS =
+    setOf("recording_date", "aired_date", "added_date", "date", "support_started_at", "support_ended_at", "started_at", "ended_at")
 // Pictures, by the names of the files they were made from
 private val IMAGE_COLUMNS =
     setOf(
         "thumbnail_image_id", "thumbnail_b_image_id", "thumbnail_c_image_id", "web_image_id", "cover_image_id",
-        "avatar_image_id",
+        "avatar_image_id", "logo_image_id",
     )
 
 // How much of a comment the history shows
@@ -128,13 +145,16 @@ class History(private val auditLog: AuditLog, private val jdbcTemplate: JdbcTemp
         val rows = auditLog.recentTold(limit).reversed()
         val subjects = rows.mapNotNull { it.subject() }
         fun ids(kind: ChangeKind) = subjects.filter { it.first == kind }.map { it.second }.toSet()
-        val names = namesOf(rows, people = ids(ChangeKind.PERSON), sessions = ids(ChangeKind.SESSION))
+        val names = namesOf(
+            rows, people = ids(ChangeKind.PERSON), sessions = ids(ChangeKind.SESSION), organisations = ids(ChangeKind.ORGANISATION),
+        )
         val episodes = byId("select id, code, title from episodes", ids(ChangeKind.EPISODE)) { it.getString(2) to it.getString(3) }
         return rows.mapNotNull { row ->
             val (kind, id) = row.subject() ?: return@mapNotNull null
             val about = when (kind) {
                 ChangeKind.EPISODE -> episodes[id]?.let { (code, title) -> ChangeSubjectDto(kind, UUID.fromString(id), title, code) }
                 ChangeKind.SESSION -> names.sessions[id]?.let { ChangeSubjectDto(kind, UUID.fromString(id), it, null) }
+                ChangeKind.ORGANISATION -> names.organisations[id]?.let { ChangeSubjectDto(kind, UUID.fromString(id), it, null) }
                 else -> names.people[id]?.let { ChangeSubjectDto(kind, UUID.fromString(id), it, null) }
             }
             names.entry(row, subject = id, about)
@@ -143,9 +163,22 @@ class History(private val auditLog: AuditLog, private val jdbcTemplate: JdbcTemp
 
     // Who made the changes, by their person's name once their account is linked, and the people, shows, sessions and
     // pictures they have by ID, by name
-    private fun namesOf(rows: List<AuditRow>, people: Set<String> = emptySet(), sessions: Set<String> = emptySet()) = Names(
+    private fun namesOf(
+        rows: List<AuditRow>,
+        people: Set<String> = emptySet(),
+        sessions: Set<String> = emptySet(),
+        organisations: Set<String> = emptySet(),
+    ) = Names(
         actors = accounts.people(rows.mapNotNull { it.actorId }).mapValues { it.value.name },
-        people = names("select id, name from people", rows.ids("person_id") + rows.ids("recommended_by") + people),
+        people = names(
+            "select id, name from people", rows.ids("person_id") + rows.ids("recommended_by") + rows.ids("contact_person_id") + people,
+        ),
+        organisations = names("select id, cast(name as text) from organisations", rows.ids("organisation_id") + organisations),
+        // An episode by its code, else its title, where a change to an organisation names it
+        episodes = names(
+            "select id, coalesce(cast(code as text), title) from episodes",
+            rows.filter { it.table == "episode_organisations" }.ids("episode_id"),
+        ),
         shows = names("select id, name from shows", rows.ids("show_id")),
         // A session by its date and what it goes by, as the front-end's sessionTitle has it
         sessions = names("select id, date, coalesce(name, location) from sessions", rows.ids("session_id") + sessions) { rs ->
@@ -179,6 +212,8 @@ private class Names(
     val shows: Map<String, String>,
     val sessions: Map<String, String>,
     val images: Map<String, String>,
+    val organisations: Map<String, String>,
+    val episodes: Map<String, String>,
 ) {
 
     fun entry(row: AuditRow, subject: String, about: ChangeSubjectDto? = null): HistoryEntryDto {
@@ -203,7 +238,44 @@ private class Names(
         "transcripts" -> transcript(row)
         "distributions" -> distribution(row)
         "people" -> change(row, "person", PERSON_COLUMNS)
+        "organisations" -> change(row, "organisation", ORGANISATION_COLUMNS)
+        "person_organisations" -> work(row, subject)
+        "episode_organisations" -> support(row, subject)
         else -> Described("Changed ${row.table}")
+    }
+
+    private fun organisation(row: AuditRow) =
+        organisations[(row.new["organisation_id"] ?: row.old["organisation_id"]).toString()] ?: "an organisation deleted since"
+
+    // Someone working at an organisation, told on their page as where, and on the organisation's as who
+    private fun work(row: AuditRow, subject: String): Described {
+        val person = people[(row.new["person_id"] ?: row.old["person_id"]).toString()] ?: "someone deleted since"
+        val organisation = organisation(row)
+        val onOrganisation = (row.new["organisation_id"] ?: row.old["organisation_id"]).toString() == subject
+        return when (row.operation) {
+            "INSERT" -> Described(
+                if (onOrganisation) "Added $person, who works there" else "Added that they work at $organisation",
+                fields(row.diff(), WORK_COLUMNS),
+            )
+            "DELETE" -> Described(if (onOrganisation) "Removed $person, who worked there" else "Removed their work at $organisation")
+            else -> Described(
+                if (onOrganisation) "Changed $person's work there" else "Changed their work at $organisation",
+                fields(row.diff(), WORK_COLUMNS),
+            )
+        }
+    }
+
+    // An organisation that supported an episode, told on the episode's page as who, and on the organisation's as which
+    private fun support(row: AuditRow, subject: String): Described {
+        val onOrganisation = (row.new["organisation_id"] ?: row.old["organisation_id"]).toString() == subject
+        val what = if (onOrganisation) episodes[(row.new["episode_id"] ?: row.old["episode_id"]).toString()] ?: "an episode deleted since"
+        else organisation(row)
+        return when {
+            row.operation == "DELETE" && onOrganisation -> Described("Removed it as a supporter of $what")
+            row.operation == "DELETE" -> Described("Removed $what as a supporter")
+            onOrganisation -> Described("Added it as a supporter of $what")
+            else -> Described("Added $what as a supporter")
+        }
     }
 
     // An account linked to a person or unlinked from them, by its username or email
@@ -317,7 +389,8 @@ private class Names(
         column == "status" -> value.toString().lowercase().replace('_', ' ')
         column == "show_id" -> shows[value.toString()] ?: "a show deleted since"
         column == "session_id" -> sessions[value.toString()] ?: "a session deleted since"
-        column == "recommended_by" -> people[value.toString()] ?: "someone deleted since"
+        column == "recommended_by" || column == "contact_person_id" -> people[value.toString()] ?: "someone deleted since"
+        column == "tier" -> value.toString().lowercase()
         column in IMAGE_COLUMNS -> images[value.toString()] ?: "a picture"
         column in DATE_COLUMNS -> runCatching { DATE.format(LocalDate.parse(value.toString())) }.getOrDefault(value.toString())
         else -> value.toString()

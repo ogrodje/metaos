@@ -66,6 +66,8 @@ export default defineNuxtConfig({
     '/transcriptions': TEAM,
     '/search': TEAM,
     '/sessions/**': TEAM,
+    '/organizacije': TEAM,
+    '/organizacije/**': TEAM,
     // The same pages in English
     '/en': PUBLIC,
     '/en/episodes': PUBLIC,
@@ -79,6 +81,8 @@ export default defineNuxtConfig({
     '/en/transcriptions': TEAM,
     '/en/search': TEAM,
     '/en/sessions/**': TEAM,
+    '/en/organisations': TEAM,
+    '/en/organisations/**': TEAM,
     '/sitemap.xml': DEV ? {} : { cache: { swr: true, maxAge: 3600 } },
     // keycloak-js asks Keycloak whether the user is signed in through a hidden iframe of silent-check-sso.html, so
     // MetaOS's pages may be framed - by MetaOS itself only

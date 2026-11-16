@@ -3,6 +3,7 @@ package si.ogrodje.metaos
 import org.hamcrest.Matchers.contains
 import org.hamcrest.Matchers.startsWith
 import org.junit.jupiter.api.Test
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.TestConfiguration
@@ -37,6 +38,7 @@ import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.Base64
 import java.util.HexFormat
+import java.util.UUID
 import java.util.zip.CRC32
 import java.util.zip.CRC32C
 import javax.imageio.ImageIO
@@ -148,6 +150,8 @@ class ImagesTest @Autowired constructor(
     private val episodePeople: EpisodePeopleRepository,
     private val history: History,
     private val mvc: MockMvc,
+    private val organisationLogos: OrganisationLogos,
+    private val organisations: OrganisationsRepository,
 ) {
 
     companion object {
@@ -266,6 +270,24 @@ class ImagesTest @Autowired constructor(
         assertFalse(isImageUrl("http://eu-central-1-shared-euc1-02.graphassets.com/abc/def"))
         assertFalse(isImageUrl("https://graphassets.com.example.com/abc"))
         assertFalse(isImageUrl("https://notgraphassets.com/abc"))
+    }
+
+    @Test
+    fun `gives the organisations ogrodje si had their logos, once, and not to one someone changed`() {
+        val kaldi = UUID.fromString("6f0b7c1e-0a3d-4c55-9b35-0d1c6a2b0001")
+        val koofr = UUID.fromString("6f0b7c1e-0a3d-4c55-9b35-0d1c6a2b0003")
+        organisations.saveAndFlush(checkNotNull(organisations.findByIdOrNull(koofr)).apply { description = "Changed first" })
+
+        organisationLogos.publish()
+        val logo = checkNotNull(organisations.findByIdOrNull(kaldi)?.logoImageId)
+        assertNull(organisations.findByIdOrNull(koofr)?.logoImageId)
+        val uploads = bucket.uploads
+
+        organisationLogos.publish()
+        assertEquals(logo, organisations.findByIdOrNull(kaldi)?.logoImageId)
+        assertEquals(uploads, bucket.uploads)
+        assertEquals("Changed the organisation", history.of(kaldi).single().summary)
+        assertEquals(FieldChangeDto("Logo", null, "kaldi.png"), history.of(kaldi).single().fields.single())
     }
 
     @Test

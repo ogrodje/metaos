@@ -47,6 +47,20 @@ const pages: RouteRecordRaw[] = [
     meta: { title: 'pages.person' },
     component: () => import('../views/PersonView.vue'),
   },
+  // Organisations, Ogrodje's supporters and partners and the companies people work at, behind sign-in; at a Slovenian
+  // address in Slovenian and an English one in English (LOCAL_PATHS)
+  {
+    path: '/organizacije',
+    name: 'organisations',
+    meta: { title: 'pages.organisations' },
+    component: () => import('../views/OrganisationsView.vue'),
+  },
+  {
+    path: '/organizacije/:id',
+    name: 'organisation',
+    meta: { title: 'pages.organisation' },
+    component: () => import('../views/OrganisationView.vue'),
+  },
   // Slovenia's tech, developer and startup events that haven't ended yet, from Goo, at ogrodje.si's old address of them
   {
     path: '/dogodki',
@@ -114,6 +128,15 @@ const pages: RouteRecordRaw[] = [
 ]
 
 /**
+ * The pages whose address is another word in another language than Slovenian, by their names: there under /en too.
+ * Links to them go by their names (organisationPath), as `path` only puts a path under /en.
+ */
+const LOCAL_PATHS: Record<string, Partial<Record<Locale, string>>> = {
+  organisations: { en: '/organisations' },
+  organisation: { en: '/organisations/:id' },
+}
+
+/**
  * Every page in each language, which Nuxt's router has instead of its own from files (router.options.ts): Slovenian at
  * its path, English under /en, named as @nuxtjs/i18n names them (`episode___sl`, `episode___en`), so its helpers
  * (useLocalePath, useSwitchLocalePath) and its locale from the route work as with pages it made itself. The address
@@ -123,6 +146,11 @@ export const routes: RouteRecordRaw[] = LOCALES.flatMap((locale) =>
   pages.map((page): RouteRecordRaw => ({
     ...page,
     name: `${String(page.name)}___${locale}`,
-    path: locale === DEFAULT_LOCALE ? page.path : `/${locale}${page.path === '/' ? '' : page.path}`,
+    path: locale === DEFAULT_LOCALE ? page.path : localPath(page, locale),
   }) as RouteRecordRaw),
 )
+
+function localPath(page: RouteRecordRaw, locale: Locale) {
+  const path = LOCAL_PATHS[String(page.name)]?.[locale] ?? page.path
+  return `/${locale}${path === '/' ? '' : path}`
+}
