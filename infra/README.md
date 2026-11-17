@@ -5,7 +5,7 @@ Nothing in it is set up by hand or by a script: a change to it is a change here,
 
 | Stack                         | What                                                                                     | State                  | Applied                         |
 |-------------------------------|------------------------------------------------------------------------------------------|------------------------|---------------------------------|
-| [`keycloak/`](keycloak)       | Realm `metaos`: scopes, clients, sign-in providers, members and staff, sessions, email | `prod`: Cloud Storage; `dev`: each developer's own | `prod`: CI, on merge; `dev`: `just keycloak <command> dev` |
+| [`keycloak/`](keycloak)       | Realm `metaos`: scopes, clients, sign-in providers, members and staff, sessions, email | `prod`: Cloud Storage; `dev`, `preview`: each machine's own | `prod`: CI, on merge; `dev`, `preview`: `just keycloak <command> dev` (or `preview`) |
 | [`gcp/`](gcp)                 | Project `ogrodje-metaos`: both environments' Cloud Storage, the states' bucket, CI's way in | Cloud Storage          | `just infra gcp <command>`, by its owners only |
 | [`newrelic/`](newrelic)       | New Relic: the browser apps, uptime checks, alerts and where they go, the dashboard       | Cloud Storage          | CI, on merge |
 | [`cloudflare/`](cloudflare)   | Zone `ogrodje.si`, as far as MetaOS goes: its five names (the apex and www too), the zone's cache, configuration and redirect rules, Smart Tiered Caching | Cloud Storage          | CI, on merge |

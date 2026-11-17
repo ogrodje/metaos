@@ -8,11 +8,13 @@ same way. Nothing else sets it up: Keycloak starts with the master realm only, a
 | `realm/`  | The realm, as a module                                                                                       |
 | `dev/`    | compose.yml's Keycloak, `http://localhost:8180`. Each developer has their own, so the state is on their machine |
 | `prod/`   | `https://metaos-auth.ogrodje.si`, with its state in Cloud Storage (`../gcp`)                                  |
+| `preview/`| compose.yml's `keycloak-preview`, `http://localhost:8189/auth`, which a machine's previews sign in through (CLAUDE.md's Previews). Each machine has its own, state on it; no email, no Google or Discord |
 
 ```bash
 just keycloak plan prod     # what would change
 just keycloak apply prod    # change it; CI does on a merge into master (../README.md)
 just keycloak adopt dev     # a realm the state doesn't have yet, e.g. a new compose Keycloak's (below)
+just keycloak adopt preview && just keycloak apply preview   # once on each machine that runs previews
 ```
 
 `just keycloak` signs in to production as `KEYCLOAK_ADMIN_USERNAME` with `KEYCLOAK_ADMIN_PASSWORD` (`.envrc`), and to
