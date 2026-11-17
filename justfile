@@ -106,6 +106,11 @@ architecture:
       --force-device-scale-factor=2 --window-size="$size" --virtual-time-budget=5000 \
       --screenshot="$PWD/architecture.png" "file://$PWD/architecture.svg"
 
+# A preview of this worktree on the tailnet, for trying a change out (CLAUDE.md's Previews, preview/preview.sh): `just
+# preview up`, then the address it prints; `just preview down` once it's done with; `just preview ls`
+preview *ARGS:
+    preview/preview.sh {{ARGS}}
+
 # Keycloak's realm metaos through Terraform (infra/keycloak/README.md): `just keycloak plan prod`, `just keycloak apply
 # dev`, `just keycloak adopt dev` for a realm its state doesn't have yet, e.g. a new compose Keycloak's, and `just
 # keycloak smtp-password prod` to send the SMTP password when a plain apply wouldn't (smtp-password.sh). Signs in to
@@ -118,12 +123,17 @@ keycloak command env *ARGS:
       prod) export TF_VAR_keycloak_admin_username="${KEYCLOAK_ADMIN_USERNAME:?}" \
               TF_VAR_keycloak_admin_password="${KEYCLOAK_ADMIN_PASSWORD:?}" \
               GOOGLE_OAUTH_ACCESS_TOKEN="${GOOGLE_OAUTH_ACCESS_TOKEN:-$(gcloud auth print-access-token)}" ;;
-      *) echo "dev or prod" >&2; exit 2 ;;
+      # The previews' (compose.yml's keycloak-preview), at this machine's name on the tailnet
+      preview) export KEYCLOAK_ADMIN_USERNAME=admin KEYCLOAK_ADMIN_PASSWORD=admin \
+                 TF_VAR_host="$(tailscale status --json | jq -r '.Self.DNSName | rtrimstr(".")')" ;;
+      *) echo "dev, prod or preview" >&2; exit 2 ;;
     esac
-    # How Keycloak sends email, in both: secretspec.toml's KEYCLOAK_SMTP_* (OG-61)
-    export TF_VAR_smtp_host="${KEYCLOAK_SMTP_HOST:?KEYCLOAK_SMTP_HOST, from secretspec.toml}" \
-      TF_VAR_smtp_port="${KEYCLOAK_SMTP_PORT:?}" TF_VAR_smtp_email="${KEYCLOAK_SMTP_EMAIL:?}" \
-      TF_VAR_smtp_password="${KEYCLOAK_SMTP_PASSWORD:?}"
+    # How Keycloak sends email, in development and production: secretspec.toml's KEYCLOAK_SMTP_* (OG-61). Previews send none
+    if [ "{{env}}" != preview ]; then
+      export TF_VAR_smtp_host="${KEYCLOAK_SMTP_HOST:?KEYCLOAK_SMTP_HOST, from secretspec.toml}" \
+        TF_VAR_smtp_port="${KEYCLOAK_SMTP_PORT:?}" TF_VAR_smtp_email="${KEYCLOAK_SMTP_EMAIL:?}" \
+        TF_VAR_smtp_password="${KEYCLOAK_SMTP_PASSWORD:?}"
+    fi
     cd infra/keycloak/{{env}}
     terraform init -input=false >/dev/null
     if [ "{{command}}" = adopt ]; then exec ../import.sh {{env}}; fi

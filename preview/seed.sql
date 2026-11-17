@@ -1,0 +1,83 @@
+-- A preview's data to begin with (scripts in this directory, CLAUDE.md's Previews): made up, never anyone's real data,
+-- and just enough for every page to have something on it. Loaded once into a new preview's database, after MetaOS
+-- has migrated it; agents add what their change needs on top, through the pages, GraphQL or MCP.
+--
+-- Fixed IDs, so links in a preview's notes keep working after `just preview up --fresh`. Dates are relative to today,
+-- so what's upcoming stays upcoming.
+BEGIN;
+
+INSERT INTO shows (id, name, color, language) VALUES
+  ('5e000000-0000-4000-8000-000000000001', 'Zagon', '#e4007c', 'sl-SI'),
+  ('5e000000-0000-4000-8000-000000000002', 'Borderless', '#1f6feb', 'en-GB');
+
+-- The first is you: the preview's dev user has this email, so whoami and "my episodes" find it
+INSERT INTO people (id, name, email, bio, homepage_url, linkedin_url) VALUES
+  ('9e000000-0000-4000-8000-000000000001', 'Dev User', 'dev@metaos.local', 'The preview''s own user (dev / dev).', NULL, NULL),
+  ('9e000000-0000-4000-8000-000000000002', 'Maja Kovač', NULL, 'Host. Writes software and talks about it.', 'https://example.com/maja', NULL),
+  ('9e000000-0000-4000-8000-000000000003', 'Luka Novak', NULL, 'Co-host and producer.', NULL, 'https://www.linkedin.com/in/example-luka'),
+  ('9e000000-0000-4000-8000-000000000004', 'dr. Ana Zupan', NULL, 'Researcher in distributed systems.', 'https://example.com/ana', NULL),
+  ('9e000000-0000-4000-8000-000000000005', 'Peter Horvat', NULL, 'Founder of a made-up startup.', NULL, NULL),
+  ('9e000000-0000-4000-8000-000000000006', 'Eva Krajnc', NULL, 'Designer.', NULL, NULL),
+  ('9e000000-0000-4000-8000-000000000007', 'Jan Oblak', NULL, NULL, NULL, NULL),
+  ('9e000000-0000-4000-8000-000000000008', 'Sara Mlakar', NULL, 'Platform engineer.', NULL, NULL);
+
+INSERT INTO sessions (id, date, name, location, address) VALUES
+  ('5c000000-0000-4000-8000-000000000001', CURRENT_DATE - 40, 'Studio, autumn', 'Studio', 'Trubarjeva 1, Ljubljana'),
+  ('5c000000-0000-4000-8000-000000000002', CURRENT_DATE + 9, 'Preview Conf 2026', 'Cankarjev dom', 'Prešernova 10, Ljubljana');
+
+INSERT INTO episodes (id, code, title, title_b, status, show_id, session_id, recording_date, aired_date, summary,
+                      tiny_summary, youtube_url, spotify_url, recommended_by, added_date) VALUES
+  ('e0000000-0000-4000-8000-000000000001', 'S01E01', 'Kako začeti z zagonskim podjetjem', NULL, 'PUBLISHED',
+   '5e000000-0000-4000-8000-000000000001', NULL, CURRENT_DATE - 200, CURRENT_DATE - 180,
+   'Peter pove, kako je začel, kaj bi danes naredil drugače in zakaj je prvi produkt zavrgel.',
+   'Prvi koraki zagonskega podjetja.', 'https://www.youtube.com/watch?v=example0001', NULL, NULL, CURRENT_DATE - 220),
+  ('e0000000-0000-4000-8000-000000000002', 'S01E02', 'Porazdeljeni sistemi brez bolečin', 'Konsenz za vsakogar', 'PUBLISHED',
+   '5e000000-0000-4000-8000-000000000001', NULL, CURRENT_DATE - 120, CURRENT_DATE - 100,
+   'Ana razloži, kaj je konsenz, zakaj so ure lažnive in kdaj potrebujete Raft.',
+   'Konsenz, ure in Raft.', 'https://www.youtube.com/watch?v=example0002', 'https://open.spotify.com/episode/example0002', NULL, CURRENT_DATE - 140),
+  ('e0000000-0000-4000-8000-000000000003', 'S02E01', 'Platform teams that people like', NULL, 'PUBLISHED',
+   '5e000000-0000-4000-8000-000000000002', NULL, CURRENT_DATE - 70, CURRENT_DATE - 50,
+   'Sara on building an internal platform that teams choose rather than put up with.',
+   'Internal platforms done well.', 'https://www.youtube.com/watch?v=example0003', NULL, NULL, CURRENT_DATE - 90),
+  ('e0000000-0000-4000-8000-000000000004', 'S01E03', 'Oblikovanje za razvijalce', NULL, 'EARLY_ACCESS',
+   '5e000000-0000-4000-8000-000000000001', '5c000000-0000-4000-8000-000000000001', CURRENT_DATE - 40, NULL,
+   'Eva o tem, kaj razvijalci lahko naredijo za boljši vmesnik, preden pride oblikovalec.', NULL, NULL, NULL, NULL, CURRENT_DATE - 60),
+  ('e0000000-0000-4000-8000-000000000005', 'S01E04', 'Testi, ki ne lažejo', NULL, 'IN_PRODUCTION',
+   '5e000000-0000-4000-8000-000000000001', '5c000000-0000-4000-8000-000000000001', CURRENT_DATE - 40, NULL,
+   NULL, NULL, NULL, NULL, NULL, CURRENT_DATE - 55),
+  ('e0000000-0000-4000-8000-000000000006', 'S01E05', 'Podatkovne baze v letu 2026', NULL, 'RECORDED',
+   '5e000000-0000-4000-8000-000000000001', '5c000000-0000-4000-8000-000000000001', CURRENT_DATE - 40, NULL,
+   NULL, NULL, NULL, NULL, NULL, CURRENT_DATE - 50),
+  ('e0000000-0000-4000-8000-000000000007', 'S01E06', 'V živo s konference', NULL, 'SCHEDULED',
+   '5e000000-0000-4000-8000-000000000001', '5c000000-0000-4000-8000-000000000002', CURRENT_DATE + 9, NULL,
+   NULL, NULL, NULL, NULL, NULL, CURRENT_DATE - 20),
+  ('e0000000-0000-4000-8000-000000000008', NULL, 'Odprta koda kot posel', NULL, 'IDEA',
+   '5e000000-0000-4000-8000-000000000001', NULL, NULL, NULL,
+   NULL, 'Kako se z odprto kodo preživiš.', NULL, NULL, '9e000000-0000-4000-8000-000000000003', CURRENT_DATE - 10),
+  ('e0000000-0000-4000-8000-000000000009', NULL, 'Remote teams across borders', NULL, 'IDEA',
+   '5e000000-0000-4000-8000-000000000002', NULL, NULL, NULL,
+   NULL, NULL, NULL, NULL, '9e000000-0000-4000-8000-000000000001', CURRENT_DATE - 3);
+
+INSERT INTO episode_people (id, episode_id, person_id, role) VALUES
+  ('ee000000-0000-4000-8000-000000000001', 'e0000000-0000-4000-8000-000000000001', '9e000000-0000-4000-8000-000000000002', 'HOST'),
+  ('ee000000-0000-4000-8000-000000000002', 'e0000000-0000-4000-8000-000000000001', '9e000000-0000-4000-8000-000000000003', 'CO_HOST'),
+  ('ee000000-0000-4000-8000-000000000003', 'e0000000-0000-4000-8000-000000000001', '9e000000-0000-4000-8000-000000000005', 'GUEST'),
+  ('ee000000-0000-4000-8000-000000000004', 'e0000000-0000-4000-8000-000000000002', '9e000000-0000-4000-8000-000000000002', 'HOST'),
+  ('ee000000-0000-4000-8000-000000000005', 'e0000000-0000-4000-8000-000000000002', '9e000000-0000-4000-8000-000000000004', 'GUEST'),
+  ('ee000000-0000-4000-8000-000000000006', 'e0000000-0000-4000-8000-000000000002', '9e000000-0000-4000-8000-000000000003', 'PRODUCER'),
+  ('ee000000-0000-4000-8000-000000000007', 'e0000000-0000-4000-8000-000000000003', '9e000000-0000-4000-8000-000000000003', 'HOST'),
+  ('ee000000-0000-4000-8000-000000000008', 'e0000000-0000-4000-8000-000000000003', '9e000000-0000-4000-8000-000000000008', 'GUEST'),
+  ('ee000000-0000-4000-8000-000000000009', 'e0000000-0000-4000-8000-000000000004', '9e000000-0000-4000-8000-000000000002', 'HOST'),
+  ('ee000000-0000-4000-8000-000000000010', 'e0000000-0000-4000-8000-000000000004', '9e000000-0000-4000-8000-000000000006', 'GUEST'),
+  ('ee000000-0000-4000-8000-000000000011', 'e0000000-0000-4000-8000-000000000004', '9e000000-0000-4000-8000-000000000006', 'DESIGNER'),
+  ('ee000000-0000-4000-8000-000000000012', 'e0000000-0000-4000-8000-000000000005', '9e000000-0000-4000-8000-000000000002', 'HOST'),
+  ('ee000000-0000-4000-8000-000000000013', 'e0000000-0000-4000-8000-000000000005', '9e000000-0000-4000-8000-000000000007', 'GUEST'),
+  ('ee000000-0000-4000-8000-000000000014', 'e0000000-0000-4000-8000-000000000005', '9e000000-0000-4000-8000-000000000001', 'PRODUCER'),
+  ('ee000000-0000-4000-8000-000000000015', 'e0000000-0000-4000-8000-000000000006', '9e000000-0000-4000-8000-000000000003', 'HOST'),
+  ('ee000000-0000-4000-8000-000000000016', 'e0000000-0000-4000-8000-000000000006', '9e000000-0000-4000-8000-000000000004', 'GUEST'),
+  ('ee000000-0000-4000-8000-000000000017', 'e0000000-0000-4000-8000-000000000007', '9e000000-0000-4000-8000-000000000002', 'HOST'),
+  ('ee000000-0000-4000-8000-000000000018', 'e0000000-0000-4000-8000-000000000007', '9e000000-0000-4000-8000-000000000005', 'CANDIDATE'),
+  ('ee000000-0000-4000-8000-000000000019', 'e0000000-0000-4000-8000-000000000008', '9e000000-0000-4000-8000-000000000007', 'CANDIDATE'),
+  ('ee000000-0000-4000-8000-000000000020', 'e0000000-0000-4000-8000-000000000003', '9e000000-0000-4000-8000-000000000001', 'CONSULTANT');
+
+COMMIT;
