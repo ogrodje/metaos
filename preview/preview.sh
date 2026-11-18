@@ -18,14 +18,20 @@
 #   127.0.0.1:809N                            its MetaOS, the boot jar, in database metaos_preview_N of compose's Postgres
 #   127.0.0.1:8189                            compose.yml's keycloak-preview, all slots'
 #
-# Previews run with none of the integrations' secrets (Drive, Dropbox, Koofr, Patreon, Cloud Storage, OpenRouter),
-# Temporal or Unleash, which this script doesn't pass on: they act on nothing real. Never `tailscale serve reset`, which
+# Previews run with none of the integrations' secrets (Drive, Dropbox, Koofr, Patreon, OpenRouter), Temporal or
+# Unleash, which this script doesn't pass on: they act on nothing real. Cloud Storage is the exception, development's
+# buckets only (ogrodje-metaos-dev and -public-dev, which are for development and tests, and whose CORS has the slots'
+# addresses, infra/gcp): with the shell's key for them, a preview publishes pictures and takes uploads; never with
+# another bucket's. Never `tailscale serve reset`, which
 # would also take down what else this machine serves (nuc8's Funnel on 443): each slot takes down only its own port.
 # Runs on Linux and macOS (bash 3.2).
 set -euo pipefail
 
 SLOTS="1 2"
 KEYCLOAK_PORT=8189
+# The only buckets a preview may use (infra/gcp: development's)
+DEV_BUCKET=ogrodje-metaos-dev
+DEV_MEDIA_BUCKET=ogrodje-metaos-public-dev
 STATE="${METAOS_PREVIEW_STATE:-$HOME/.local/state/metaos-previews}"
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
@@ -229,13 +235,22 @@ cmd_up() {
     created=true
   fi
 
-  # Only what a preview needs: not the shell's integrations' secrets, Temporal's address or Unleash's token
-  local issuer="$url/auth/realms/metaos"
+  # Only what a preview needs: not the shell's integrations' secrets, Temporal's address or Unleash's token; but
+  # development's buckets, when the shell has their key, and only theirs
+  local issuer="$url/auth/realms/metaos" storage=()
+  if [ -n "${GOOGLE_STORAGE_KEY:-}" ] && [ "${METAOS_STORAGE_BUCKET:-}" = "$DEV_BUCKET" ] &&
+     [ "${METAOS_MEDIA_BUCKET:-}" = "$DEV_MEDIA_BUCKET" ]; then
+    storage=(GOOGLE_STORAGE_KEY="$GOOGLE_STORAGE_KEY" METAOS_STORAGE_BUCKET="$DEV_BUCKET" METAOS_MEDIA_BUCKET="$DEV_MEDIA_BUCKET")
+    say "Cloud Storage: $DEV_BUCKET and $DEV_MEDIA_BUCKET"
+  else
+    say "Cloud Storage: off (the shell has no key for $DEV_BUCKET and $DEV_MEDIA_BUCKET)"
+  fi
   nohup env -i PATH="$PATH" HOME="$HOME" LANG="${LANG:-C.UTF-8}" \
     POSTGRES_HOST=localhost POSTGRES_PORT=5437 POSTGRES_DB="$db" \
     POSTGRES_USER="$POSTGRES_USER" POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
     SERVER_PORT="$api" KEYCLOAK_ISSUER_URI="$issuer" \
     SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI="http://127.0.0.1:$KEYCLOAK_PORT/auth/realms/metaos/protocol/openid-connect/certs" \
+    ${storage[@]+"${storage[@]}"} \
     java -Xmx1g -jar "$dir/metaos.jar" >"$dir/api.log" 2>&1 &
   local api_pid=$!
   nohup env -i PATH="$PATH" HOME="$HOME" LANG="${LANG:-C.UTF-8}" \

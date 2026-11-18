@@ -1147,9 +1147,11 @@ just preview down          # done: stop it, take its address down, drop its data
   metaos-previews/slot-N`), so the worktree can change and build again meanwhile. MetaOS has its own database,
   `metaos_preview_N` in compose's Postgres, which Flyway migrates and `preview/seed.sql` fills when it's new: made-up
   shows, people, a session and episodes at each stage, nobody's real data. Whatever the agent adds on top stays until
-  `--fresh` or `down`. A preview gets none of the shell's secrets: no Drive, Dropbox, Koofr, Patreon, Cloud Storage,
+  `--fresh` or `down`. A preview gets none of the shell's secrets: no Drive, Dropbox, Koofr, Patreon,
   agents (OpenRouter), Temporal (its task queue would be every slot's) or Unleash (the flags' defaults), so it changes
-  nothing real. About 0.6 GB for MetaOS and 0.15 GB for the front-end.
+  nothing real. Cloud Storage is the one it gets, development's buckets only (`ogrodje-metaos-dev` and
+  `-public-dev`, whose CORS has the slots' addresses, `infra/gcp`), when the shell has their key: so a preview
+  publishes pictures and takes the team's uploads, as development does, into the buckets that are for that. About 0.6 GB for MetaOS and 0.15 GB for the front-end.
 - **Sign-in:** as `dev` / `dev` (staff), through the machine's previews' Keycloak, compose.yml's `keycloak-preview`
   (`--profile preview`, `127.0.0.1:8189`, under `/auth`), with realm `metaos` from `infra/keycloak/preview`, which
   names the slots' addresses as metaos-ui's redirect URIs. Each slot's tailscale serve passes `/auth/realms` and
