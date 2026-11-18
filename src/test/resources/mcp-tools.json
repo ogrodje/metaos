@@ -3702,7 +3702,7 @@
       "readOnlyHint" : false,
       "title" : "Update organisation"
     },
-    "description" : "Change an organisation: its name, description, tier and when it supported Ogrodje, its links, its finance details (VAT ID, company ID, address, who to contact), which are the team's, where it announces its events (its website too, which the scrapers read every hour) and its badge's colours on the Events page, and whether it collects events or is archived (listed apart, its events no longer gathered; nothing is deleted). Omitted fields are left as they are; empty text clears one. It's listed as a supporter or partner while its tier isn't NONE, from when its support started (or always, without a start) till when it ended (or for good, without an end)",
+    "description" : "Change an organisation: its name, description, tier and when it supported Ogrodje, its links, its finance details (VAT ID, company ID, address, who to contact), which are the team's, where it announces its events (its website too, which the scrapers read every hour) and its badge's colours on the Events page, where its events usually are (its venue and address, for those that don't say), and whether it collects events or is archived (listed apart, its events no longer gathered; nothing is deleted). Omitted fields are left as they are; empty text clears one. It's listed as a supporter or partner while its tier isn't NONE, from when its support started (or always, without a start) till when it ended (or for good, without an end)",
     "inputSchema" : {
       "$schema" : "https://json-schema.org/draft/2020-12/schema",
       "properties" : {
@@ -3802,6 +3802,14 @@
         },
         "vatId" : {
           "description" : "VAT ID, e.g. SI12345678; empty to clear",
+          "type" : "string"
+        },
+        "venueAddress" : {
+          "description" : "That venue's address, e.g. Trubarjeva cesta 5, 1000 Ljubljana; empty to clear",
+          "type" : "string"
+        },
+        "venueName" : {
+          "description" : "Where its events usually are, e.g. Kovačnica, for those that don't say; empty to clear",
           "type" : "string"
         },
         "websiteUrl" : {

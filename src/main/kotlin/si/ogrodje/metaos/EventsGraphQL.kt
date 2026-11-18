@@ -37,6 +37,7 @@ data class EventInput(
 @Controller
 class EventsGraphQL(
     private val events: Events,
+    private val organisations: Organisations,
     private val syncs: EventsSyncs,
     private val goo: GooImport,
     private val imagesRepository: ImagesRepository,
@@ -53,6 +54,12 @@ class EventsGraphQL(
     @QueryMapping
     @PreAuthorize(SIGNED_IN)
     fun eventsRefresh(@Argument organisation: UUID?): EventsRefresh = syncs.status(organisation)
+
+    @QueryMapping
+    fun eventOrganisers(): Int = organisations.all(archived = false).count { it.gathersEvents && it.eventSources().isNotEmpty() }
+
+    @SchemaMapping(typeName = "Event")
+    fun place(event: Event): EventPlace? = event.place()
 
     @SchemaMapping(typeName = "Event")
     fun start(event: Event): String = event.startsAt.toInstant().toString()

@@ -91,6 +91,10 @@ INSERT INTO organisations (id, name, tier, website_url, meetup_url, ical_url, ma
   ('0a000000-0000-4000-8000-000000000003', 'Old Meetup (preview)', 'NONE', 'https://example.com/old',
    'https://www.meetup.com/old-preview/', NULL, NULL, NULL, 'Archived: its events are no longer gathered', FALSE, now());
 
+-- Where Kotlin Ljubljana's events usually are (V37), which its event that doesn't say where it is goes by
+UPDATE organisations SET venue_name = 'Kovačnica', venue_address = 'Tržaška cesta 2, Ljubljana'
+WHERE id = '0a000000-0000-4000-8000-000000000001';
+
 INSERT INTO events (id, organisation_id, source, external_id, source_url, title, description, url, starts_at, ends_at,
                     has_start_time, has_end_time, location_name, location_address, hidden_at, promoted_at) VALUES
   ('0e000000-0000-4000-8000-000000000001', '0a000000-0000-4000-8000-000000000001', 'MEETUP', 'meetup-preview-1',

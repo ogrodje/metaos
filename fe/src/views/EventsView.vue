@@ -46,6 +46,12 @@ async function loadEvents(quietly = false) {
   }
 }
 
+// How many organisations' events it gathers, for its line under the heading
+const organisers = ref<number>()
+const firstOrganisers = await useFirstLoad('event-organisers',
+  async () => (await graphql<{ eventOrganisers: number }>('{ eventOrganisers }')).eventOrganisers)
+organisers.value = firstOrganisers.data ?? undefined
+
 const first = await useFirstLoad('events', fetchEvents)
 events.value = first.data
 error.value = first.error
@@ -78,7 +84,14 @@ const weeks = computed(() => byWeek(events.value ?? []))
 <template>
   <main class="content">
     <PageHeader :title="t('pages.events')" :count="events?.length">
-      <I18nT keypath="events.intro" scope="global">
+      <I18nT v-if="organisers" keypath="events.intro" :plural="organisers" scope="global">
+        <template #n>{{ organisers }}</template>
+        <template #discord>
+          <a class="link" href="https://discord.com/invite/xV2Xc4VX9W" target="_blank" rel="noopener">{{ t('events.discord') }}</a>
+        </template>
+        <template #channel><strong>#🗓-dogodki</strong></template>
+      </I18nT>
+      <I18nT v-else keypath="events.introNoCount" scope="global">
         <template #discord>
           <a class="link" href="https://discord.com/invite/xV2Xc4VX9W" target="_blank" rel="noopener">{{ t('events.discord') }}</a>
         </template>
@@ -122,12 +135,7 @@ const weeks = computed(() => byWeek(events.value ?? []))
     </template>
 
     <footer class="disclaimer">
-      <I18nT keypath="events.disclaimer" tag="p" scope="global">
-        <template #not><strong>{{ t('events.not') }}</strong></template>
-        <template #goo>
-          <a class="link" href="https://github.com/ogrodje/goo" target="_blank" rel="noopener">Goo</a>
-        </template>
-      </I18nT>
+      <p>{{ t('events.disclaimer') }}</p>
       <I18nT keypath="events.api" tag="p" scope="global">
         <template #api>
           <RouterLink class="link" :to="path('/usage')">{{ t('events.apiLink') }}</RouterLink>

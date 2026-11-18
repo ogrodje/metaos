@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { badgeColors, byWeek, colorOf, dayOf, eventTime, formTime, inputTime, isManual, shortDay, sourceName, weekdayName, weekOf, weekRange } from '@/events'
+import { badgeColors, byWeek, colorOf, dayOf, eventTime, formTime, inputTime, isManual, isOnline, mapUrl, placeLine, shortDay, sourceName, weekdayName, weekOf, weekRange } from '@/events'
 import { t, tSl } from './i18n'
 
 const at = (start: string, end: string | null, hasStartTime = true, hasEndTime = true) => ({ start, end, hasStartTime, hasEndTime })
@@ -90,6 +90,28 @@ describe("an event's form", () => {
   it('tells the team their own events from those a scraper found', () => {
     expect(isManual({ source: 'MANUAL' })).toBe(true)
     expect(isManual({ source: 'MEETUP' })).toBe(false)
+  })
+})
+
+describe('placeLine', () => {
+  it('says the place and its address, or either, and the place once where the address has it', () => {
+    expect(placeLine({ name: 'Kovačnica', address: 'Trubarjeva 5, Ljubljana' })).toBe('Kovačnica, Trubarjeva 5, Ljubljana')
+    expect(placeLine({ name: 'Kovačnica', address: null })).toBe('Kovačnica')
+    expect(placeLine({ name: null, address: 'Trubarjeva 5' })).toBe('Trubarjeva 5')
+    expect(placeLine({ name: 'FRI', address: 'FRI, Večna pot 113' })).toBe('FRI, Večna pot 113')
+    expect(placeLine({ name: ' ', address: null })).toBeNull()
+    expect(placeLine(null)).toBeNull()
+  })
+})
+
+describe('mapUrl', () => {
+  it('links a place to the map, but not one online', () => {
+    expect(mapUrl({ name: 'Kovačnica', address: 'Trubarjeva 5' }))
+      .toBe('https://www.google.com/maps/search/?api=1&query=Kova%C4%8Dnica%2C%20Trubarjeva%205')
+    expect(mapUrl({ name: 'Spletni dogodek', address: null })).toBeNull()
+    expect(isOnline({ name: 'Online (Zoom)', address: null })).toBe(true)
+    expect(isOnline({ name: 'Kovačnica', address: null })).toBe(false)
+    expect(mapUrl({ name: null, address: null })).toBeNull()
   })
 })
 

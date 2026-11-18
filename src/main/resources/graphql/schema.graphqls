@@ -119,6 +119,8 @@ type Query {
 
     "Whether a refresh of every organisation's events, or of organisation's, is on. Needs a signed-in user."
     eventsRefresh(organisation: ID): EventsRefresh!
+    "How many organisations the Events page gathers events from: not archived, collecting them, with a link to read"
+    eventOrganisers: Int!
 }
 
 """
@@ -136,8 +138,11 @@ type Event {
     end: String
     hasStartTime: Boolean!
     hasEndTime: Boolean!
+    "Where it is, as its source or the team says; see place"
     locationName: String
     locationAddress: String
+    "Where it is: its own location, else its organisation's venue, where it doesn't say. Null where neither says."
+    place: EventPlace
     "Ogrodje's picks, which stand out"
     promoted: Boolean!
     "Hidden by the team: not listed for anyone else"
@@ -150,6 +155,14 @@ type Event {
     organisation: Organisation!
     "Who it's by, as its badge: the organisation's name, logo and colours"
     meetup: Meetup!
+}
+
+"Where an event is: its place, e.g. Kovačnica, and its address; either may be missing"
+type EventPlace {
+    name: String
+    address: String
+    "Whether it's the organisation's venue, as the event doesn't say"
+    fromOrganisation: Boolean!
 }
 
 "Who an event is by, as its badge on the Events page"
@@ -191,6 +204,8 @@ type GooImportSummary {
     events: Int!
     "Logos published from Hygraph"
     logos: Int!
+    "Organisations given the venue where their events usually are"
+    venues: Int!
 }
 
 type Mutation {
@@ -383,6 +398,10 @@ input OrganisationInput {
     collectsEvents: Boolean
     "Archived: listed apart, and its events no longer gathered; nothing of it is deleted"
     archived: Boolean
+    "Where its events usually are, e.g. Kovačnica, for those that don't say"
+    venueName: String
+    "That venue's address"
+    venueAddress: String
 }
 
 "How an organisation supports Ogrodje, as ogrodje.si's footer had them, or not at all"
@@ -445,6 +464,10 @@ type Organisation {
     collectsEvents: Boolean!
     "Archived: listed apart, and its events no longer gathered"
     archived: Boolean!
+    "Where its events usually are, e.g. Kovačnica, which an event that doesn't say where it is goes by"
+    venueName: String
+    "That venue's address"
+    venueAddress: String
     "Its events, the latest first; anyone not signed in gets only the upcoming ones that aren't hidden, the soonest first"
     events: [Event!]!
     "How each of its links was last scraped. None without a signed-in user."

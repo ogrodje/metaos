@@ -27,8 +27,17 @@ export interface ListedEvent {
   hasEndTime: boolean
   locationName: string | null
   locationAddress: string | null
+  /** Where it is: its own location, else its organisation's venue (fromOrganisation) */
+  place?: EventPlace | null
   promoted: boolean
   meetup: Meetup | null
+}
+
+/** Where an event is: its place and address, either may be missing */
+export interface EventPlace {
+  name: string | null
+  address: string | null
+  fromOrganisation: boolean
 }
 
 /** Which scraper found an event, or MANUAL for the team's own */
@@ -44,7 +53,7 @@ export interface TeamEvent extends ListedEvent {
 }
 
 export const EVENT_FIELDS = `id title url start end hasStartTime hasEndTime locationName locationAddress promoted
-  meetup { name logo mainColor backgroundColor }`
+  place { name address fromOrganisation } meetup { name logo mainColor backgroundColor }`
 
 /** An event's fields for the team, on top of everyone's */
 export const TEAM_EVENT_FIELDS = `${EVENT_FIELDS} description hidden source sourceUrl organisation { id name }`
@@ -214,4 +223,29 @@ const SOURCE_NAMES: Record<string, string> = {
 /** Which scraper found an event, or read an organisation's link, as people say it, e.g. Meetup */
 export function sourceName(source: string) {
   return SOURCE_NAMES[source] ?? source.split('_').map((word) => word.charAt(0) + word.slice(1).toLowerCase()).join(' ')
+}
+
+// A place that isn't one, which no map has
+const ONLINE = /\b(online|on-line|splet\w*|virtual\w*|virtualn\w*|zoom|teams|youtube|discord|webinar\w*)\b/i
+
+/** Where an event is, on a line: its place and its address, or either; the place once when they're the same */
+export function placeLine(place: Pick<EventPlace, 'name' | 'address'> | null | undefined): string | null {
+  const name = place?.name?.trim() || null
+  const address = place?.address?.trim() || null
+  if (!name || !address) return name ?? address
+  const lower = (text: string) => text.toLocaleLowerCase('sl')
+  if (lower(address).includes(lower(name))) return address
+  if (lower(name).includes(lower(address))) return name
+  return `${name}, ${address}`
+}
+
+/** Whether an event's place is online, e.g. Zoom or Spletni dogodek, so it has no map */
+export const isOnline = (place: Pick<EventPlace, 'name' | 'address'> | null | undefined) =>
+  !!place && !place.address && !!place.name && ONLINE.test(place.name)
+
+/** A link to the place on a map (Google Maps' search, which opens the app on phones), or none for one online */
+export function mapUrl(place: Pick<EventPlace, 'name' | 'address'> | null | undefined): string | null {
+  const line = placeLine(place)
+  if (!line || isOnline(place)) return null
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(line)}`
 }

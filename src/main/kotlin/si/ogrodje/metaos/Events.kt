@@ -66,10 +66,48 @@ class Event(
     /** It's listed until it ends, or until it starts when it has no end */
     fun upcoming(now: Instant) = (endsAt ?: startsAt).toInstant() >= now
 
+    /**
+     * Where it is, as it says, else at its organisation's venue: one with no address of its own whose place is none, its
+     * organisation's name (as some sources give it) or the venue's name gets the venue's address, and its name where it
+     * has none. One elsewhere, e.g. online, keeps what it says.
+     */
+    fun place(): EventPlace? {
+        val name = locationName?.trim()?.ifEmpty { null }
+        val address = locationAddress?.trim()?.ifEmpty { null }
+        if (address != null) return EventPlace(name, address, fromOrganisation = false)
+        val venue = organisation.venueName?.trim()?.ifEmpty { null }
+        val venueAddress = organisation.venueAddress?.trim()?.ifEmpty { null }
+        val atVenue = name == null || fold(name) == fold(organisation.name) || (venue != null && fold(name) == fold(venue))
+        return when {
+            atVenue && (venue != null || venueAddress != null) ->
+                EventPlace(venue ?: name?.takeIf { fold(it) != fold(organisation.name) }, venueAddress, fromOrganisation = true)
+            name != null -> EventPlace(name, null, fromOrganisation = false)
+            else -> null
+        }
+    }
+
     override fun equals(other: Any?) = this === other || (other is Event && id != null && id == other.id)
     override fun hashCode() = javaClass.hashCode()
     override fun toString() = "Event(id=$id, title=$title)"
 }
+
+/**
+ * Where an organisation's events usually are, from those that say it (a place and an address): the address most of them
+ * have, at least two and three in five, with the name they give it most often; none when they're all over the place.
+ */
+fun usualVenue(events: List<Event>): Pair<String?, String>? {
+    val located = events.mapNotNull { e ->
+        e.locationAddress?.trim()?.ifEmpty { null }?.let { e.locationName?.trim()?.ifEmpty { null } to it }
+    }
+    val (_, most) = located.groupBy { fold(it.second) }.maxByOrNull { it.value.size } ?: return null
+    if (most.size < 2 || most.size * 5 < located.size * 3) return null
+    val name = most.mapNotNull { it.first }.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
+    val address = most.groupingBy { it.second }.eachCount().maxBy { it.value }.key
+    return name to address
+}
+
+/** Where an event is: its place and address, either may be missing, and whether they're its organisation's venue's */
+data class EventPlace(val name: String?, val address: String?, val fromOrganisation: Boolean)
 
 /** How one of an organisation's links was last scraped: when, by which parser, how many events, or why it failed */
 @Entity
@@ -239,7 +277,21 @@ class Events(
                 changed++
             }
         }
+        fillVenue(organisation)
         return FoundCounts(added, changed)
+    }
+
+    /**
+     * Gives [organisation] the venue its events usually are at ([usualVenue]), where it has none: so those that don't
+     * say where they are say that. Whether it did.
+     */
+    @Transactional
+    fun fillVenue(organisation: Organisation): Boolean {
+        if (organisation.venueName != null || organisation.venueAddress != null) return false
+        val (name, address) = usualVenue(events.findByOrganisations(listOf(organisation))) ?: return false
+        organisation.venueName = name
+        organisation.venueAddress = address
+        return true
     }
 
     private fun differs(event: Event, f: FoundEvent) =

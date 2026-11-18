@@ -36,12 +36,16 @@ data class OrganisationDto(
     val backgroundColor: String?,
     val collectsEvents: Boolean,
     val archived: Boolean,
+    // Where its events usually are, which an event that doesn't say where it is goes by
+    val venueName: String?,
+    val venueAddress: String?,
 )
 
 fun Organisation.toDto() = OrganisationDto(
     id, name, description, tier, supportStartedAt, supportEndedAt, supports(ogrodjeToday()), websiteUrl, linkedinUrl,
     twitterUrl, instagramUrl, facebookUrl, vatId, companyId, address, contactPerson?.id, contactPerson?.name, meetupUrl,
     eventbriteUrl, icalUrl, lumaUrl, discordUrl, kompotUrl, mainColor, backgroundColor, collectsEvents, archived,
+    venueName, venueAddress,
 )
 
 /** How one of an organisation's links was last scraped */
@@ -154,7 +158,8 @@ class OrganisationsMCP(private val organisations: Organisations, private val eve
         description = "Change an organisation: its name, description, tier and when it supported Ogrodje, its links, " +
             "its finance details (VAT ID, company ID, address, who to contact), which are the team's, where it " +
             "announces its events (its website too, which the scrapers read every hour) and its badge's colours on the " +
-            "Events page, and whether it collects events or is archived (listed apart, its events no longer gathered; " +
+            "Events page, where its events usually are (its venue and address, for those that don't say), and " +
+            "whether it collects events or is archived (listed apart, its events no longer gathered; " +
             "nothing is deleted). Omitted fields are left as they are; empty text clears one. It's listed as a " +
             "supporter or partner while its tier isn't NONE, from when its support started (or always, without a " +
             "start) till when it ended (or for good, without an end)"
@@ -185,12 +190,14 @@ class OrganisationsMCP(private val organisations: Organisations, private val eve
         @McpToolParam(description = "Its badge's background, e.g. #000000; $CLEARS", required = false) backgroundColor: String? = null,
         @McpToolParam(description = "Whether its events are gathered from its links", required = false) collectsEvents: Boolean? = null,
         @McpToolParam(description = "Archive it (true), or bring it back (false)", required = false) archived: Boolean? = null,
+        @McpToolParam(description = "Where its events usually are, e.g. Kovačnica, for those that don't say; $CLEARS", required = false) venueName: String? = null,
+        @McpToolParam(description = "That venue's address, e.g. Trubarjeva cesta 5, 1000 Ljubljana; $CLEARS", required = false) venueAddress: String? = null,
     ): OrganisationDto = organisations.update(
         id,
         OrganisationChanges(
             name, description, tier, supportStartedAt, supportEndedAt, websiteUrl, linkedinUrl, twitterUrl, instagramUrl,
             facebookUrl, vatId, companyId, address, contactPerson, meetupUrl, eventbriteUrl, icalUrl, lumaUrl, discordUrl,
-            kompotUrl, mainColor, backgroundColor, collectsEvents, archived,
+            kompotUrl, mainColor, backgroundColor, collectsEvents, archived, venueName, venueAddress,
         ),
     ).toDto()
 

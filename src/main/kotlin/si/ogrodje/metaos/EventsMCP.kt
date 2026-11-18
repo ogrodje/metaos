@@ -20,6 +20,8 @@ data class EventDto(
     val url: String?,
     val locationName: String?,
     val locationAddress: String?,
+    // Where it is: its own location, else its organisation's venue (fromOrganisation)
+    val place: EventPlace?,
     val hidden: Boolean,
     val promoted: Boolean,
     // Which scraper found it, or MANUAL for the team's own
@@ -29,7 +31,7 @@ data class EventDto(
 
 fun Event.toDto() = EventDto(
     id, title, organisation.id, organisation.name, startsAt.toInstant(), endsAt?.toInstant(), hasStartTime, hasEndTime,
-    description, url, locationName, locationAddress, hiddenAt != null, promotedAt != null, source, sourceUrl,
+    description, url, locationName, locationAddress, place(), hiddenAt != null, promotedAt != null, source, sourceUrl,
 )
 
 private const val EVENT_ID = "Event ID (list_events)"

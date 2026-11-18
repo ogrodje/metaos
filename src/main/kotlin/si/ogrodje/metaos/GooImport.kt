@@ -16,7 +16,7 @@ import java.time.Instant
 import java.time.OffsetDateTime
 
 /** What importing from Goo did: organisations made and changed, and events added */
-data class GooImportSummary(val created: Int, val updated: Int, val events: Int, val logos: Int)
+data class GooImportSummary(val created: Int, val updated: Int, val events: Int, val logos: Int, val venues: Int = 0)
 
 /**
  * The one-time move of Goo (goo.ogrodje.si, github.com/ogrodje/goo) into MetaOS (OG-64), which can be run again until
@@ -34,6 +34,7 @@ class GooImport(
     @Value("\${metaos.goo.url}") private val goo: String,
     private val organisations: OrganisationsRepository,
     private val events: EventsRepository,
+    private val eventsOf: Events,
     private val images: ObjectProvider<Images>,
     private val transaction: TransactionTemplate,
     private val mapper: JsonMapper,
@@ -73,8 +74,12 @@ class GooImport(
             }.onFailure { log.warn("No logo for {} from {}: {}", meetup.name, meetup.logo, it.message) }
         }
         val added = timeline(byGooId)
-        log.info("Imported Goo: {} organisations made, {} changed, {} events, {} logos", created, updated, added, logos)
-        return GooImportSummary(created, updated, added, logos)
+        // Where each one's events usually are, as Hygraph has no venues, for its events that don't say
+        val venues = byGooId.values.count { o ->
+            transaction.execute { organisations.findById(checkNotNull(o.id)).map(eventsOf::fillVenue).orElse(false) } == true
+        }
+        log.info("Imported Goo: {} organisations made, {} changed, {} events, {} logos, {} venues", created, updated, added, logos, venues)
+        return GooImportSummary(created, updated, added, logos, venues)
     }
 
     private fun match(meetup: Meetup): Pair<Organisation, Boolean> {

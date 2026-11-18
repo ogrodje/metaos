@@ -263,8 +263,10 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   which opens where it's announced in a new tab, when it is (`eventTime` in [`fe/src/events.ts`](fe/src/events.ts):
   its times only where its source says it has them, in Ljubljana's time, where ogrodje.si took every time for summer
   time's), its organisation as a badge in its colours with its logo (a colour from its name where it has none), and
-  where it is when it has both the place and its address (`EventRow.vue`, `MeetupBadge.vue`); promoted ones, Ogrodje's picks, stand out in
-  the accent. Under them, a note that MetaOS gathers them from public sources. They're MetaOS's own (Events, below),
+  where it is (its place and address, or either, else its organisation's venue; `placeLine`), which opens Google Maps but
+  for one online (`mapUrl`; `EventRow.vue`, `MeetupBadge.vue`); promoted ones, Ogrodje's picks, stand out in the accent.
+  Its heading's line says how many organisations' events it gathers (`eventOrganisers`); under them, that MetaOS gathers
+  them from the organisers' public pages, and that Ogrodje doesn't organise them nor vouch for them. They're MetaOS's own (Events, below),
   through the `events` query: those that haven't ended, or started when they have no end, and aren't hidden. The team
   also gets the hidden ones, dimmed, and on each Hide, Pick and Edit (Edit only for its own), Add event and Refresh.
 - The People page, `/people`, lists everyone by name (Slovenian order, past a "dr."), from the `people` query: who they
@@ -314,6 +316,12 @@ them (OG-64): the start of its CRM. Finance is to build on them.
   webcal), `luma_url` and `kompot_url`, which the scrapers read (Events), and `discord_url`; its badge's colours on the
   Events page (`main_color`, the text's, and `background_color`, `#rrggbb`), and whether its events are gathered
   (`collects_events`). `goo_id` is the Hygraph meetup it was imported from.
+- Its venue (V37: `venue_name`, `venue_address`, public, unlike its registered `address`): where its events usually
+  are, which an event that doesn't say where it is goes by (`Event.place`: one with no address whose place is none, the
+  organisation's name or the venue's, as some sources give them; one online keeps what it says), as GraphQL's
+  `Event.place` and MCP's `place` have it, with `fromOrganisation`. Where it has none, MetaOS gives it the one most of its
+  events say (`usualVenue`: one address, at least two events and three in five), after each scrape and the Goo import,
+  as Hygraph has no venues.
 - People work at them (`person_organisations`: a title, free text, and from when till when, days; again after they
   left, not twice at once), and they support episodes (`episode_organisations`, once each). Unlinking deletes those
   rows; the audit log keeps them, and `restore_link` brings them back. `History.kt` tells them on the episode's,

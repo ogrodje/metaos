@@ -53,6 +53,9 @@ export interface Organisation extends Supporter {
   backgroundColor: string | null
   collectsEvents: boolean
   archived: boolean
+  /** Where its events usually are, which those that don't say where they are go by */
+  venueName: string | null
+  venueAddress: string | null
 }
 
 /** How one of an organisation's links was last scraped for events */
@@ -82,7 +85,7 @@ export const EVENT_LINKS = [
 export type OrganisationInput = Partial<Record<
   'name' | 'description' | 'supportStartedAt' | 'supportEndedAt' | 'websiteUrl' | 'linkedinUrl' | 'twitterUrl'
   | 'instagramUrl' | 'facebookUrl' | 'vatId' | 'companyId' | 'address' | 'meetupUrl' | 'eventbriteUrl' | 'icalUrl'
-  | 'lumaUrl' | 'discordUrl' | 'kompotUrl' | 'mainColor' | 'backgroundColor', string>> & {
+  | 'lumaUrl' | 'discordUrl' | 'kompotUrl' | 'mainColor' | 'backgroundColor' | 'venueName' | 'venueAddress', string>> & {
   tier?: OrganisationTier
   collectsEvents?: boolean
   archived?: boolean
@@ -95,7 +98,7 @@ export const SUPPORTER_FIELDS = `id name tier websiteUrl logo { ${IMAGE_FIELDS} 
 export const ORGANISATION_FIELDS = `
   ${SUPPORTER_FIELDS} description supporting supportStartedAt supportEndedAt linkedinUrl twitterUrl instagramUrl
   facebookUrl vatId companyId address contactPerson { id name } meetupUrl eventbriteUrl icalUrl lumaUrl discordUrl
-  kompotUrl mainColor backgroundColor collectsEvents archived
+  kompotUrl mainColor backgroundColor collectsEvents archived venueName venueAddress
 `
 
 export const CREATE_ORGANISATION = `mutation ($input: OrganisationInput!) {
@@ -112,9 +115,10 @@ export interface GooImportSummary {
   updated: number
   events: number
   logos: number
+  venues: number
 }
 
-export const IMPORT_FROM_GOO = 'mutation { summary: importFromGoo { created updated events logos } }'
+export const IMPORT_FROM_GOO = 'mutation { summary: importFromGoo { created updated events logos venues } }'
 
 /** A colour as the badge takes it, #rrggbb, or none; what the colour field can't show, e.g. #fff, is none */
 export function isColor(value: string | null | undefined): value is string {

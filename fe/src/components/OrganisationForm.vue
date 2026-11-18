@@ -28,7 +28,7 @@ type TextField = Exclude<keyof OrganisationInput, 'tier' | 'collectsEvents' | 'a
 const TEXT_FIELDS: TextField[] = [
   'name', 'description', 'supportStartedAt', 'supportEndedAt', 'websiteUrl', 'linkedinUrl', 'twitterUrl', 'instagramUrl',
   'facebookUrl', 'vatId', 'companyId', 'address', 'meetupUrl', 'eventbriteUrl', 'icalUrl', 'lumaUrl', 'discordUrl',
-  'kompotUrl', 'mainColor', 'backgroundColor',
+  'kompotUrl', 'mainColor', 'backgroundColor', 'venueName', 'venueAddress',
 ]
 
 const text = ref(Object.fromEntries(TEXT_FIELDS.map((field) => [field, props.organisation?.[field] ?? ''])) as Record<TextField, string>)
@@ -165,6 +165,17 @@ function picked(field: 'mainColor' | 'backgroundColor', value: string) {
           </span>
         </label>
       </div>
+      <div class="fields">
+        <label>
+          <span class="label">{{ t('organisation.venueName') }}</span>
+          <input v-model="text.venueName" class="input" type="text" autocomplete="off" :placeholder="t('organisationForm.venuePlaceholder')">
+        </label>
+        <label>
+          <span class="label">{{ t('organisation.venueAddress') }}</span>
+          <input v-model="text.venueAddress" class="input" type="text" autocomplete="off" :placeholder="t('organisationForm.venueAddressPlaceholder')">
+        </label>
+      </div>
+      <p class="hint">{{ t('organisationForm.venueHint') }}</p>
       <p class="preview">
         <span class="label">{{ t('organisationForm.badge') }}</span>
         <MeetupBadge :meetup="badge"/>

@@ -99,7 +99,7 @@ private val ORGANISATION_COLUMNS = linkedMapOf(
     "company_id" to "Company ID", "address" to "Address", "contact_person_id" to "Contact", "meetup_url" to "Meetup",
     "eventbrite_url" to "Eventbrite", "ical_url" to "Calendar", "luma_url" to "Luma", "discord_url" to "Discord",
     "kompot_url" to "Kompot", "main_color" to "Badge text", "background_color" to "Badge background",
-    "collects_events" to "Collects events",
+    "collects_events" to "Collects events", "venue_name" to "Venue", "venue_address" to "Venue address",
 )
 
 // An event's, as the team gives them to its own

@@ -78,6 +78,10 @@ class Organisation(
     @Column(columnDefinition = "text") var mainColor: String? = null
     @Column(columnDefinition = "text") var backgroundColor: String? = null
 
+    // Where its events usually are, e.g. Kovačnica, and its address: an event that doesn't say where it is is there
+    @Column(columnDefinition = "text") var venueName: String? = null
+    @Column(columnDefinition = "text") var venueAddress: String? = null
+
     // Whether its events are gathered from its links
     @Column(nullable = false) var collectsEvents: Boolean = true
 
@@ -266,6 +270,8 @@ data class OrganisationChanges(
     val backgroundColor: String? = null,
     val collectsEvents: Boolean? = null,
     val archived: Boolean? = null,
+    val venueName: String? = null,
+    val venueAddress: String? = null,
 )
 
 /** What changes about a person's work at an organisation, as [OrganisationChanges] */
@@ -337,6 +343,8 @@ class Organisations(
         changes.mainColor?.let { organisation.mainColor = colour(it, "Its badge's text colour") }
         changes.backgroundColor?.let { organisation.backgroundColor = colour(it, "Its badge's background") }
         changes.collectsEvents?.let { organisation.collectsEvents = it }
+        changes.venueName?.let { organisation.venueName = it.cleared() }
+        changes.venueAddress?.let { organisation.venueAddress = it.cleared() }
         changes.archived?.let { archived ->
             if (archived != organisation.archived) organisation.archivedAt = if (archived) OffsetDateTime.now() else null
         }

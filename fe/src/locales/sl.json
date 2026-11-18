@@ -387,18 +387,18 @@
     "api": "Dogodki so na voljo tudi {api} (poizvedba {query}).",
     "apiLink": "prek API-ja GraphQL MetaOS",
     "description": "Tehnološki, razvijalski in startup dogodki ter konference v Sloveniji, ki jih spremlja Ogrodje, po tednih.",
-    "disclaimer": "⚠️ Dogodke in konference MetaOS zbira z javnih strani in koledarjev organizatorjev, zato preverite podatke na njihovih straneh. Ogrodje {not} organizator. Stran nadaljuje {goo}, ki jih je zbiral prej.",
+    "disclaimer": "Dogodke in konference Ogrodje MetaOS zbira z javnih strani in koledarjev organizatorjev, zato preverite podatke na njihovih straneh. Ogrodje ni organizator dogodkov in ne jamči za točnost zbranih podatkov.",
     "discord": "strežniku Discord",
-    "intro": "Ogrodje spremlja več kot 60 tehnoloških, razvijalskih in startup dogodkov, konferenc in organizacij. Na dogodke se lahko naročite tudi na našem {discord}, na kanalu {channel}.",
+    "intro": "Tehnološki, razvijalski in startup dogodki {n} organizatorja na enem mestu. Obvestila o njih so tudi na našem {discord}, na kanalu {channel}. | Tehnološki, razvijalski in startup dogodki {n} organizatorjev na enem mestu. Obvestila o njih so tudi na našem {discord}, na kanalu {channel}. | Tehnološki, razvijalski in startup dogodki {n} organizatorjev na enem mestu. Obvestila o njih so tudi na našem {discord}, na kanalu {channel}. | Tehnološki, razvijalski in startup dogodki {n} organizatorjev na enem mestu. Obvestila o njih so tudi na našem {discord}, na kanalu {channel}.",
+    "introNoCount": "Tehnološki, razvijalski in startup dogodki na enem mestu. Obvestila o njih so tudi na našem {discord}, na kanalu {channel}.",
     "loading": "Nalagamo dogodke",
     "newTab": "(odpre se v novem zavihku)",
     "none": "Ta hip ni prihajajočih dogodkov.",
-    "not": "ni",
+    "onMap": "{place}, na zemljevidu (odpre se v novem zavihku)",
     "promoted": "Izpostavljeno",
     "team": {
       "add": "Dodaj dogodek",
       "editLabel": "Uredi {title}",
-      "foundOn": "Vir: {source}",
       "hidden": "Skrito",
       "hide": "Skrij",
       "hideLabel": "Skrij {title} pred drugimi",
@@ -715,6 +715,9 @@
     "unarchive": "Vrni iz arhiva",
     "until": "Do",
     "vatId": "ID za DDV",
+    "venue": "Prizorišče",
+    "venueAddress": "Naslov prizorišča",
+    "venueName": "Prizorišče dogodkov",
     "what": "Organizacija"
   },
   "organisationForm": {
@@ -739,6 +742,9 @@
     "supportEndedAt": "Podpira do",
     "supportStartedAt": "Podpira od",
     "tier": "Ogrodje podpira kot",
+    "venueAddressPlaceholder": "npr. Trubarjeva cesta 5, 1000 Ljubljana",
+    "venueHint": "Kjer so njeni dogodki navadno. Dogodek, ki ne pove, kje je, je tu. Prazno MetaOS izpolni samo, ko je večina dogodkov na istem naslovu.",
+    "venuePlaceholder": "npr. Kovačnica",
     "website": "Spletna stran"
   },
   "organisations": {
@@ -754,12 +760,13 @@
       "ask": "Uvozim srečanja iz Gooja kot organizacije in njegove prihajajoče dogodke? Dopolni se le, kar manjka.",
       "confirm": "Uvozi",
       "created": "{n} nova organizacija | {n} novi organizaciji | {n} nove organizacije | {n} novih organizacij",
-      "done": "Uvoženo iz Gooja: {created}, {updated}, {events} in {logos}.",
+      "done": "Uvoženo iz Gooja: {created}, {updated}, {events}, {logos} in {venues}.",
       "events": "{n} dogodek | {n} dogodka | {n} dogodki | {n} dogodkov",
       "import": "Uvozi iz Gooja",
       "importing": "Uvažamo …",
       "logos": "{n} logotip | {n} logotipa | {n} logotipi | {n} logotipov",
-      "updated": "{n} dopolnjena | {n} dopolnjeni | {n} dopolnjene | {n} dopolnjenih"
+      "updated": "{n} dopolnjena | {n} dopolnjeni | {n} dopolnjene | {n} dopolnjenih",
+      "venues": "{n} prizorišče | {n} prizorišči | {n} prizorišča | {n} prizorišč"
     },
     "lede": "Podporniki in partnerji Ogrodja ter podjetja, v katerih ljudje delajo.",
     "loading": "Nalagamo organizacije",

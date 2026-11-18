@@ -18,7 +18,7 @@ import PersonAvatar from '@/components/PersonAvatar.vue'
 import SignInPrompt from '@/components/SignInPrompt.vue'
 import SocialLinks from '@/components/SocialLinks.vue'
 import { type Episode, EPISODE_FIELDS, LIST_PICTURE_FIELDS } from '@/episodes'
-import { sourceName, TEAM_EVENT_FIELDS, type TeamEvent } from '@/events'
+import { mapUrl, placeLine, sourceName, TEAM_EVENT_FIELDS, type TeamEvent } from '@/events'
 import { useEventsRefresh } from '@/eventsRefresh'
 import { errorMessage, graphql } from '@/graphql'
 import { TIME_ZONE } from '@/i18n'
@@ -192,6 +192,11 @@ const badge = computed(() => organisation.value && {
   backgroundColor: organisation.value.backgroundColor,
 })
 
+// Where its events usually are, which those that don't say where they are go by, with a link to the map
+const venuePlace = computed(() => organisation.value && { name: organisation.value.venueName, address: organisation.value.venueAddress })
+const venue = computed(() => placeLine(venuePlace.value))
+const venueMap = computed(() => mapUrl(venuePlace.value))
+
 // Where it announces its events, and how each was last scraped: its website and its event links
 const eventLinks = computed(() => {
   const shown = organisation.value
@@ -291,6 +296,10 @@ const hasFinance = computed(() => {
               {{ organisation.collectsEvents ? t('organisation.events.gathersYes') : t('organisation.events.gathersNo') }}
             </Fact>
             <Fact v-if="badge" :label="t('organisation.events.badge')"><MeetupBadge :meetup="badge"/></Fact>
+            <Fact v-if="venue" :label="t('organisation.venue')" stacked>
+              <a v-if="venueMap" :href="venueMap" target="_blank" rel="noopener">{{ venue }}</a>
+              <template v-else>{{ venue }}</template>
+            </Fact>
             <Fact v-for="link in eventLinks" :key="link.key" :label="link.name" stacked>
               <a :href="link.url" target="_blank" rel="noopener">{{ siteName(link.url) }}</a>
               <template v-if="link.field !== 'DISCORD'">

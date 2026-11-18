@@ -387,18 +387,18 @@
     "api": "The events are also available {api} (its {query} query).",
     "apiLink": "through MetaOS's GraphQL API",
     "description": "Slovenia's tech, developer and startup events and conferences that Ogrodje follows, by week.",
-    "disclaimer": "⚠️ MetaOS gathers the events and conferences from the organisers' public pages and calendars, so please check the details on their pages. Ogrodje is {not} the organiser. This page continues {goo}, which gathered them before.",
+    "disclaimer": "Ogrodje MetaOS gathers the events and conferences from the organisers' public pages and calendars, so please check the details on their pages. Ogrodje doesn't organise the events and doesn't vouch for the accuracy of what's gathered.",
     "discord": "Discord server",
-    "intro": "Ogrodje follows over 60 tech, developer and startup events, conferences and organisers. You can also follow the events on our {discord}, in the {channel} channel.",
+    "intro": "Tech, developer and startup events from {n} organiser in one place. They're on our {discord} too, in the {channel} channel. | Tech, developer and startup events from {n} organisers in one place. They’re on our {discord} too, in the {channel} channel.",
+    "introNoCount": "Tech, developer and startup events in one place. They're on our {discord} too, in the {channel} channel.",
     "loading": "Loading the events",
     "newTab": "(opens in a new tab)",
     "none": "There are no upcoming events at the moment.",
-    "not": "not",
+    "onMap": "{place}, on the map (opens in a new tab)",
     "promoted": "Featured",
     "team": {
       "add": "Add event",
       "editLabel": "Edit {title}",
-      "foundOn": "Found on {source}",
       "hidden": "Hidden",
       "hide": "Hide",
       "hideLabel": "Hide {title} from everyone else",
@@ -715,6 +715,9 @@
     "unarchive": "Bring back",
     "until": "Until",
     "vatId": "VAT ID",
+    "venue": "Venue",
+    "venueAddress": "Venue address",
+    "venueName": "Events venue",
     "what": "The organisation"
   },
   "organisationForm": {
@@ -739,6 +742,9 @@
     "supportEndedAt": "Supporting until",
     "supportStartedAt": "Supporting since",
     "tier": "Supports Ogrodje as",
+    "venueAddressPlaceholder": "e.g. Trubarjeva cesta 5, 1000 Ljubljana",
+    "venueHint": "Where its events usually are. An event that doesn't say where it is is here. Left empty, MetaOS fills it in once most of its events are at one address.",
+    "venuePlaceholder": "e.g. Kovačnica",
     "website": "Website"
   },
   "organisations": {
@@ -754,12 +760,13 @@
       "ask": "Import Goo's meetups as organisations, and its upcoming events? Only what's missing is filled in.",
       "confirm": "Import",
       "created": "{n} new organisation | {n} new organisations",
-      "done": "Imported from Goo: {created}, {updated}, {events} and {logos}.",
+      "done": "Imported from Goo: {created}, {updated}, {events}, {logos} and {venues}.",
       "events": "{n} event | {n} events",
       "import": "Import from Goo",
       "importing": "Importing…",
       "logos": "{n} logo | {n} logos",
-      "updated": "{n} filled in | {n} filled in"
+      "updated": "{n} filled in | {n} filled in",
+      "venues": "{n} venue | {n} venues"
     },
     "lede": "Ogrodje's supporters and partners, and the companies people work at.",
     "loading": "Loading the organisations",

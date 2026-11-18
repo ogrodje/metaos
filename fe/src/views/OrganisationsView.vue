@@ -161,6 +161,7 @@ function counts(organisation: Listed) {
             updated: t('organisations.goo.updated', { n: imported.updated }, imported.updated),
             events: t('organisations.goo.events', { n: imported.events }, imported.events),
             logos: t('organisations.goo.logos', { n: imported.logos }, imported.logos),
+            venues: t('organisations.goo.venues', { n: imported.venues }, imported.venues),
           }) }}
         </p>
         <OrganisationForm v-if="creating" id="new-organisation" @saved="created" @close="creating = false"/>

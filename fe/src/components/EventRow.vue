@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { computed, nextTick, ref, useId } from 'vue'
 import EventForm from '@/components/EventForm.vue'
 import MeetupBadge from '@/components/MeetupBadge.vue'
-import { eventTime, type EventInput, isManual, type ListedEvent, sourceName, type TeamEvent, UPDATE_EVENT } from '@/events'
+import { eventTime, type EventInput, isManual, type ListedEvent, mapUrl, placeLine, type TeamEvent, UPDATE_EVENT } from '@/events'
 import { errorMessage, graphql } from '@/graphql'
 import { useLocale } from '@/useLocale'
 
@@ -46,12 +46,10 @@ function stopEditing() {
 }
 
 const when = computed(() => eventTime(props.event, dateLocale.value))
-// Where it is, when MetaOS knows both the place and its address, as ogrodje.si showed it
-const where = computed(() => {
-  const { locationName, locationAddress } = props.event
-  if (!locationName || !locationAddress) return null
-  return locationName === locationAddress ? locationName : `${locationName}, ${locationAddress}`
-})
+// Where it is: as it says, else at its organisation's venue (place), with a link to the map; online, without one
+const place = computed(() => props.event.place ?? { name: props.event.locationName, address: props.event.locationAddress })
+const where = computed(() => placeLine(place.value))
+const map = computed(() => mapUrl(place.value))
 </script>
 
 <!-- An event on a line or two: its title, which opens where it's announced in a new tab, who it's by, as a badge in their
@@ -70,17 +68,15 @@ const where = computed(() => {
       </p>
       <p v-if="event.meetup || where" class="details">
         <MeetupBadge v-if="event.meetup" :meetup="event.meetup"/>
-        <span v-if="where" class="where"><FontAwesomeIcon class="icon" :icon="faLocationDot"/>{{ where }}</span>
+        <a v-if="where && map" class="where" :href="map" target="_blank" rel="noopener"
+           :aria-label="t('events.onMap', { place: where })"><FontAwesomeIcon class="icon" :icon="faLocationDot"/>{{ where }}</a>
+        <span v-else-if="where" class="where"><FontAwesomeIcon class="icon" :icon="faLocationDot"/>{{ where }}</span>
       </p>
     </div>
     <time class="when" :datetime="event.start">{{ when }}</time>
 
     <div v-if="team && !editing" class="manage">
-      <span class="source">
-        <template v-if="isManual(team)">{{ t('events.team.manual') }}</template>
-        <a v-else-if="team.sourceUrl" :href="team.sourceUrl" target="_blank" rel="noopener">{{ t('events.team.foundOn', { source: sourceName(team.source) }) }}</a>
-        <template v-else>{{ t('events.team.foundOn', { source: sourceName(team.source) }) }}</template>
-      </span>
+      <span v-if="isManual(team)" class="source">{{ t('events.team.manual') }}</span>
       <span class="actions">
         <button type="button" class="button small quiet" :aria-disabled="busy || undefined"
                 :aria-label="team.hidden ? t('events.team.showLabel', { title: event.title }) : t('events.team.hideLabel', { title: event.title })"
@@ -170,17 +166,6 @@ const where = computed(() => {
   font-size: var(--text-caption);
   line-height: 18px;
   color: var(--muted);
-
-  a {
-    color: inherit;
-    text-decoration: underline;
-    text-decoration-color: var(--faint);
-    text-underline-offset: 3px;
-
-    &:hover {
-      color: var(--ink);
-    }
-  }
 }
 
 .actions {
@@ -210,6 +195,19 @@ const where = computed(() => {
   font-size: var(--text-small);
   line-height: 20px;
   color: var(--secondary);
+}
+
+// A link to the map, quiet until it's pointed at
+a.where {
+  color: inherit;
+  text-decoration: none;
+
+  &:hover {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--faint);
+    text-underline-offset: 3px;
+  }
 }
 
 .where {

@@ -160,6 +160,47 @@ class EventsTest @Autowired constructor(
             .andExpect(jsonPath("$.errors[0].message").exists())
     }
 
+    @Test
+    fun `an event that doesn't say where it is is at its organisation's venue, which its events give it`() {
+        val by = organisation("Venue Test")
+        fun at(id: String, name: String?, address: String?) = found(id, "Talk $id").copy(locationName = name, locationAddress = address)
+        keep(by, listOf(
+            at("v-1", "Kovačnica", "Trubarjeva 5, Ljubljana"), at("v-2", "kovačnica", "Trubarjeva 5, Ljubljana"),
+            at("v-3", null, null), at("v-4", "Venue Test", null), at("v-5", "Online", null), at("v-6", "FRI", "Večna pot 113"),
+        ))
+        // Two of three that say where they are: their venue
+        val organisation = organisationsMCP.get(by).organisation
+        assertEquals("Kovačnica", organisation.venueName)
+        assertEquals("Trubarjeva 5, Ljubljana", organisation.venueAddress)
+
+        val places = eventsMCP.list(organisationId = by).associate { it.title to it.place }
+        assertEquals(EventPlace("FRI", "Večna pot 113", false), places["Talk v-6"])
+        assertEquals(EventPlace("Kovačnica", "Trubarjeva 5, Ljubljana", true), places["Talk v-3"])
+        assertEquals(EventPlace("Kovačnica", "Trubarjeva 5, Ljubljana", true), places["Talk v-4"])
+        assertEquals(EventPlace("Online", null, false), places["Talk v-5"])
+
+        // The team's venue isn't changed, and clearing it leaves the events where they say
+        organisationsMCP.update(by, venueName = "Hekovnik", venueAddress = "")
+        keep(by, listOf(at("v-7", "Kovačnica", "Trubarjeva 5, Ljubljana")))
+        assertNull(organisationsMCP.get(by).organisation.venueAddress)
+        assertEquals(EventPlace("Hekovnik", null, true), eventsMCP.list(organisationId = by).first { it.title == "Talk v-3" }.place)
+
+        graphql("{ events { title place { name address fromOrganisation } } eventOrganisers }")
+            .andExpect(jsonPath("$.data.events[?(@.title == 'Talk v-6')].place.address", hasItem("Večna pot 113")))
+            .andExpect(jsonPath("$.data.eventOrganisers").isNumber)
+    }
+
+    @Test
+    fun `a venue is where most of an organisation's events are, and none when they're anywhere`() {
+        val by = Organisation("Usual")
+        fun at(name: String?, address: String) = Event(by, "MEETUP", null, "x", java.time.OffsetDateTime.now()).apply {
+            locationName = name; locationAddress = address
+        }
+        assertNull(usualVenue(listOf(at("A", "Street 1"))))
+        assertNull(usualVenue(listOf(at("A", "Street 1"), at("A", "Street 1"), at("B", "Street 2"), at("C", "Street 3"))))
+        assertEquals("A" to "Street 1", usualVenue(listOf(at("A", "Street 1"), at(null, "street 1"), at("A", "Street 1"), at("B", "Street 2"))))
+    }
+
     private fun graphql(query: String, auth: RequestPostProcessor? = null): ResultActions {
         val request = post("/graphql").contentType(MediaType.APPLICATION_JSON)
             .content(JsonMapper.builder().build().writeValueAsString(mapOf("query" to query)))
