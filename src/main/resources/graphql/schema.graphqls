@@ -99,27 +99,37 @@ type Query {
     supporters: [Organisation!]!
 
     """
-    Every organisation, by name: supporters and partners, and the companies people work at. Needs a signed-in user.
+    Every organisation, by name: supporters and partners, the companies people work at, and those whose events are on
+    the Events page; only those archived, or not, where archived is given. Needs a signed-in user.
     """
-    organisations: [Organisation!]!
+    organisations(archived: Boolean): [Organisation!]!
 
     "An organisation by its ID; null if there's none. Needs a signed-in user."
     organisation(id: ID!): Organisation
 
     """
-    Slovenia's tech, developer and startup events, from Goo (goo.ogrodje.si), that haven't ended yet (or started, when
-    they have no end), the soonest first
+    Slovenia's tech, developer and startup events, as the scrapers gather them from organisations' links (and the team
+    adds), that haven't ended yet (or started, when they have no end), the soonest first; the hidden ones too, with
+    hidden, for a signed-in user
     """
-    events: [Event!]!
+    events(hidden: Boolean): [Event!]!
+
+    "An event by its ID; null if there's none, or, without a signed-in user, it's hidden or over"
+    event(id: ID!): Event
+
+    "Whether a refresh of every organisation's events, or of organisation's, is on. Needs a signed-in user."
+    eventsRefresh(organisation: ID): EventsRefresh!
 }
 
 """
-An event, as Goo gathers it from public sources. Its start and end are instants (ISO 8601, UTC), with a time of day only
-where hasStartTime and hasEndTime say; one without an end has none, or the same as its start.
+An event, by an organisation, as a scraper found it on the organisation's links, or the team added it (source MANUAL).
+Its start and end are instants (ISO 8601, UTC), with a time of day only where hasStartTime and hasEndTime say; one
+without an end has none.
 """
 type Event {
     id: ID!
     title: String!
+    description: String
     "Where it's announced, e.g. on Meetup or Eventbrite"
     url: String
     start: String!
@@ -130,23 +140,59 @@ type Event {
     locationAddress: String
     "Ogrodje's picks, which stand out"
     promoted: Boolean!
+    "Hidden by the team: not listed for anyone else"
+    hidden: Boolean!
+    "Which scraper found it, e.g. MEETUP, or MANUAL for the team's own, which they may change wholly"
+    source: String!
+    "The page the scraper read it from. Null without a signed-in user."
+    sourceUrl: String
     "Who it's by"
-    meetup: Meetup
+    organisation: Organisation!
+    "Who it's by, as its badge: the organisation's name, logo and colours"
+    meetup: Meetup!
 }
 
-"Who an event is by, with its logo and colours: its text's (mainColor) and its badge's (backgroundColor), as #rrggbb"
+"Who an event is by, as its badge on the Events page"
 type Meetup {
     name: String!
     logo: String
+    "Its text's colour, e.g. #ffffff"
     mainColor: String
     backgroundColor: String
 }
 
-"""
-Changes, as the signed-in user: each needs an approved user's token with metaos:write (CommentsGraphQL.kt, Artwork.kt,
-MediaFiles.kt, GraphQL.kt, SessionsGraphQL.kt, DistributionsGraphQL.kt,
-OrganisationsGraphQL.kt)
-"""
+"How one of an organisation's links was last scraped"
+type EventScrape {
+    "WEBSITE, MEETUP, EVENTBRITE, ICAL, LUMA or KOMPOT: the field of the organisation the link is in"
+    field: String!
+    url: String!
+    "The scraper that read it, e.g. MEETUP; null when none takes it, or it failed"
+    source: String
+    scrapedAt: String!
+    "How many events it found"
+    events: Int!
+    "Why it failed, when it did"
+    error: String
+}
+
+"Whether the team's refresh of events, of every organisation's or of one's, is on"
+type EventsRefresh {
+    running: Boolean!
+    startedAt: String
+}
+
+"What importing from Goo did"
+type GooImportSummary {
+    "Organisations made of Goo's meetups"
+    created: Int!
+    "Organisations that were there, given what they hadn't got"
+    updated: Int!
+    "Goo's upcoming events added"
+    events: Int!
+    "Logos published from Hygraph"
+    logos: Int!
+}
+
 type Mutation {
     "Comment on an episode (ideas too) by its code or ID, in Markdown"
     commentOnEpisode(ref: String!, body: String!): Comment!
@@ -259,6 +305,44 @@ type Mutation {
     addEpisodeSupporter(ref: String!, organisation: ID!): Episode!
     "Take an organisation off the supporters of an episode"
     removeEpisodeSupporter(ref: String!, organisation: ID!): Episode!
+    """
+    Add an event of the team's own (MANUAL), by an organisation, with its title and start: a time (2026-11-16T18:00, in
+    Ljubljana, or with its offset) or a day (2026-11-16), as its end
+    """
+    createEvent(input: EventInput!): Event!
+    """
+    Change an event: the team's own wholly; one a scraper found, only whether it's hidden or promoted. What's left out
+    stays as it is, and empty text clears it.
+    """
+    updateEvent(id: ID!, input: EventInput!): Event!
+    """
+    Gather the events of every organisation that collects them again now, or of organisation's, unless that's on
+    already; it goes on after the answer, and the events come as they're found
+    """
+    refreshEvents(organisation: ID): EventsRefresh!
+    """
+    Import Goo's meetups from Hygraph as organisations, and Goo's upcoming events, once (OG-64); again, it fills in only
+    what's missing
+    """
+    importFromGoo: GooImportSummary!
+}
+
+"What an event is to be, for createEvent and updateEvent: what's left out stays as it is; empty text clears it"
+input EventInput {
+    "The ID of the organisation it's by"
+    organisation: ID
+    title: String
+    "A time, e.g. 2026-11-16T18:00 (in Ljubljana) or 2026-11-16T17:00:00Z, or a day, e.g. 2026-11-16"
+    start: String
+    "As start; empty for none"
+    end: String
+    description: String
+    "Where it's announced"
+    url: String
+    locationName: String
+    locationAddress: String
+    hidden: Boolean
+    promoted: Boolean
 }
 
 """
@@ -283,6 +367,22 @@ input OrganisationInput {
     address: String
     "The ID of the person to contact there"
     contactPerson: ID
+    "Where it announces its events, read by the scrapers, as its website is"
+    meetupUrl: String
+    eventbriteUrl: String
+    "A calendar (iCal: http, https or webcal)"
+    icalUrl: String
+    lumaUrl: String
+    discordUrl: String
+    kompotUrl: String
+    "Its badge's text colour on the Events page, e.g. #ffffff"
+    mainColor: String
+    "Its badge's background, e.g. #000000"
+    backgroundColor: String
+    "Whether its events are gathered from its links"
+    collectsEvents: Boolean
+    "Archived: listed apart, and its events no longer gathered; nothing of it is deleted"
+    archived: Boolean
 }
 
 "How an organisation supports Ogrodje, as ogrodje.si's footer had them, or not at all"
@@ -330,6 +430,25 @@ type Organisation {
     people: [OrganisationPerson!]!
     "The episodes it supported, the latest first. Anyone not signed in gets only the released ones."
     episodes: [Episode!]!
+    "Where it announces its events, which the scrapers read, as its website"
+    meetupUrl: String
+    eventbriteUrl: String
+    icalUrl: String
+    lumaUrl: String
+    discordUrl: String
+    kompotUrl: String
+    "Its badge's text colour on the Events page"
+    mainColor: String
+    "Its badge's background"
+    backgroundColor: String
+    "Whether its events are gathered from its links"
+    collectsEvents: Boolean!
+    "Archived: listed apart, and its events no longer gathered"
+    archived: Boolean!
+    "Its events, the latest first; anyone not signed in gets only the upcoming ones that aren't hidden, the soonest first"
+    events: [Event!]!
+    "How each of its links was last scraped. None without a signed-in user."
+    eventScrapes: [EventScrape!]!
 }
 
 "Someone's work at an organisation: their title, and from when till when (days)"

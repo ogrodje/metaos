@@ -13,7 +13,7 @@ data class FieldChangeDto(val field: String, val from: String?, val to: String?)
 
 /** What a change is to, so the front-end can tell changes apart without reading their words, e.g. to group them */
 enum class ChangeKind {
-    EPISODE, SESSION, PERSON, DOCUMENT, KOOFR_FOLDER, DROPBOX_FOLDER, COMMENT, ACCOUNT, MEDIA, DISTRIBUTION, ORGANISATION, OTHER,
+    EPISODE, SESSION, PERSON, DOCUMENT, KOOFR_FOLDER, DROPBOX_FOLDER, COMMENT, ACCOUNT, MEDIA, DISTRIBUTION, ORGANISATION, EVENT, OTHER,
 }
 
 /** A change to an episode or session, or to what's linked to it, as the front-end shows it */
@@ -48,6 +48,7 @@ private fun kindOf(table: String) = when (table) {
     "distributions" -> ChangeKind.DISTRIBUTION
     "people" -> ChangeKind.PERSON
     "organisations", "person_organisations", "episode_organisations" -> ChangeKind.ORGANISATION
+    "events" -> ChangeKind.EVENT
     else -> ChangeKind.OTHER
 }
 
@@ -64,12 +65,13 @@ private fun AuditRow.subject(): Pair<ChangeKind, String>? {
         "comments" -> id("episode_id")?.let { ChangeKind.EPISODE to it } ?: id("session_id")?.let { ChangeKind.SESSION to it }
         "accounts" -> id("person_id")?.let { ChangeKind.PERSON to it }
         "organisations" -> ChangeKind.ORGANISATION to rowId.toString()
-        "person_organisations", "episode_organisations" -> id("organisation_id")?.let { ChangeKind.ORGANISATION to it }
+        "person_organisations", "episode_organisations", "events" -> id("organisation_id")?.let { ChangeKind.ORGANISATION to it }
         else -> null
     }
 }
 
 private val DATE = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.UK)
+private val EVENT_TIME = DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm", Locale.UK)
 
 // The columns people care about, in the order they're shown, by their names
 private val EPISODE_COLUMNS = linkedMapOf(
@@ -94,7 +96,16 @@ private val ORGANISATION_COLUMNS = linkedMapOf(
     "name" to "Name", "description" to "Description", "tier" to "Tier", "support_started_at" to "Supporting since",
     "support_ended_at" to "Supporting until", "website_url" to "Website", "linkedin_url" to "LinkedIn", "twitter_url" to "X",
     "instagram_url" to "Instagram", "facebook_url" to "Facebook", "logo_image_id" to "Logo", "vat_id" to "VAT ID",
-    "company_id" to "Company ID", "address" to "Address", "contact_person_id" to "Contact",
+    "company_id" to "Company ID", "address" to "Address", "contact_person_id" to "Contact", "meetup_url" to "Meetup",
+    "eventbrite_url" to "Eventbrite", "ical_url" to "Calendar", "luma_url" to "Luma", "discord_url" to "Discord",
+    "kompot_url" to "Kompot", "main_color" to "Badge text", "background_color" to "Badge background",
+    "collects_events" to "Collects events",
+)
+
+// An event's, as the team gives them to its own
+private val EVENT_COLUMNS = linkedMapOf(
+    "title" to "Title", "starts_at" to "Starts", "ends_at" to "Ends", "url" to "Link", "location_name" to "Where",
+    "location_address" to "Address", "description" to "Description", "organisation_id" to "By",
 )
 
 // A person's work at an organisation
@@ -106,7 +117,7 @@ private val DISTRIBUTION_COLUMNS = linkedMapOf(
 )
 
 // Too long to show what they were and what they became
-private val LONG_COLUMNS = setOf("summary", "machine_summary")
+private val LONG_COLUMNS = setOf("summary", "machine_summary", "description")
 private val DATE_COLUMNS =
     setOf("recording_date", "aired_date", "added_date", "date", "support_started_at", "support_ended_at", "started_at", "ended_at")
 // Pictures, by the names of the files they were made from
@@ -241,7 +252,23 @@ private class Names(
         "organisations" -> change(row, "organisation", ORGANISATION_COLUMNS)
         "person_organisations" -> work(row, subject)
         "episode_organisations" -> support(row, subject)
+        "events" -> event(row)
         else -> Described("Changed ${row.table}")
+    }
+
+    // An event of the organisation's, by its title: added by the team, hidden or shown, picked, or changed
+    private fun event(row: AuditRow): Described {
+        val title = "\"${row.new["title"] ?: row.old["title"]}\""
+        val diff = row.diff()
+        val hidden = diff["hidden_at"]
+        val promoted = diff["promoted_at"]
+        return when {
+            row.operation == "INSERT" -> Described("Added the event $title", fields(diff, EVENT_COLUMNS))
+            row.operation == "DELETE" -> Described("Deleted the event $title for good")
+            hidden != null -> Described(if (hidden.to != null) "Hid the event $title" else "Showed the event $title again")
+            promoted != null -> Described(if (promoted.to != null) "Made the event $title one of Ogrodje's picks" else "Took the event $title off Ogrodje's picks")
+            else -> Described("Changed the event $title", fields(diff, EVENT_COLUMNS))
+        }
     }
 
     private fun organisation(row: AuditRow) =
@@ -373,6 +400,10 @@ private class Names(
             row.operation == "INSERT" -> Described("Created the $what", fields(diff, columns))
             row.operation == "DELETE" -> Described("Deleted the $what for good")
             deletedAt != null -> Described(if (deletedAt.to != null) "Deleted the $what" else "Restored the $what")
+            diff["archived_at"] != null -> Described(
+                if (diff.getValue("archived_at").to != null) "Archived the $what" else "Brought the $what back from the archive",
+                fields(diff, columns),
+            )
             else -> Described("Changed the $what", fields(diff, columns))
         }
     }
@@ -391,6 +422,9 @@ private class Names(
         column == "session_id" -> sessions[value.toString()] ?: "a session deleted since"
         column == "recommended_by" || column == "contact_person_id" -> people[value.toString()] ?: "someone deleted since"
         column == "tier" -> value.toString().lowercase()
+        column == "organisation_id" -> organisations[value.toString()] ?: "an organisation deleted since"
+        column == "starts_at" || column == "ends_at" ->
+            runCatching { EVENT_TIME.format(OffsetDateTime.parse(value.toString()).atZoneSameInstant(LJUBLJANA)) }.getOrDefault(value.toString())
         column in IMAGE_COLUMNS -> images[value.toString()] ?: "a picture"
         column in DATE_COLUMNS -> runCatching { DATE.format(LocalDate.parse(value.toString())) }.getOrDefault(value.toString())
         else -> value.toString()

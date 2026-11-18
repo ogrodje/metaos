@@ -243,6 +243,61 @@
     },
     "title" : "Create episode"
   },
+  "create_event" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : false,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Create event"
+    },
+    "description" : "Add an event the scrapers don't find, by an organisation, to the Events page: the team's own, which update_event changes wholly",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "description" : {
+          "description" : "What it's about",
+          "type" : "string"
+        },
+        "end" : {
+          "description" : "When it ends: a time, e.g. 2026-11-16T18:00 (in Ljubljana) or 2026-11-16T17:00:00Z, or a day, e.g. 2026-11-16, which has no time of day",
+          "type" : "string"
+        },
+        "locationAddress" : {
+          "description" : "Its address",
+          "type" : "string"
+        },
+        "locationName" : {
+          "description" : "Where it is, e.g. Kovačnica",
+          "type" : "string"
+        },
+        "organisationId" : {
+          "description" : "ID of the organisation it's by (list_organisations)",
+          "format" : "uuid",
+          "type" : "string"
+        },
+        "promoted" : {
+          "description" : "One of Ogrodje's picks, which stand out",
+          "type" : "boolean"
+        },
+        "start" : {
+          "description" : "When it starts: a time, e.g. 2026-11-16T18:00 (in Ljubljana) or 2026-11-16T17:00:00Z, or a day, e.g. 2026-11-16, which has no time of day",
+          "type" : "string"
+        },
+        "title" : {
+          "description" : "Its title",
+          "type" : "string"
+        },
+        "url" : {
+          "description" : "Where it's announced (http or https)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "organisationId", "title", "start" ],
+      "type" : "object"
+    },
+    "title" : "Create event"
+  },
   "create_koofr_folder" : {
     "annotations" : {
       "destructiveHint" : false,
@@ -287,6 +342,22 @@
       "properties" : {
         "description" : {
           "description" : "What it is, e.g. what it makes",
+          "type" : "string"
+        },
+        "eventbriteUrl" : {
+          "description" : "Its Eventbrite organiser page, whose events the scrapers gather",
+          "type" : "string"
+        },
+        "icalUrl" : {
+          "description" : "Its events' calendar (iCal), which the scrapers read",
+          "type" : "string"
+        },
+        "lumaUrl" : {
+          "description" : "Its Luma calendar, whose events the scrapers gather",
+          "type" : "string"
+        },
+        "meetupUrl" : {
+          "description" : "Its Meetup group, whose events the scrapers gather",
           "type" : "string"
         },
         "name" : {
@@ -706,7 +777,7 @@
       "readOnlyHint" : true,
       "title" : "Get organisation"
     },
-    "description" : "An organisation, with the people who work or worked at it (those who still do first) and the episodes it supported, the latest first",
+    "description" : "An organisation, with the people who work or worked at it (those who still do first), the episodes it supported, the latest first, and how each of its links was last scraped for events",
     "inputSchema" : {
       "$schema" : "https://json-schema.org/draft/2020-12/schema",
       "properties" : {
@@ -1511,6 +1582,33 @@
     },
     "title" : "List episodes"
   },
+  "list_events" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List events"
+    },
+    "description" : "List Slovenia's tech, developer and startup events on the Events page: those that haven't ended, the soonest first, as the scrapers gather them from organisations' links and the team adds them; or every event of one organisation, the latest first",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "hidden" : {
+          "description" : "The hidden ones too",
+          "type" : "boolean"
+        },
+        "organisationId" : {
+          "description" : "Only this organisation's, past ones too (list_organisations)",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ ],
+      "type" : "object"
+    },
+    "title" : "List events"
+  },
   "list_koofr_folder" : {
     "annotations" : {
       "destructiveHint" : false,
@@ -1562,10 +1660,14 @@
       "readOnlyHint" : true,
       "title" : "List organisations"
     },
-    "description" : "List all organisations by name: Ogrodje's supporters and partners, and the companies people work at",
+    "description" : "List all organisations by name: Ogrodje's supporters and partners, the companies people work at, and those whose events are on the Events page",
     "inputSchema" : {
       "$schema" : "https://json-schema.org/draft/2020-12/schema",
       "properties" : {
+        "archived" : {
+          "description" : "Only those archived (true) or not (false); all by default",
+          "type" : "boolean"
+        },
         "supporting" : {
           "description" : "Only those listed as supporters or partners today",
           "type" : "boolean"
@@ -2199,6 +2301,29 @@
       "type" : "object"
     },
     "title" : "Refresh distribution preview"
+  },
+  "refresh_events" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : true,
+      "readOnlyHint" : false,
+      "title" : "Refresh events"
+    },
+    "description" : "Gather events from organisations' links again now, as the scrapers do every hour: every organisation's that collects them, or one's. It answers at once and goes on; the events come as they're found, and get_organisation says how each link was last scraped. Not again while one is on",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "organisationId" : {
+          "description" : "Only this organisation's (list_organisations)",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ ],
+      "type" : "object"
+    },
+    "title" : "Refresh events"
   },
   "remove_episode_distribution" : {
     "annotations" : {
@@ -3505,6 +3630,70 @@
     },
     "title" : "Update episode media"
   },
+  "update_event" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Update event"
+    },
+    "description" : "Change an event: hide it from the Events page or show it again, or make it one of Ogrodje's picks; and the team's own (source MANUAL) wholly, as a scraper keeps what it found as the site says. Omitted fields are left as they are; empty text clears one. Nothing is deleted",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "description" : {
+          "description" : "What it's about (the team's own only)",
+          "type" : "string"
+        },
+        "end" : {
+          "description" : "When it ends: a time, e.g. 2026-11-16T18:00 (in Ljubljana) or 2026-11-16T17:00:00Z, or a day, e.g. 2026-11-16, which has no time of day; empty for none (the team's own only)",
+          "type" : "string"
+        },
+        "hidden" : {
+          "description" : "Hidden from the Events page",
+          "type" : "boolean"
+        },
+        "id" : {
+          "description" : "Event ID (list_events)",
+          "format" : "uuid",
+          "type" : "string"
+        },
+        "locationAddress" : {
+          "description" : "Its address (the team's own only)",
+          "type" : "string"
+        },
+        "locationName" : {
+          "description" : "Where it is (the team's own only)",
+          "type" : "string"
+        },
+        "organisationId" : {
+          "description" : "ID of the organisation it's by (the team's own only)",
+          "format" : "uuid",
+          "type" : "string"
+        },
+        "promoted" : {
+          "description" : "One of Ogrodje's picks",
+          "type" : "boolean"
+        },
+        "start" : {
+          "description" : "When it starts: a time, e.g. 2026-11-16T18:00 (in Ljubljana) or 2026-11-16T17:00:00Z, or a day, e.g. 2026-11-16, which has no time of day (the team's own only)",
+          "type" : "string"
+        },
+        "title" : {
+          "description" : "Its title (the team's own only)",
+          "type" : "string"
+        },
+        "url" : {
+          "description" : "Where it's announced; empty clears it (the team's own only)",
+          "type" : "string"
+        }
+      },
+      "required" : [ "id" ],
+      "type" : "object"
+    },
+    "title" : "Update event"
+  },
   "update_organisation" : {
     "annotations" : {
       "destructiveHint" : true,
@@ -3513,13 +3702,25 @@
       "readOnlyHint" : false,
       "title" : "Update organisation"
     },
-    "description" : "Change an organisation: its name, description, tier and when it supported Ogrodje, its links, and its finance details (VAT ID, company ID, address, who to contact), which are the team's. Omitted fields are left as they are; empty text clears one. It's listed as a supporter or partner while its tier isn't NONE, from when its support started (or always, without a start) till when it ended (or for good, without an end)",
+    "description" : "Change an organisation: its name, description, tier and when it supported Ogrodje, its links, its finance details (VAT ID, company ID, address, who to contact), which are the team's, where it announces its events (its website too, which the scrapers read every hour) and its badge's colours on the Events page, and whether it collects events or is archived (listed apart, its events no longer gathered; nothing is deleted). Omitted fields are left as they are; empty text clears one. It's listed as a supporter or partner while its tier isn't NONE, from when its support started (or always, without a start) till when it ended (or for good, without an end)",
     "inputSchema" : {
       "$schema" : "https://json-schema.org/draft/2020-12/schema",
       "properties" : {
         "address" : {
           "description" : "Its registered address; empty to clear",
           "type" : "string"
+        },
+        "archived" : {
+          "description" : "Archive it (true), or bring it back (false)",
+          "type" : "boolean"
+        },
+        "backgroundColor" : {
+          "description" : "Its badge's background, e.g. #000000; empty to clear",
+          "type" : "string"
+        },
+        "collectsEvents" : {
+          "description" : "Whether its events are gathered from its links",
+          "type" : "boolean"
         },
         "companyId" : {
           "description" : "Company ID in its registry, e.g. a matična številka; empty to clear",
@@ -3533,8 +3734,20 @@
           "description" : "What it is, e.g. what it makes; empty to clear",
           "type" : "string"
         },
+        "discordUrl" : {
+          "description" : "Its Discord; empty to clear",
+          "type" : "string"
+        },
+        "eventbriteUrl" : {
+          "description" : "Its Eventbrite organiser page; empty to clear",
+          "type" : "string"
+        },
         "facebookUrl" : {
           "description" : "Its Facebook page (https); empty to clear",
+          "type" : "string"
+        },
+        "icalUrl" : {
+          "description" : "Its events' calendar (iCal: http, https or webcal); empty to clear",
           "type" : "string"
         },
         "id" : {
@@ -3546,8 +3759,24 @@
           "description" : "Its Instagram profile (https); empty to clear",
           "type" : "string"
         },
+        "kompotUrl" : {
+          "description" : "Its page on Kompot; empty to clear",
+          "type" : "string"
+        },
         "linkedinUrl" : {
           "description" : "Its LinkedIn page (https); empty to clear",
+          "type" : "string"
+        },
+        "lumaUrl" : {
+          "description" : "Its Luma calendar; empty to clear",
+          "type" : "string"
+        },
+        "mainColor" : {
+          "description" : "Its badge's text colour on the Events page, e.g. #ffffff; empty to clear",
+          "type" : "string"
+        },
+        "meetupUrl" : {
+          "description" : "Its Meetup group, whose events the scrapers gather; empty to clear",
           "type" : "string"
         },
         "name" : {
