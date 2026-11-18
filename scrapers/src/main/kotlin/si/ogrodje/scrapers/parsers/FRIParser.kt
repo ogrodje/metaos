@@ -15,6 +15,10 @@ import kotlin.math.abs
  * `.date-single-top` and `.date-single-bottom`, one of several days `.date-top` and `.date-bottom`, each with `.dan` and
  * `.mesec`. A card that doesn't read is left out, as are doctoral defences and the events DataScience@UL-FRI lists
  * itself ([DataScienceParser]), unless its page doesn't answer. Its ID is the SHA-1 of the event's URL, fri-<sha1>.
+ *
+ * It reads FRI from [homepage] alone, whichever of FRI's addresses it's given (with www. or without, its calendar or
+ * any other page), and its events' URLs are [normalised]: an organisation with FRI in two of its links, e.g.
+ * https://www.fri.uni-lj.si/ and https://fri.uni-lj.si, had each event twice, by two IDs (OG-67).
  */
 object FRIParser : Parser {
     override val source = Source.FRI
@@ -30,13 +34,18 @@ object FRIParser : Parser {
     private val dayNumber = Regex("""(\d{1,2})""")
     private val clockTime = Regex("""(\d{1,2})[:.](\d{2})""")
 
+    /** Where FRI is read from, without www., as the IDs of the events Goo found have it */
+    val homepage = URI("https://fri.uni-lj.si")
+
     /** Exactly FRI: its subdomains, e.g. datascience.fri.uni-lj.si, are other sites */
     override fun accepts(field: SourceField, url: URI) =
         (url.host ?: "").lowercase().let { it == "fri.uni-lj.si" || it == "www.fri.uni-lj.si" }
 
-    override fun parse(context: ScrapeContext, url: URI) = parse(context, url, LocalDate.now(LJUBLJANA))
+    /** FRI's events, from [homepage], whichever of FRI's addresses [url] is */
+    override fun parse(context: ScrapeContext, url: URI) = parse(context, LocalDate.now(LJUBLJANA))
 
-    internal fun parse(context: ScrapeContext, url: URI, today: LocalDate): List<ScrapedEvent> {
+    internal fun parse(context: ScrapeContext, today: LocalDate): List<ScrapedEvent> {
+        val url = homepage
         val calendarUrl = url.at("/sl/koledar-dogodkov")
         val calendar = context.web.document(calendarUrl).selectFirst("div#vsi-dogodki")
             ?: throw NoSuchElementException("No calendar at $calendarUrl")
@@ -65,7 +74,7 @@ object FRIParser : Parser {
     private fun event(url: URI, today: LocalDate, card: Element): ScrapedEvent {
         val anchor = card.selectFirst(".event-title a[href]") ?: card.selectFirst("a[href]")
             ?: throw IllegalStateException("No link found")
-        val link = url.resolve(anchor.attr("href")).toString()
+        val link = url.resolve(anchor.attr("href").trim()).normalised().toString()
         val title = anchor.text().trim().takeIf { it.isNotEmpty() } ?: throw IllegalStateException("No title")
         val (startDay, endDay) = dates(card) ?: throw IllegalStateException("No date found for '$title'")
         val startDate = dateOf(startDay, today) ?: throw IllegalStateException("Could not read date '$startDay' for '$title'")

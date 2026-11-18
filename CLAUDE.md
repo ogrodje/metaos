@@ -379,7 +379,10 @@ Slovenia's tech, developer and startup events, which MetaOS gathers from the org
   same interface by the same name, so changing one is changing both). `EventsSyncWorkflow` asks them for each link of
   every organisation that gathers events (not archived, `collects_events`), at once, keeps what they found
   (`Events.keep`: writes only what changed, nothing that ended over a year ago, `EVENTS_KEPT_FOR`) and how each link
-  went (`event_scrapes`, without an audit trigger: when, by which scraper, how many, or why it failed). Every hour
+  went (`event_scrapes`, without an audit trigger: when, by which scraper, how many, or why it failed). A scraper whose
+  IDs come from its events' URLs writes them one way (`normalised`: no `www.`, no slash at the end), and reads its site
+  from one address, whichever of its addresses the link has: FRI's events were twice, from `https://www.fri.uni-lj.si/`
+  and `https://fri.uni-lj.si` (OG-67, `FRIParser.homepage`, `V38__fri_duplicate_events.sql`). Every hour
   (`EventsSyncs`, `events-sync-<hour>`, so two pods start it once), and when the team asks, for all or one
   organisation (`refreshEvents`, `refresh_events`, the Refresh buttons; once at a time). Without Temporal, nothing's
   gathered, and Refresh says so (previews).
