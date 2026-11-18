@@ -16,7 +16,7 @@ import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
 
 /**
- * Chromium, for the few sites that show their events only to a browser (Eventbrite, GZS, MPIK Koroška): Playwright's
+ * Chromium, for the few sites that show their events only to a browser (Eventbrite, GZS): Playwright's
  * browser server at `scrapers.browser-url` (in k8s a container of its own beside the scrapers, from Microsoft's image,
  * as patreon-gateway's), or else one it starts itself. Playwright's connection is single-threaded, so every page is
  * on one thread, one at a time, each in a fresh context of its own, closed once it's done.

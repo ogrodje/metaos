@@ -9,7 +9,28 @@ import java.time.Instant
  * had no parser, and Kompot's links none either, so they're left out.
  */
 val PARSERS: List<Parser> = listOf(
+    MeetupComParser,
+    EventbriteParser,
+    TehnoloskiParkLjubljanaParser,
+    GZSParser,
+    PrimorskiTehnoloskiParkParser,
     StartupSiParser,
+    ICalParser,
+    LumaParser,
+    DataScienceParser,
+    FRIParser,
+    KCUIParser,
+    InkubatorSavinjskeRegijeParser,
+    RacunalniskiMuzejParser,
+    WordPressEventsParser.LUI,
+    SpletneUriceParser,
+    WordPressEventsParser.PomurskiTehnoloskiPark,
+    WordPressEventsParser.InkubatorBelaKrajina,
+    WordPressEventsParser.InkubatorRogaskaSlatina,
+    SLAIFParser,
+    KatapultParser,
+    PodbreznikParser,
+    MPIKKoroskaParser,
 )
 
 /** The parser that takes [url] in [field], if any */

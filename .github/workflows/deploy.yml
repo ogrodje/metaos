@@ -1,7 +1,7 @@
 name: Build and Deploy
 
 # Tests, builds the images and rolls them out to metaos-prod. The app's tests are a job of their own, beside the images
-# rather than before them, and each image is a job of its own, so the five run at once; the deploy waits for them all,
+# rather than before them, and each image is a job of its own, so the six run at once; the deploy waits for them all,
 # so an image whose tests failed is pushed but not deployed. The private registry and the API server are reached over
 # Tailscale as tag:ci. Started by hand on another branch, it builds and pushes that branch's images (not as latest) and
 # deploys nothing.
@@ -73,6 +73,11 @@ jobs:
             dockerfile: docker/patreon-gateway.Dockerfile
             java: true
             build: ./gradlew --build-cache -p patreon-gateway test bootJar
+          # The scrapers of Goo's sources are a build of their own too (scrapers/); their tests need neither browser nor web
+          - image: scrapers
+            dockerfile: docker/scrapers.Dockerfile
+            java: true
+            build: ./gradlew --build-cache -p scrapers test bootJar
           # Nothing to build first: the Dockerfile compiles MetaOS's provider itself. `kc.sh build` makes different files
           # each time, so its layer comes from the cache (GitHub's), which keeps the image the same until Keycloak, the
           # provider or the realm changes, and Keycloak running
@@ -251,7 +256,7 @@ jobs:
           TAG: ${{ needs.image.outputs.tag }}
         run: |
           cd k8s/base
-          for image in metaos metaos-web keycloak patreon-gateway; do
+          for image in metaos metaos-web keycloak patreon-gateway scrapers; do
             digest=$(docker buildx imagetools inspect "$IMAGES/$image:$TAG" --format '{{json .Manifest}}' \
               | jq -r .digest)
             echo "$image:$TAG is $digest"
@@ -263,7 +268,7 @@ jobs:
           kubectl apply -k k8s/base/
 
           # Own keys: deployment.kubernetes.io/revision belongs to the Deployment controller
-          kubectl annotate deployment metaos metaos-web patreon-gateway -n metaos-prod \
+          kubectl annotate deployment metaos metaos-web patreon-gateway scrapers -n metaos-prod \
             ogrodje.si/git-sha="${GITHUB_SHA}" \
             ogrodje.si/deployed-by="${GITHUB_ACTOR}" \
             ogrodje.si/deployed-at="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
@@ -276,6 +281,7 @@ jobs:
           kubectl rollout status deployment/metaos -n metaos-prod --timeout=5m
           kubectl rollout status deployment/metaos-web -n metaos-prod --timeout=5m
           kubectl rollout status deployment/patreon-gateway -n metaos-prod --timeout=5m
+          kubectl rollout status deployment/scrapers -n metaos-prod --timeout=5m
 
       - name: Smoke the deployed app
         run: |
