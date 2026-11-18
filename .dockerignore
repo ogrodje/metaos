@@ -7,3 +7,5 @@
 !fe/.output
 !patreon-gateway/build/libs/patreon-gateway.jar
 !patreon-gateway/build/newrelic
+!scrapers/build/libs/scrapers.jar
+!scrapers/build/newrelic
