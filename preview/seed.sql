@@ -80,4 +80,49 @@ INSERT INTO episode_people (id, episode_id, person_id, role) VALUES
   ('ee000000-0000-4000-8000-000000000019', 'e0000000-0000-4000-8000-000000000008', '9e000000-0000-4000-8000-000000000007', 'CANDIDATE'),
   ('ee000000-0000-4000-8000-000000000020', 'e0000000-0000-4000-8000-000000000003', '9e000000-0000-4000-8000-000000000001', 'CONSULTANT');
 
+-- Made-up meetups whose events are on the Events page (V36), and their events, from now on so they stay upcoming;
+-- with how their links were last read, as the scrapers would have, as previews have no Temporal to read them
+INSERT INTO organisations (id, name, tier, website_url, meetup_url, ical_url, main_color, background_color, description,
+                           collects_events, archived_at) VALUES
+  ('0a000000-0000-4000-8000-000000000001', 'Kotlin Ljubljana (preview)', 'NONE', 'https://example.com/kotlin',
+   'https://www.meetup.com/kotlin-ljubljana-preview/', NULL, '#ffffff', '#7f52ff', 'A made-up meetup', TRUE, NULL),
+  ('0a000000-0000-4000-8000-000000000002', 'Hekerji Maribor (preview)', 'NONE', 'https://example.com/hekerji',
+   NULL, 'https://example.com/hekerji/cal.ics', NULL, NULL, 'A made-up hacker space', TRUE, NULL),
+  ('0a000000-0000-4000-8000-000000000003', 'Old Meetup (preview)', 'NONE', 'https://example.com/old',
+   'https://www.meetup.com/old-preview/', NULL, NULL, NULL, 'Archived: its events are no longer gathered', FALSE, now());
+
+-- Where Kotlin Ljubljana's events usually are (V37), which its event that doesn't say where it is goes by
+UPDATE organisations SET venue_name = 'Kovačnica', venue_address = 'Tržaška cesta 2, Ljubljana'
+WHERE id = '0a000000-0000-4000-8000-000000000001';
+
+INSERT INTO events (id, organisation_id, source, external_id, source_url, title, description, url, starts_at, ends_at,
+                    has_start_time, has_end_time, location_name, location_address, hidden_at, promoted_at) VALUES
+  ('0e000000-0000-4000-8000-000000000001', '0a000000-0000-4000-8000-000000000001', 'MEETUP', 'meetup-preview-1',
+   'https://www.meetup.com/kotlin-ljubljana-preview/events', 'Coroutines in practice', 'Talks and pizza',
+   'https://www.meetup.com/kotlin-ljubljana-preview/events/1', date_trunc('day', now()) + interval '2 days 17 hours',
+   date_trunc('day', now()) + interval '2 days 20 hours', TRUE, TRUE, 'Kovačnica', 'Tržaška cesta 2, Ljubljana', NULL, now()),
+  ('0e000000-0000-4000-8000-000000000002', '0a000000-0000-4000-8000-000000000001', 'MEETUP', 'meetup-preview-2',
+   'https://www.meetup.com/kotlin-ljubljana-preview/events', 'Kotlin Multiplatform night', NULL,
+   'https://www.meetup.com/kotlin-ljubljana-preview/events/2', date_trunc('day', now()) + interval '9 days 17 hours',
+   NULL, TRUE, FALSE, NULL, NULL, NULL, NULL),
+  ('0e000000-0000-4000-8000-000000000003', '0a000000-0000-4000-8000-000000000002', 'ICAL', 'ical-preview-1',
+   'https://example.com/hekerji/cal.ics', 'Hackathon weekend', 'Two days of hacking', 'https://example.com/hekerji/hackathon',
+   date_trunc('day', now()) + interval '12 days', date_trunc('day', now()) + interval '13 days', FALSE, FALSE,
+   'Hekerji', 'Glavni trg 1, Maribor', NULL, NULL),
+  ('0e000000-0000-4000-8000-000000000004', '0a000000-0000-4000-8000-000000000002', 'ICAL', 'ical-preview-2',
+   'https://example.com/hekerji/cal.ics', 'Spam event, hidden by the team', NULL, NULL,
+   date_trunc('day', now()) + interval '5 days 16 hours', NULL, TRUE, FALSE, NULL, NULL, now(), NULL),
+  ('0e000000-0000-4000-8000-000000000005', '0a000000-0000-4000-8000-000000000002', 'MANUAL', NULL,
+   NULL, 'Ogrodje meetup (added by hand)', NULL, 'https://ogrodje.si',
+   date_trunc('day', now()) + interval '6 days 17 hours', date_trunc('day', now()) + interval '6 days 19 hours',
+   TRUE, TRUE, NULL, NULL, NULL, NULL);
+
+INSERT INTO event_scrapes (organisation_id, field, url, source, scraped_at, events, error) VALUES
+  ('0a000000-0000-4000-8000-000000000001', 'WEBSITE', 'https://example.com/kotlin', NULL, now() - interval '20 minutes', 0, NULL),
+  ('0a000000-0000-4000-8000-000000000001', 'MEETUP', 'https://www.meetup.com/kotlin-ljubljana-preview/', 'MEETUP',
+   now() - interval '20 minutes', 2, NULL),
+  ('0a000000-0000-4000-8000-000000000002', 'WEBSITE', 'https://example.com/hekerji', NULL, now() - interval '20 minutes', 0, NULL),
+  ('0a000000-0000-4000-8000-000000000002', 'ICAL', 'https://example.com/hekerji/cal.ics', NULL, now() - interval '20 minutes', 0,
+   'https://example.com/hekerji/cal.ics answered 503');
+
 COMMIT;

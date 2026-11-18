@@ -1,8 +1,10 @@
 // Search as MetaOS's GraphQL API has it (src/main/resources/graphql/schema.graphqls, Search.kt): episodes, ideas too,
-// people and recording sessions. It's the team's, so only signed-in users can search.
+// people, recording sessions, organisations and events (from a month back on). It's the team's, so only signed-in users
+// can search.
 
 import { EPISODE_FIELDS, type Episode } from '@/episodes'
 import type { Translate } from '@/i18n'
+import type { ListedEvent } from '@/events'
 import { type Person, PERSON_FIELDS } from '@/people'
 
 /** Where a search matched */
@@ -20,6 +22,8 @@ export type SearchField =
   | 'LOCATION'
   | 'ADDRESS'
   | 'DATE'
+  | 'DESCRIPTION'
+  | 'ORGANISATION'
 
 export interface EpisodeHit {
   episode: Episode
@@ -49,6 +53,33 @@ export interface SessionHit {
   matchedIn: SearchField[]
 }
 
+/** An organisation as search results list it */
+export interface FoundOrganisation {
+  id: string
+  name: string
+  description: string | null
+  tier: 'SUPPORTER' | 'PARTNER' | 'NONE'
+  archived: boolean
+  venueName: string | null
+  venueAddress: string | null
+}
+
+export interface OrganisationHit {
+  organisation: FoundOrganisation
+  matchedIn: SearchField[]
+}
+
+/** An event as search results list it: when and where, who it's by, and whether the team hid it */
+export interface FoundEvent extends Pick<ListedEvent, 'id' | 'title' | 'url' | 'start' | 'end' | 'hasStartTime' | 'hasEndTime' | 'place'> {
+  hidden: boolean
+  organisation: { id: string, name: string }
+}
+
+export interface EventHit {
+  event: FoundEvent
+  matchedIn: SearchField[]
+}
+
 /** The episode whose code the text is, alone; a season's episodes; or the best of each kind, and how many there are */
 export interface SearchResults {
   episode: Episode | null
@@ -56,9 +87,13 @@ export interface SearchResults {
   episodes: EpisodeHit[]
   people: PersonHit[]
   sessions: SessionHit[]
+  organisations: OrganisationHit[]
+  events: EventHit[]
   episodeCount: number
   personCount: number
   sessionCount: number
+  organisationCount: number
+  eventCount: number
 }
 
 export const SEARCH_QUERY = `query ($text: String!, $limit: Int!) {
@@ -68,13 +103,19 @@ export const SEARCH_QUERY = `query ($text: String!, $limit: Int!) {
     episodes { episode { ${EPISODE_FIELDS} } matchedIn snippet }
     people { person { ${PERSON_FIELDS} } matchedIn }
     sessions { session { id date name location address episodes { id code title } } matchedIn }
-    episodeCount personCount sessionCount
+    organisations { organisation { id name description tier archived venueName venueAddress } matchedIn }
+    events {
+      event { id title url start end hasStartTime hasEndTime hidden place { name address fromOrganisation } organisation { id name } }
+      matchedIn
+    }
+    episodeCount personCount sessionCount organisationCount eventCount
   }
 }`
 
 /** How many there are in all: the episode whose code it was counts as one */
 export function resultCount(results: SearchResults) {
-  return (results.episode ? 1 : 0) + results.episodeCount + results.personCount + results.sessionCount
+  return (results.episode ? 1 : 0) + results.episodeCount + results.personCount + results.sessionCount +
+    results.organisationCount + results.eventCount
 }
 
 /** The search page, for a text */

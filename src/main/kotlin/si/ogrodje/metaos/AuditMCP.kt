@@ -111,6 +111,8 @@ class AuditLog(
                or (table_name = 'accounts'
                    and old_row ->> 'person_id' is distinct from new_row ->> 'person_id'
                    and ? in (old_row ->> 'person_id', new_row ->> 'person_id'))
+               or (table_name = 'events' and coalesce(client, '') <> '$WORKFLOWS_CLIENT'
+                   and ? in (old_row ->> 'organisation_id', new_row ->> 'organisation_id'))
                or (table_name in ('person_organisations', 'episode_organisations')
                    and ? in (old_row ->> 'person_id', new_row ->> 'person_id', old_row ->> 'episode_id', new_row ->> 'episode_id',
                              old_row ->> 'organisation_id', new_row ->> 'organisation_id'))
@@ -124,7 +126,7 @@ class AuditLog(
             order by id
             """.trimIndent(),
             toRow, id, id.toString(), id.toString(), id.toString(), id.toString(), id.toString(), id.toString(), id.toString(),
-            id.toString(), id.toString(),
+            id.toString(), id.toString(), id.toString(),
         )
 
     fun recent(limit: Int): List<AuditRow> =
@@ -144,6 +146,7 @@ class AuditLog(
                                  'person_organisations', 'episode_organisations')
                or (table_name = 'accounts' and old_row ->> 'person_id' is distinct from new_row ->> 'person_id')
                or ($TOLD_DISTRIBUTIONS)
+               or (table_name = 'events' and coalesce(client, '') <> '$WORKFLOWS_CLIENT')
             order by id desc
             limit ?
             """.trimIndent(),

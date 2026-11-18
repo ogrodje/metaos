@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import java.text.Collator
 import java.time.LocalDate
+import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeParseException
 import java.util.Locale
@@ -64,6 +65,46 @@ class Organisation(
     @ManyToOne(optional = true)
     @JoinColumn(name = "contact_person_id")
     var contactPerson: Person? = null
+
+    // Where it announces its events, which the scrapers read (EventsSync.kt), as Goo's meetups had them; its website too
+    @Column(columnDefinition = "text") var meetupUrl: String? = null
+    @Column(columnDefinition = "text") var eventbriteUrl: String? = null
+    @Column(columnDefinition = "text") var icalUrl: String? = null
+    @Column(columnDefinition = "text") var lumaUrl: String? = null
+    @Column(columnDefinition = "text") var discordUrl: String? = null
+    @Column(columnDefinition = "text") var kompotUrl: String? = null
+
+    // Its badge's on the Events page, its text's and its background's, e.g. #ffffff
+    @Column(columnDefinition = "text") var mainColor: String? = null
+    @Column(columnDefinition = "text") var backgroundColor: String? = null
+
+    // Where its events usually are, e.g. Kovačnica, and its address: an event that doesn't say where it is is there
+    @Column(columnDefinition = "text") var venueName: String? = null
+    @Column(columnDefinition = "text") var venueAddress: String? = null
+
+    // Whether its events are gathered from its links: not by default, as most organisations don't announce events
+    @Column(nullable = false) var collectsEvents: Boolean = false
+
+    // Archived: listed apart, and its events no longer gathered; nothing of it is deleted
+    var archivedAt: OffsetDateTime? = null
+
+    // The meetup in Hygraph it was imported from (GooImport.kt)
+    @Column(columnDefinition = "text") var gooId: String? = null
+
+    val archived: Boolean get() = archivedAt != null
+
+    /** Whether the scrapers gather its events: it isn't archived, and collects them */
+    val gathersEvents: Boolean get() = collectsEvents && !archived
+
+    /** Its links the scrapers read, by the field they're in: its website, Meetup, Eventbrite, iCal, Luma and Kompot */
+    fun eventSources(): Map<EventField, String> = listOfNotNull(
+        websiteUrl?.let { EventField.WEBSITE to it },
+        meetupUrl?.let { EventField.MEETUP to it },
+        eventbriteUrl?.let { EventField.EVENTBRITE to it },
+        icalUrl?.let { EventField.ICAL to it },
+        lumaUrl?.let { EventField.LUMA to it },
+        kompotUrl?.let { EventField.KOMPOT to it },
+    ).toMap()
 
     /** Whether it's listed as one of Ogrodje's supporters or partners on [day] */
     fun supports(day: LocalDate) = tier != OrganisationTier.NONE &&
@@ -219,6 +260,18 @@ data class OrganisationChanges(
     val companyId: String? = null,
     val address: String? = null,
     val contactPerson: String? = null,
+    val meetupUrl: String? = null,
+    val eventbriteUrl: String? = null,
+    val icalUrl: String? = null,
+    val lumaUrl: String? = null,
+    val discordUrl: String? = null,
+    val kompotUrl: String? = null,
+    val mainColor: String? = null,
+    val backgroundColor: String? = null,
+    val collectsEvents: Boolean? = null,
+    val archived: Boolean? = null,
+    val venueName: String? = null,
+    val venueAddress: String? = null,
 )
 
 /** What changes about a person's work at an organisation, as [OrganisationChanges] */
@@ -239,18 +292,24 @@ class Organisations(
 
     fun find(id: UUID): Organisation = requireNotNull(organisations.findByIdOrNull(id)) { "Organisation $id not found" }
 
-    fun all(): List<Organisation> = organisations.findAll().sortedWith(organisationsByName)
+    /** Every organisation by name, or only those [archived] or not */
+    fun all(archived: Boolean? = null): List<Organisation> =
+        organisations.findAll().filter { archived == null || it.archived == archived }.sortedWith(organisationsByName)
 
     /** Those listed as Ogrodje's supporters and partners on [day], supporters first, for the home page and the footer */
     fun supporters(day: LocalDate = ogrodjeToday()): List<Organisation> =
-        organisations.findByTierNot(OrganisationTier.NONE).filter { it.supports(day) }.sortedWith(byTier)
+        organisations.findByTierNot(OrganisationTier.NONE).filter { !it.archived && it.supports(day) }.sortedWith(byTier)
 
     @Transactional
     fun create(name: String, changes: OrganisationChanges = OrganisationChanges()): Organisation {
         val trimmed = name.trim()
         require(trimmed.isNotEmpty()) { "Name must not be blank" }
         require(organisations.findByName(trimmed) == null) { "Organisation $trimmed already exists" }
-        return organisations.save(Organisation(trimmed).apply { change(this, changes.copy(name = null)) })
+        return organisations.save(Organisation(trimmed).apply {
+            change(this, changes.copy(name = null))
+            // One made with somewhere to read its events, but its website alone, gathers them unless told otherwise
+            if (changes.collectsEvents == null) collectsEvents = eventSources().keys.any { it != EventField.WEBSITE }
+        })
     }
 
     @Transactional
@@ -279,6 +338,33 @@ class Organisations(
         changes.contactPerson?.let { ref ->
             organisation.contactPerson = ref.cleared()?.let { person(uuid(it, "A contact person")) }
         }
+        changes.meetupUrl?.let { organisation.meetupUrl = link(it, "Its Meetup page") }
+        changes.eventbriteUrl?.let { organisation.eventbriteUrl = link(it, "Its Eventbrite page") }
+        changes.icalUrl?.let { organisation.icalUrl = link(it, "Its calendar", setOf("http", "https", "webcal")) }
+        changes.lumaUrl?.let { organisation.lumaUrl = link(it, "Its Luma calendar") }
+        changes.discordUrl?.let { organisation.discordUrl = link(it, "Its Discord") }
+        changes.kompotUrl?.let { organisation.kompotUrl = link(it, "Its Kompot page") }
+        changes.mainColor?.let { organisation.mainColor = colour(it, "Its badge's text colour") }
+        changes.backgroundColor?.let { organisation.backgroundColor = colour(it, "Its badge's background") }
+        changes.collectsEvents?.let { organisation.collectsEvents = it }
+        changes.venueName?.let { organisation.venueName = it.cleared() }
+        changes.venueAddress?.let { organisation.venueAddress = it.cleared() }
+        changes.archived?.let { archived ->
+            if (archived != organisation.archived) organisation.archivedAt = if (archived) OffsetDateTime.now() else null
+        }
+    }
+
+    // A link, or none for empty text
+    private fun link(text: String, what: String, schemes: Set<String> = setOf("http", "https")): String? = text.cleared()?.also {
+        val scheme = runCatching { java.net.URI(it) }.getOrNull()?.takeIf { uri -> uri.host != null }?.scheme?.lowercase()
+        require(scheme in schemes) { "$what is a link (${schemes.joinToString(" or ")}), not $it" }
+    }
+
+    // A colour, e.g. #ff00aa, or none for empty text
+    private fun colour(text: String, what: String): String? = text.cleared()?.let {
+        val hex = if (it.startsWith("#")) it else "#$it"
+        require(hex.matches(Regex("#[0-9a-fA-F]{6}"))) { "$what is a colour, e.g. #ff00aa, not $it" }
+        hex.lowercase()
     }
 
     // Its people and the episodes it supported are kept, and come back with it

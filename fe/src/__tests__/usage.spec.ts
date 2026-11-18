@@ -155,8 +155,8 @@ describe('the tools', () => {
     expect(search).toEqual({
       id: 'search',
       title: 'Search',
-      about: 'episodes, ideas, people and recording sessions at once',
-      tools: [{ name: 'search', description: expect.stringMatching(/^Find episodes, people and sessions/) }],
+      about: 'episodes, ideas, people, recording sessions, organisations and events at once',
+      tools: [{ name: 'search', description: expect.stringMatching(/^Find episodes, people, sessions, organisations and events/) }],
     })
     expect(toolGroups(tSl)[0]?.title).toBe('Iskanje')
     expect(toolGroups(tSl).flatMap((group) => group.tools.map((tool) => tool.name))).toEqual(toolNames)

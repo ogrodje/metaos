@@ -26,12 +26,55 @@ data class OrganisationDto(
     val address: String?,
     val contactPersonId: UUID?,
     val contactPerson: String?,
+    val meetupUrl: String?,
+    val eventbriteUrl: String?,
+    val icalUrl: String?,
+    val lumaUrl: String?,
+    val discordUrl: String?,
+    val kompotUrl: String?,
+    val mainColor: String?,
+    val backgroundColor: String?,
+    val collectsEvents: Boolean,
+    val archived: Boolean,
+    // Where its events usually are, which an event that doesn't say where it is goes by
+    val venueName: String?,
+    val venueAddress: String?,
 )
 
 fun Organisation.toDto() = OrganisationDto(
     id, name, description, tier, supportStartedAt, supportEndedAt, supports(ogrodjeToday()), websiteUrl, linkedinUrl,
-    twitterUrl, instagramUrl, facebookUrl, vatId, companyId, address, contactPerson?.id, contactPerson?.name,
+    twitterUrl, instagramUrl, facebookUrl, vatId, companyId, address, contactPerson?.id, contactPerson?.name, meetupUrl,
+    eventbriteUrl, icalUrl, lumaUrl, discordUrl, kompotUrl, mainColor, backgroundColor, collectsEvents, archived,
+    venueName, venueAddress,
 )
+
+/** One of two organisations that may be one */
+data class DuplicateSide(val id: UUID?, val name: String, val websiteUrl: String?, val tier: OrganisationTier, val archived: Boolean, val fromGoo: Boolean) {
+    constructor(o: Organisation) : this(o.id, o.name, o.websiteUrl, o.tier, o.archived, o.gooId != null)
+}
+
+data class DuplicateDto(val first: DuplicateSide, val second: DuplicateSide, val reasons: List<DuplicateReason>)
+
+/**
+ * What merging did, or would do (dryRun): the kept one as it is now, the fields it got, those where both differed
+ * (its own kept), and how much moved to it, or was dropped as it had it already
+ */
+data class MergeDto(
+    val into: OrganisationDto,
+    val merged: String,
+    val dryRun: Boolean,
+    val filled: List<String>,
+    val conflicts: List<MergeConflict>,
+    val workMoved: Int,
+    val workDropped: Int,
+    val episodesMoved: Int,
+    val episodesDropped: Int,
+    val eventsMoved: Int,
+    val eventsDropped: Int,
+)
+
+/** How one of an organisation's links was last scraped */
+data class EventScrapeDto(val field: EventField, val url: String, val source: String?, val scrapedAt: java.time.Instant, val events: Int, val error: String?)
 
 /** A person's work at an organisation: its ID, which update_person_organisation and unlink_person_from_organisation take */
 data class WorkDto(
@@ -48,11 +91,12 @@ data class WorkDto(
 fun PersonOrganisation.toDto() =
     WorkDto(id, person.id, person.name, organisation.id, organisation.name, title, startedAt, endedAt)
 
-/** An organisation, with who works at it and the episodes it supported */
+/** An organisation, with who works at it, the episodes it supported, and how its links were last scraped for events */
 data class OrganisationDetailsDto(
     val organisation: OrganisationDto,
     val people: List<WorkDto>,
     val supportedEpisodes: List<EpisodeDto>,
+    val eventScrapes: List<EventScrapeDto>,
 )
 
 private const val ORGANISATION_ID = "Organisation ID (list_organisations)"
@@ -62,7 +106,11 @@ private const val TIER =
 private const val DAY = "a day, e.g. 2026-11-16"
 
 @Component
-class OrganisationsMCP(private val organisations: Organisations) {
+class OrganisationsMCP(
+    private val organisations: Organisations,
+    private val events: Events,
+    private val merges: OrganisationMerges,
+) {
 
     @Transactional(readOnly = true)
     @McpTool(
@@ -71,12 +119,14 @@ class OrganisationsMCP(private val organisations: Organisations) {
             title = "List organisations",
             readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
         ),
-        description = "List all organisations by name: Ogrodje's supporters and partners, and the companies people work at"
+        description = "List all organisations by name: Ogrodje's supporters and partners, the companies people work at, " +
+            "and those whose events are on the Events page"
     )
     fun list(
         @McpToolParam(description = "Only those listed as supporters or partners today", required = false) supporting: Boolean? = null,
+        @McpToolParam(description = "Only those archived (true) or not (false); all by default", required = false) archived: Boolean? = null,
     ): List<OrganisationDto> =
-        (if (supporting == true) organisations.supporters() else organisations.all()).map { it.toDto() }
+        (if (supporting == true) organisations.supporters() else organisations.all(archived)).map { it.toDto() }
 
     @Transactional(readOnly = true)
     @McpTool(
@@ -85,8 +135,8 @@ class OrganisationsMCP(private val organisations: Organisations) {
             title = "Get organisation",
             readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
         ),
-        description = "An organisation, with the people who work or worked at it (those who still do first) and the " +
-            "episodes it supported, the latest first"
+        description = "An organisation, with the people who work or worked at it (those who still do first), the " +
+            "episodes it supported, the latest first, and how each of its links was last scraped for events"
     )
     fun get(@McpToolParam(description = ORGANISATION_ID) id: UUID): OrganisationDetailsDto {
         val organisation = organisations.find(id)
@@ -94,6 +144,9 @@ class OrganisationsMCP(private val organisations: Organisations) {
             organisation.toDto(),
             organisations.peopleOf(organisation).map { it.toDto() },
             organisations.supportedBy(listOf(organisation)).getValue(organisation).map { it.toDto() },
+            events.scrapesOf(listOf(organisation)).getValue(organisation).map {
+                EventScrapeDto(it.field, it.url, it.source, it.scrapedAt.toInstant(), it.events, it.error)
+            },
         )
     }
 
@@ -112,8 +165,17 @@ class OrganisationsMCP(private val organisations: Organisations) {
         @McpToolParam(description = "What it is, e.g. what it makes", required = false) description: String? = null,
         @McpToolParam(description = "$TIER; NONE by default", required = false) tier: OrganisationTier? = null,
         @McpToolParam(description = "Its website (http or https)", required = false) websiteUrl: String? = null,
-    ): OrganisationDto =
-        organisations.create(name, OrganisationChanges(description = description, tier = tier, websiteUrl = websiteUrl)).toDto()
+        @McpToolParam(description = "Its Meetup group, whose events the scrapers gather", required = false) meetupUrl: String? = null,
+        @McpToolParam(description = "Its Eventbrite organiser page, whose events the scrapers gather", required = false) eventbriteUrl: String? = null,
+        @McpToolParam(description = "Its events' calendar (iCal), which the scrapers read", required = false) icalUrl: String? = null,
+        @McpToolParam(description = "Its Luma calendar, whose events the scrapers gather", required = false) lumaUrl: String? = null,
+    ): OrganisationDto = organisations.create(
+        name,
+        OrganisationChanges(
+            description = description, tier = tier, websiteUrl = websiteUrl, meetupUrl = meetupUrl, eventbriteUrl = eventbriteUrl,
+            icalUrl = icalUrl, lumaUrl = lumaUrl,
+        ),
+    ).toDto()
 
     @Transactional
     @McpTool(
@@ -122,10 +184,14 @@ class OrganisationsMCP(private val organisations: Organisations) {
             title = "Update organisation",
             readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
         ),
-        description = "Change an organisation: its name, description, tier and when it supported Ogrodje, its links, and " +
-            "its finance details (VAT ID, company ID, address, who to contact), which are the team's. Omitted fields are " +
-            "left as they are; empty text clears one. It's listed as a supporter or partner while its tier isn't NONE, " +
-            "from when its support started (or always, without a start) till when it ended (or for good, without an end)"
+        description = "Change an organisation: its name, description, tier and when it supported Ogrodje, its links, " +
+            "its finance details (VAT ID, company ID, address, who to contact), which are the team's, where it " +
+            "announces its events (its website too, which the scrapers read every hour) and its badge's colours on the " +
+            "Events page, where its events usually are (its venue and address, for those that don't say), and " +
+            "whether it collects events or is archived (listed apart, its events no longer gathered; " +
+            "nothing is deleted). Omitted fields are left as they are; empty text clears one. It's listed as a " +
+            "supporter or partner while its tier isn't NONE, from when its support started (or always, without a " +
+            "start) till when it ended (or for good, without an end)"
     )
     fun update(
         @McpToolParam(description = ORGANISATION_ID) id: UUID,
@@ -143,13 +209,70 @@ class OrganisationsMCP(private val organisations: Organisations) {
         @McpToolParam(description = "Company ID in its registry, e.g. a matična številka; $CLEARS", required = false) companyId: String? = null,
         @McpToolParam(description = "Its registered address; $CLEARS", required = false) address: String? = null,
         @McpToolParam(description = "ID of the person to contact there; $CLEARS", required = false) contactPerson: String? = null,
+        @McpToolParam(description = "Its Meetup group, whose events the scrapers gather; $CLEARS", required = false) meetupUrl: String? = null,
+        @McpToolParam(description = "Its Eventbrite organiser page; $CLEARS", required = false) eventbriteUrl: String? = null,
+        @McpToolParam(description = "Its events' calendar (iCal: http, https or webcal); $CLEARS", required = false) icalUrl: String? = null,
+        @McpToolParam(description = "Its Luma calendar; $CLEARS", required = false) lumaUrl: String? = null,
+        @McpToolParam(description = "Its Discord; $CLEARS", required = false) discordUrl: String? = null,
+        @McpToolParam(description = "Its page on Kompot; $CLEARS", required = false) kompotUrl: String? = null,
+        @McpToolParam(description = "Its badge's text colour on the Events page, e.g. #ffffff; $CLEARS", required = false) mainColor: String? = null,
+        @McpToolParam(description = "Its badge's background, e.g. #000000; $CLEARS", required = false) backgroundColor: String? = null,
+        @McpToolParam(description = "Whether its events are gathered from its links", required = false) collectsEvents: Boolean? = null,
+        @McpToolParam(description = "Archive it (true), or bring it back (false)", required = false) archived: Boolean? = null,
+        @McpToolParam(description = "Where its events usually are, e.g. Kovačnica, for those that don't say; $CLEARS", required = false) venueName: String? = null,
+        @McpToolParam(description = "That venue's address, e.g. Trubarjeva cesta 5, 1000 Ljubljana; $CLEARS", required = false) venueAddress: String? = null,
     ): OrganisationDto = organisations.update(
         id,
         OrganisationChanges(
             name, description, tier, supportStartedAt, supportEndedAt, websiteUrl, linkedinUrl, twitterUrl, instagramUrl,
-            facebookUrl, vatId, companyId, address, contactPerson,
+            facebookUrl, vatId, companyId, address, contactPerson, meetupUrl, eventbriteUrl, icalUrl, lumaUrl, discordUrl,
+            kompotUrl, mainColor, backgroundColor, collectsEvents, archived, venueName, venueAddress,
         ),
     ).toDto()
+
+    @Transactional(readOnly = true)
+    @McpTool(
+        name = "list_duplicate_organisations",
+        annotations = McpTool.McpAnnotations(
+            title = "List duplicate organisations",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
+        description = "Pairs of organisations that may be one, e.g. a partner and the Goo meetup it also was, or a " +
+            "company under two names, archived ones too, with why: SAME_NAME (case, diacritics and punctuation aside), " +
+            "NAME_CONTAINS (one's name in the other's, e.g. FRI and FRI - Fakulteta za računalništvo), SAME_WEBSITE or " +
+            "SAME_LINK (a social or event link). Candidates only: look at both (get_organisation) before merging them " +
+            "(merge_organisations)"
+    )
+    fun duplicates(): List<DuplicateDto> = merges.duplicates().map { d ->
+        DuplicateDto(DuplicateSide(d.first), DuplicateSide(d.second), d.reasons)
+    }
+
+    @Transactional
+    @McpTool(
+        name = "merge_organisations",
+        annotations = McpTool.McpAnnotations(
+            title = "Merge organisations",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
+        ),
+        description = "Merge an organisation that's there twice into the one to keep, which keeps its name and what " +
+            "it has, and gets the other's: the fields it hasn't got (links, logo, finance details, venue, colours, its " +
+            "tier with its dates where it has none, its Goo meetup), the people who work there, the episodes it " +
+            "supported and its events (those it has already, the same work, episode or scraped event, are dropped); " +
+            "then the other is soft-deleted. Where both have a field and differ, the kept one's stays, and the " +
+            "answer lists it (conflicts), to set by hand (update_organisation). Try it first with dryRun, which only " +
+            "says what it would do. Again, it finds the other deleted and changes nothing. Every change is in the " +
+            "history; restoring the other brings it back without what was moved"
+    )
+    fun merge(
+        @McpToolParam(description = "The organisation to keep, with its name (list_organisations, list_duplicate_organisations)") into: UUID,
+        @McpToolParam(description = "The one to merge into it, which is deleted") from: UUID,
+        @McpToolParam(description = "Only say what it would do, changing nothing", required = false) dryRun: Boolean? = null,
+    ): MergeDto = merges.merge(into, from, dryRun == true).let { m ->
+        MergeDto(
+            m.into.toDto(), m.from.name, m.dryRun, m.filled, m.conflicts, m.workMoved, m.workDropped, m.episodesMoved,
+            m.episodesDropped, m.eventsMoved, m.eventsDropped,
+        )
+    }
 
     @Transactional
     @McpTool(

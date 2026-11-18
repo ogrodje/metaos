@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { byTier, isWordmark, organisationPath, siteName, type Supporter, tierName, workPeriod } from '@/organisations'
+import { byTier, isColor, isWordmark, organisationPath, siteName, type Supporter, tierName, workPeriod } from '@/organisations'
 import { t, tSl } from './i18n'
 
 const organisation = (name: string, tier: Supporter['tier']): Supporter =>
@@ -47,5 +47,12 @@ describe('organisations', () => {
 
   it('leads to its page by its route, as its address is another word in English', () => {
     expect(organisationPath({ id: 'abc' })).toEqual({ name: 'organisation', params: { id: 'abc' } })
+  })
+})
+
+describe('isColor', () => {
+  it('takes a colour as the badge does, #rrggbb', () => {
+    expect(isColor('#1a2B3c')).toBe(true)
+    expect(['#fff', '1a2b3c', '', null, undefined, '#1a2b3cff'].map(isColor)).toEqual([false, false, false, false, false, false])
   })
 })

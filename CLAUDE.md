@@ -261,16 +261,14 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   Slovenia's tech, developer and startup events as ogrodje.si's Dogodki page did, for anyone, in Slovenian, as the
   events are: by week, Monday to Sunday ("Teden / 9. 11. – 15. 11. 2026"), then by day, each event with its title,
   which opens where it's announced in a new tab, when it is (`eventTime` in [`fe/src/events.ts`](fe/src/events.ts):
-  its times only where Goo says it has them, in Ljubljana's time, where ogrodje.si took every time for summer time's),
-  its meetup as a badge in its colours with its logo (a colour from its name where it has none), and where it is when
-  Goo has both the place and its address (`EventRow.vue`); promoted ones, Ogrodje's picks, stand out in the accent.
-  Under them, ogrodje.si's note that Goo gathers them from public sources. They come from [Goo](https://goo.ogrodje.si)
-  (github.com/ogrodje/goo), which gathers them from organizers' calendars, Meetup, Eventbrite and others, through
-  MetaOS's `events` query ([`Goo.kt`](src/main/kotlin/si/ogrodje/metaos/Goo.kt)): its public timeline,
-  `${metaos.goo.url}/timeline` (`GOO_URL`, by default `https://goo.ogrodje.si`), those that haven't ended, or started
-  when they have no end, which each pod keeps a minute, and keeps while Goo doesn't answer. Goo's logo URLs come with
-  Hygraph's transformations encoded, which Hygraph refuses, so MetaOS decodes them. MetaOS only shows them: Goo's own
-  admin edits, hides and promotes them.
+  its times only where its source says it has them, in Ljubljana's time, where ogrodje.si took every time for summer
+  time's), its organisation as a badge in its colours with its logo (a colour from its name where it has none; for the team, a link to its page), and
+  where it is (its place and address, or either, else its organisation's venue; `placeLine`), which opens Google Maps but
+  for one online (`mapUrl`; `EventRow.vue`, `MeetupBadge.vue`); promoted ones, Ogrodje's picks, stand out in the accent.
+  Its heading's line says how many organisations' events it gathers (`eventOrganisers`); under them, that MetaOS gathers
+  them from the organisers' public pages, and that Ogrodje doesn't organise them nor vouch for them. They're MetaOS's own (Events, below),
+  through the `events` query: those that haven't ended, or started when they have no end, and aren't hidden. The team
+  also gets the hidden ones, dimmed, and on each Hide, Pick and Edit (Edit only for its own), Add event and Refresh.
 - The People page, `/people`, lists everyone by name (Slovenian order, past a "dr."), from the `people` query: who they
   are, and links to their website and social profiles (`PersonCard.vue`). The team first, under rules as the rest, with
   their pictures large, their bios, and how many episodes they're on as what (`teamSummary`, e.g. 37 episodes as
@@ -286,10 +284,13 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
 - Search is the team's: signed in, the header has a Search button (`SearchPalette.vue`; also ⌘K, Ctrl+K and `/`),
   which opens a few of each kind over the page, and its See all the search page, `/search?q=`, with all of them by
   kind; the address keeps what's searched. Both ask the `search` query, as does the `search` MCP tool:
-  [`Search.kt`](src/main/kotlin/si/ogrodje/metaos/Search.kt) finds episodes, ideas too, people and recording sessions.
+  [`Search.kt`](src/main/kotlin/si/ogrodje/metaos/Search.kt) finds episodes, ideas too, people, recording sessions,
+  organisations (archived ones too, by name, description and venue) and events (those still to come and those that
+  ended in the last month, `EVENTS_SEARCHED_BACK`, hidden ones too, by title, organisation, place, date and
+  description; the soonest first, which open where they're announced).
   An episode code, however it's typed (`s5e8`, `S5 E8`, `5x08`), or an ID is that episode alone, which ↵ opens; a
   season (`S04`) lists it. Otherwise every word has to start a word, or be in one, in an episode's titles, people,
-  show, summaries (not the AI one) or session, a person's name or bio, or a session's name, place, address or date; case
+  show, summaries (not the AI one) or session, a person's name or bio, or a session's name, place, address or date, an organisation's or an event's; case
   and diacritics don't matter (`fold`, also in `fe/src/search.ts`, which marks the words found). Each word counts the
   weight of the field it's best in (`SearchField`), and a row says why it was found when it doesn't show it.
 - Users sign in with keycloak-js (`fe/src/stores/auth.ts`), straight to Discord or Google (`idpHint`). Once the page
@@ -304,18 +305,41 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
 
 Organisations ([`Organisations.kt`](src/main/kotlin/si/ogrodje/metaos/Organisations.kt),
 [`V35__organisations.sql`](src/main/resources/db/migration/V35__organisations.sql)) are Ogrodje's supporters and
-partners, and the companies people work at: the start of its CRM. Goo's meetups and finance are to build on them.
+partners, the companies people work at, and those whose events are on the Events page, Goo's meetups, merged into
+them (OG-64): the start of its CRM. Finance is to build on them.
 
 - An organisation has a name (unique, case-insensitive), a description, links (website, LinkedIn, X, Instagram,
   Facebook), a logo (`set_organisation_logo`, as an avatar is, Images), and its tier, as ogrodje.si's footer had them:
   `SUPPORTER` (Podporniki), `PARTNER` (Partnerji) or `NONE`. It's listed (`supports`, the `supporters` query) while its
   tier isn't `NONE`, from `support_started_at` (or always, without one) to `support_ended_at` (or for good), days in
   Ljubljana, both included. Its finance details, VAT ID, company ID, address and the person to contact there, are the
-  team's. Soft-deleted, as people are (`list_deleted`, `restore_organisation`).
+  team's. Soft-deleted, as people are (`list_deleted`, `restore_organisation`). Archived (`archived_at`, `archived`):
+  listed apart, not among the supporters, and its events no longer gathered; nothing of it deleted.
+- Where it announces its events (V36): its website, `meetup_url`, `eventbrite_url`, `ical_url` (http, https or
+  webcal), `luma_url` and `kompot_url`, which the scrapers read (Events), and `discord_url`; its badge's colours on the
+  Events page (`main_color`, the text's, and `background_color`, `#rrggbb`), and whether its events are gathered
+  (`collects_events`: Goo's meetups, and one made with an event link but its website; not the rest). `goo_id` is the
+  Hygraph meetup it was imported from.
+- Its venue (V37: `venue_name`, `venue_address`, public, unlike its registered `address`): where its events usually
+  are, which an event that doesn't say where it is goes by (`Event.place`: one with no address whose place is none, the
+  organisation's name or the venue's, as some sources give them; one online keeps what it says), as GraphQL's
+  `Event.place` and MCP's `place` have it, with `fromOrganisation`. Where it has none, MetaOS gives it the one most of its
+  events say (`usualVenue`: one place, by its address, else its name, as many sources put the whole address there; at
+  least two events and three in five, leaving out online ones), after each scrape and the Goo import, as Hygraph has
+  no venues.
 - People work at them (`person_organisations`: a title, free text, and from when till when, days; again after they
   left, not twice at once), and they support episodes (`episode_organisations`, once each). Unlinking deletes those
   rows; the audit log keeps them, and `restore_link` brings them back. `History.kt` tells them on the episode's,
   person's and organisation's histories (`ChangeKind.ORGANISATION`), and Home's recent activity names organisations.
+- One that's there twice (a partner and the Goo meetup it also was, a company under two names) is merged, by agents
+  over MCP, with no page for it ([`OrganisationMerges.kt`](src/main/kotlin/si/ogrodje/metaos/OrganisationMerges.kt)):
+  `list_duplicate_organisations` suggests pairs (the same name, one's name in the other's, the same website or another
+  link), and `merge_organisations` (`dryRun` first) keeps one, with its name, and gives it what it hasn't got of the
+  other's fields, then its people's work, supported episodes and events, moved rather than made again (those it has
+  already are dropped: the same person there then with the same title, episode, or scraper's ID, whose pick and
+  hiding it keeps), and soft-deletes the other. Where both have a field, the kept one's stays, and the answer lists it.
+  The history tells what moved, on both, the person's and the episode's ("Moved Ana's work here from ..."); restoring
+  the other brings it back empty.
 - [`OrganisationsMCP`](src/main/kotlin/si/ogrodje/metaos/OrganisationsMCP.kt) and
   [`OrganisationsGraphQL`](src/main/kotlin/si/ogrodje/metaos/OrganisationsGraphQL.kt) have the same rules, in
   `Organisations`. Public: `supporters` (name, tier, website, logo) and `Episode.supportedBy`; with an organisation's
@@ -332,9 +356,44 @@ partners, and the companies people work at: the start of its CRM. Goo's meetups 
   page with another word in each language (`LOCAL_PATHS` in `router/index.ts`), so links to them go by route name
   (`organisationPath`, `path({ name })`); the list by tier (`OrganisationsView.vue`), and an organisation's workspace
   (`OrganisationView.vue`): its logo and name, who works and worked there, the episodes it supported, and in its panel
-  its support, links and finance details. A released episode's page says Supported by its organisations
+  its support, links and finance details, and its events (Events): each link's last scrape, Refresh events, and its events with Add event. The team creates
+  (`OrganisationForm.vue`), edits, archives and deletes them there, and imports Goo from the list (Import from Goo). A released episode's page says Supported by its organisations
   (`SupportedBy.vue`: to their websites, for the team to their pages), and a person's panel where they work (the
   team's).
+
+### Events
+
+Slovenia's tech, developer and startup events, which MetaOS gathers from the organisations' links, as Goo
+(github.com/ogrodje/goo) did, whose meetups are now organisations and whose scrapers are now MetaOS's
+([`Events.kt`](src/main/kotlin/si/ogrodje/metaos/Events.kt), [`EventsSync.kt`](src/main/kotlin/si/ogrodje/metaos/EventsSync.kt),
+[`V36__events.sql`](src/main/resources/db/migration/V36__events.sql), OG-64).
+
+- An event is an organisation's, from a scraper (`source`, e.g. `MEETUP`, and its ID there, `external_id`, Goo's own,
+  once an organisation) or the team's own (`MANUAL`): its title, description, link, start and end (instants, with a
+  time of day only where `has_start_time` and `has_end_time` say), and where it is. The team hides one (`hidden_at`,
+  not listed for anyone else) or picks it (`promoted_at`), which a scraper's keeps when it's found again; a scraper's
+  changes only so, the team's own wholly. It has its audit trigger, so it's in the live updates; the organisation's
+  history and Home's tell the team's changes (`ChangeKind.EVENT`), not the scrapers' (`metaos-workflows`).
+- The scrapers ([`scrapers/`](scrapers/README.md)) are a service of their own, Goo's parsers in Kotlin, one pod with
+  Playwright's browser beside it, which works on Temporal's task queue `scrapers` (`ScraperActivities`: MetaOS has the
+  same interface by the same name, so changing one is changing both). `EventsSyncWorkflow` asks them for each link of
+  every organisation that gathers events (not archived, `collects_events`), at once, keeps what they found
+  (`Events.keep`: writes only what changed, nothing that ended over a year ago, `EVENTS_KEPT_FOR`) and how each link
+  went (`event_scrapes`, without an audit trigger: when, by which scraper, how many, or why it failed). Every hour
+  (`EventsSyncs`, `events-sync-<hour>`, so two pods start it once), and when the team asks, for all or one
+  organisation (`refreshEvents`, `refresh_events`, the Refresh buttons; once at a time). Without Temporal, nothing's
+  gathered, and Refresh says so (previews).
+- `importFromGoo` (GraphQL, staff; [`GooImport.kt`](src/main/kotlin/si/ogrodje/metaos/GooImport.kt)) imports Goo once:
+  its meetups from Hygraph (`HYGRAPH_ENDPOINT`, secretspec) as organisations (by `goo_id`, else by name, else by
+  website; filling only what's empty; the hidden or unpublished archived), their logos, and Goo's upcoming events from
+  its timeline (`metaos.goo.url`). Again, it adds only what's missing. Goo's weekly Discord post stays Goo's until it's
+  ported (OG-65).
+- MCP: `list_events`, `create_event`, `update_event`, `refresh_events` (`EventsMCP`), and the organisations' tools take
+  the new fields. GraphQL: `events(hidden)`, `event`, `eventsRefresh`, `Organisation.events` and `eventScrapes`, and
+  `createEvent`, `updateEvent`, `refreshEvents`, `importFromGoo` (`EventsGraphQL`). Public: the upcoming events that
+  aren't hidden, with their organisations' names, logos and colours (`meetup`); the rest is the team's.
+- `EventsTest` has the rules, `EventsSyncTest` the workflow in Temporal's test server against a stand-in scraper,
+  `GooImportTest` the import against stand-ins of Hygraph and Goo; the scrapers' own tests read saved pages.
 
 ### Authentication (Keycloak)
 
@@ -1110,9 +1169,11 @@ just preview down          # done: stop it, take its address down, drop its data
   metaos-previews/slot-N`), so the worktree can change and build again meanwhile. MetaOS has its own database,
   `metaos_preview_N` in compose's Postgres, which Flyway migrates and `preview/seed.sql` fills when it's new: made-up
   shows, people, a session and episodes at each stage, nobody's real data. Whatever the agent adds on top stays until
-  `--fresh` or `down`. A preview gets none of the shell's secrets: no Drive, Dropbox, Koofr, Patreon, Cloud Storage,
+  `--fresh` or `down`. A preview gets none of the shell's secrets: no Drive, Dropbox, Koofr, Patreon,
   agents (OpenRouter), Temporal (its task queue would be every slot's) or Unleash (the flags' defaults), so it changes
-  nothing real. About 0.6 GB for MetaOS and 0.15 GB for the front-end.
+  nothing real. Cloud Storage is the one it gets, development's buckets only (`ogrodje-metaos-dev` and
+  `-public-dev`, whose CORS has the slots' addresses, `infra/gcp`), when the shell has their key: so a preview
+  publishes pictures and takes the team's uploads, as development does, into the buckets that are for that. About 0.6 GB for MetaOS and 0.15 GB for the front-end.
 - **Sign-in:** as `dev` / `dev` (staff), through the machine's previews' Keycloak, compose.yml's `keycloak-preview`
   (`--profile preview`, `127.0.0.1:8189`, under `/auth`), with realm `metaos` from `infra/keycloak/preview`, which
   names the slots' addresses as metaos-ui's redirect URIs. Each slot's tailscale serve passes `/auth/realms` and
@@ -1145,6 +1206,8 @@ decisions behind it and what is left to do.
   that another needs: MCP is stateless (`spring.ai.mcp.server.protocol=STATELESS`, no `Mcp-Session-Id`), as no tool
   needs a session and the bearer token says who's calling; every pod listens for changes (Live updates) and checks its
   connections; caches like `DropboxFolderIndex` are each pod's own. Flyway takes a lock, so both may start at once.
+- The scrapers are one pod too (`deployment-scrapers.yaml`), Temporal's worker on task queue `scrapers`, with
+  Playwright's browser beside it, no state and no Ingress (Events).
 - patreon-gateway is one pod (`deployment-patreon-gateway.yaml`), with its state on a volume, and no Ingress: MetaOS
   calls it at `http://patreon-gateway`, with the token from `patreon-gateway-secret` (`k8s/set_secrets.sh`), and it
   works on Temporal's task queue `patreon` (`TEMPORAL_ADDRESS=temporal:7233`). CI tests,
@@ -1154,9 +1217,9 @@ decisions behind it and what is left to do.
   cluster's address, so the browser goes out through low (oto.srv4all.net, a VM whose address it lets through), the
   tailnet's exit node, by the pod's `tailscale` container (an ephemeral machine, `PROD_PATREON_TAILSCALE_AUTHKEY`);
   while low is down, jobs wait and try again.
-- CI builds each image (`metaos`, `metaos-web`, `patreon-gateway`, `keycloak`) in a job of its own, at once, each
+- CI builds each image (`metaos`, `metaos-web`, `patreon-gateway`, `scrapers`, `keycloak`) in a job of its own, at once, each
   building what goes in it first (and testing it, but for the app's, whose tests, the longest, are a job of their own
-  beside them), and the deploy waits for all five. They get devenv.nix's JDK, Node and Yarn, the same versions, from
+  beside them), and the deploy waits for all six. They get devenv.nix's JDK, Node and Yarn, the same versions, from
   GitHub's setup actions rather than Nix ([`.github/actions/toolchain`](.github/actions/toolchain/action.yml), which
   has to follow devenv.nix), as entering devenv's shell took a minute a job, and production's ffprobe for
   `MediaProbeTest`. The app's tests run in three JVMs (`-PtestForks=3`), with their Postgres pulled while Gradle

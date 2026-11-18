@@ -58,6 +58,9 @@ module "storage_dev" {
   origins = [
     "http://localhost:5173", "http://localhost:8080", "http://localhost:5174", "http://localhost:5175",
     "https://nuc8.folk-decibel.ts.net:5173",
+    # The agents' previews, slots 1 and 2 on nuc8 and ziv (preview/preview.sh), which upload to these buckets too
+    "https://nuc8.folk-decibel.ts.net:9441", "https://nuc8.folk-decibel.ts.net:9442",
+    "https://ziv.folk-decibel.ts.net:9441", "https://ziv.folk-decibel.ts.net:9442",
   ]
   production = false
 }

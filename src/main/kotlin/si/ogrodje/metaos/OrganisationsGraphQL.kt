@@ -27,10 +27,23 @@ data class OrganisationInput(
     val companyId: String? = null,
     val address: String? = null,
     val contactPerson: String? = null,
+    val meetupUrl: String? = null,
+    val eventbriteUrl: String? = null,
+    val icalUrl: String? = null,
+    val lumaUrl: String? = null,
+    val discordUrl: String? = null,
+    val kompotUrl: String? = null,
+    val mainColor: String? = null,
+    val backgroundColor: String? = null,
+    val collectsEvents: Boolean? = null,
+    val archived: Boolean? = null,
+    val venueName: String? = null,
+    val venueAddress: String? = null,
 ) {
     fun changes() = OrganisationChanges(
         name, description, tier, supportStartedAt, supportEndedAt, websiteUrl, linkedinUrl, twitterUrl, instagramUrl,
-        facebookUrl, vatId, companyId, address, contactPerson,
+        facebookUrl, vatId, companyId, address, contactPerson, meetupUrl, eventbriteUrl, icalUrl, lumaUrl, discordUrl,
+        kompotUrl, mainColor, backgroundColor, collectsEvents, archived, venueName, venueAddress,
     )
 }
 
@@ -50,7 +63,7 @@ class OrganisationsGraphQL(
 
     @QueryMapping("organisations")
     @PreAuthorize(SIGNED_IN)
-    fun allOrganisations(): List<Organisation> = organisations.all()
+    fun allOrganisations(@Argument archived: Boolean?): List<Organisation> = organisations.all(archived)
 
     @QueryMapping
     @PreAuthorize(SIGNED_IN)

@@ -1,28 +1,64 @@
 <script setup lang="ts">
 import { faArrowUpRightFromSquare, faLocationDot } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { computed } from 'vue'
-import { badgeColors, eventTime, type GooEvent } from '@/events'
+import { computed, nextTick, ref, useId } from 'vue'
+import EventForm from '@/components/EventForm.vue'
+import MeetupBadge from '@/components/MeetupBadge.vue'
+import { eventTime, type EventInput, isManual, type ListedEvent, mapUrl, placeLine, type TeamEvent, UPDATE_EVENT } from '@/events'
+import { errorMessage, graphql } from '@/graphql'
+import { organisationPath } from '@/organisations'
 import { useLocale } from '@/useLocale'
 
-const props = defineProps<{ event: GooEvent }>()
-const { t, dateLocale } = useLocale()
+// manage: the team's, with the event's team fields: Hide or Show, Pick (promoted) or Unpick, and Edit for their own;
+// a hidden one dimmed, with a tag. The page passes it only once it knows it's the team's, so the server renders it as
+// anyone sees it. Its organisation's badge leads the team to its page, but on that page (here: false).
+const props = withDefaults(defineProps<{
+  event: ListedEvent | TeamEvent
+  manage?: boolean
+  linked?: boolean
+}>(), { linked: true })
+
+const emit = defineEmits<{ changed: [event: TeamEvent] }>()
+const { t, dateLocale, path } = useLocale()
+const id = useId()
+
+const team = computed(() => (props.manage && 'hidden' in props.event ? props.event : null))
+
+const busy = ref(false)
+const error = ref<string>()
+const editing = ref(false)
+
+async function update(input: EventInput) {
+  if (busy.value || !team.value) return
+  busy.value = true
+  error.value = undefined
+  try {
+    const { event } = await graphql<{ event: TeamEvent }>(UPDATE_EVENT, { id: team.value.id, input })
+    emit('changed', event)
+  } catch (e) {
+    error.value = errorMessage(e, t)
+  } finally {
+    busy.value = false
+  }
+}
+
+function stopEditing() {
+  editing.value = false
+  void nextTick(() => document.getElementById(`${id}-edit`)?.focus())
+}
 
 const when = computed(() => eventTime(props.event, dateLocale.value))
-const badge = computed(() => (props.event.meetup ? badgeColors(props.event.meetup) : null))
-// Where it is, when Goo knows both the place and its address, as ogrodje.si showed it
-const where = computed(() => {
-  const { locationName, locationAddress } = props.event
-  if (!locationName || !locationAddress) return null
-  return locationName === locationAddress ? locationName : `${locationName}, ${locationAddress}`
-})
+// Where it is: as it says, else at its organisation's venue (place), with a link to the map; online, without one
+const place = computed(() => props.event.place ?? { name: props.event.locationName, address: props.event.locationAddress })
+const where = computed(() => placeLine(place.value))
+const map = computed(() => mapUrl(place.value))
 </script>
 
 <!-- An event on a line or two: its title, which opens where it's announced in a new tab, who it's by, as a badge in their
      colours with their logo, and where it is; when it is at the right, or on phones under the title. Promoted ones, Ogrodje's
      picks, stand out in the accent. -->
 <template>
-  <li class="event" :class="{ promoted: event.promoted }">
+  <li class="event" :class="{ promoted: event.promoted, hidden: team?.hidden }">
     <div class="main">
       <p class="title">
         <a v-if="event.url" :href="event.url" target="_blank" rel="noopener">
@@ -30,15 +66,33 @@ const where = computed(() => {
         </a>
         <span v-else>{{ event.title }}</span>
         <span v-if="event.promoted" class="tag">{{ t('events.promoted') }}</span>
+        <span v-if="team?.hidden" class="tag quiet">{{ t('events.team.hidden') }}</span>
       </p>
       <p v-if="event.meetup || where" class="details">
-        <span v-if="event.meetup && badge" class="meetup" :style="{ color: badge.color, background: badge.background }">
-          <img v-if="event.meetup.logo" :src="event.meetup.logo" alt="" width="20" height="20" loading="lazy">{{ event.meetup.name }}
-        </span>
-        <span v-if="where" class="where"><FontAwesomeIcon class="icon" :icon="faLocationDot"/>{{ where }}</span>
+        <MeetupBadge v-if="event.meetup" :meetup="event.meetup"
+                     :to="team && linked ? path(organisationPath(team.organisation)) : undefined"/>
+        <a v-if="where && map" class="where" :href="map" target="_blank" rel="noopener"
+           :aria-label="t('events.onMap', { place: where })"><FontAwesomeIcon class="icon" :icon="faLocationDot"/>{{ where }}</a>
+        <span v-else-if="where" class="where"><FontAwesomeIcon class="icon" :icon="faLocationDot"/>{{ where }}</span>
       </p>
     </div>
     <time class="when" :datetime="event.start">{{ when }}</time>
+
+    <div v-if="team && !editing" class="manage">
+      <span v-if="isManual(team)" class="source">{{ t('events.team.manual') }}</span>
+      <span class="actions">
+        <button type="button" class="button small quiet" :aria-disabled="busy || undefined"
+                :aria-label="team.hidden ? t('events.team.showLabel', { title: event.title }) : t('events.team.hideLabel', { title: event.title })"
+                @click="update({ hidden: !team.hidden })">{{ team.hidden ? t('events.team.show') : t('events.team.hide') }}</button>
+        <button type="button" class="button small quiet" :aria-disabled="busy || undefined" :aria-pressed="team.promoted"
+                :aria-label="t('events.team.pickLabel', { title: event.title })"
+                @click="update({ promoted: !team.promoted })">{{ team.promoted ? t('events.team.unpick') : t('events.team.pick') }}</button>
+        <button v-if="isManual(team)" :id="`${id}-edit`" type="button" class="button small quiet"
+                :aria-label="t('events.team.editLabel', { title: event.title })" @click="editing = true">{{ t('common.edit') }}</button>
+      </span>
+      <p v-if="error" class="error" role="alert">{{ error }}</p>
+    </div>
+    <EventForm v-if="team && editing" class="form" :event="team" @saved="(saved) => emit('changed', saved)" @close="stopEditing"/>
   </li>
 </template>
 
@@ -76,6 +130,13 @@ const where = computed(() => {
   }
 }
 
+// The team's: what's hidden from everyone else, dimmed
+.hidden {
+  .title, .details, .when {
+    opacity: .55;
+  }
+}
+
 .tag {
   margin-left: 10px;
   padding: 0 6px;
@@ -87,6 +148,45 @@ const where = computed(() => {
   color: var(--accent-text);
   vertical-align: 1px;
   white-space: nowrap;
+
+  &.quiet {
+    background: var(--hover);
+    color: var(--secondary);
+  }
+}
+
+// The team's, under it: who found it, and what they do with it
+.manage {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-top: 6px;
+}
+
+.source {
+  font-size: var(--text-caption);
+  line-height: 18px;
+  color: var(--muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.error {
+  flex-basis: 100%;
+  font-size: var(--text-small);
+  line-height: 20px;
+  color: var(--accent-text);
+}
+
+.form {
+  grid-column: 1 / -1;
 }
 
 .details {
@@ -100,33 +200,16 @@ const where = computed(() => {
   color: var(--secondary);
 }
 
-// Who it's by, in their colours, with their logo
-.meetup {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 100%;
-  min-height: 24px;
-  padding: 2px 8px 2px 2px;
-  border-radius: var(--radius-xs);
-  font-size: var(--text-caption);
-  line-height: 16px;
-  font-weight: 600;
-  // An edge, for a badge as white as the page
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08);
+// A link to the map, quiet until it's pointed at
+a.where {
+  color: inherit;
+  text-decoration: none;
 
-  // Without a logo, the name has the badge to itself
-  &:not(:has(img)) {
-    padding-left: 8px;
-  }
-
-  img {
-    flex: none;
-    width: 20px;
-    height: 20px;
-    object-fit: cover;
-    border-radius: 3px;
-    background: #FFFFFF;
+  &:hover {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--faint);
+    text-underline-offset: 3px;
   }
 }
 
@@ -178,6 +261,10 @@ const where = computed(() => {
   .details {
     grid-area: details;
     margin-top: 4px;
+  }
+
+  .actions {
+    margin-left: 0;
   }
 }
 </style>
