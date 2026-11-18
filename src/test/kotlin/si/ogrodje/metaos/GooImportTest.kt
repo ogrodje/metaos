@@ -94,6 +94,10 @@ class GooImportTest @Autowired constructor(
         val muzej = organisations.getValue("Računalniški muzej")
         assertEquals("https://www.racunalniski-muzej.si/", muzej.websiteUrl)
         assertTrue("Računalniški muzej (Goo)" !in organisations)
+        // ... and gathers its events now, as Goo did, as do Goo's own; V35's others don't (V37)
+        assertTrue(muzej.collectsEvents)
+        assertTrue(kotlin.collectsEvents)
+        assertFalse(organisations.getValue("Koofr").collectsEvents)
 
         val hidden = organisations.getValue("Hidden Import Test")
         assertTrue(hidden.archived)

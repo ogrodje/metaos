@@ -315,7 +315,7 @@ them (OG-64): the start of its CRM. Finance is to build on them.
 - Where it announces its events (V36): its website, `meetup_url`, `eventbrite_url`, `ical_url` (http, https or
   webcal), `luma_url` and `kompot_url`, which the scrapers read (Events), and `discord_url`; its badge's colours on the
   Events page (`main_color`, the text's, and `background_color`, `#rrggbb`), and whether its events are gathered
-  (`collects_events`). `goo_id` is the Hygraph meetup it was imported from.
+  (`collects_events`: Goo's meetups, and one made with an event link but its website; not the rest, V37). `goo_id` is the Hygraph meetup it was imported from.
 - Its venue (V37: `venue_name`, `venue_address`, public, unlike its registered `address`): where its events usually
   are, which an event that doesn't say where it is goes by (`Event.place`: one with no address whose place is none, the
   organisation's name or the venue's, as some sources give them; one online keeps what it says), as GraphQL's

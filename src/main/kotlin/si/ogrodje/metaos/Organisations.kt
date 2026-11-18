@@ -82,8 +82,8 @@ class Organisation(
     @Column(columnDefinition = "text") var venueName: String? = null
     @Column(columnDefinition = "text") var venueAddress: String? = null
 
-    // Whether its events are gathered from its links
-    @Column(nullable = false) var collectsEvents: Boolean = true
+    // Whether its events are gathered from its links: not by default, as most organisations don't announce events
+    @Column(nullable = false) var collectsEvents: Boolean = false
 
     // Archived: listed apart, and its events no longer gathered; nothing of it is deleted
     var archivedAt: OffsetDateTime? = null
@@ -305,7 +305,11 @@ class Organisations(
         val trimmed = name.trim()
         require(trimmed.isNotEmpty()) { "Name must not be blank" }
         require(organisations.findByName(trimmed) == null) { "Organisation $trimmed already exists" }
-        return organisations.save(Organisation(trimmed).apply { change(this, changes.copy(name = null)) })
+        return organisations.save(Organisation(trimmed).apply {
+            change(this, changes.copy(name = null))
+            // One made with somewhere to read its events, but its website alone, gathers them unless told otherwise
+            if (changes.collectsEvents == null) collectsEvents = eventSources().keys.any { it != EventField.WEBSITE }
+        })
     }
 
     @Transactional

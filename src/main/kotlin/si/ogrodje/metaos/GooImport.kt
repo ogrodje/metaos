@@ -89,6 +89,7 @@ class GooImport(
             organisations.findAll().firstOrNull { it.gooId == null && it.websiteUrl?.let(::site) == site }?.let { return it to false }
         }
         return Organisation(meetup.name.trim()).apply {
+            collectsEvents = true
             if (meetup.hidden || meetup.stage != "PUBLISHED") archivedAt = OffsetDateTime.now()
         } to true
     }
@@ -101,6 +102,11 @@ class GooImport(
                 apply(value)
                 changed = true
             }
+        }
+        // One that was there before it was Goo's, e.g. a partner, gathers its events now, as Goo did, unless Goo hid it
+        if (o.gooId == null && !m.hidden && m.stage == "PUBLISHED" && !o.collectsEvents) {
+            o.collectsEvents = true
+            changed = true
         }
         set(o.gooId, m.id) { o.gooId = it }
         set(o.websiteUrl, m.homepage?.takeIf { it.matches(HTTP) }) { o.websiteUrl = it }

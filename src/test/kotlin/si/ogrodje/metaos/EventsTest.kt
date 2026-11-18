@@ -108,6 +108,9 @@ class EventsTest @Autowired constructor(
 
     @Test
     fun `archiving and not collecting stop the scrapers, and change nothing else`() {
+        // One gathers events once it has somewhere to read them but its website, unless told otherwise
+        assertFalse(organisationsMCP.create(name = "Website Only Test", websiteUrl = "https://example.com").collectsEvents)
+        assertTrue(organisationsMCP.create(name = "Meetup Test", meetupUrl = "https://www.meetup.com/meetup-test/").collectsEvents)
         val by = organisation("Archive Test")
         val changed = organisationsMCP.update(by, meetupUrl = "https://www.meetup.com/archive-test/", icalUrl = "webcal://example.com/cal.ics",
             mainColor = "FF00AA", collectsEvents = false)
