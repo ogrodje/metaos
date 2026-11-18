@@ -148,6 +148,47 @@ class EventsTest @Autowired constructor(
     }
 
     @Test
+    fun `an event's page is anyone's, a past one's too, with more from its organiser, upcoming first, never hidden`() {
+        val by = organisation("Event Page Test")
+        val now = Instant.now().truncatedTo(ChronoUnit.SECONDS)
+        fun daysFrom(days: Long) = now.plus(days, ChronoUnit.DAYS)
+        keep(by, listOf(
+            found("page-main", "This one", daysFrom(5)),
+            found("page-soon", "Soon", daysFrom(2)),
+            found("page-later", "Later", daysFrom(30)),
+            found("page-hidden", "Hidden soon", daysFrom(1)),
+            found("page-past", "Last week", daysFrom(-7)),
+            found("page-long-ago", "Long ago", daysFrom(-60)),
+        ))
+        val ids = eventsMCP.list(organisationId = by).associate { it.title to checkNotNull(it.id) }
+        eventsMCP.update(checkNotNull(ids["Hidden soon"]), hidden = true)
+        // Another organisation's is never among them
+        keep(organisation("Event Page Other Test"), listOf(found("page-other", "Elsewhere", daysFrom(3))))
+
+        val main = events.find(checkNotNull(ids["This one"]))
+        assertEquals(listOf("Soon", "Later", "Last week"), events.moreFromOrganiser(main).map { it.title })
+        // With fewer upcoming ones, the past fill in, the latest first
+        val later = events.find(checkNotNull(ids["Later"]))
+        assertEquals(listOf("Soon", "This one", "Last week"), events.moreFromOrganiser(later).map { it.title })
+        assertEquals(listOf("Soon", "This one", "Later", "Last week", "Long ago"),
+            events.moreFromOrganiser(events.find(checkNotNull(ids["Hidden soon"])), limit = 10).map { it.title })
+
+        // Signed out: a past one's page, with its organiser's others, but no hidden one
+        graphql("""{ event(id: "${ids["Long ago"]}") { title description moreFromOrganiser { title } } }""")
+            .andExpect(jsonPath("$.data.event.title").value("Long ago"))
+            .andExpect(jsonPath("$.data.event.moreFromOrganiser[*].title", not(hasItem("Hidden soon"))))
+            .andExpect(jsonPath("$.data.event.moreFromOrganiser[0].title").value("Soon"))
+        graphql("""{ event(id: "${ids["Hidden soon"]}") { title } }""").andExpect(jsonPath("$.data.event").value(null as Any?))
+        graphql("""{ event(id: "${UUID.randomUUID()}") { title } }""").andExpect(jsonPath("$.data.event").value(null as Any?))
+        // The team sees a hidden one's page, without hidden ones among its others either
+        graphql("""{ event(id: "${ids["Hidden soon"]}") { title moreFromOrganiser { title } } }""", writer)
+            .andExpect(jsonPath("$.data.event.title").value("Hidden soon"))
+            .andExpect(jsonPath("$.data.event.moreFromOrganiser[*].title", not(hasItem("Hidden soon"))))
+        // The list stays the upcoming ones
+        graphql("{ events { title } }").andExpect(jsonPath("$.data.events[*].title", not(hasItem("Last week"))))
+    }
+
+    @Test
     fun `the team adds and changes events over GraphQL, and anyone else may not`() {
         val by = organisation("GraphQL Events Test")
         val create = """mutation { createEvent(input: { organisation: "$by", title: "Hekaton", start: "2030-06-01", end: "2030-06-02" }) { id title hasStartTime source } }"""

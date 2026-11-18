@@ -1,15 +1,17 @@
 import { createError, defineEventHandler, setHeader } from 'h3'
 import { useRuntimeConfig } from 'nitropack/runtime'
 import { episodePath } from '~/episodes'
+import { eventPath } from '~/events'
 import { personPath } from '~/people'
 
-// Where search engines find the pages anyone may see: the lists, every released episode and everyone on them, as
-// MetaOS's API gives them to someone who isn't signed in, each in both languages, Slovenian at its address and English
-// under /en, which each names as the other's (hreflang, OG-58). Kept for an hour (nuxt.config.ts).
+// Where search engines find the pages anyone may see: the lists, every released episode and everyone on them, and the
+// upcoming events, as MetaOS's API gives them to someone who isn't signed in, each in both languages, Slovenian at its
+// address and English under /en, which each names as the other's (hreflang, OG-58). Kept for an hour (nuxt.config.ts).
 
 interface Listed {
   episodes: { id: string, code: string | null, airedDate: string | null }[]
   people: { id: string }[]
+  events: { id: string }[]
 }
 
 const LISTS = ['/', '/episodes', '/people', '/dogodki', '/usage', '/zasebnost']
@@ -30,7 +32,7 @@ export default defineEventHandler(async (event) => {
   const response = await fetch(`${metaosUrl}/graphql`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify({ query: '{ episodes { id code airedDate } people { id } }' }),
+    body: JSON.stringify({ query: '{ episodes { id code airedDate } people { id } events { id } }' }),
     signal: AbortSignal.timeout(10_000),
   })
   const { data, errors } = response.ok ? await response.json() as { data?: Listed, errors?: unknown[] } : {}
@@ -40,6 +42,7 @@ export default defineEventHandler(async (event) => {
     ...LISTS.map((path) => ({ path, modified: null })),
     ...data.episodes.map((episode) => ({ path: episodePath(episode), modified: episode.airedDate })),
     ...data.people.map((person) => ({ path: personPath(person), modified: null })),
+    ...data.events.map((event) => ({ path: eventPath(event), modified: null })),
   ]
   setHeader(event, 'content-type', 'application/xml; charset=utf-8')
   return [

@@ -362,6 +362,28 @@
     "status": "MetaOS je odgovoril s kodo {status}",
     "unreachable": "MetaOS ni dosegljiv; preverite povezavo"
   },
+  "event": {
+    "about": "O dogodku {title}",
+    "allEvents": "← Vsi dogodki in konference",
+    "announced": "Na strani organizatorja",
+    "description": "Opis",
+    "endsAt": "konec ob {time}",
+    "loading": "Nalaganje dogodka",
+    "more": "Več od tega organizatorja",
+    "noDescription": "Organizator ni dodal opisa. Več je morda na njegovi strani.",
+    "notFound": {
+      "title": "Dogodka ni",
+      "text": "Takega dogodka ni ali ni več objavljen. Prihajajoči so na strani z dogodki in konferencami."
+    },
+    "organiser": "Organizator",
+    "past": "Minil",
+    "startsAt": "začetek ob {time}",
+    "upcoming": "Prihajajoč",
+    "usualVenue": "Običajno prizorišče organizatorja",
+    "what": "Dogodek",
+    "when": "Kdaj",
+    "where": "Kje"
+  },
   "eventForm": {
     "add": "Nov dogodek",
     "chooseOrganisation": "Izberite organizacijo",
@@ -384,6 +406,7 @@
     "url": "Kje je objavljen"
   },
   "events": {
+    "announcedLabel": "Kje je objavljen dogodek {title} (odpre se v novem zavihku)",
     "api": "Dogodki so na voljo tudi {api} (poizvedba {query}).",
     "apiLink": "prek API-ja GraphQL MetaOS",
     "description": "Tehnološki, razvijalski in startup dogodki ter konference v Sloveniji, ki jih spremlja Ogrodje, po tednih.",
@@ -792,6 +815,7 @@
   "pages": {
     "episode": "Epizoda",
     "episodes": "Epizode",
+    "event": "Dogodek",
     "events": "Dogodki in konference",
     "home": "Domov",
     "ideas": "Ideje",

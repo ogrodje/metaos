@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { badgeColors, byWeek, colorOf, dayOf, eventTime, formTime, inputTime, isManual, isOnline, mapUrl, placeLine, shortDay, sourceName, weekdayName, weekOf, weekRange } from '@/events'
+import { badgeColors, byWeek, colorOf, dayOf, eventPath, eventSchedule, eventTime, isPast, paragraphs, formTime, inputTime, isManual, isOnline, mapUrl, placeLine, shortDay, sourceName, weekdayName, weekOf, weekRange } from '@/events'
 import { t, tSl } from './i18n'
 
 const at = (start: string, end: string | null, hasStartTime = true, hasEndTime = true) => ({ start, end, hasStartTime, hasEndTime })
@@ -121,5 +121,37 @@ describe('sourceName', () => {
     expect(sourceName('ICAL')).toBe('iCal')
     expect(sourceName('TEHNOLOSKI_PARK_LJUBLJANA')).toBe('Tehnološki park Ljubljana')
     expect(sourceName('NEW_SCRAPER')).toBe('New Scraper')
+  })
+})
+
+describe("an event's page", () => {
+  it('is at /dogodki/<ID>', () => {
+    expect(eventPath({ id: 'abc' })).toBe('/dogodki/abc')
+  })
+
+  it('says the day with its weekday, and the times where there are any, in Ljubljana', () => {
+    expect(eventSchedule(at('2026-11-10T17:00:00Z', '2026-11-10T19:30:00Z'), 'sl-SI'))
+      .toEqual({ startDay: 'Torek, 10. november 2026', endDay: null, startTime: '18:00', endTime: '20:30' })
+    expect(eventSchedule(at('2026-11-10T17:00:00Z', '2026-11-10T19:30:00Z'), 'en-GB'))
+      .toEqual({ startDay: 'Tuesday, 10 November 2026', endDay: null, startTime: '18:00', endTime: '20:30' })
+    // A day's event, which starts at midnight in Ljubljana, the day before in UTC
+    expect(eventSchedule(at('2026-11-22T23:00:00Z', '2026-11-24T23:00:00Z', false, false), 'sl-SI'))
+      .toEqual({ startDay: 'Ponedeljek, 23. november 2026', endDay: 'Sreda, 25. november 2026', startTime: null, endTime: null })
+    expect(eventSchedule(at('2026-11-10T17:00:00Z', null), 'sl-SI').endTime).toBeNull()
+    expect(eventSchedule(at('2026-11-10T17:00:00Z', '2026-11-10T17:00:00Z'), 'sl-SI').endTime).toBeNull()
+  })
+
+  it('tells a past event, over once it ended, or started without an end', () => {
+    const now = Date.parse('2026-11-18T12:00:00Z')
+    expect(isPast({ start: '2026-11-17T17:00:00Z', end: '2026-11-17T19:00:00Z' }, now)).toBe(true)
+    expect(isPast({ start: '2026-11-17T17:00:00Z', end: '2026-11-19T19:00:00Z' }, now)).toBe(false)
+    expect(isPast({ start: '2026-11-18T11:00:00Z', end: null }, now)).toBe(true)
+    expect(isPast({ start: '2026-11-20T11:00:00Z', end: null }, now)).toBe(false)
+  })
+
+  it('keeps the paragraphs of its description', () => {
+    expect(paragraphs('First line\nsecond line\r\n\r\n  Next  \n\n\n\nLast')).toEqual(['First line\nsecond line', 'Next', 'Last'])
+    expect(paragraphs('   ')).toEqual([])
+    expect(paragraphs(null)).toEqual([])
   })
 })

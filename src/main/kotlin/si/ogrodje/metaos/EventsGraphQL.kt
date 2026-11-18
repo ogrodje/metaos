@@ -32,7 +32,7 @@ data class EventInput(
 
 /**
  * Events over GraphQL (Events.kt): the upcoming ones that aren't hidden are anyone's, as they were on ogrodje.si; the
- * hidden ones, an organisation's past ones, how its links were scraped, and every change, the team's.
+ * hidden ones, an organisation's past ones (but on an event's own page), how its links were scraped, and every change, the team's.
  */
 @Controller
 class EventsGraphQL(
@@ -47,9 +47,13 @@ class EventsGraphQL(
     @QueryMapping("events")
     fun upcoming(@Argument hidden: Boolean?): List<Event> = events.upcoming(hidden = hidden == true && signedIn())
 
+    // Its page is anyone's, a past one's too, unless it's hidden
     @QueryMapping
     fun event(@Argument id: UUID): Event? =
-        runCatching { events.find(id) }.getOrNull()?.takeIf { signedIn() || (it.hiddenAt == null && it.upcoming(Instant.now())) }
+        runCatching { events.find(id) }.getOrNull()?.takeIf { signedIn() || it.hiddenAt == null }
+
+    @SchemaMapping(typeName = "Event")
+    fun moreFromOrganiser(event: Event): List<Event> = events.moreFromOrganiser(event)
 
     @QueryMapping
     @PreAuthorize(SIGNED_IN)

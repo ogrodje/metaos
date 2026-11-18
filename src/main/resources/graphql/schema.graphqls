@@ -114,7 +114,7 @@ type Query {
     """
     events(hidden: Boolean): [Event!]!
 
-    "An event by its ID; null if there's none, or, without a signed-in user, it's hidden or over"
+    "An event by its ID, a past one too, for its page; null if there's none, or, without a signed-in user, it's hidden"
     event(id: ID!): Event
 
     "Whether a refresh of every organisation's events, or of organisation's, is on. Needs a signed-in user."
@@ -155,6 +155,11 @@ type Event {
     organisation: Organisation!
     "Who it's by, as its badge: the organisation's name, logo and colours"
     meetup: Meetup!
+    """
+    Up to three of its organisation's other events that aren't hidden, for its page: those that haven't ended yet, the
+    soonest first, then the past ones, the latest first
+    """
+    moreFromOrganiser: [Event!]!
 }
 
 "Where an event is: its place, e.g. Kovačnica, and its address; either may be missing"

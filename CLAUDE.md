@@ -106,7 +106,7 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
 - Its runtime config (`nuxt.config.ts`) says where users sign in (`NUXT_PUBLIC_ISSUER`, the Keycloak issuer) and as
   which client, where MCP clients connect (`NUXT_PUBLIC_MCP_URL`), the site's public address (`NUXT_PUBLIC_SITE_URL`)
   and where its server finds MetaOS (`NUXT_METAOS_URL`), so one build works in every environment.
-- The pages anyone may see (Home, Episodes, People, an episode's and a person's page, Events, Usage, Privacy) render on the server, as
+- The pages anyone may see (Home, Episodes, People, an episode's, a person's and an event's page, Events, Usage, Privacy) render on the server, as
   someone who isn't signed in sees them: the server asks the API without a token (`graphql.ts`), so every visitor gets
   the same page, which Cloudflare keeps for a minute and serves stale for ten while it's rendered again
   (`routeRules`'s `Cache-Control`; not in development). Not Nitro too: its swr serves what it kept however old, and
@@ -260,7 +260,7 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
 - The Events page, `/dogodki` (ogrodje.si's address of it, which links keep; `/events` is the live updates'), lists
   Slovenia's tech, developer and startup events as ogrodje.si's Dogodki page did, for anyone, in Slovenian, as the
   events are: by week, Monday to Sunday ("Teden / 9. 11. – 15. 11. 2026"), then by day, each event with its title,
-  which opens where it's announced in a new tab, when it is (`eventTime` in [`fe/src/events.ts`](fe/src/events.ts):
+  which opens its page (below), and an icon that opens where it's announced in a new tab, when it is (`eventTime` in [`fe/src/events.ts`](fe/src/events.ts):
   its times only where its source says it has them, in Ljubljana's time, where ogrodje.si took every time for summer
   time's), its organisation as a badge in its colours with its logo (a colour from its name where it has none; for the team, a link to its page), and
   where it is (its place and address, or either, else its organisation's venue; `placeLine`), which opens Google Maps but
@@ -269,6 +269,15 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   them from the organisers' public pages, and that Ogrodje doesn't organise them nor vouch for them. They're MetaOS's own (Events, below),
   through the `events` query: those that haven't ended, or started when they have no end, and aren't hidden. The team
   also gets the hidden ones, dimmed, and on each Hide, Pick and Edit (Edit only for its own), Add event and Refresh.
+- An event's page, `/dogodki/<ID>` (`EventView.vue`, OG-68), is anyone's, a past one's too, but a hidden one's,
+  which is the team's and not found for anyone else, as one that isn't there: a workspace, its title with its
+  organisation's badge, Featured and Past in its lead; in its panel when it is (its weekday and date in Ljubljana, and
+  its times where it has them, `eventSchedule`), where (a map for a place, online as text, and the organisation's
+  usual venue said as such), a link to the organiser's page of it, and More from this organiser (`moreFromOrganiser`:
+  up to three of its organisation's other events that aren't hidden, those still to come the soonest first, then the
+  past ones, the latest first, each with its date and whether it's past); its description in the main column, its
+  paragraphs as written (`paragraphs`). The sitemap has the upcoming ones'. The Events page itself stays the upcoming
+  ones.
 - The People page, `/people`, lists everyone by name (Slovenian order, past a "dr."), from the `people` query: who they
   are, and links to their website and social profiles (`PersonCard.vue`). The team first, under rules as the rest, with
   their pictures large, their bios, and how many episodes they're on as what (`teamSummary`, e.g. 37 episodes as
@@ -389,9 +398,10 @@ Slovenia's tech, developer and startup events, which MetaOS gathers from the org
   its timeline (`metaos.goo.url`). Again, it adds only what's missing. Goo's weekly Discord post stays Goo's until it's
   ported (OG-65).
 - MCP: `list_events`, `create_event`, `update_event`, `refresh_events` (`EventsMCP`), and the organisations' tools take
-  the new fields. GraphQL: `events(hidden)`, `event`, `eventsRefresh`, `Organisation.events` and `eventScrapes`, and
+  the new fields. GraphQL: `events(hidden)`, `event` (a past one too, for its page), `Event.moreFromOrganiser`, `eventsRefresh`, `Organisation.events` and `eventScrapes`, and
   `createEvent`, `updateEvent`, `refreshEvents`, `importFromGoo` (`EventsGraphQL`). Public: the upcoming events that
-  aren't hidden, with their organisations' names, logos and colours (`meetup`); the rest is the team's.
+  aren't hidden, and any one that isn't by its ID, with their organisations' names, logos and colours (`meetup`); the
+  rest is the team's.
 - `EventsTest` has the rules, `EventsSyncTest` the workflow in Temporal's test server against a stand-in scraper,
   `GooImportTest` the import against stand-ins of Hygraph and Goo; the scrapers' own tests read saved pages.
 

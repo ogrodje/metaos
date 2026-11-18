@@ -362,6 +362,28 @@
     "status": "MetaOS answered {status}",
     "unreachable": "MetaOS can't be reached; check the connection"
   },
+  "event": {
+    "about": "About {title}",
+    "allEvents": "← All events and conferences",
+    "announced": "On the organiser's page",
+    "description": "Description",
+    "endsAt": "ends at {time}",
+    "loading": "Loading the event",
+    "more": "More from this organiser",
+    "noDescription": "The organiser hasn't given a description. Their page may say more.",
+    "notFound": {
+      "title": "Event not found",
+      "text": "There's no such event, or it's no longer listed. The events and conferences page has those coming up."
+    },
+    "organiser": "Organiser",
+    "past": "Past",
+    "startsAt": "starts at {time}",
+    "upcoming": "Upcoming",
+    "usualVenue": "The organiser's usual venue",
+    "what": "The event",
+    "when": "When",
+    "where": "Where"
+  },
   "eventForm": {
     "add": "Add an event",
     "chooseOrganisation": "Choose an organisation",
@@ -384,6 +406,7 @@
     "url": "Where it's announced"
   },
   "events": {
+    "announcedLabel": "Where {title} is announced (opens in a new tab)",
     "api": "The events are also available {api} (its {query} query).",
     "apiLink": "through MetaOS's GraphQL API",
     "description": "Slovenia's tech, developer and startup events and conferences that Ogrodje follows, by week.",
@@ -792,6 +815,7 @@
   "pages": {
     "episode": "Episode",
     "episodes": "Episodes",
+    "event": "Event",
     "events": "Events and conferences",
     "home": "Home",
     "ideas": "Ideas",

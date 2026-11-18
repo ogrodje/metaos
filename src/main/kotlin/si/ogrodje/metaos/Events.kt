@@ -141,6 +141,9 @@ interface EventsRepository : JpaRepository<Event, UUID> {
     @Query("select e from Event e join fetch e.organisation where e.organisation in :organisations order by e.startsAt desc")
     fun findByOrganisations(organisations: Collection<Organisation>): List<Event>
 
+    @Query("select e from Event e join fetch e.organisation where e.organisation = :organisation and e.hiddenAt is null and e.id <> :id")
+    fun findVisibleOfOrganisationBut(organisation: Organisation, id: UUID): List<Event>
+
     fun findByOrganisationAndExternalIdIn(organisation: Organisation, externalIds: Collection<String>): List<Event>
 }
 
@@ -185,6 +188,9 @@ data class FoundEvent(
 /** How many of what a scraper found were new, and how many changed */
 data class FoundCounts(val added: Int, val changed: Int)
 
+/** How many of its organisation's other events an event's page lists */
+const val MORE_FROM_ORGANISER = 3
+
 /** How far back events are gathered: a year (OG-64) */
 val EVENTS_KEPT_FOR: Duration = Duration.ofDays(365)
 
@@ -204,6 +210,15 @@ class Events(
     /** Those that haven't ended yet (or started, without an end), the soonest first; the hidden ones only when asked */
     fun upcoming(now: Instant = Instant.now(), hidden: Boolean = false): List<Event> =
         events.findEndingSince(now.atOffset(java.time.ZoneOffset.UTC)).filter { hidden || it.hiddenAt == null }
+
+    /**
+     * Up to [limit] of [event]'s organisation's other events that aren't hidden, for its page's More from this
+     * organiser: those that haven't ended yet, the soonest first, then the past ones, the latest first
+     */
+    fun moreFromOrganiser(event: Event, limit: Int = MORE_FROM_ORGANISER, now: Instant = Instant.now()): List<Event> {
+        val (upcoming, past) = events.findVisibleOfOrganisationBut(event.organisation, checkNotNull(event.id)).partition { it.upcoming(now) }
+        return (upcoming.sortedBy { it.startsAt } + past.sortedByDescending { it.startsAt }).take(limit)
+    }
 
     /** Every event of each of [organisations], the latest first */
     fun of(organisations: List<Organisation>): Map<Organisation, List<Event>> {

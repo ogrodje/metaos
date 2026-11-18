@@ -2,9 +2,10 @@
 import { faArrowUpRightFromSquare, faLocationDot } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { computed, nextTick, ref, useId } from 'vue'
+import { RouterLink } from 'vue-router'
 import EventForm from '@/components/EventForm.vue'
 import MeetupBadge from '@/components/MeetupBadge.vue'
-import { eventTime, type EventInput, isManual, type ListedEvent, mapUrl, placeLine, type TeamEvent, UPDATE_EVENT } from '@/events'
+import { eventPath, eventTime, type EventInput, isManual, type ListedEvent, mapUrl, placeLine, type TeamEvent, UPDATE_EVENT } from '@/events'
 import { errorMessage, graphql } from '@/graphql'
 import { organisationPath } from '@/organisations'
 import { useLocale } from '@/useLocale'
@@ -54,17 +55,16 @@ const where = computed(() => placeLine(place.value))
 const map = computed(() => mapUrl(place.value))
 </script>
 
-<!-- An event on a line or two: its title, which opens where it's announced in a new tab, who it's by, as a badge in their
+<!-- An event on a line or two: its title, which opens its page, an icon that opens where it's announced in a new tab, who it's by, as a badge in their
      colours with their logo, and where it is; when it is at the right, or on phones under the title. Promoted ones, Ogrodje's
      picks, stand out in the accent. -->
 <template>
   <li class="event" :class="{ promoted: event.promoted, hidden: team?.hidden }">
     <div class="main">
       <p class="title">
-        <a v-if="event.url" :href="event.url" target="_blank" rel="noopener">
-          {{ event.title }}<FontAwesomeIcon class="external" :icon="faArrowUpRightFromSquare"/><span class="visually-hidden"> {{ t('events.newTab') }}</span>
-        </a>
-        <span v-else>{{ event.title }}</span>
+        <RouterLink class="page" :to="path(eventPath(event))">{{ event.title }}</RouterLink>
+        <a v-if="event.url" class="announced" :href="event.url" target="_blank" rel="noopener"
+           :aria-label="t('events.announcedLabel', { title: event.title })"><FontAwesomeIcon class="external" :icon="faArrowUpRightFromSquare"/></a>
         <span v-if="event.promoted" class="tag">{{ t('events.promoted') }}</span>
         <span v-if="team?.hidden" class="tag quiet">{{ t('events.team.hidden') }}</span>
       </p>
@@ -121,11 +121,29 @@ const map = computed(() => mapUrl(place.value))
   font-weight: 500;
   text-wrap: pretty;
 
+  .page {
+    color: inherit;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+      text-decoration-color: var(--faint);
+      text-underline-offset: 3px;
+    }
+  }
+
+  .announced {
+    margin-left: 6px;
+    color: var(--muted);
+
+    &:hover {
+      color: var(--ink);
+    }
+  }
+
   .external {
     width: 10px;
     height: 10px;
-    margin-left: 6px;
-    color: var(--muted);
     vertical-align: 0;
   }
 }

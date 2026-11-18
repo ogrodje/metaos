@@ -249,3 +249,46 @@ export function mapUrl(place: Pick<EventPlace, 'name' | 'address'> | null | unde
   if (!line || isOnline(place)) return null
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(line)}`
 }
+
+/** An event's own page, at ogrodje.si's address of the events: /dogodki/<ID> */
+export const eventPath = (event: Pick<ListedEvent, 'id'>) => `/dogodki/${event.id}`
+
+/** An event as its page has it: its description, and up to three of its organiser's others (moreFromOrganiser) */
+export interface EventDetails extends ListedEvent {
+  description: string | null
+  hidden: boolean
+  organisation: { id: string, name: string }
+  moreFromOrganiser: ListedEvent[]
+}
+
+export const EVENT_PAGE = `query ($id: ID!) { event(id: $id) { ${EVENT_FIELDS} description hidden organisation { id name }
+  moreFromOrganiser { ${EVENT_FIELDS} } } }`
+
+/** Whether [event] is over at [now]: it ended, or started when it has no end, as Events.kt's upcoming */
+export function isPast(event: Pick<ListedEvent, 'start' | 'end'>, now: number) {
+  return new Date(event.end ?? event.start).getTime() < now
+}
+
+// e.g. Torek, 10. november 2026, or Tuesday 10 November 2026
+const longDay = (at: string, dateLocale: DateLocale) => capitalized(new Date(at).toLocaleDateString(dateLocale,
+  { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: TIME_ZONE }), dateLocale)
+
+/**
+ * When an event is, for its page, in Ljubljana's time: the day it starts, with its weekday, and the day it ends when
+ * that's another; its start's and its end's times, where it has them
+ */
+export function eventSchedule(event: Pick<ListedEvent, 'start' | 'end' | 'hasStartTime' | 'hasEndTime'>, dateLocale: DateLocale) {
+  const { end } = event
+  const otherDay = !!end && dayOf(end) !== dayOf(event.start)
+  return {
+    startDay: longDay(event.start, dateLocale),
+    endDay: otherDay ? longDay(end, dateLocale) : null,
+    startTime: event.hasStartTime ? time(event.start, dateLocale) : null,
+    endTime: end && event.hasEndTime && end !== event.start ? time(end, dateLocale) : null,
+  }
+}
+
+/** A description's paragraphs, by its blank lines; its single line breaks stay within them */
+export function paragraphs(text: string | null | undefined): string[] {
+  return (text ?? '').replace(/\r\n?/g, '\n').split(/\n[ \t]*\n+/).map((part) => part.trim()).filter(Boolean)
+}
