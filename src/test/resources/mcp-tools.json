@@ -1361,6 +1361,23 @@
     },
     "title" : "List Dropbox places"
   },
+  "list_duplicate_organisations" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List duplicate organisations"
+    },
+    "description" : "Pairs of organisations that may be one, e.g. a partner and the Goo meetup it also was, or a company under two names, archived ones too, with why: SAME_NAME (case, diacritics and punctuation aside), NAME_CONTAINS (one's name in the other's, e.g. FRI and FRI - Fakulteta za računalništvo), SAME_WEBSITE or SAME_LINK (a social or event link). Candidates only: look at both (get_organisation) before merging them (merge_organisations)",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : { },
+      "required" : [ ],
+      "type" : "object"
+    },
+    "title" : "List duplicate organisations"
+  },
   "list_episode_comments" : {
     "annotations" : {
       "destructiveHint" : false,
@@ -2097,6 +2114,38 @@
       "type" : "object"
     },
     "title" : "Match docs to episodes"
+  },
+  "merge_organisations" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Merge organisations"
+    },
+    "description" : "Merge an organisation that's there twice into the one to keep, which keeps its name and what it has, and gets the other's: the fields it hasn't got (links, logo, finance details, venue, colours, its tier with its dates where it has none, its Goo meetup), the people who work there, the episodes it supported and its events (those it has already, the same work, episode or scraped event, are dropped); then the other is soft-deleted. Where both have a field and differ, the kept one's stays, and the answer lists it (conflicts), to set by hand (update_organisation). Try it first with dryRun, which only says what it would do. Again, it finds the other deleted and changes nothing. Every change is in the history; restoring the other brings it back without what was moved",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "dryRun" : {
+          "description" : "Only say what it would do, changing nothing",
+          "type" : "boolean"
+        },
+        "from" : {
+          "description" : "The one to merge into it, which is deleted",
+          "format" : "uuid",
+          "type" : "string"
+        },
+        "into" : {
+          "description" : "The organisation to keep, with its name (list_organisations, list_duplicate_organisations)",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "into", "from" ],
+      "type" : "object"
+    },
+    "title" : "Merge organisations"
   },
   "move_dropbox_file" : {
     "annotations" : {

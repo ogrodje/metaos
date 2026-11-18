@@ -315,7 +315,8 @@ them (OG-64): the start of its CRM. Finance is to build on them.
 - Where it announces its events (V36): its website, `meetup_url`, `eventbrite_url`, `ical_url` (http, https or
   webcal), `luma_url` and `kompot_url`, which the scrapers read (Events), and `discord_url`; its badge's colours on the
   Events page (`main_color`, the text's, and `background_color`, `#rrggbb`), and whether its events are gathered
-  (`collects_events`: Goo's meetups, and one made with an event link but its website; not the rest, V37). `goo_id` is the Hygraph meetup it was imported from.
+  (`collects_events`: Goo's meetups, and one made with an event link but its website; not the rest). `goo_id` is the
+  Hygraph meetup it was imported from.
 - Its venue (V37: `venue_name`, `venue_address`, public, unlike its registered `address`): where its events usually
   are, which an event that doesn't say where it is goes by (`Event.place`: one with no address whose place is none, the
   organisation's name or the venue's, as some sources give them; one online keeps what it says), as GraphQL's
@@ -327,6 +328,15 @@ them (OG-64): the start of its CRM. Finance is to build on them.
   left, not twice at once), and they support episodes (`episode_organisations`, once each). Unlinking deletes those
   rows; the audit log keeps them, and `restore_link` brings them back. `History.kt` tells them on the episode's,
   person's and organisation's histories (`ChangeKind.ORGANISATION`), and Home's recent activity names organisations.
+- One that's there twice (a partner and the Goo meetup it also was, a company under two names) is merged, by agents
+  over MCP, with no page for it ([`OrganisationMerges.kt`](src/main/kotlin/si/ogrodje/metaos/OrganisationMerges.kt)):
+  `list_duplicate_organisations` suggests pairs (the same name, one's name in the other's, the same website or another
+  link), and `merge_organisations` (`dryRun` first) keeps one, with its name, and gives it what it hasn't got of the
+  other's fields, then its people's work, supported episodes and events, moved rather than made again (those it has
+  already are dropped: the same person there then with the same title, episode, or scraper's ID, whose pick and
+  hiding it keeps), and soft-deletes the other. Where both have a field, the kept one's stays, and the answer lists it.
+  The history tells what moved, on both, the person's and the episode's ("Moved Ana's work here from ..."); restoring
+  the other brings it back empty.
 - [`OrganisationsMCP`](src/main/kotlin/si/ogrodje/metaos/OrganisationsMCP.kt) and
   [`OrganisationsGraphQL`](src/main/kotlin/si/ogrodje/metaos/OrganisationsGraphQL.kt) have the same rules, in
   `Organisations`. Public: `supporters` (name, tier, website, logo) and `Episode.supportedBy`; with an organisation's

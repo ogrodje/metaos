@@ -252,13 +252,14 @@ private class Names(
         "organisations" -> change(row, "organisation", ORGANISATION_COLUMNS)
         "person_organisations" -> work(row, subject)
         "episode_organisations" -> support(row, subject)
-        "events" -> event(row)
+        "events" -> event(row, subject)
         else -> Described("Changed ${row.table}")
     }
 
     // An event of the organisation's, by its title: added by the team, hidden or shown, picked, or changed
-    private fun event(row: AuditRow): Described {
+    private fun event(row: AuditRow, subject: String): Described {
         val title = "\"${row.new["title"] ?: row.old["title"]}\""
+        moved(row, subject, "the event $title")?.let { return it }
         val diff = row.diff()
         val hidden = diff["hidden_at"]
         val promoted = diff["promoted_at"]
@@ -271,6 +272,19 @@ private class Names(
         }
     }
 
+    // A row moved from one organisation to another, as merging them does (OrganisationMerges), told on each
+    private fun moved(row: AuditRow, subject: String, what: String): Described? {
+        if (row.operation != "UPDATE") return null
+        val (old, new) = row.old["organisation_id"]?.toString() to row.new["organisation_id"]?.toString()
+        if (old == null || new == null || old == new) return null
+        fun name(id: String) = organisations[id] ?: "an organisation deleted since"
+        return Described(when (subject) {
+            old -> "Moved $what to ${name(new)}"
+            new -> "Moved $what here from ${name(old)}"
+            else -> "Moved $what from ${name(old)} to ${name(new)}"
+        })
+    }
+
     private fun organisation(row: AuditRow) =
         organisations[(row.new["organisation_id"] ?: row.old["organisation_id"]).toString()] ?: "an organisation deleted since"
 
@@ -279,6 +293,7 @@ private class Names(
         val person = people[(row.new["person_id"] ?: row.old["person_id"]).toString()] ?: "someone deleted since"
         val organisation = organisation(row)
         val onOrganisation = (row.new["organisation_id"] ?: row.old["organisation_id"]).toString() == subject
+        moved(row, subject, if (row.new["person_id"].toString() == subject) "their work" else "$person's work")?.let { return it }
         return when (row.operation) {
             "INSERT" -> Described(
                 if (onOrganisation) "Added $person, who works there" else "Added that they work at $organisation",
@@ -294,6 +309,8 @@ private class Names(
 
     // An organisation that supported an episode, told on the episode's page as who, and on the organisation's as which
     private fun support(row: AuditRow, subject: String): Described {
+        val episode = (row.new["episode_id"] ?: row.old["episode_id"]).toString()
+        moved(row, subject, if (episode == subject) "its supporter" else "its support of ${episodes[episode] ?: "an episode deleted since"}")?.let { return it }
         val onOrganisation = (row.new["organisation_id"] ?: row.old["organisation_id"]).toString() == subject
         val what = if (onOrganisation) episodes[(row.new["episode_id"] ?: row.old["episode_id"]).toString()] ?: "an episode deleted since"
         else organisation(row)

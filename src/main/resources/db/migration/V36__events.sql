@@ -11,8 +11,10 @@ ALTER TABLE organisations
     -- The badge's, on the Events page: its text's and its background's, e.g. #ffffff
     ADD COLUMN main_color       TEXT CHECK (main_color ~ '^#[0-9a-fA-F]{6}$'),
     ADD COLUMN background_color TEXT CHECK (background_color ~ '^#[0-9a-fA-F]{6}$'),
-    -- Whether its events are gathered from its links; off, what's there stays
-    ADD COLUMN collects_events  BOOLEAN NOT NULL DEFAULT true,
+    -- Whether its events are gathered from its links; off, what's there stays. Not by default: V35's supporters and
+    -- partners, and the companies people work at, have only their websites, where they don't announce events; Goo's
+    -- meetups gather theirs (GooImport.kt), as does one made with an event link (Organisations.create)
+    ADD COLUMN collects_events  BOOLEAN NOT NULL DEFAULT false,
     -- Archived: listed apart, and its events no longer gathered; nothing of it is deleted
     ADD COLUMN archived_at      TIMESTAMPTZ,
     -- The meetup in Hygraph it was imported from (GooImport.kt), so importing it again changes it rather than add it

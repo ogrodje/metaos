@@ -82,6 +82,8 @@ export const TOOL_GROUPS: { id: string, tools: { name: string }[] }[] = [
       { name: 'get_organisation' },
       { name: 'create_organisation' },
       { name: 'update_organisation' },
+      { name: 'list_duplicate_organisations' },
+      { name: 'merge_organisations' },
       { name: 'delete_organisation' },
       { name: 'restore_organisation' },
       { name: 'list_person_organisations' },

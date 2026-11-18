@@ -48,6 +48,31 @@ fun Organisation.toDto() = OrganisationDto(
     venueName, venueAddress,
 )
 
+/** One of two organisations that may be one */
+data class DuplicateSide(val id: UUID?, val name: String, val websiteUrl: String?, val tier: OrganisationTier, val archived: Boolean, val fromGoo: Boolean) {
+    constructor(o: Organisation) : this(o.id, o.name, o.websiteUrl, o.tier, o.archived, o.gooId != null)
+}
+
+data class DuplicateDto(val first: DuplicateSide, val second: DuplicateSide, val reasons: List<DuplicateReason>)
+
+/**
+ * What merging did, or would do (dryRun): the kept one as it is now, the fields it got, those where both differed
+ * (its own kept), and how much moved to it, or was dropped as it had it already
+ */
+data class MergeDto(
+    val into: OrganisationDto,
+    val merged: String,
+    val dryRun: Boolean,
+    val filled: List<String>,
+    val conflicts: List<MergeConflict>,
+    val workMoved: Int,
+    val workDropped: Int,
+    val episodesMoved: Int,
+    val episodesDropped: Int,
+    val eventsMoved: Int,
+    val eventsDropped: Int,
+)
+
 /** How one of an organisation's links was last scraped */
 data class EventScrapeDto(val field: EventField, val url: String, val source: String?, val scrapedAt: java.time.Instant, val events: Int, val error: String?)
 
@@ -81,7 +106,11 @@ private const val TIER =
 private const val DAY = "a day, e.g. 2026-11-16"
 
 @Component
-class OrganisationsMCP(private val organisations: Organisations, private val events: Events) {
+class OrganisationsMCP(
+    private val organisations: Organisations,
+    private val events: Events,
+    private val merges: OrganisationMerges,
+) {
 
     @Transactional(readOnly = true)
     @McpTool(
@@ -200,6 +229,50 @@ class OrganisationsMCP(private val organisations: Organisations, private val eve
             kompotUrl, mainColor, backgroundColor, collectsEvents, archived, venueName, venueAddress,
         ),
     ).toDto()
+
+    @Transactional(readOnly = true)
+    @McpTool(
+        name = "list_duplicate_organisations",
+        annotations = McpTool.McpAnnotations(
+            title = "List duplicate organisations",
+            readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
+        ),
+        description = "Pairs of organisations that may be one, e.g. a partner and the Goo meetup it also was, or a " +
+            "company under two names, archived ones too, with why: SAME_NAME (case, diacritics and punctuation aside), " +
+            "NAME_CONTAINS (one's name in the other's, e.g. FRI and FRI - Fakulteta za računalništvo), SAME_WEBSITE or " +
+            "SAME_LINK (a social or event link). Candidates only: look at both (get_organisation) before merging them " +
+            "(merge_organisations)"
+    )
+    fun duplicates(): List<DuplicateDto> = merges.duplicates().map { d ->
+        DuplicateDto(DuplicateSide(d.first), DuplicateSide(d.second), d.reasons)
+    }
+
+    @Transactional
+    @McpTool(
+        name = "merge_organisations",
+        annotations = McpTool.McpAnnotations(
+            title = "Merge organisations",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
+        ),
+        description = "Merge an organisation that's there twice into the one to keep, which keeps its name and what " +
+            "it has, and gets the other's: the fields it hasn't got (links, logo, finance details, venue, colours, its " +
+            "tier with its dates where it has none, its Goo meetup), the people who work there, the episodes it " +
+            "supported and its events (those it has already, the same work, episode or scraped event, are dropped); " +
+            "then the other is soft-deleted. Where both have a field and differ, the kept one's stays, and the " +
+            "answer lists it (conflicts), to set by hand (update_organisation). Try it first with dryRun, which only " +
+            "says what it would do. Again, it finds the other deleted and changes nothing. Every change is in the " +
+            "history; restoring the other brings it back without what was moved"
+    )
+    fun merge(
+        @McpToolParam(description = "The organisation to keep, with its name (list_organisations, list_duplicate_organisations)") into: UUID,
+        @McpToolParam(description = "The one to merge into it, which is deleted") from: UUID,
+        @McpToolParam(description = "Only say what it would do, changing nothing", required = false) dryRun: Boolean? = null,
+    ): MergeDto = merges.merge(into, from, dryRun == true).let { m ->
+        MergeDto(
+            m.into.toDto(), m.from.name, m.dryRun, m.filled, m.conflicts, m.workMoved, m.workDropped, m.episodesMoved,
+            m.episodesDropped, m.eventsMoved, m.eventsDropped,
+        )
+    }
 
     @Transactional
     @McpTool(
