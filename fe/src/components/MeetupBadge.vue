@@ -1,17 +1,19 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { RouterLink, type RouteLocationRaw } from 'vue-router'
 import { badgeColors, type Meetup } from '@/events'
 
 // Who an event is by, as the Events page shows it: their name in their colours, with their logo; white on a colour from
-// their name where they have none
-const props = defineProps<{ meetup: Pick<Meetup, 'name' | 'logo' | 'mainColor' | 'backgroundColor'> }>()
+// their name where they have none. to: where it leads, e.g. the organisation's page for the team
+const props = defineProps<{ meetup: Pick<Meetup, 'name' | 'logo' | 'mainColor' | 'backgroundColor'>, to?: RouteLocationRaw }>()
 const badge = computed(() => badgeColors(props.meetup))
 </script>
 
 <template>
-  <span class="meetup" :style="{ color: badge.color, background: badge.background }">
+  <component :is="to ? RouterLink : 'span'" class="meetup" :class="{ link: to }" :to="to"
+             :style="{ color: badge.color, background: badge.background }">
     <img v-if="meetup.logo" :src="meetup.logo" alt="" width="20" height="20" loading="lazy">{{ meetup.name }}
-  </span>
+  </component>
 </template>
 
 <style scoped lang="scss">
@@ -28,6 +30,15 @@ const badge = computed(() => badgeColors(props.meetup))
   font-weight: 600;
   // An edge, for a badge as white as the page
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08);
+
+  // One that leads to the organisation's page, for the team: underlined while pointed at
+  &.link {
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
 
   // Without a logo, the name has the badge to itself
   &:not(:has(img)) {

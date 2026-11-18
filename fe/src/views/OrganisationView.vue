@@ -346,7 +346,7 @@ const hasFinance = computed(() => {
           <EventForm v-if="addingEvent" id="add-event" :organisation="organisation" @saved="eventAdded" @close="addingEvent = false"/>
           <p v-if="!organisation.events.length && !addingEvent" class="note">{{ t('organisation.events.none') }}</p>
           <ul v-if="organisation.events.length" class="events">
-            <EventRow v-for="event in events" :key="event.id" :event="event" manage @changed="eventChanged"/>
+            <EventRow v-for="event in events" :key="event.id" :event="event" manage :linked="false" @changed="eventChanged"/>
           </ul>
           <button v-if="organisation.events.length > EVENTS_SHOWN" type="button" class="text-button all" :aria-expanded="eventsOpen"
                   @click="eventsOpen = !eventsOpen">

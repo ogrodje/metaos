@@ -6,18 +6,20 @@ import EventForm from '@/components/EventForm.vue'
 import MeetupBadge from '@/components/MeetupBadge.vue'
 import { eventTime, type EventInput, isManual, type ListedEvent, mapUrl, placeLine, type TeamEvent, UPDATE_EVENT } from '@/events'
 import { errorMessage, graphql } from '@/graphql'
+import { organisationPath } from '@/organisations'
 import { useLocale } from '@/useLocale'
 
 // manage: the team's, with the event's team fields: Hide or Show, Pick (promoted) or Unpick, and Edit for their own;
 // a hidden one dimmed, with a tag. The page passes it only once it knows it's the team's, so the server renders it as
-// anyone sees it.
-const props = defineProps<{
+// anyone sees it. Its organisation's badge leads the team to its page, but on that page (here: false).
+const props = withDefaults(defineProps<{
   event: ListedEvent | TeamEvent
   manage?: boolean
-}>()
+  linked?: boolean
+}>(), { linked: true })
 
 const emit = defineEmits<{ changed: [event: TeamEvent] }>()
-const { t, dateLocale } = useLocale()
+const { t, dateLocale, path } = useLocale()
 const id = useId()
 
 const team = computed(() => (props.manage && 'hidden' in props.event ? props.event : null))
@@ -67,7 +69,8 @@ const map = computed(() => mapUrl(place.value))
         <span v-if="team?.hidden" class="tag quiet">{{ t('events.team.hidden') }}</span>
       </p>
       <p v-if="event.meetup || where" class="details">
-        <MeetupBadge v-if="event.meetup" :meetup="event.meetup"/>
+        <MeetupBadge v-if="event.meetup" :meetup="event.meetup"
+                     :to="team && linked ? path(organisationPath(team.organisation)) : undefined"/>
         <a v-if="where && map" class="where" :href="map" target="_blank" rel="noopener"
            :aria-label="t('events.onMap', { place: where })"><FontAwesomeIcon class="icon" :icon="faLocationDot"/>{{ where }}</a>
         <span v-else-if="where" class="where"><FontAwesomeIcon class="icon" :icon="faLocationDot"/>{{ where }}</span>

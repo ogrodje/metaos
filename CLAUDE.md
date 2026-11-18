@@ -262,7 +262,7 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   events are: by week, Monday to Sunday ("Teden / 9. 11. – 15. 11. 2026"), then by day, each event with its title,
   which opens where it's announced in a new tab, when it is (`eventTime` in [`fe/src/events.ts`](fe/src/events.ts):
   its times only where its source says it has them, in Ljubljana's time, where ogrodje.si took every time for summer
-  time's), its organisation as a badge in its colours with its logo (a colour from its name where it has none), and
+  time's), its organisation as a badge in its colours with its logo (a colour from its name where it has none; for the team, a link to its page), and
   where it is (its place and address, or either, else its organisation's venue; `placeLine`), which opens Google Maps but
   for one online (`mapUrl`; `EventRow.vue`, `MeetupBadge.vue`); promoted ones, Ogrodje's picks, stand out in the accent.
   Its heading's line says how many organisations' events it gathers (`eventOrganisers`); under them, that MetaOS gathers
