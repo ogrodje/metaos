@@ -320,8 +320,9 @@ them (OG-64): the start of its CRM. Finance is to build on them.
   are, which an event that doesn't say where it is goes by (`Event.place`: one with no address whose place is none, the
   organisation's name or the venue's, as some sources give them; one online keeps what it says), as GraphQL's
   `Event.place` and MCP's `place` have it, with `fromOrganisation`. Where it has none, MetaOS gives it the one most of its
-  events say (`usualVenue`: one address, at least two events and three in five), after each scrape and the Goo import,
-  as Hygraph has no venues.
+  events say (`usualVenue`: one place, by its address, else its name, as many sources put the whole address there; at
+  least two events and three in five, leaving out online ones), after each scrape and the Goo import, as Hygraph has
+  no venues.
 - People work at them (`person_organisations`: a title, free text, and from when till when, days; again after they
   left, not twice at once), and they support episodes (`episode_organisations`, once each). Unlinking deletes those
   rows; the audit log keeps them, and `restore_link` brings them back. `History.kt` tells them on the episode's,

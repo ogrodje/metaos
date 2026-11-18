@@ -91,19 +91,28 @@ class Event(
     override fun toString() = "Event(id=$id, title=$title)"
 }
 
+// A place that isn't one, e.g. Online, Na spletu or Zoom, as fe/src/events.ts's isOnline
+private val ONLINE = Regex("""\b(online|on-line|splet\w*|virtual\w*|virtualn\w*|zoom|teams|youtube|discord|webinar\w*)\b""", RegexOption.IGNORE_CASE)
+
+/** Whether [name], an event's place without an address, is online */
+fun isOnline(name: String) = ONLINE.containsMatchIn(name)
+
 /**
- * Where an organisation's events usually are, from those that say it (a place and an address): the address most of them
- * have, at least two and three in five, with the name they give it most often; none when they're all over the place.
+ * Where an organisation's events usually are, from those that say it (a place, an address, or both, as many sources
+ * put the whole address in the place's name), but online or its organisation's name: the one most of them have, by its address, else its name, at
+ * least two and three in five, with the name and address they give it most often; none when they're all over the place.
  */
-fun usualVenue(events: List<Event>): Pair<String?, String>? {
+fun usualVenue(events: List<Event>): Pair<String?, String?>? {
     val located = events.mapNotNull { e ->
-        e.locationAddress?.trim()?.ifEmpty { null }?.let { e.locationName?.trim()?.ifEmpty { null } to it }
+        val name = e.locationName?.trim()?.ifEmpty { null }
+        val address = e.locationAddress?.trim()?.ifEmpty { null }
+        // Its organisation's name alone, as some sources give it, says nothing
+        (name to address).takeIf { address != null || (name != null && !isOnline(name) && fold(name) != fold(e.organisation.name)) }
     }
-    val (_, most) = located.groupBy { fold(it.second) }.maxByOrNull { it.value.size } ?: return null
+    val (_, most) = located.groupBy { fold(it.second ?: checkNotNull(it.first)) }.maxByOrNull { it.value.size } ?: return null
     if (most.size < 2 || most.size * 5 < located.size * 3) return null
-    val name = most.mapNotNull { it.first }.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
-    val address = most.groupingBy { it.second }.eachCount().maxBy { it.value }.key
-    return name to address
+    fun <T> usual(values: List<T>) = values.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
+    return usual(most.mapNotNull { it.first }) to usual(most.mapNotNull { it.second })
 }
 
 /** Where an event is: its place and address, either may be missing, and whether they're its organisation's venue's */

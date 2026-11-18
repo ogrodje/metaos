@@ -225,7 +225,7 @@ export function sourceName(source: string) {
   return SOURCE_NAMES[source] ?? source.split('_').map((word) => word.charAt(0) + word.slice(1).toLowerCase()).join(' ')
 }
 
-// A place that isn't one, which no map has
+// A place that isn't one, which no map has (as isOnline in Events.kt)
 const ONLINE = /\b(online|on-line|splet\w*|virtual\w*|virtualn\w*|zoom|teams|youtube|discord|webinar\w*)\b/i
 
 /** Where an event is, on a line: its place and its address, or either; the place once when they're the same */

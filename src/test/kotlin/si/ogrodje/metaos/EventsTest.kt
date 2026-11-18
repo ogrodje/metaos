@@ -193,12 +193,16 @@ class EventsTest @Autowired constructor(
     @Test
     fun `a venue is where most of an organisation's events are, and none when they're anywhere`() {
         val by = Organisation("Usual")
-        fun at(name: String?, address: String) = Event(by, "MEETUP", null, "x", java.time.OffsetDateTime.now()).apply {
+        fun at(name: String?, address: String?) = Event(by, "MEETUP", null, "x", java.time.OffsetDateTime.now()).apply {
             locationName = name; locationAddress = address
         }
         assertNull(usualVenue(listOf(at("A", "Street 1"))))
         assertNull(usualVenue(listOf(at("A", "Street 1"), at("A", "Street 1"), at("B", "Street 2"), at("C", "Street 3"))))
         assertEquals("A" to "Street 1", usualVenue(listOf(at("A", "Street 1"), at(null, "street 1"), at("A", "Street 1"), at("B", "Street 2"))))
+        // The whole address in the place's name, as many sources give it; online ones aren't places
+        assertEquals("Katapult, Gabrsko 12, Trbovlje" to null,
+            usualVenue(listOf(at("Katapult, Gabrsko 12, Trbovlje", null), at("katapult, gabrsko 12, trbovlje", null), at("Na spletu", null), at("Online", null))))
+        assertNull(usualVenue(listOf(at("Online", null), at("Online", null))))
     }
 
     private fun graphql(query: String, auth: RequestPostProcessor? = null): ResultActions {
