@@ -2708,7 +2708,7 @@
       "readOnlyHint" : true,
       "title" : "Search MetaOS"
     },
-    "description" : "Find episodes (ideas too), people and recording sessions by an episode code, a name or the words in their titles, alternative titles, people, show, summaries (not the AI one), bio, place, address or date, the best first, with where each matched and, for a summary, the text around the match. An episode code, however it's typed (S05E08, s5e8, 5x08), or an episode's ID finds that episode on its own, and a season (S04) its episodes. Case and diacritics don't matter, and the start of a word is enough",
+    "description" : "Find episodes (ideas too), people, recording sessions, organisations (archived ones too) and events (those still to come, and those of the last month, hidden ones too) by an episode code, a name or the words in their titles, alternative titles, people, show, summaries (not the AI one), bio, description, organisation, place, address or date, the best first, with where each matched and, for a summary, the text around the match. An episode code, however it's typed (S05E08, s5e8, 5x08), or an episode's ID finds that episode on its own, and a season (S04) its episodes. Case and diacritics don't matter, and the start of a word is enough",
     "inputSchema" : {
       "$schema" : "https://json-schema.org/draft/2020-12/schema",
       "properties" : {

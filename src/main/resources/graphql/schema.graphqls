@@ -1182,10 +1182,16 @@ type SearchResults {
     episodes: [EpisodeHit!]!
     people: [PersonHit!]!
     sessions: [SessionHit!]!
+    "Organisations, archived ones too"
+    organisations: [OrganisationHit!]!
+    "Events that haven't ended, and those that ended in the last month, hidden ones too: the soonest first"
+    events: [EventHit!]!
     "How many episodes match, also past the limit"
     episodeCount: Int!
     personCount: Int!
     sessionCount: Int!
+    organisationCount: Int!
+    eventCount: Int!
 }
 
 "An episode a search found"
@@ -1212,7 +1218,23 @@ type SessionHit {
     matchedIn: [SearchField!]!
 }
 
-"Where a search matched: an episode's code, titles, people, show, summaries or session; a person's name or bio; a session's name, place, address or date"
+"An organisation a search found"
+type OrganisationHit {
+    organisation: Organisation!
+    matchedIn: [SearchField!]!
+}
+
+"An event a search found"
+type EventHit {
+    event: Event!
+    matchedIn: [SearchField!]!
+}
+
+"""
+Where a search matched: an episode's code, titles, people, show, summaries or session; a person's name or bio; a
+session's name, place, address or date; an organisation's name, description or venue; an event's title, organisation,
+place, address, date or description
+"""
 enum SearchField {
     CODE
     TITLE
@@ -1227,4 +1249,6 @@ enum SearchField {
     LOCATION
     ADDRESS
     DATE
+    DESCRIPTION
+    ORGANISATION
 }

@@ -963,6 +963,7 @@
     "description": "Which personal data Ogrodje processes on ogrodje.si, when you sign in and in Ogrodje's email, and for how long it keeps it."
   },
   "search": {
+    "archived": "Archived",
     "best": "The best {n}; more words find fewer.",
     "close": "Close search",
     "codes": "A code, {a}, {b} or {c}, finds its episode; {season} lists a season.",
@@ -971,12 +972,12 @@
     "episodeOne": "Episode",
     "failed": "Search didn't work: {error}",
     "hint": "Type a code, a name or a topic. Case and diacritics don't matter, and the start of a word is enough.",
-    "intro": "Search the episodes, ideas too, the people on them and the recording sessions: by title, name, show, summary, or place.",
+    "intro": "Search the episodes, ideas too, the people on them, the recording sessions, organisations and events (from a month back on): by title, name, show, summary, or place.",
     "noEpisodes": "On no episode yet",
     "nothing": "Nothing found for “{q}”.",
-    "nothingHint": "Search looks in titles, names, shows, summaries and places. Try fewer words, or the start of one: jezikov finds jezikovni and jezikovnega.",
+    "nothingHint": "Search looks in titles, names, shows, summaries, descriptions and places. Try fewer words, or the start of one: jezikov finds jezikovni and jezikovnega.",
     "of": "{shown} of {total}",
-    "palettePlaceholder": "Search episodes, people and sessions",
+    "palettePlaceholder": "Search episodes, people, sessions, organisations and events",
     "placeholder": "A code, a name or a topic",
     "results": "Results",
     "searching": "Searching…",
@@ -985,7 +986,7 @@
     "sessions": "Recording sessions",
     "show": "Show",
     "signIn": {
-      "text": "Search finds Ogrodje's episodes, ideas too, the people on them and the recording sessions, which are for Ogrodje's team. Sign in with Discord or Google, or use MetaOS from your AI assistant over MCP: {usage} shows how to connect it.",
+      "text": "Search finds Ogrodje's episodes, ideas too, the people on them, the recording sessions, organisations and events, which are for Ogrodje's team. Sign in with Discord or Google, or use MetaOS from your AI assistant over MCP: {usage} shows how to connect it.",
       "title": "Sign in to search"
     },
     "snippet": {
@@ -996,6 +997,8 @@
     "tabs": {
       "all": "All",
       "episodes": "Episodes",
+      "events": "Events",
+      "organisations": "Organisations",
       "people": "People",
       "sessions": "Sessions"
     },
@@ -1139,7 +1142,7 @@
       "restore_person": "Bring back a deleted person, with their roles and the episodes they recommended; with another email, or none, if theirs is taken",
       "restore_session": "Bring back a deleted session, with its episodes",
       "restore_show": "Bring back a deleted show, with its episodes; under a new name if its own is taken",
-      "search": "Find episodes, people and sessions by a code, a name or words in their titles and summaries; a code finds its episode on its own",
+      "search": "Find episodes, people, sessions, organisations and events by a code, a name or words; a code finds its episode on its own",
       "search_documents": "Search Google Docs by the words in their title or text",
       "search_dropbox": "Search for files and folders by name",
       "search_koofr": "Search for files and folders by name",
@@ -1234,7 +1237,7 @@
         "title": "Pictures"
       },
       "search": {
-        "about": "episodes, ideas, people and recording sessions at once",
+        "about": "episodes, ideas, people, recording sessions, organisations and events at once",
         "title": "Search"
       },
       "sessions": {

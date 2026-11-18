@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { faUser } from '@fortawesome/free-regular-svg-icons'
+import { type RouteLocationRaw, useRoute, useRouter } from 'vue-router'
+import { faBuilding, faCalendar, faUser } from '@fortawesome/free-regular-svg-icons'
 import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { I18nT } from 'vue-i18n'
@@ -9,12 +9,14 @@ import MarkedText from '@/components/MarkedText.vue'
 import ShowBadge from '@/components/ShowBadge.vue'
 import StatusLabel from '@/components/StatusLabel.vue'
 import { episodePath, formatDate, guests, sessionName, sessionPath, sessionPlace } from '@/episodes'
+import { eventTime, placeLine } from '@/events'
 import { errorMessage, graphql } from '@/graphql'
 import { TIME_ZONE } from '@/i18n'
+import { organisationPath } from '@/organisations'
 import { personPath, rolesOf } from '@/people'
 import {
-  type EpisodeHit, episodeMatch, type PersonHit, resultCount, SEARCH_QUERY, type SearchResults, searchPath, searchWords,
-  type SessionHit,
+  type EpisodeHit, episodeMatch, type EventHit, type OrganisationHit, type PersonHit, resultCount, SEARCH_QUERY,
+  type SearchResults, searchPath, searchWords, type SessionHit,
 } from '@/search'
 import { useLocale } from '@/useLocale'
 
@@ -45,6 +47,9 @@ type Item =
   | { kind: 'episode', key: string, path: string, hit: EpisodeHit, exact: boolean }
   | { kind: 'person', key: string, path: string, hit: PersonHit }
   | { kind: 'session', key: string, path: string, hit: SessionHit }
+  | { kind: 'organisation', key: string, path: RouteLocationRaw, hit: OrganisationHit }
+  // An event opens where it's announced, in a new tab, else its organisation's page
+  | { kind: 'event', key: string, path: RouteLocationRaw, href: string | null, hit: EventHit }
 
 interface Group {
   title: string
@@ -84,6 +89,22 @@ const groups = computed<Group[]>(() => {
       title: t('search.sessions'),
       more: more(results.sessions.length, results.sessionCount),
       items: results.sessions.map((hit) => ({ kind: 'session', key: `s${hit.session.id}`, path: sessionPath(hit.session), hit })),
+    })
+  }
+  if (results.organisations.length) {
+    all.push({
+      title: t('search.tabs.organisations'),
+      more: more(results.organisations.length, results.organisationCount),
+      items: results.organisations.map((hit) => ({ kind: 'organisation', key: `o${hit.organisation.id}`, path: organisationPath(hit.organisation), hit })),
+    })
+  }
+  if (results.events.length) {
+    all.push({
+      title: t('search.tabs.events'),
+      more: more(results.events.length, results.eventCount),
+      items: results.events.map((hit) => ({
+        kind: 'event', key: `v${hit.event.id}`, path: organisationPath(hit.event.organisation), href: hit.event.url, hit,
+      })),
     })
   }
   return all
@@ -135,23 +156,38 @@ function close() {
 }
 
 // In the page's language, e.g. /en/episodes/S05E08
-function go(to: string | ReturnType<typeof searchPath>) {
+function go(to: RouteLocationRaw) {
   close()
-  router.push(typeof to === 'string' ? path(to) : { ...to, path: path(to.path) })
+  router.push(path(to))
 }
 
-// A result opens here, or with ⌘ or Ctrl, Shift or the middle button in a new tab, as a link would
-function onItemClick(event: MouseEvent, to: string) {
-  if (event.metaKey || event.ctrlKey || event.shiftKey || event.button === 1) {
-    event.preventDefault()
-    window.open(router.resolve(path(to)).href, '_blank', 'noopener')
+// An item: an event with its link opens that in a new tab, as it's elsewhere; the rest here
+function openItem(item: Item) {
+  if (item.kind === 'event' && item.href) {
+    close()
+    window.open(item.href, '_blank', 'noopener')
   } else {
-    go(to)
+    go(item.path)
   }
 }
 
+// A result opens here, or with ⌘ or Ctrl, Shift or the middle button in a new tab, as a link would
+function onItemClick(event: MouseEvent, item: Item) {
+  if (item.kind !== 'event' || !item.href) {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.button === 1) {
+      event.preventDefault()
+      window.open(router.resolve(path(item.path)).href, '_blank', 'noopener')
+      return
+    }
+  }
+  openItem(item)
+}
+
 function seeAll() {
-  if (text.value.trim()) go(searchPath(text.value.trim()))
+  if (!text.value.trim()) return
+  const to = searchPath(text.value.trim())
+  close()
+  router.push({ ...to, path: path(to.path) as string })
 }
 
 function onKeydown(event: KeyboardEvent) {
@@ -163,7 +199,7 @@ function onKeydown(event: KeyboardEvent) {
     event.preventDefault()
     // The text may be ahead of the results: then it's what was typed that counts
     const item = found.value?.text === text.value ? items.value[selected.value] : undefined
-    if (item) go(item.path)
+    if (item) openItem(item)
     else seeAll()
   }
 }
@@ -219,6 +255,13 @@ function personLine(hit: PersonHit) {
   return person.episodes.length ? `${rolesOf(person, t)} · ${latest}` : t('search.noEpisodes')
 }
 
+// Under an organisation's name: that it's archived, and where its events usually are
+function organisationLine(hit: OrganisationHit) {
+  const { organisation } = hit
+  const venue = placeLine({ name: organisation.venueName, address: organisation.venueAddress })
+  return [organisation.archived ? t('search.archived') : null, venue].filter(Boolean).join(' · ') || null
+}
+
 defineExpose({ open })
 </script>
 
@@ -262,8 +305,8 @@ defineExpose({ open })
             <li v-for="item in group.items" :id="`search-item-${indexOf(item)}`" :key="item.key" role="option"
                 :aria-selected="indexOf(item) === selected" class="item"
                 :class="{ selected: indexOf(item) === selected, exact: item.kind === 'episode' && item.exact }"
-                @mousemove="selected = indexOf(item)" @click="onItemClick($event, item.path)"
-                @auxclick="$event.button === 1 && onItemClick($event, item.path)">
+                @mousemove="selected = indexOf(item)" @click="onItemClick($event, item)"
+                @auxclick="$event.button === 1 && onItemClick($event, item)">
               <template v-if="item.kind === 'episode'">
                 <span class="lead code">{{ item.hit.episode.code ?? '—' }}</span>
                 <span class="main">
@@ -285,6 +328,26 @@ defineExpose({ open })
                   <span class="line"><MarkedText :text="personLine(item.hit)" :words="item.hit.matchedIn[0] === 'BIO' ? words : []"/></span>
                 </span>
                 <span class="side"/>
+              </template>
+
+              <template v-else-if="item.kind === 'organisation'">
+                <span class="lead"><FontAwesomeIcon :icon="faBuilding"/></span>
+                <span class="main">
+                  <span class="title"><MarkedText :text="item.hit.organisation.name" :words="words"/></span>
+                  <span v-if="organisationLine(item.hit)" class="line"><MarkedText :text="organisationLine(item.hit)!" :words="words"/></span>
+                </span>
+                <span class="side"/>
+              </template>
+
+              <template v-else-if="item.kind === 'event'">
+                <span class="lead"><FontAwesomeIcon :icon="faCalendar"/></span>
+                <span class="main">
+                  <span class="title"><MarkedText :text="item.hit.event.title" :words="words"/></span>
+                  <span class="line">
+                    <MarkedText :text="item.hit.event.organisation.name" :words="words"/><template v-if="placeLine(item.hit.event.place)"> · <MarkedText :text="placeLine(item.hit.event.place)!" :words="words"/></template><template v-if="item.hit.event.hidden"> · {{ t('events.team.hidden') }}</template>
+                  </span>
+                </span>
+                <span class="side"><time :datetime="item.hit.event.start">{{ eventTime(item.hit.event, dateLocale) }}</time></span>
               </template>
 
               <template v-else>

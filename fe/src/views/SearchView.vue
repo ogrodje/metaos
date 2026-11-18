@@ -12,8 +12,10 @@ import MarkedText from '@/components/MarkedText.vue'
 import PersonItem from '@/components/PersonItem.vue'
 import SignInPrompt from '@/components/SignInPrompt.vue'
 import { sessionPath, sessionPlace, sessionTitle } from '@/episodes'
+import { eventTime, placeLine } from '@/events'
 import { errorMessage, graphql } from '@/graphql'
 import { type EpisodeHit, episodeMatch, resultCount, SEARCH_QUERY, type SearchResults, searchWords } from '@/search'
+import { organisationPath } from '@/organisations'
 import { useAuthStore } from '@/stores/auth'
 import { usePageTitle } from '@/title'
 import { useLocale } from '@/useLocale'
@@ -30,7 +32,7 @@ const { t, dateLocale, path } = useLocale()
 const LIMIT = 100
 const PAUSE = 200
 
-type Tab = 'all' | 'episodes' | 'people' | 'sessions'
+type Tab = 'all' | 'episodes' | 'people' | 'sessions' | 'organisations' | 'events'
 
 const queryText = () => (typeof route.query.q === 'string' ? route.query.q : '')
 
@@ -51,6 +53,8 @@ const tabs = computed(() => {
     { id: 'episodes' as Tab, title: t('search.tabs.episodes'), count: r.episodeCount + (r.episode ? 1 : 0) },
     { id: 'people' as Tab, title: t('search.tabs.people'), count: r.personCount },
     { id: 'sessions' as Tab, title: t('search.tabs.sessions'), count: r.sessionCount },
+    { id: 'organisations' as Tab, title: t('search.tabs.organisations'), count: r.organisationCount },
+    { id: 'events' as Tab, title: t('search.tabs.events'), count: r.eventCount },
   ]
 })
 
@@ -205,6 +209,39 @@ useLiveRefresh(() => search(true))
             </li>
           </ul>
         </section>
+
+        <section v-if="results.organisations.length && shows('organisations')" aria-labelledby="organisations">
+          <div class="heading">
+            <h2 id="organisations">{{ t('search.tabs.organisations') }}</h2>
+            <span class="count">{{ results.organisationCount }}</span>
+          </div>
+          <ul class="rows">
+            <li v-for="hit in results.organisations" :key="hit.organisation.id">
+              <RouterLink :to="path(organisationPath(hit.organisation))"><MarkedText :text="hit.organisation.name" :words="words"/></RouterLink>
+              <span v-if="hit.organisation.archived" class="aside">{{ t('search.archived') }}</span>
+              <span v-if="placeLine({ name: hit.organisation.venueName, address: hit.organisation.venueAddress })" class="aside">
+                <MarkedText :text="placeLine({ name: hit.organisation.venueName, address: hit.organisation.venueAddress })!" :words="words"/>
+              </span>
+            </li>
+          </ul>
+        </section>
+
+        <section v-if="results.events.length && shows('events')" aria-labelledby="events">
+          <div class="heading">
+            <h2 id="events">{{ t('search.tabs.events') }}</h2>
+            <span class="count">{{ results.eventCount }}</span>
+          </div>
+          <ul class="rows">
+            <li v-for="hit in results.events" :key="hit.event.id">
+              <a v-if="hit.event.url" :href="hit.event.url" target="_blank" rel="noopener"><MarkedText :text="hit.event.title" :words="words"/></a>
+              <RouterLink v-else :to="path(organisationPath(hit.event.organisation))"><MarkedText :text="hit.event.title" :words="words"/></RouterLink>
+              <span class="aside">{{ eventTime(hit.event, dateLocale) }}</span>
+              <span class="aside"><RouterLink class="by" :to="path(organisationPath(hit.event.organisation))"><MarkedText :text="hit.event.organisation.name" :words="words"/></RouterLink></span>
+              <span v-if="placeLine(hit.event.place)" class="aside"><MarkedText :text="placeLine(hit.event.place)!" :words="words"/></span>
+              <span v-if="hit.event.hidden" class="aside">{{ t('events.team.hidden') }}</span>
+            </li>
+          </ul>
+        </section>
       </template>
     </template>
   </main>
@@ -310,6 +347,16 @@ useLiveRefresh(() => search(true))
 
 .rows a {
   font-weight: 500;
+}
+
+// Who an event is by, among what's said about it
+.rows a.by {
+  font-weight: inherit;
+  color: inherit;
+
+  &:hover {
+    text-decoration: underline;
+  }
 }
 
 // Each after the one before it, with a dot between

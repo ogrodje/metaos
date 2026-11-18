@@ -7,7 +7,8 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 /*
- * Search over episodes (ideas too), people and recording sessions, for the front-end's search (GraphQL's search) and
+ * Search over episodes (ideas too), people, recording sessions, organisations (archived ones too) and events (those
+ * that haven't ended, and those of the last month, hidden ones too), for the front-end's search (GraphQL's search) and
  * the search MCP tool. It's the team's, so it looks at everything but the AI summary.
  *
  * An episode code, however it's typed (S05E08, s5e8, S5 E8, 5x08), finds that episode on its own, and a season (S04,
@@ -34,7 +35,12 @@ enum class SearchField(val weight: Int) {
     LOCATION(10),
     ADDRESS(6),
     DATE(5),
+    DESCRIPTION(3),
+    ORGANISATION(7),
 }
+
+/** How far back search finds events: those that ended in the last month, and every one still to come */
+val EVENTS_SEARCHED_BACK: java.time.Duration = java.time.Duration.ofDays(31)
 
 /** An episode found by its words: where it matched, and the text around a match its row wouldn't otherwise show */
 data class EpisodeHit(val episode: Episode, val matchedIn: List<SearchField>, val snippet: String? = null)
@@ -42,6 +48,10 @@ data class EpisodeHit(val episode: Episode, val matchedIn: List<SearchField>, va
 data class PersonHit(val person: Person, val matchedIn: List<SearchField>)
 
 data class SessionHit(val session: Session, val matchedIn: List<SearchField>)
+
+data class OrganisationHit(val organisation: Organisation, val matchedIn: List<SearchField>)
+
+data class EventHit(val event: Event, val matchedIn: List<SearchField>)
 
 /**
  * What a search found: the episode whose code or ID the text is, alone; a season's episodes; or the best matches of
@@ -53,9 +63,13 @@ data class SearchResults(
     val episodes: List<EpisodeHit> = emptyList(),
     val people: List<PersonHit> = emptyList(),
     val sessions: List<SessionHit> = emptyList(),
+    val organisations: List<OrganisationHit> = emptyList(),
+    val events: List<EventHit> = emptyList(),
     val episodeCount: Int = episodes.size,
     val personCount: Int = people.size,
     val sessionCount: Int = sessions.size,
+    val organisationCount: Int = organisations.size,
+    val eventCount: Int = events.size,
 )
 
 private val MARKS = Regex("\\p{M}+")
@@ -156,6 +170,8 @@ class Search(
     private val people: PeopleRepository,
     private val episodePeople: EpisodePeopleRepository,
     private val sessions: SessionsRepository,
+    private val organisations: OrganisationsRepository,
+    private val events: EventsRepository,
 ) {
 
     @Transactional(readOnly = true)
@@ -196,6 +212,13 @@ class Search(
         val personMatches = people.findAll().mapNotNull { person -> person.match(person.texts(), words) }.best(peopleByName)
         val sessionMatches = sessions.findAll().mapNotNull { session -> session.match(session.texts(), words) }
             .best(compareByDescending { it.date })
+        val organisationMatches = organisations.findAll().mapNotNull { o -> o.match(o.texts(), words) }
+            .best(compareBy<Organisation> { it.archived }.then(organisationsByName))
+        // The soonest first, those still to come before those past
+        val now = java.time.Instant.now()
+        val eventMatches = events.findEndingSince(now.minus(EVENTS_SEARCHED_BACK).atOffset(java.time.ZoneOffset.UTC))
+            .mapNotNull { e -> e.match(e.texts(), words) }
+            .best(compareBy<Event> { !it.upcoming(now) }.thenBy { java.time.Duration.between(now, it.startsAt.toInstant()).abs() })
 
         return SearchResults(
             episodes = episodeMatches.take(limit).map { match ->
@@ -204,9 +227,13 @@ class Search(
             },
             people = personMatches.take(limit).map { PersonHit(it.item, it.matchedIn) },
             sessions = sessionMatches.take(limit).map { SessionHit(it.item, it.matchedIn) },
+            organisations = organisationMatches.take(limit).map { OrganisationHit(it.item, it.matchedIn) },
+            events = eventMatches.take(limit).map { EventHit(it.item, it.matchedIn) },
             episodeCount = episodeMatches.size,
             personCount = personMatches.size,
             sessionCount = sessionMatches.size,
+            organisationCount = organisationMatches.size,
+            eventCount = eventMatches.size,
         )
     }
 
@@ -219,6 +246,28 @@ class Search(
         tinySummary?.let { add(Text(SearchField.TINY_SUMMARY, plainText(it))) }
         summary?.let { add(Text(SearchField.SUMMARY, plainText(it))) }
         listOfNotNull(session?.name, session?.location).distinct().forEach { add(Text(SearchField.SESSION, it)) }
+    }
+
+    // Its name, what it is, and where its events usually are
+    private fun Organisation.texts() = listOfNotNull(
+        Text(SearchField.NAME, name),
+        description?.let { Text(SearchField.DESCRIPTION, plainText(it)) },
+        venueName?.let { Text(SearchField.LOCATION, it) },
+        venueAddress?.let { Text(SearchField.ADDRESS, it) },
+    )
+
+    // Its title, who it's by, where it is (else its organisation's venue), when, as a session's date, and what it's about
+    private fun Event.texts(): List<Text> {
+        val day = startsAt.atZoneSameInstant(LJUBLJANA).toLocalDate()
+        val place = place()
+        return listOfNotNull(
+            Text(SearchField.TITLE, title),
+            Text(SearchField.ORGANISATION, organisation.name),
+            place?.name?.let { Text(SearchField.LOCATION, it) },
+            place?.address?.let { Text(SearchField.ADDRESS, it) },
+            Text(SearchField.DATE, "$day ${day.month.getDisplayName(TextStyle.FULL, SLOVENIAN)} ${day.month.getDisplayName(TextStyle.FULL, Locale.UK)}"),
+            description?.let { Text(SearchField.DESCRIPTION, plainText(it)) },
+        )
     }
 
     private fun Person.texts() = listOfNotNull(Text(SearchField.NAME, name), bio?.let { Text(SearchField.BIO, it) })

@@ -963,6 +963,7 @@
     "description": "Katere osebne podatke Ogrodje obdeluje na ogrodje.si, ob prijavi in v e-pošti Ogrodja, in kako dolgo jih hrani."
   },
   "search": {
+    "archived": "Arhivirana",
     "best": "Prikazan je najboljši zadetek; z več besedami jih najdete manj. | Prikazana sta najboljša {n}; z več besedami jih najdete manj. | Prikazani so najboljši {n}; z več besedami jih najdete manj. | Prikazanih je najboljših {n}; z več besedami jih najdete manj.",
     "close": "Zapri iskanje",
     "codes": "Koda, {a}, {b} ali {c}, najde svojo epizodo; {season} izpiše sezono.",
@@ -971,12 +972,12 @@
     "episodeOne": "Epizoda",
     "failed": "Iskanje ni uspelo: {error}",
     "hint": "Vpišite kodo, ime ali temo. Velike in male črke ter šumniki niso pomembni, dovolj je začetek besede.",
-    "intro": "Iščite po epizodah, tudi idejah, ljudeh v njih in snemanjih: po naslovu, imenu, oddaji, povzetku ali kraju.",
+    "intro": "Iščite po epizodah, tudi idejah, ljudeh v njih, snemanjih, organizacijah in dogodkih (od meseca nazaj naprej): po naslovu, imenu, oddaji, povzetku ali kraju.",
     "noEpisodes": "Še v nobeni epizodi",
     "nothing": "Za »{q}« ni zadetkov.",
-    "nothingHint": "Iskanje pregleda naslove, imena, oddaje, povzetke in kraje. Poskusite z manj besedami ali z začetkom besede: jezikov najde jezikovni in jezikovnega.",
+    "nothingHint": "Iskanje pregleda naslove, imena, oddaje, povzetke, opise in kraje. Poskusite z manj besedami ali z začetkom besede: jezikov najde jezikovni in jezikovnega.",
     "of": "{shown} od {total}",
-    "palettePlaceholder": "Iščite epizode, ljudi in snemanja",
+    "palettePlaceholder": "Iščite epizode, ljudi, snemanja, organizacije in dogodke",
     "placeholder": "Koda, ime ali tema",
     "results": "Zadetki",
     "searching": "Iščemo …",
@@ -985,7 +986,7 @@
     "sessions": "Snemanja",
     "show": "Pokaži",
     "signIn": {
-      "text": "Iskanje najde epizode Ogrodja, tudi ideje, ljudi v njih in snemanja, ki so namenjeni ekipi Ogrodja. Prijavite se z Discordom ali Googlom ali pa MetaOS uporabljajte prek MCP v svojem asistentu AI: kako ga povežete, pove stran {usage}.",
+      "text": "Iskanje najde epizode Ogrodja, tudi ideje, ljudi v njih, snemanja, organizacije in dogodke, ki so namenjeni ekipi Ogrodja. Prijavite se z Discordom ali Googlom ali pa MetaOS uporabljajte prek MCP v svojem asistentu AI: kako ga povežete, pove stran {usage}.",
       "title": "Za iskanje se prijavite"
     },
     "snippet": {
@@ -996,6 +997,8 @@
     "tabs": {
       "all": "Vse",
       "episodes": "Epizode",
+      "events": "Dogodki",
+      "organisations": "Organizacije",
       "people": "Ljudje",
       "sessions": "Snemanja"
     },
@@ -1139,7 +1142,7 @@
       "restore_person": "Vrne izbrisano osebo, z vlogami in epizodami, ki jih je predlagala; z drugim e-poštnim naslovom ali brez njega, če je njen zaseden",
       "restore_session": "Vrne izbrisano snemanje, z njegovimi epizodami",
       "restore_show": "Vrne izbrisano oddajo, z njenimi epizodami; pod novim imenom, če je njeno zasedeno",
-      "search": "Poišče epizode, ljudi in snemanja po kodi, imenu ali besedah v naslovih in povzetkih; koda najde samo svojo epizodo",
+      "search": "Poišče epizode, ljudi, snemanja, organizacije in dogodke po kodi, imenu ali besedah; koda najde samo svojo epizodo",
       "search_documents": "Poišče dokumente Google po besedah v naslovu ali besedilu",
       "search_dropbox": "Poišče datoteke in mape po imenu",
       "search_koofr": "Poišče datoteke in mape po imenu",
@@ -1234,7 +1237,7 @@
         "title": "Slike"
       },
       "search": {
-        "about": "epizode, ideje, ljudje in snemanja hkrati",
+        "about": "epizode, ideje, ljudje, snemanja, organizacije in dogodki hkrati",
         "title": "Iskanje"
       },
       "sessions": {

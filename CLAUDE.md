@@ -284,10 +284,13 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
 - Search is the team's: signed in, the header has a Search button (`SearchPalette.vue`; also ⌘K, Ctrl+K and `/`),
   which opens a few of each kind over the page, and its See all the search page, `/search?q=`, with all of them by
   kind; the address keeps what's searched. Both ask the `search` query, as does the `search` MCP tool:
-  [`Search.kt`](src/main/kotlin/si/ogrodje/metaos/Search.kt) finds episodes, ideas too, people and recording sessions.
+  [`Search.kt`](src/main/kotlin/si/ogrodje/metaos/Search.kt) finds episodes, ideas too, people, recording sessions,
+  organisations (archived ones too, by name, description and venue) and events (those still to come and those that
+  ended in the last month, `EVENTS_SEARCHED_BACK`, hidden ones too, by title, organisation, place, date and
+  description; the soonest first, which open where they're announced).
   An episode code, however it's typed (`s5e8`, `S5 E8`, `5x08`), or an ID is that episode alone, which ↵ opens; a
   season (`S04`) lists it. Otherwise every word has to start a word, or be in one, in an episode's titles, people,
-  show, summaries (not the AI one) or session, a person's name or bio, or a session's name, place, address or date; case
+  show, summaries (not the AI one) or session, a person's name or bio, or a session's name, place, address or date, an organisation's or an event's; case
   and diacritics don't matter (`fold`, also in `fe/src/search.ts`, which marks the words found). Each word counts the
   weight of the field it's best in (`SearchField`), and a row says why it was found when it doesn't show it.
 - Users sign in with keycloak-js (`fe/src/stores/auth.ts`), straight to Discord or Google (`idpHint`). Once the page

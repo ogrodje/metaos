@@ -37,6 +37,8 @@ class SearchTest @Autowired constructor(
     private val episodePeople: EpisodePeopleRepository,
     private val sessions: SessionsRepository,
     private val searchMCP: SearchMCP,
+    private val organisationsMCP: OrganisationsMCP,
+    private val eventsMCP: EventsMCP,
 ) {
 
     private val reader = jwt().jwt { it.claim("realm_access", APPROVED).claim("scope", API_READ_SCOPE) }
@@ -184,6 +186,31 @@ class SearchTest @Autowired constructor(
         search("narval", limit = 1)
             .andExpect(jsonPath("$.data.search.episodes[*].episode.code", contains("S78E01")))
             .andExpect(jsonPath("$.data.search.episodeCount").value(3))
+    }
+
+    @Test
+    fun `finds organisations, archived ones too, and events from a month back on, by who they're by and where`() {
+        val by = checkNotNull(organisationsMCP.create(name = "Zebroidni klub").id)
+        organisationsMCP.update(by, description = "Srečanja ljubiteljev zeber", venueName = "Okapijeva hiša", venueAddress = "Zebrina ulica 1")
+        val gone = checkNotNull(organisationsMCP.create(name = "Zebroidni arhiv").id)
+        organisationsMCP.update(gone, archived = true)
+        val day = { days: Long -> LocalDate.now(LJUBLJANA).plusDays(days).toString() }
+        eventsMCP.create(by, "Zebroidni večer", start = day(10))
+        eventsMCP.create(by, "Zebroidni zajtrk", start = day(-20))
+        eventsMCP.create(by, "Zebroidni lanski piknik", start = day(-60))
+
+        graphql("""{ search(text: "zebroidni", limit: 10) { organisations { organisation { name archived } matchedIn }
+            events { event { title } matchedIn } organisationCount eventCount } }""")
+            // The live one before the archived one; the events still to come before those past, none older than a month
+            .andExpect(jsonPath("$.data.search.organisations[*].organisation.name", contains("Zebroidni klub", "Zebroidni arhiv")))
+            .andExpect(jsonPath("$.data.search.events[*].event.title", contains("Zebroidni večer", "Zebroidni zajtrk")))
+            .andExpect(jsonPath("$.data.search.eventCount").value(2))
+        // By who it's by and where it is: its organisation's venue, as it doesn't say
+        graphql("""{ search(text: "okapijeva", limit: 10) { organisations { matchedIn } events { event { title } matchedIn } } }""")
+            .andExpect(jsonPath("$.data.search.organisations[0].matchedIn", contains("LOCATION")))
+            .andExpect(jsonPath("$.data.search.events[*].event.title", containsInAnyOrder("Zebroidni večer", "Zebroidni zajtrk")))
+        assertEquals(listOf("ORGANISATION"), searchMCP.search("zebroidni klub vecer", null).events.single().matchedIn.map { it.name }.takeLast(1))
+        assertEquals(listOf("Zebroidni klub"), searchMCP.search("ljubiteljev zeber", null).organisations.map { it.organisation.name })
     }
 
     @Test

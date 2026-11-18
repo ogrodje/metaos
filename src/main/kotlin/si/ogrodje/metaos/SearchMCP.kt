@@ -7,6 +7,8 @@ import org.springframework.stereotype.Component
 data class EpisodeHitDto(val episode: EpisodeDto, val matchedIn: List<SearchField>, val snippet: String?)
 data class PersonHitDto(val person: PersonDto, val matchedIn: List<SearchField>)
 data class SessionHitDto(val session: SessionDto, val matchedIn: List<SearchField>)
+data class OrganisationHitDto(val organisation: OrganisationDto, val matchedIn: List<SearchField>)
+data class EventHitDto(val event: EventDto, val matchedIn: List<SearchField>)
 
 data class SearchResultsDto(
     val episode: EpisodeDto?,
@@ -14,9 +16,13 @@ data class SearchResultsDto(
     val episodes: List<EpisodeHitDto>,
     val people: List<PersonHitDto>,
     val sessions: List<SessionHitDto>,
+    val organisations: List<OrganisationHitDto>,
+    val events: List<EventHitDto>,
     val episodeCount: Int,
     val personCount: Int,
     val sessionCount: Int,
+    val organisationCount: Int,
+    val eventCount: Int,
 )
 
 // How many of each kind the tool lists, unless asked for another number
@@ -31,9 +37,10 @@ class SearchMCP(private val search: Search) {
             title = "Search MetaOS",
             readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false
         ),
-        description = "Find episodes (ideas too), people and recording sessions by an episode code, a name or the words " +
-            "in their titles, alternative titles, people, show, summaries (not the AI one), bio, place, address or " +
-            "date, the best first, with where each matched and, for a summary, the text around the match. An episode " +
+        description = "Find episodes (ideas too), people, recording sessions, organisations (archived ones too) and " +
+            "events (those still to come, and those of the last month, hidden ones too) by an episode code, a name or " +
+            "the words in their titles, alternative titles, people, show, summaries (not the AI one), bio, " +
+            "description, organisation, place, address or date, the best first, with where each matched and, for a summary, the text around the match. An episode " +
             "code, however it's typed (S05E08, s5e8, 5x08), or an episode's ID finds that episode on its own, and a " +
             "season (S04) its episodes. Case and diacritics don't matter, and the start of a word is enough"
     )
@@ -49,9 +56,13 @@ class SearchMCP(private val search: Search) {
             episodes = found.episodes.map { EpisodeHitDto(it.episode.toDto(), it.matchedIn, it.snippet) },
             people = found.people.map { PersonHitDto(it.person.toDto(), it.matchedIn) },
             sessions = found.sessions.map { SessionHitDto(it.session.toDto(), it.matchedIn) },
+            organisations = found.organisations.map { OrganisationHitDto(it.organisation.toDto(), it.matchedIn) },
+            events = found.events.map { EventHitDto(it.event.toDto(), it.matchedIn) },
             episodeCount = found.episodeCount,
             personCount = found.personCount,
             sessionCount = found.sessionCount,
+            organisationCount = found.organisationCount,
+            eventCount = found.eventCount,
         )
     }
 }
