@@ -263,7 +263,7 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   which opens where it's announced in a new tab, when it is (`eventTime` in [`fe/src/events.ts`](fe/src/events.ts):
   its times only where its source says it has them, in Ljubljana's time, where ogrodje.si took every time for summer
   time's), its organisation as a badge in its colours with its logo (a colour from its name where it has none), and
-  where it is when it has both the place and its address (`EventRow.vue`); promoted ones, Ogrodje's picks, stand out in
+  where it is when it has both the place and its address (`EventRow.vue`, `MeetupBadge.vue`); promoted ones, Ogrodje's picks, stand out in
   the accent. Under them, a note that MetaOS gathers them from public sources. They're MetaOS's own (Events, below),
   through the `events` query: those that haven't ended, or started when they have no end, and aren't hidden. The team
   also gets the hidden ones, dimmed, and on each Hide, Pick and Edit (Edit only for its own), Add event and Refresh.
@@ -334,8 +334,8 @@ them (OG-64): the start of its CRM. Finance is to build on them.
   page with another word in each language (`LOCAL_PATHS` in `router/index.ts`), so links to them go by route name
   (`organisationPath`, `path({ name })`); the list by tier (`OrganisationsView.vue`), and an organisation's workspace
   (`OrganisationView.vue`): its logo and name, who works and worked there, the episodes it supported, and in its panel
-  its support, links and finance details, and its events (Events). The team creates, edits, archives and deletes them
-  there. A released episode's page says Supported by its organisations
+  its support, links and finance details, and its events (Events): each link's last scrape, Refresh events, and its events with Add event. The team creates
+  (`OrganisationForm.vue`), edits, archives and deletes them there, and imports Goo from the list (Import from Goo). A released episode's page says Supported by its organisations
   (`SupportedBy.vue`: to their websites, for the team to their pages), and a person's panel where they work (the
   team's).
 

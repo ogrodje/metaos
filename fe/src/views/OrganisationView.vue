@@ -1,22 +1,32 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { computed, nextTick, ref, watch } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { keepUnchanged, useLiveRefresh } from '@/changes'
 import EpisodeRow from '@/components/EpisodeRow.vue'
+import EventForm from '@/components/EventForm.vue'
+import EventRow from '@/components/EventRow.vue'
 import Fact from '@/components/Fact.vue'
 import FactGroup from '@/components/FactGroup.vue'
 import FactPanel from '@/components/FactPanel.vue'
 import LoadError from '@/components/LoadError.vue'
 import LoadingRows from '@/components/LoadingRows.vue'
+import MeetupBadge from '@/components/MeetupBadge.vue'
 import NotFound from '@/components/NotFound.vue'
+import OrganisationForm from '@/components/OrganisationForm.vue'
 import OrganisationLogo from '@/components/OrganisationLogo.vue'
 import PersonAvatar from '@/components/PersonAvatar.vue'
 import SignInPrompt from '@/components/SignInPrompt.vue'
 import SocialLinks from '@/components/SocialLinks.vue'
 import { type Episode, EPISODE_FIELDS, LIST_PICTURE_FIELDS } from '@/episodes'
+import { sourceName, TEAM_EVENT_FIELDS, type TeamEvent } from '@/events'
+import { useEventsRefresh } from '@/eventsRefresh'
 import { errorMessage, graphql } from '@/graphql'
-import { type Image, IMAGE_FIELDS } from '@/images'
-import { type Organisation, ORGANISATION_FIELDS, siteName, tierName, type Work, WORK_FIELDS, workPeriod } from '@/organisations'
+import { TIME_ZONE } from '@/i18n'
+import { type Image, IMAGE_FIELDS, src } from '@/images'
+import {
+  DELETE_ORGANISATION, EVENT_LINKS, EVENT_SCRAPE_FIELDS, type EventScrape, type Organisation, ORGANISATION_FIELDS,
+  ORGANISATIONS_PATH, siteName, tierName, UPDATE_ORGANISATION, type Work, WORK_FIELDS, workPeriod,
+} from '@/organisations'
 import { personPath } from '@/people'
 import { useAuthStore } from '@/stores/auth'
 import { usePageTitle } from '@/title'
@@ -26,10 +36,13 @@ import { useLocale } from '@/useLocale'
 interface OrganisationDetails extends Organisation {
   people: (Work & { person: { id: string, name: string, avatar: Image | null } })[]
   episodes: Episode[]
+  events: TeamEvent[]
+  eventScrapes: EventScrape[]
 }
 
 const auth = useAuthStore()
 const route = useRoute()
+const router = useRouter()
 const { t, dateLocale, path } = useLocale()
 
 const id = String(route.params.id)
@@ -50,6 +63,8 @@ async function load(quietly = false) {
         ${ORGANISATION_FIELDS}
         people { ${WORK_FIELDS} person { id name avatar { ${IMAGE_FIELDS} } } }
         episodes { ${EPISODE_FIELDS} ${LIST_PICTURE_FIELDS} }
+        events { ${TEAM_EVENT_FIELDS} }
+        eventScrapes { ${EVENT_SCRAPE_FIELDS} }
       }
     }`, { id })
     if (load !== loads) return
@@ -95,6 +110,114 @@ const support = computed(() => {
   return shown.supporting ? tierName(shown.tier, t) : t('organisations.formerly', { tier: tierName(shown.tier, t) })
 })
 
+// The team changes it here: Edit, Archive or Bring back, and Delete, asked first
+const editing = ref(false)
+const confirmingDelete = ref(false)
+const busy = ref(false)
+const actionError = ref<string>()
+
+function saved(changed: Organisation) {
+  if (organisation.value) organisation.value = { ...organisation.value, ...changed }
+}
+
+function stopEditing() {
+  editing.value = false
+  void nextTick(() => document.getElementById('edit-organisation')?.focus())
+}
+
+async function setArchived(archived: boolean) {
+  if (busy.value || !organisation.value) return
+  busy.value = true
+  actionError.value = undefined
+  try {
+    const data = await graphql<{ organisation: Organisation }>(UPDATE_ORGANISATION, { id, input: { archived } })
+    saved(data.organisation)
+  } catch (e) {
+    actionError.value = errorMessage(e, t)
+  } finally {
+    busy.value = false
+  }
+}
+
+function askToDelete() {
+  actionError.value = undefined
+  confirmingDelete.value = true
+  void nextTick(() => document.getElementById('keep-organisation')?.focus())
+}
+
+function keep() {
+  confirmingDelete.value = false
+  void nextTick(() => document.getElementById('delete-organisation')?.focus())
+}
+
+async function remove() {
+  if (busy.value) return
+  busy.value = true
+  actionError.value = undefined
+  try {
+    await graphql(DELETE_ORGANISATION, { id })
+    await router.push(path(ORGANISATIONS_PATH))
+  } catch (e) {
+    actionError.value = errorMessage(e, t)
+  } finally {
+    busy.value = false
+  }
+}
+
+// Its events: refreshed from its links now, added by the team, and each hidden, picked or changed in its row
+const { running: refreshing, starting: refreshStarting, error: refreshError, start: startRefresh } =
+  useEventsRefresh(() => id, () => load(true).catch(() => undefined))
+const addingEvent = ref(false)
+const eventsOpen = ref(false)
+const EVENTS_SHOWN = 10
+const events = computed(() => {
+  const all = organisation.value?.events ?? []
+  return eventsOpen.value ? all : all.slice(0, EVENTS_SHOWN)
+})
+
+function eventChanged(event: TeamEvent) {
+  if (!organisation.value) return
+  organisation.value = { ...organisation.value, events: organisation.value.events.map((each) => (each.id === event.id ? event : each)) }
+}
+
+function eventAdded() {
+  void load(true).catch(() => undefined)
+}
+
+// Its badge on the Events page, with its logo
+const badge = computed(() => organisation.value && {
+  name: organisation.value.name,
+  logo: organisation.value.logo ? src(organisation.value.logo, 40) : null,
+  mainColor: organisation.value.mainColor,
+  backgroundColor: organisation.value.backgroundColor,
+})
+
+// Where it announces its events, and how each was last scraped: its website and its event links
+const eventLinks = computed(() => {
+  const shown = organisation.value
+  if (!shown) return []
+  const links = [
+    { key: 'websiteUrl', field: 'WEBSITE', name: t('person.website'), url: shown.websiteUrl },
+    ...EVENT_LINKS.map((link) => ({ key: link.key, field: link.field, name: link.name, url: shown[link.key] })),
+  ]
+  return links.filter((link) => link.url).map((link) => ({
+    ...link,
+    url: link.url!,
+    scrape: shown.eventScrapes.find((scrape) => scrape.field === link.field && scrape.url === link.url) ?? null,
+  }))
+})
+
+const scrapedAt = (at: string) =>
+  new Date(at).toLocaleString(dateLocale.value, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: TIME_ZONE })
+
+// Which scraper read it, else that none does, how many it found, and when; why it failed under it
+function scrapeLine(scrape: EventScrape) {
+  const found = t('organisation.events.found', { n: scrape.events }, scrape.events)
+  if (scrape.error) return [scrape.source ? sourceName(scrape.source) : null, scrapedAt(scrape.scrapedAt)].filter(Boolean).join(' · ')
+  if (!scrape.source) return `${t('organisation.events.noScraper')} · ${scrapedAt(scrape.scrapedAt)}`
+  return `${sourceName(scrape.source)} · ${found} · ${scrapedAt(scrape.scrapedAt)}`
+}
+
 const hasFinance = computed(() => {
   const shown = organisation.value
   return !!shown && !!(shown.vatId || shown.companyId || shown.address || shown.contactPerson)
@@ -115,14 +238,34 @@ const hasFinance = computed(() => {
          them who works there and the episodes it supported -->
     <div v-else class="workspace">
       <div class="lead">
-        <header class="organisation">
+        <OrganisationForm v-if="editing" :organisation="organisation" @saved="saved" @close="stopEditing"/>
+        <header v-else class="organisation">
           <OrganisationLogo :image="organisation.logo" :name="organisation.name" :size="96"/>
           <div class="title">
             <h1>{{ organisation.name }}</h1>
-            <p v-if="support" class="meta">{{ support }}</p>
+            <p v-if="support || organisation.archived" class="meta">
+              {{ [organisation.archived ? t('organisation.archived') : null, support].filter(Boolean).join(' · ') }}
+            </p>
             <p v-if="organisation.description" class="subtitle">{{ organisation.description }}</p>
           </div>
         </header>
+        <div v-if="!editing" class="manage">
+          <span v-if="confirmingDelete" class="confirm" role="group" aria-labelledby="delete-ask" @keydown.esc="keep">
+            <span id="delete-ask">{{ t('organisation.deleteAsk', { name: organisation.name }) }}</span>
+            <button type="button" class="button small danger" :aria-disabled="busy || undefined" @click="remove">
+              {{ busy ? t('organisation.deleting') : t('organisation.delete') }}
+            </button>
+            <button id="keep-organisation" type="button" class="button small" :disabled="busy" @click="keep">{{ t('common.cancel') }}</button>
+          </span>
+          <template v-else>
+            <button id="edit-organisation" type="button" class="button small" @click="editing = true">{{ t('common.edit') }}</button>
+            <button type="button" class="button small quiet" :aria-disabled="busy || undefined" @click="setArchived(!organisation.archived)">
+              {{ organisation.archived ? t('organisation.unarchive') : t('organisation.archive') }}
+            </button>
+            <button id="delete-organisation" type="button" class="button small quiet" @click="askToDelete">{{ t('organisation.delete') }}</button>
+          </template>
+          <p v-if="actionError" class="error" role="alert">{{ actionError }}</p>
+        </div>
       </div>
 
       <FactPanel :label="t('organisation.about', { name: organisation.name })">
@@ -142,6 +285,31 @@ const hasFinance = computed(() => {
             </Fact>
           </dl>
         </FactGroup>
+        <FactGroup :title="t('organisation.events.title')">
+          <dl>
+            <Fact :label="t('organisation.events.gathers')">
+              {{ organisation.collectsEvents ? t('organisation.events.gathersYes') : t('organisation.events.gathersNo') }}
+            </Fact>
+            <Fact v-if="badge" :label="t('organisation.events.badge')"><MeetupBadge :meetup="badge"/></Fact>
+            <Fact v-for="link in eventLinks" :key="link.key" :label="link.name" stacked>
+              <a :href="link.url" target="_blank" rel="noopener">{{ siteName(link.url) }}</a>
+              <template v-if="link.field !== 'DISCORD'">
+                <span v-if="!link.scrape" class="scrape">{{ t('organisation.events.notScraped') }}</span>
+                <template v-else>
+                  <span class="scrape">{{ scrapeLine(link.scrape) }}</span>
+                  <span v-if="link.scrape.error" class="scrape failed">{{ link.scrape.error }}</span>
+                </template>
+              </template>
+            </Fact>
+          </dl>
+          <p v-if="!eventLinks.length" class="panel-note">{{ t('organisation.events.noLinks') }}</p>
+          <div v-if="organisation.collectsEvents && eventLinks.length" class="refresh">
+            <button type="button" class="button small" :aria-disabled="refreshing || refreshStarting || undefined" @click="startRefresh()">
+              {{ refreshing || refreshStarting ? t('events.team.refreshing') : t('events.team.refresh') }}
+            </button>
+            <p v-if="refreshError" class="error" role="alert">{{ t('events.team.notRefreshed', { error: refreshError }) }}</p>
+          </div>
+        </FactGroup>
         <FactGroup v-if="hasFinance" :title="t('organisation.finance')">
           <dl>
             <Fact v-if="organisation.vatId" :label="t('organisation.vatId')"><span class="number">{{ organisation.vatId }}</span></Fact>
@@ -155,7 +323,27 @@ const hasFinance = computed(() => {
       </FactPanel>
 
       <div class="main">
-        <p v-if="!organisation.people.length && !organisation.episodes.length" class="note">{{ t('organisation.nothing') }}</p>
+        <p v-if="!organisation.people.length && !organisation.episodes.length && !organisation.events.length" class="note">
+          {{ t('organisation.nothing') }}
+        </p>
+
+        <section aria-labelledby="events">
+          <div class="heading">
+            <h2 id="events">{{ t('organisation.events.title') }}</h2>
+            <span class="count">{{ organisation.events.length }}</span>
+            <button type="button" class="text-button more" :aria-expanded="addingEvent" aria-controls="add-event"
+                    @click="addingEvent = !addingEvent">{{ addingEvent ? t('common.cancel') : t('events.team.add') }}</button>
+          </div>
+          <EventForm v-if="addingEvent" id="add-event" :organisation="organisation" @saved="eventAdded" @close="addingEvent = false"/>
+          <p v-if="!organisation.events.length && !addingEvent" class="note">{{ t('organisation.events.none') }}</p>
+          <ul v-if="organisation.events.length" class="events">
+            <EventRow v-for="event in events" :key="event.id" :event="event" manage @changed="eventChanged"/>
+          </ul>
+          <button v-if="organisation.events.length > EVENTS_SHOWN" type="button" class="text-button all" :aria-expanded="eventsOpen"
+                  @click="eventsOpen = !eventsOpen">
+            {{ eventsOpen ? t('common.showLess') : t('common.showAll') }}
+          </button>
+        </section>
 
         <section v-for="list in workLists" :key="list.id" :aria-labelledby="list.id">
           <div class="heading">
@@ -238,6 +426,63 @@ const hasFinance = computed(() => {
 
 .number {
   font-family: var(--font-mono);
+}
+
+// The team's, under its name
+.manage {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+
+  .confirm {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--text-small);
+    line-height: 20px;
+  }
+}
+
+.error {
+  flex-basis: 100%;
+  font-size: var(--text-small);
+  line-height: 20px;
+  color: var(--accent-text);
+}
+
+.events {
+  padding: 0;
+  list-style: none;
+}
+
+.all {
+  margin-top: 12px;
+}
+
+// How a link was last scraped, under it
+.scrape {
+  display: block;
+  font-size: var(--text-caption);
+  line-height: 18px;
+  color: var(--muted);
+
+  &.failed {
+    color: var(--warning);
+  }
+}
+
+.panel-note {
+  font-size: var(--text-small);
+  line-height: 20px;
+  color: var(--muted);
+}
+
+.refresh {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
 }
 
 dd a {

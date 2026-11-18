@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { badgeColors, byWeek, colorOf, dayOf, eventTime, shortDay, weekdayName, weekOf, weekRange } from '@/events'
+import { badgeColors, byWeek, colorOf, dayOf, eventTime, formTime, inputTime, isManual, shortDay, sourceName, weekdayName, weekOf, weekRange } from '@/events'
 import { t, tSl } from './i18n'
 
 const at = (start: string, end: string | null, hasStartTime = true, hasEndTime = true) => ({ start, end, hasStartTime, hasEndTime })
@@ -66,5 +66,38 @@ describe('badgeColors', () => {
       .toEqual({ color: '#FFFFFF', background: colorOf('Start:up Slovenija') })
     expect(colorOf('Start:up Slovenija')).toBe(colorOf('Start:up Slovenija'))
     expect(colorOf('Start:up Slovenija')).not.toBe(colorOf('Kovačnica'))
+  })
+})
+
+describe("an event's form", () => {
+  it('shows a time as the day and the time in Ljubljana, and a day alone without one', () => {
+    expect(formTime('2026-11-16T17:00:00Z', true)).toEqual({ day: '2026-11-16', time: '18:00' })
+    expect(formTime('2026-07-16T22:30:00Z', true)).toEqual({ day: '2026-07-17', time: '00:30' })
+    expect(formTime('2026-11-24T23:00:00Z', false)).toEqual({ day: '2026-11-25', time: '' })
+    expect(formTime(null, false)).toEqual({ day: '', time: '' })
+  })
+
+  it('gives MetaOS a time in Ljubljana, a day, or nothing', () => {
+    expect(inputTime({ day: '2026-11-16', time: '18:00' })).toBe('2026-11-16T18:00')
+    expect(inputTime({ day: '2026-11-16', time: '' })).toBe('2026-11-16')
+    expect(inputTime({ day: '', time: '18:00' })).toBe('')
+  })
+
+  it('goes there and back as it was', () => {
+    expect(inputTime(formTime('2026-03-29T08:15:00Z', true))).toBe('2026-03-29T10:15')
+  })
+
+  it('tells the team their own events from those a scraper found', () => {
+    expect(isManual({ source: 'MANUAL' })).toBe(true)
+    expect(isManual({ source: 'MEETUP' })).toBe(false)
+  })
+})
+
+describe('sourceName', () => {
+  it('names the scrapers as their sites do, and any other by its code', () => {
+    expect(sourceName('MEETUP')).toBe('Meetup')
+    expect(sourceName('ICAL')).toBe('iCal')
+    expect(sourceName('TEHNOLOSKI_PARK_LJUBLJANA')).toBe('Tehnološki park Ljubljana')
+    expect(sourceName('NEW_SCRAPER')).toBe('New Scraper')
   })
 })
