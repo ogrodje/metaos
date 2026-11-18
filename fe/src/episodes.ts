@@ -136,7 +136,7 @@ export interface FieldChange {
 /** What a change is to (ChangeKind in the schema) */
 export type ChangeKind =
   | 'EPISODE' | 'SESSION' | 'PERSON' | 'DOCUMENT' | 'KOOFR_FOLDER' | 'DROPBOX_FOLDER' | 'COMMENT' | 'ACCOUNT' | 'MEDIA' | 'DISTRIBUTION'
-  | 'ORGANISATION' | 'OTHER'
+  | 'ORGANISATION' | 'EVENT' | 'OTHER'
 
 /** The episode, session or person a change is to, e.g. on the home page's recent activity */
 export interface ChangeSubject {

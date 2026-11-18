@@ -158,6 +158,10 @@ class EventsTest @Autowired constructor(
             .andExpect(jsonPath("$.data.updateEvent.promoted").value(true))
             .andExpect(jsonPath("$.data.updateEvent.locationName").value("Kovačnica"))
         assertNotNull(events.find(UUID.fromString(id)).promotedAt)
+        // Home's latest changes tell them, as the kind GraphQL has
+        graphql("{ recentChanges(limit: 5) { kind summary about { kind name } } }", writer)
+            .andExpect(jsonPath("$.errors").doesNotExist())
+            .andExpect(jsonPath("$.data.recentChanges[*].kind", hasItem("EVENT")))
         // Without Temporal, nothing to refresh with
         graphql("""mutation { refreshEvents { running } }""", writer)
             .andExpect(jsonPath("$.errors[0].message").exists())

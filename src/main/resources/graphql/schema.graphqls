@@ -1129,6 +1129,8 @@ enum ChangeKind {
     DISTRIBUTION
     "An organisation itself, someone's work there, or its support of an episode"
     ORGANISATION
+    "One of an organisation's events, as the team changed it: added, hidden, picked or edited"
+    EVENT
     OTHER
 }
 
