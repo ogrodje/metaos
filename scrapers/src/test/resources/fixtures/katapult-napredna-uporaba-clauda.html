@@ -1,0 +1,2583 @@
+<!DOCTYPE html>
+<html lang="sl">
+    <head>
+        <!-- Meta -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+<!-- CSRF Token -->
+<meta name="csrf-token" content="fhIlbWLjZ10iNx8Ns27IfeFnw55UtmCXMHgyxb4y">
+
+
+        
+    
+
+
+<!-- SEO -->
+
+<meta name="robots" content="index, follow" />
+<meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+<meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+
+<link rel="canonical" href="https://katapult.si/novice/napredna-uporaba-clauda-za-optimizacijo-pogostih-nalog-pri-poslovanju">
+<meta name="author" content="Katapult">
+<title>Napredna uporaba Clauda za optimizacijo pogostih nalog pri poslovanju I 22.10.2026</title>
+
+<meta property="og:title" content="Napredna uporaba Clauda za optimizacijo pogostih nalog pri poslovanju I 22.10.2026">
+<meta property="og:description" content="Delavnica, na kateri boste spoznali, kako Claude uporabiti kot orodje za ponovljive delovne procese in ga povezati z orodji, ki jih že uporabljate.">
+<meta property="og:locale" content="sl">
+<meta property="og:url" content="https://katapult.si/novice/napredna-uporaba-clauda-za-optimizacijo-pogostih-nalog-pri-poslovanju">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Katapult" />
+
+<meta property="og:image" content="/img/asset/YXNzZXRzL2ZyZW5rLWRyYWdhci1iYW5uZXIuanBn/frenk-dragar-banner.jpg?fit=crop&fm=jpg&h=630&w=1200&s=22122500006a3a0cad89228105563ca3" />
+
+
+<link rel='image_src' href="/img/asset/YXNzZXRzL2ZyZW5rLWRyYWdhci1iYW5uZXIuanBn/frenk-dragar-banner.jpg?fit=crop&fm=jpg&h=630&w=1200&s=22122500006a3a0cad89228105563ca3">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Napredna uporaba Clauda za optimizacijo pogostih nalog pri poslovanju I 22.10.2026">
+<meta name="twitter:description" content="Delavnica, na kateri boste spoznali, kako Claude uporabiti kot orodje za ponovljive delovne procese in ga povezati z orodji, ki jih že uporabljate.">
+
+
+        <!-- Favicons -->
+<link rel="icon" href="/assets/images/favicon.png" />
+
+
+            
+    <style >/* latin-ext */
+@font-face {
+  font-family: 'Krona One';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://katapult.si/storage/fonts/1228337554/skronaonev15janeghdjhcjgfib1zcuyoiwg-8a0wy2v.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Krona One';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://katapult.si/storage/fonts/1228337554/skronaonev15janeghdjhcjgfib1zcuynowg-8a0ww.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url(https://katapult.si/storage/fonts/1228337554/smontserratv31jtusjig1-i6t8kchkm459wrhyyth89znpq.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url(https://katapult.si/storage/fonts/1228337554/smontserratv31jtusjig1-i6t8kchkm459w1hyyth89znpq.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url(https://katapult.si/storage/fonts/1228337554/smontserratv31jtusjig1-i6t8kchkm459wzhyyth89znpq.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url(https://katapult.si/storage/fonts/1228337554/smontserratv31jtusjig1-i6t8kchkm459wdhyyth89znpq.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url(https://katapult.si/storage/fonts/1228337554/smontserratv31jtusjig1-i6t8kchkm459wlhyyth89y.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://katapult.si/storage/fonts/1228337554/smontserratv31jtusjig1-i6t8kchkm459wrhyyth89znpq.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://katapult.si/storage/fonts/1228337554/smontserratv31jtusjig1-i6t8kchkm459w1hyyth89znpq.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://katapult.si/storage/fonts/1228337554/smontserratv31jtusjig1-i6t8kchkm459wzhyyth89znpq.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://katapult.si/storage/fonts/1228337554/smontserratv31jtusjig1-i6t8kchkm459wdhyyth89znpq.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://katapult.si/storage/fonts/1228337554/smontserratv31jtusjig1-i6t8kchkm459wlhyyth89y.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(https://katapult.si/storage/fonts/1228337554/smontserratv31jtusjig1-i6t8kchkm459wrhyyth89znpq.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(https://katapult.si/storage/fonts/1228337554/smontserratv31jtusjig1-i6t8kchkm459w1hyyth89znpq.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(https://katapult.si/storage/fonts/1228337554/smontserratv31jtusjig1-i6t8kchkm459wzhyyth89znpq.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(https://katapult.si/storage/fonts/1228337554/smontserratv31jtusjig1-i6t8kchkm459wdhyyth89znpq.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(https://katapult.si/storage/fonts/1228337554/smontserratv31jtusjig1-i6t8kchkm459wlhyyth89y.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(https://katapult.si/storage/fonts/1228337554/smontserratv31jtusjig1-i6t8kchkm459wrhyyth89znpq.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(https://katapult.si/storage/fonts/1228337554/smontserratv31jtusjig1-i6t8kchkm459w1hyyth89znpq.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(https://katapult.si/storage/fonts/1228337554/smontserratv31jtusjig1-i6t8kchkm459wzhyyth89znpq.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(https://katapult.si/storage/fonts/1228337554/smontserratv31jtusjig1-i6t8kchkm459wdhyyth89znpq.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(https://katapult.si/storage/fonts/1228337554/smontserratv31jtusjig1-i6t8kchkm459wlhyyth89y.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(https://katapult.si/storage/fonts/1228337554/smontserratv31jtusjig1-i6t8kchkm459wrhyyth89znpq.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(https://katapult.si/storage/fonts/1228337554/smontserratv31jtusjig1-i6t8kchkm459w1hyyth89znpq.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(https://katapult.si/storage/fonts/1228337554/smontserratv31jtusjig1-i6t8kchkm459wzhyyth89znpq.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(https://katapult.si/storage/fonts/1228337554/smontserratv31jtusjig1-i6t8kchkm459wdhyyth89znpq.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(https://katapult.si/storage/fonts/1228337554/smontserratv31jtusjig1-i6t8kchkm459wlhyyth89y.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+</style>
+
+        <!-- Livewire Styles --><style >[wire\:loading][wire\:loading], [wire\:loading\.delay][wire\:loading\.delay], [wire\:loading\.list-item][wire\:loading\.list-item], [wire\:loading\.inline-block][wire\:loading\.inline-block], [wire\:loading\.inline][wire\:loading\.inline], [wire\:loading\.block][wire\:loading\.block], [wire\:loading\.flex][wire\:loading\.flex], [wire\:loading\.table][wire\:loading\.table], [wire\:loading\.grid][wire\:loading\.grid], [wire\:loading\.inline-flex][wire\:loading\.inline-flex] {display: none;}[wire\:loading\.delay\.none][wire\:loading\.delay\.none], [wire\:loading\.delay\.shortest][wire\:loading\.delay\.shortest], [wire\:loading\.delay\.shorter][wire\:loading\.delay\.shorter], [wire\:loading\.delay\.short][wire\:loading\.delay\.short], [wire\:loading\.delay\.default][wire\:loading\.delay\.default], [wire\:loading\.delay\.long][wire\:loading\.delay\.long], [wire\:loading\.delay\.longer][wire\:loading\.delay\.longer], [wire\:loading\.delay\.longest][wire\:loading\.delay\.longest] {display: none;}[wire\:offline][wire\:offline] {display: none;}[wire\:dirty]:not(textarea):not(input):not(select) {display: none;}:root {--livewire-progress-bar-color: #2299dd;}[x-cloak="x-cloak"],[x-cloak=""] {display: none !important;}[wire\:cloak="wire:cloak"],[wire\:cloak=""] {display: none !important;}dialog#livewire-error::backdrop {background-color: rgba(0, 0, 0, .6);}</style>
+
+        <link rel="preload" as="style" href="https://katapult.si/build/assets/app-DfLrpfQT.css" /><link rel="preload" as="style" href="https://katapult.si/build/assets/app-B_JyXl69.css" /><link rel="modulepreload" as="script" href="https://katapult.si/build/assets/app-DIpr-Y_9.js" /><link rel="stylesheet" href="https://katapult.si/build/assets/app-DfLrpfQT.css" data-navigate-track="reload" /><link rel="stylesheet" href="https://katapult.si/build/assets/app-B_JyXl69.css" data-navigate-track="reload" /><script type="module" src="https://katapult.si/build/assets/app-DIpr-Y_9.js" data-navigate-track="reload"></script>
+
+        <!-- Global site tag (gtag.js) - Google Analytics -->
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-2KDD8FNCHT"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'G-2KDD8FNCHT');
+    </script>
+
+
+    </head>
+    <body class="min-h-screen overflow-x-hidden">
+        
+<header
+    x-data="{closed:true, activeDropdown:null, activePage: window.location.pathname}"
+    class="w-full z-[9999] fixed top-0 left-0 bg-white"
+    id="top">
+    <div
+        class="flex flex-row justify-between items-center main-container mx-auto py-[14px]">
+    <a href="/"><img src="/assets/images/logo.svg" alt="logo katapult" /></a>
+
+        <button @click="closed=!closed" class="xl:hidden">
+            <img
+                x-cloak
+                x-show="closed"
+                src="/assets/images/hamburger.svg"
+                alt="hamburger"/>
+            <img
+                x-cloak
+                x-show="!closed"
+                src="/assets/images/close-menu.svg"
+                alt="close menu"/>
+        </button>
+        <ul
+            class="hidden xl:flex flex-row justify-end items-center space-x-[28px]">
+            <li :class="{ 'text-primary-orange underline underline-offset-4': activePage.includes('/storitve') }" class=" body-small-bold uppercase hover:text-primary-orange hover:underline hover:underline-offset-4">
+                <a href="/storitve">storitve</a>
+            </li>
+            <li :class="{ 'text-primary-orange underline underline-offset-4': activePage.includes('/izobrazevanja') }" class=" body-small-bold uppercase hover:text-primary-orange hover:underline hover:underline-offset-4">
+                <a href="/izobrazevanja">izobraževanja</a>
+            </li>
+
+            
+            
+                
+            
+
+            <li :class="{ 'text-primary-orange underline underline-offset-4': activePage.includes('/zgodbe-akrobatov') }" class=" body-small-bold uppercase hover:text-primary-orange hover:underline hover:underline-offset-4"><a href="/zgodbe-akrobatov">zgodbe akrobatov</a></li>
+            <li  class=" body-small-bold uppercase hover:text-primary-orange hover:underline hover:underline-offset-4"><a href="/novice">novice</a></li>
+            <li  class=" text-primary-orange underline underline-offset-4  body-small-bold uppercase hover:text-primary-orange hover:underline hover:underline-offset-4"><a href="/dogodki">dogodki</a></li>
+            <li :class="{ 'text-primary-orange underline underline-offset-4': activePage.includes('/projekti') }" class=" body-small-bold uppercase hover:text-primary-orange hover:underline hover:underline-offset-4"><a href="/projekti">projekti</a></li>
+            <li :class="{ 'text-primary-orange underline underline-offset-4': activePage.includes('/o-nas') }" class=" body-small-bold uppercase hover:text-primary-orange hover:underline hover:underline-offset-4"><a href="/o-nas">o nas</a></li>
+            <li><a href="/en"><img class="w-[30px] h-[40px]" src="/assets/images/en.png" alt="english-katapult" /> </a></li>
+            <li><a href="/pridruzi-nam-se" class="btn-orange space-x-2">
+                <span class="my-auto">Pridruži se</span>
+                <img src="/assets/images/m-icon-heart-btn.svg" alt="" aria-hidden="true"/>
+            </a></li>
+        </ul>
+    </div>
+    <div x-cloak
+    x-show="!closed"
+    x-transition:enter="transition ease-out duration-300"
+    x-transition:enter-start="opacity-0 transform scale-90"
+    x-transition:enter-end="opacity-100 transform scale-100"
+    x-transition:leave="transition ease-in duration-300"
+    x-transition:leave-start="opacity-100 transform scale-100"
+    x-transition:leave-end="opacity-0 transform scale-90"
+    class="xl:hidden w-screen h-[90vh] bg-white flex flex-col justify-center items-center">
+    <ul
+        class="w-full h-full flex flex-col justify-start items-start pl-[14px]  mt-5 space-y-[18px]">
+        <!-- storitve -->
+        <li class="w-full flex flex-col justify-start items-center ">
+            <div
+                class="w-full flex flex-row justify-start items-center space-x-[10px]">
+                <a
+                    href="/storitve"
+
+                    :class="{ 'text-primary-orange underline underline-offset-4': activePage.includes('/storitve') || activeDropdown === 'storitve'}" class=" body-bold uppercase hover:text-primary-orange hover:underline hover:underline-offset-4">
+                    Storitve
+                </a>
+                <button
+                    @click="activeDropdown = (activeDropdown === 'storitve' ? null : 'storitve')"
+                    class="h-6 w-6">
+                    <img
+                        x-cloak
+                        x-show="activeDropdown !== 'storitve'"
+                        src="/images/m-arrow-down.svg"
+                        alt="hamburger"/>
+                    <img
+                        x-cloak
+                        x-show="activeDropdown === 'storitve'"
+                        src="/images/m-arrow-up.svg"
+                        alt="close menu"/>
+                </button>
+            </div>
+        </li>
+            <ul
+                x-cloak
+                x-show="activeDropdown === 'storitve'"
+                x-transition.duration.500ms
+                class="w-full flex flex-col justify-start items-start space-y-3 px-8 ">
+                <li class="group body-regular w-full"><a class="tabs-anchor hover:text-primary-orange flex flex-row justify-start items-baseline space-x-3" href="/storitve#proizvodne-storitve" @click="closed=!closed"><svg  class="icon  w-[12px] h-[13px] mr-2 opacity-0 group-hover:opacity-100 text-primary-orange  ">
+    <use xlink:href="https://katapult.si/assets/icons/symbol-defs.svg#icon-heart"></use>
+</svg>
+ Proizvodne storitve</a></li>
+                <li class="group body-regular w-full"><a class="tabs-anchor hover:text-primary-orange flex flex-row justify-start items-baseline space-x-3"  href="/storitve#testni-laboratorij" @click="closed=!closed"><svg  class="icon  w-[12px] h-[13px] mr-2 opacity-0 group-hover:opacity-100 text-primary-orange  ">
+    <use xlink:href="https://katapult.si/assets/icons/symbol-defs.svg#icon-heart"></use>
+</svg>
+ Testni laboratorij</a></li>
+                <li class="group body-regular w-full"><a class="tabs-anchor hover:text-primary-orange flex flex-row justify-start items-baseline space-x-3"  href="/storitve#podporne-skupne-sluzbe" @click="closed=!closed"><svg  class="icon  w-[12px] h-[13px] mr-2 opacity-0 group-hover:opacity-100 text-primary-orange  ">
+    <use xlink:href="https://katapult.si/assets/icons/symbol-defs.svg#icon-heart"></use>
+</svg>
+ Podporne skupne službe</a></li>
+                <li class="group body-regular w-full"><a class="tabs-anchor hover:text-primary-orange flex flex-row justify-start items-baseline space-x-3"  href="/storitve#prostori" @click="closed=!closed"><svg  class="icon  w-[12px] h-[13px] mr-2 opacity-0 group-hover:opacity-100 text-primary-orange  ">
+    <use xlink:href="https://katapult.si/assets/icons/symbol-defs.svg#icon-heart"></use>
+</svg>
+ Prostori</a></li>
+            </ul>
+
+        <!-- izobraževanja -->
+        <li class="w-full flex flex-col justify-start items-center space-y-3">
+            <div
+                class="w-full flex flex-row justify-start items-center space-x-[10px]">
+            <a href="/izobrazevanja"
+                    :class="{ 'text-primary-orange underline underline-offset-4': activePage.includes('/izobrazevanja') || activeDropdown === 'izobrazevanja'}" class=" body-bold uppercase hover:text-primary-orange hover:underline hover:underline-offset-4">
+                    Izobraževanja
+        </a>
+                <button
+                    @click="activeDropdown = (activeDropdown === 'izobrazevanja' ? null : 'izobrazevanja')"
+                    class="h-6 w-6">
+                    <img
+                        x-cloak
+                        x-show="activeDropdown !== 'izobrazevanja'"
+                        src="/images/m-arrow-down.svg"
+                        alt="arrow down"/>
+                    <img
+                        x-cloak
+                        x-show="activeDropdown === 'izobrazevanja'"
+                        src="/images/m-arrow-up.svg"
+                        alt="arrow up"/>
+                </button>
+            </div>
+            <ul  x-cloak
+            x-show="activeDropdown === 'izobrazevanja'"
+            x-transition.duration.500ms
+            class="w-full flex flex-col justify-start items-start space-y-3 px-8 ">
+            
+            <li class="group">
+                <a class="tabs-anchor hover:text-primary-orange w-full flex flex-row justify-start items-baseline space-x-3 body-regular" href="/izobrazevanja#mozaik-podjetnosti" @click="closed=!closed">
+                    <svg  class="icon  w-[12px] h-[13px] mr-2 opacity-0 group-hover:opacity-100 text-primary-orange  ">
+    <use xlink:href="https://katapult.si/assets/icons/symbol-defs.svg#icon-heart"></use>
+</svg>
+
+                    Mozaik podjetnosti
+                </a>
+            </li>
+        
+            <li class="group">
+                <a class="tabs-anchor hover:text-primary-orange w-full flex flex-row justify-start items-baseline space-x-3 body-regular" href="/izobrazevanja#mentoriranje" @click="closed=!closed">
+                    <svg  class="icon  w-[12px] h-[13px] mr-2 opacity-0 group-hover:opacity-100 text-primary-orange  ">
+    <use xlink:href="https://katapult.si/assets/icons/symbol-defs.svg#icon-heart"></use>
+</svg>
+
+                    Mentoriranje
+                </a>
+            </li>
+        
+            <li class="group">
+                <a class="tabs-anchor hover:text-primary-orange w-full flex flex-row justify-start items-baseline space-x-3 body-regular" href="/izobrazevanja#sklad-akrobatov" @click="closed=!closed">
+                    <svg  class="icon  w-[12px] h-[13px] mr-2 opacity-0 group-hover:opacity-100 text-primary-orange  ">
+    <use xlink:href="https://katapult.si/assets/icons/symbol-defs.svg#icon-heart"></use>
+</svg>
+
+                    Sklad Akrobatov
+                </a>
+            </li>
+        
+            <li class="group">
+                <a class="tabs-anchor hover:text-primary-orange w-full flex flex-row justify-start items-baseline space-x-3 body-regular" href="/izobrazevanja#izobrazevanja-na-strojih" @click="closed=!closed">
+                    <svg  class="icon  w-[12px] h-[13px] mr-2 opacity-0 group-hover:opacity-100 text-primary-orange  ">
+    <use xlink:href="https://katapult.si/assets/icons/symbol-defs.svg#icon-heart"></use>
+</svg>
+
+                    Izobraževanja na strojih
+                </a>
+            </li>
+        
+            <li class="group">
+                <a class="tabs-anchor hover:text-primary-orange w-full flex flex-row justify-start items-baseline space-x-3 body-regular" href="/izobrazevanja#za-najmlajse-s-o-s-sola" @click="closed=!closed">
+                    <svg  class="icon  w-[12px] h-[13px] mr-2 opacity-0 group-hover:opacity-100 text-primary-orange  ">
+    <use xlink:href="https://katapult.si/assets/icons/symbol-defs.svg#icon-heart"></use>
+</svg>
+
+                    S.O.S. šola
+                </a>
+            </li>
+        
+            <li class="group">
+                <a class="tabs-anchor hover:text-primary-orange w-full flex flex-row justify-start items-baseline space-x-3 body-regular" href="/izobrazevanja#katapult-robotika" @click="closed=!closed">
+                    <svg  class="icon  w-[12px] h-[13px] mr-2 opacity-0 group-hover:opacity-100 text-primary-orange  ">
+    <use xlink:href="https://katapult.si/assets/icons/symbol-defs.svg#icon-heart"></use>
+</svg>
+
+                    Katapult ROBOTIKA
+                </a>
+            </li>
+        
+        </ul>
+        <!-- zgodbe akrobatov -->
+        <li class="w-full flex flex-row justify-start items-center">
+            <a href="/zgodbe-akrobatov" :class="{ 'text-primary-orange underline underline-offset-4': activePage.includes('/zgodbe-akrobatov') }" class=" body-bold uppercase hover:text-primary-orange hover:underline hover:underline-offset-4">Zgodbe akrobatov</a>
+        </li>
+        <!-- novice -->
+        <li class="w-full flex flex-row justify-start items-center"
+        >
+            <a href="/novice" :class="{ 'text-primary-orange underline underline-offset-4': activePage.includes('/novice') }" class=" body-bold uppercase hover:text-primary-orange hover:underline hover:underline-offset-4 -mt-[18px]">novice</a>
+        </li>
+        <!-- dogodki -->
+        <li class="w-full flex flex-row justify-start items-center"
+        >
+            <a href="/dogodki" :class="{ 'text-primary-orange underline underline-offset-4': activePage.includes('/dogodki') }" class=" body-bold uppercase hover:text-primary-orange hover:underline hover:underline-offset-4 -mt-[18px]">dogodki</a>
+        </li>
+        <!-- projekti -->
+        <li class="w-full flex flex-row justify-start items-center">
+            <a href="/projekti" :class="{ 'text-primary-orange underline underline-offset-4': activePage.includes('/projekti') }" class="body-bold uppercase hover:text-primary-orange hover:underline hover:underline-offset-4 -mt-[18px]">projekti</a>
+        </li>
+        <!-- o nas -->
+        <li class="w-full flex flex-col justify-start items-center">
+            <div
+                class="w-full flex flex-row justify-start items-center">
+            <a href="/o-nas"
+
+                    :class="{ 'text-primary-orange underline underline-offset-4': activePage.includes('/o-nas') || activeDropdown === 'onas' }" class=" body-bold uppercase hover:text-primary-orange hover:underline hover:underline-offset-4">
+                    o nas
+        </a>
+
+            </div>
+
+
+        </li>
+
+        <li>
+            <a href="/pridruzi-nam-se" class="btn-orange space-x-2" role="button">
+                <span class="my-auto">Pridruži se</span>
+                <img src="/assets/images/m-icon-heart-btn.svg" alt="" aria-hidden="true" />
+            </a>
+        </li>
+    </ul>
+    <div class="w-full">
+        <img src="/assets/images/Mozaik podjetnosti-2.svg" alt="" aria-hidden="true" />
+    </div>
+</div>
+</header>
+
+<style>
+
+</style>
+
+        <main>
+            <div id="app"><div class="w-full overflow-x-hidden">
+  <section class="m-blog-single-title">
+    <div class="max-w-[738px] mx-auto mt-[53px] mb-[65px] flex flex-col text-center">
+        
+            <div class="flex justify-center font-bold text-[12px] leading-[18px] mb-[4px]">
+                
+                Dogodek
+                
+            </div>
+        
+        <h1 class="">
+            Napredna uporaba Clauda za optimizacijo pogostih nalog pri poslovanju I 22.10.2026
+        </h1>
+        <div class="mx-auto w-[50px] bg-primary-orange h-[1px] mt-[21px] mb-[29px]"></div>
+        <div class="blog-single-info flex flex-col gap-y-[10px]">
+
+            
+                <div class="blog-single-subtitle">
+                    <p>Umetno inteligenco danes uporablja skoraj vsak, a večina ostane pri občasnem klepetu, s čimer je težko zares optimizirati delovne procese. Na tej delavnici gremo korak dlje: pogledali si bomo, kako Claude uporabiti kot orodje za ponovljive delovne procese in ga povezati z orodji, ki jih že uporabljate.</p>
+
+                </div>
+            
+
+            
+            <div class="blog-single-info-meta flex justify-center">
+                <div class="flex gap-[10px] items-center justify-center w-full">
+                    
+                        <span class="w-1/2 text-right">Katapult</span>
+                    
+                    
+                        <span class="block w-[1px] mr-[1px] h-[8px] bg-primary-orange custom-vertical-separator"></span>
+                    
+                    
+                        <span class="w-1/2 text-left">05.10.2026</span>
+                    
+                </div>
+            </div>
+            
+
+            <div class="flex w-full justify-center mt-4">
+                
+                    <img class="lazy" src="/img/assets/images/blog-single-subtitle-image.png?s=309dd52b44f5599eb157806c0fd38d0d"
+                         alt="blog single subtitle image"/>
+                
+            </div>
+        </div>
+    </div>
+</section>
+
+  <div class="content-holder">
+    <div class="page-sections">
+    
+
+    <section style="
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        "
+             class="
+                
+            "
+        >
+
+        
+        
+
+        <div class="main-container mx-auto
+
+            medium-container"
+
+             style="
+                 
+
+                 
+
+
+
+
+
+
+
+
+
+                 "
+        >
+
+            
+            
+
+
+            <div class="page-elements">
+    
+        
+            <div class="m-columns flex gap-x-8 gap-y-8
+
+    flex-col
+    md:flex-row
+
+
+
+
+    md:items-start
+
+
+"
+style="
+    
+    
+"
+>
+    
+    <div class="md:w-2/3
+        
+        ">
+        
+            
+                <div class="e-text">
+    <p>Skozi konkretne primere iz prakse&nbsp;bomo&nbsp;pokazali:</p><ul><li><p>kako si nastavite projekte z lastnimi viri in navodili, tako da orodje ve, kako delate in s čim se&nbsp;ukvarjate,</p></li><li><p>kako iz obstoječih podatkov (Excel, CSV, PDF in še več) ali programov (računovodskih, ERP, …) pripravite pregledna poročila in&nbsp;dashboarde,</p></li><li><p>kako si delno avtomatizirate in optimizirate opravljanje ponavljajočih se nalog, na primer pripravo raznih dokumentov, odgovarjanje na tipična povpraševanja in obdelavo&nbsp;prijav.</p></li></ul><p><strong>Zadnji del delavnice je namenjen delu na vaših lastnih&nbsp;primerih.</strong></p><p>Udeleženci prinesejo svoje konkretne naloge, predavatelj pa bo krožil med njimi in pomagal pri postavitvi. Iz delavnice tako odidete z nečim, kar boste lahko uporabili že naslednji&nbsp;dan.</p><p>Predznanje programiranja ni potrebno, delavnica pa je namenjena udeležencem, ki AI orodja že uporabljajo in želijo iti&nbsp;globlje.</p><p><strong>Kaj prinesti?</strong> Prenosni računalnik in nekaj konkretnih primerov dela, ki vam vzamejo preveč časa. Priporočamo tudi plačljivo licenco Clauda – ni pa pogoj za&nbsp;udeležbo.</p>
+</div>
+
+            
+        
+    </div>
+    
+    <div class="md:w-1/3
+        
+        ">
+        
+            
+                <div class="e-text">
+    <p><strong>Kdaj?</strong> Četrtek, 22.10.2026, 9.00 -&nbsp;12.00</p><p><strong>Kje?</strong> Katapult, Gabrsko 12,&nbsp;Trbovlje</p><p><strong>Koliko?</strong>&nbsp;Brezplačno</p><p><strong>Predavatelj:</strong> Frenk&nbsp;Dragar</p>
+</div>
+
+            
+        
+            
+                
+    <div class="e-button flex
+    
+            justify-center
+        
+    ">
+    <a
+        
+        class=" flex items-center
+            
+                btn-boxed space-x-2
+                btn-orange
+                btn-large
+            
+
+            
+        "
+        
+
+        
+            type="button"
+        
+
+        href="https://forms.gle/ZZQRXsx9BKBvCLTW6"
+
+
+
+>
+        <span class="">
+            Prijava na dogodek
+        </span>
+        
+            <svg  class="icon ">
+    <use xlink:href="https://katapult.si/assets/icons/symbol-defs.svg#icon-button-heart"></use>
+</svg>
+
+        
+    </a>
+    </div>
+
+
+            
+        
+    </div>
+    
+</div>
+
+        
+    
+</div>
+
+        </div>
+
+    </section>
+
+    
+
+    <section style="
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        "
+             class="
+                
+            "
+        >
+
+        
+        
+
+        <div class="main-container mx-auto
+
+            medium-container"
+
+             style="
+                 
+
+                 
+
+
+
+
+
+
+
+
+
+                 "
+        >
+
+            
+            
+                <div class="w-full mx-auto pb-5">
+                    
+    <div class="e-title-section w-full flex flex-col items-center justify-center lg:items-start mx-auto lg:flex-row
+
+    ">
+        
+
+        <div class="flex flex-col justify-start items-start lg:justify-center lg:items-center lg:text-center text-left w-full lg:max-w-[679px] ">
+            <div class="w-full flex flex-col md:flex-row justify-start text-left items-start  lg:mx-auto lg:justify-center lg:items-center flex-row ">
+                <div class="flex flex-col justify-start lg:justify-center lg:items-center lg:mx-auto lg:text-center
+                text-center
+                items-center
+                mx-auto
+                ">
+                    <h2 class="headline2 text-primary-orange">
+                        Frenk Dragar
+                    </h2>
+                    <div class="w-12 mt-1 lg:mt-3 bg-primary-orange h-[1px]"></div>
+                </div>
+                
+            </div>
+            
+        
+        </div>
+        
+    </div>
+
+
+                </div>
+            
+
+
+            <div class="page-elements">
+    
+        
+            <div class="m-columns flex gap-x-8 gap-y-8
+
+    flex-col
+    md:flex-row
+
+
+
+
+    md:items-start
+
+
+"
+style="
+    
+    
+"
+>
+    
+    <div class="md:w-full
+        
+        ">
+        
+            
+                <div class="e-text">
+    <p><strong>Frenk Dragar</strong> je strokovnjak za umetno inteligenco in ustanovitelj podjetja Trivial Group, kjer razvijajo AI sisteme za avtomatizacijo internih procesov in produkte za končne stranke, med drugim orodja za avtomatsko ocenjevanje in glasovne simulacije za izobraževalna podjetja. Je ustanovni član skupnosti SLOAI, kjer organizirajo srečanja na temo AI&nbsp;inžiniringa.</p><p>Po dodiplomskem študiju matematike in računalništva v Ljubljani je magistriral iz umetne inteligence na Univerzi v Utrechtu, kjer se je v raziskovalnem delu ukvarjal z vodnimi žigi v jezikovnih modelih. V zadnjem letu je izvedel tudi več deset delavnic o rabi umetne inteligence pri&nbsp;delu.</p><p>Clauda in sorodne programe AI pri svojem delu uporablja vsakodnevno, od vodenja projektov in priprave poročil do razvoja programske opreme, zato delavnico gradi na primerih, ki jih uporablja sam in vidi v&nbsp;praksi.</p>
+</div>
+
+            
+        
+    </div>
+    
+    <div class="md:w-1/3
+        
+        ">
+        
+            
+                <div class="e-image flex relative
+
+
+    
+
+
+">
+
+    
+    <img src="/img/asset/YXNzZXRzL2ZyZW5rLWRyYWdhci1wcm9maWxuYS5qcGc/frenk-dragar-profilna.jpg?s=59d03d24171d75b1a111314fcfdd598c" alt="">
+    
+</div>
+
+            
+        
+    </div>
+    
+</div>
+
+        
+    
+</div>
+
+        </div>
+
+    </section>
+
+    
+
+    <section style="
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        "
+             class="
+                
+            "
+        >
+
+        
+        
+
+        <div class="main-container mx-auto
+
+            medium-container"
+
+             style="
+                 
+
+                 
+
+
+
+
+
+
+
+
+
+                 "
+        >
+
+            
+            
+
+
+            <div class="page-elements">
+    
+        
+            <div class="e-text">
+    <p></p><p></p>
+</div>
+
+        
+    
+        
+            <div class="e-image flex relative
+
+
+
+">
+
+    
+    <img src="/img/asset/YXNzZXRzL3NsaWthLnBuZw/slika.png?s=d580f16ec9192b6a315057302fe8cc19" alt="">
+    
+</div>
+
+        
+    
+        
+            <div class="e-text">
+    <p></p><p></p>
+</div>
+
+        
+    
+</div>
+
+        </div>
+
+    </section>
+
+    
+
+    <section style="
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        "
+             class="
+                
+            "
+        >
+
+        
+        
+
+        <div class="main-container mx-auto
+
+            medium-container"
+
+             style="
+                 
+
+                 
+
+
+
+
+
+
+
+
+
+                 "
+        >
+
+            
+            
+                <div class="w-full mx-auto pb-5">
+                    
+    <div class="e-title-section w-full flex flex-col items-center justify-center lg:items-start mx-auto lg:flex-row
+
+    ">
+        
+
+        <div class="flex flex-col justify-start items-start lg:justify-center lg:items-center lg:text-center text-left w-full lg:max-w-[679px] ">
+            <div class="w-full flex flex-col md:flex-row justify-start text-left items-start  lg:mx-auto lg:justify-center lg:items-center flex-row ">
+                <div class="flex flex-col justify-start lg:justify-center lg:items-center lg:mx-auto lg:text-center
+                text-center
+                items-center
+                mx-auto
+                ">
+                    <h2 class="headline2 text-primary-orange">
+                        Kako je na naših dogodkih?
+                    </h2>
+                    <div class="w-12 mt-1 lg:mt-3 bg-primary-orange h-[1px]"></div>
+                </div>
+                
+            </div>
+            
+        
+        <p class="pt-[10px] lg:pt-[40px] subtitle-regular lg:w-[679px] lg:text-center w-full flex justify-start items-start lg:justify-center lg:items-center
+             justify-center text-center
+            ">
+            Mnogo praktičnega znanja. Precej novih kontaktov. Dosti povezovanja in sodelovanja. Pa tudi precej smeha in zabave.
+        </p>
+        
+        </div>
+        
+    </div>
+
+
+                </div>
+            
+
+
+            <div class="page-elements">
+    
+        
+            <div class="e-different-size-image-gallery w-full flex flex-col justify-center items-center relative py-24">
+
+
+        
+        
+        <img  src="/assets/images/ptica.svg" alt="" class="absolute z-20 top-3 left-20" aria-hidden="true"/>
+        
+        
+    <div class="lg:hidden w-full">
+        <div
+            class="swiper swiper-simple-slider w-full relative"
+            aria-label="simple images Carousel "
+            role="region">
+            <div class="swiper-wrapper">
+                
+                <div
+                    class="swiper-slide swiper-slider pb-10 flex flex-col justify-center items-center lg:items-start mx-auto">
+
+                    <div
+                        style="background-image: url('/img/asset/YXNzZXRzLzMzNzA1ODk5NF83NDA4ODI4NjEwNDIyNTlfNDA5MjQ3MTkyMjA2ODQyNTYwNF9uLTYwMHgzOTkuanBn/337058994_740882861042259_4092471922068425604_n-600x399.jpg?fm=jpg&s=0259cd43785cd21555748fa36c5ad837'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                        class="w-full h-[400px]"
+                        role="img"
+                        aria-label="image"
+                    ></div>
+                </div>
+                
+                <div
+                    class="swiper-slide swiper-slider pb-10 flex flex-col justify-center items-center lg:items-start mx-auto">
+
+                    <div
+                        style="background-image: url('/img/asset/YXNzZXRzLzMzNjc3OTU2NV8xMTcyOTEwNzQwMDgwODUxXzU1MTc1NTY3MTYwMzE4NTUyMDJfbi02MDB4Mzk5LmpwZw/336779565_1172910740080851_5517556716031855202_n-600x399.jpg?fm=jpg&s=c0b8c3f12d0ca2362a2caeff8368079e'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                        class="w-full h-[400px]"
+                        role="img"
+                        aria-label="image"
+                    ></div>
+                </div>
+                
+                <div
+                    class="swiper-slide swiper-slider pb-10 flex flex-col justify-center items-center lg:items-start mx-auto">
+
+                    <div
+                        style="background-image: url('/img/asset/YXNzZXRzLzMzNzUwMzQxNF85MTAxNDM4ODY4OTA1NjhfMzE3MDI2MDMxOTk5NTgyMjMzM19uLTYwMHg0NTAuanBn/337503414_910143886890568_3170260319995822333_n-600x450.jpg?fm=jpg&s=9a9f60e22163cf06e0e8f13392102b78'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                        class="w-full h-[400px]"
+                        role="img"
+                        aria-label="image"
+                    ></div>
+                </div>
+                
+                <div
+                    class="swiper-slide swiper-slider pb-10 flex flex-col justify-center items-center lg:items-start mx-auto">
+
+                    <div
+                        style="background-image: url('/img/asset/YXNzZXRzL2Rhbi1vZHBydGloLXZyYXQtc3RwYy1pbi1naW1uYXppamEtNi02MDB4Mzk5LmpwZw/dan-odprtih-vrat-stpc-in-gimnazija-6-600x399.jpg?fm=jpg&s=f9be44f2ca0045c75c320b2f1b231879'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                        class="w-full h-[400px]"
+                        role="img"
+                        aria-label="image"
+                    ></div>
+                </div>
+                
+                <div
+                    class="swiper-slide swiper-slider pb-10 flex flex-col justify-center items-center lg:items-start mx-auto">
+
+                    <div
+                        style="background-image: url('/img/asset/YXNzZXRzL2Rhbi1vZHBydGloLXZyYXQtc3RwYy1pbi1naW1uYXppamEtOC02MDB4Mzk5LmpwZw/dan-odprtih-vrat-stpc-in-gimnazija-8-600x399.jpg?fm=jpg&s=af0086a529d19be6cb4d952e8542da89'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                        class="w-full h-[400px]"
+                        role="img"
+                        aria-label="image"
+                    ></div>
+                </div>
+                
+                <div
+                    class="swiper-slide swiper-slider pb-10 flex flex-col justify-center items-center lg:items-start mx-auto">
+
+                    <div
+                        style="background-image: url('/img/asset/YXNzZXRzL2Rhbi1vZHBydGloLXZyYXQtc3RwYy1pbi1naW1uYXppamEtMTgtNjAweDM5OS5qcGc/dan-odprtih-vrat-stpc-in-gimnazija-18-600x399.jpg?fm=jpg&s=18f02161ed299de1f15373c38244432a'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                        class="w-full h-[400px]"
+                        role="img"
+                        aria-label="image"
+                    ></div>
+                </div>
+                
+                <div
+                    class="swiper-slide swiper-slider pb-10 flex flex-col justify-center items-center lg:items-start mx-auto">
+
+                    <div
+                        style="background-image: url('/img/asset/YXNzZXRzL2dyZWdvci1yZWJvbGota3Jlc28tZ290b3ZhYy1zaWxpY29uLWdhcmRlbnMta2F0YXB1bHQtMTA0LTYwMHgzMzguanBn/gregor-rebolj-kreso-gotovac-silicon-gardens-katapult-104-600x338.jpg?fm=jpg&s=f8432488f5fe3964b253d15ab2a923e5'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                        class="w-full h-[400px]"
+                        role="img"
+                        aria-label="image"
+                    ></div>
+                </div>
+                
+                <div
+                    class="swiper-slide swiper-slider pb-10 flex flex-col justify-center items-center lg:items-start mx-auto">
+
+                    <div
+                        style="background-image: url('/img/asset/YXNzZXRzL2dyZWdvci1yZWJvbGota3Jlc28tZ290b3ZhYy1zaWxpY29uLWdhcmRlbnMta2F0YXB1bHQtNjAweDM1MS0xNzA0Nzk3ODA4LmpwZw/gregor-rebolj-kreso-gotovac-silicon-gardens-katapult-600x351-1704797808.jpg?fm=jpg&s=ce203acc8fcb2391ade6e2b829599d2c'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                        class="w-full h-[400px]"
+                        role="img"
+                        aria-label="image"
+                    ></div>
+                </div>
+                
+                <div
+                    class="swiper-slide swiper-slider pb-10 flex flex-col justify-center items-center lg:items-start mx-auto">
+
+                    <div
+                        style="background-image: url('/img/asset/YXNzZXRzL2thdGFwdWx0LW1hcmVjLTIwMjMtMjEuanBn/katapult-marec-2023-21.jpg?fm=jpg&s=f9ae4348d66c054581868a7e09237445'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                        class="w-full h-[400px]"
+                        role="img"
+                        aria-label="image"
+                    ></div>
+                </div>
+                
+                <div
+                    class="swiper-slide swiper-slider pb-10 flex flex-col justify-center items-center lg:items-start mx-auto">
+
+                    <div
+                        style="background-image: url('/img/asset/YXNzZXRzL2thdGFwdWx0LW1hcmVjLTIwMjMtMjUuanBn/katapult-marec-2023-25.jpg?fm=jpg&s=f0cb30cf1293c322f1cd2cb40601a497'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                        class="w-full h-[400px]"
+                        role="img"
+                        aria-label="image"
+                    ></div>
+                </div>
+                
+                <div
+                    class="swiper-slide swiper-slider pb-10 flex flex-col justify-center items-center lg:items-start mx-auto">
+
+                    <div
+                        style="background-image: url('/img/asset/YXNzZXRzL2dyZWdvci1yZWJvbGota3Jlc28tZ290b3ZhYy1zaWxpY29uLWdhcmRlbnMta2F0YXB1bHQtOS02MDB4Nzk5LmpwZw/gregor-rebolj-kreso-gotovac-silicon-gardens-katapult-9-600x799.jpg?fm=jpg&s=6ce9396b0e45aac444e2b2384252a544'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                        class="w-full h-[400px]"
+                        role="img"
+                        aria-label="image"
+                    ></div>
+                </div>
+                
+                <div
+                    class="swiper-slide swiper-slider pb-10 flex flex-col justify-center items-center lg:items-start mx-auto">
+
+                    <div
+                        style="background-image: url('/img/asset/YXNzZXRzL2thdGFwdWx0LW1hcmVjLTIwMjMtOS5qcGc/katapult-marec-2023-9.jpg?fm=jpg&s=ecbb1c5dd356e49424d5528fdeb8e698'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                        class="w-full h-[400px]"
+                        role="img"
+                        aria-label="image"
+                    ></div>
+                </div>
+                
+                <div
+                    class="swiper-slide swiper-slider pb-10 flex flex-col justify-center items-center lg:items-start mx-auto">
+
+                    <div
+                        style="background-image: url('/img/asset/YXNzZXRzL2thdGFwdWx0LW1hcmVjLTIwMjMuanBn/katapult-marec-2023.jpg?fm=jpg&s=026a67f6311e1c96dce64571640c6572'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                        class="w-full h-[400px]"
+                        role="img"
+                        aria-label="image"
+                    ></div>
+                </div>
+                
+                <div
+                    class="swiper-slide swiper-slider pb-10 flex flex-col justify-center items-center lg:items-start mx-auto">
+
+                    <div
+                        style="background-image: url('/img/asset/YXNzZXRzL2thdGFwdWx0LXBvZGpldG5pc2tpLWlua3ViYXRvci1rYWtvLW5hLXR1amUtdHJnZS1qdXJlLWtuZXotMS02MDB4NDUwLTE3MDQ3OTc3ODAuanBn/katapult-podjetniski-inkubator-kako-na-tuje-trge-jure-knez-1-600x450-1704797780.jpg?fm=jpg&s=b6bd466c78bbd1cb97717821ab8d8ac1'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                        class="w-full h-[400px]"
+                        role="img"
+                        aria-label="image"
+                    ></div>
+                </div>
+                
+                <div
+                    class="swiper-slide swiper-slider pb-10 flex flex-col justify-center items-center lg:items-start mx-auto">
+
+                    <div
+                        style="background-image: url('/img/asset/YXNzZXRzL25hamVtLXByb3N0b3JhLXRyYm92bGplLTQtNjAweDQ1Mi5qcGc/najem-prostora-trbovlje-4-600x452.jpg?fm=jpg&s=0949792b54ad9122b45f9cb12da45a1f'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                        class="w-full h-[400px]"
+                        role="img"
+                        aria-label="image"
+                    ></div>
+                </div>
+                
+            </div>
+            <button
+    class="kat-swiper-button-prev title-swiper-button-prev cursor-pointer px-[13px] py-2 xl:px-[18px] xl:py-3 z-20 absolute
+    left-0 bottom-0
+    
+    ">
+    <img
+        src="/assets/images/m-icon-arrow-prev.svg"
+        alt="arrow previous for the carousel"/>
+</button>
+<button
+    class="kat-swiper-button-next title-swiper-button-next cursor-pointer px-[13px] py-2 xl:px-[18px] xl:py-3 z-20 absolute
+    right-0 bottom-0
+    
+    ">
+    <img
+        src="/assets/images/m-icon-arrow-next.svg"
+        alt="arrow next for the carousel"/>
+</button>
+
+        </div>
+    </div>
+    <div class="gallery-grid hidden lg:flex w-full flex-wrap">
+        
+            <div
+                style="background-image: url('/img/asset/YXNzZXRzLzMzNzA1ODk5NF83NDA4ODI4NjEwNDIyNTlfNDA5MjQ3MTkyMjA2ODQyNTYwNF9uLTYwMHgzOTkuanBn/337058994_740882861042259_4092471922068425604_n-600x399.jpg?fm=jpg&s=0259cd43785cd21555748fa36c5ad837'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                class="w-full h-[300px] px-2 py-2"
+                role="img"
+                aria-label="image"
+            ></div>
+        
+            <div
+                style="background-image: url('/img/asset/YXNzZXRzLzMzNjc3OTU2NV8xMTcyOTEwNzQwMDgwODUxXzU1MTc1NTY3MTYwMzE4NTUyMDJfbi02MDB4Mzk5LmpwZw/336779565_1172910740080851_5517556716031855202_n-600x399.jpg?fm=jpg&s=c0b8c3f12d0ca2362a2caeff8368079e'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                class="w-full h-[300px] px-2 py-2"
+                role="img"
+                aria-label="image"
+            ></div>
+        
+            <div
+                style="background-image: url('/img/asset/YXNzZXRzLzMzNzUwMzQxNF85MTAxNDM4ODY4OTA1NjhfMzE3MDI2MDMxOTk5NTgyMjMzM19uLTYwMHg0NTAuanBn/337503414_910143886890568_3170260319995822333_n-600x450.jpg?fm=jpg&s=9a9f60e22163cf06e0e8f13392102b78'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                class="w-full h-[300px] px-2 py-2"
+                role="img"
+                aria-label="image"
+            ></div>
+        
+            <div
+                style="background-image: url('/img/asset/YXNzZXRzL2Rhbi1vZHBydGloLXZyYXQtc3RwYy1pbi1naW1uYXppamEtNi02MDB4Mzk5LmpwZw/dan-odprtih-vrat-stpc-in-gimnazija-6-600x399.jpg?fm=jpg&s=f9be44f2ca0045c75c320b2f1b231879'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                class="w-full h-[300px] px-2 py-2"
+                role="img"
+                aria-label="image"
+            ></div>
+        
+            <div
+                style="background-image: url('/img/asset/YXNzZXRzL2Rhbi1vZHBydGloLXZyYXQtc3RwYy1pbi1naW1uYXppamEtOC02MDB4Mzk5LmpwZw/dan-odprtih-vrat-stpc-in-gimnazija-8-600x399.jpg?fm=jpg&s=af0086a529d19be6cb4d952e8542da89'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                class="w-full h-[300px] px-2 py-2"
+                role="img"
+                aria-label="image"
+            ></div>
+        
+            <div
+                style="background-image: url('/img/asset/YXNzZXRzL2Rhbi1vZHBydGloLXZyYXQtc3RwYy1pbi1naW1uYXppamEtMTgtNjAweDM5OS5qcGc/dan-odprtih-vrat-stpc-in-gimnazija-18-600x399.jpg?fm=jpg&s=18f02161ed299de1f15373c38244432a'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                class="w-full h-[300px] px-2 py-2"
+                role="img"
+                aria-label="image"
+            ></div>
+        
+            <div
+                style="background-image: url('/img/asset/YXNzZXRzL2dyZWdvci1yZWJvbGota3Jlc28tZ290b3ZhYy1zaWxpY29uLWdhcmRlbnMta2F0YXB1bHQtMTA0LTYwMHgzMzguanBn/gregor-rebolj-kreso-gotovac-silicon-gardens-katapult-104-600x338.jpg?fm=jpg&s=f8432488f5fe3964b253d15ab2a923e5'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                class="w-full h-[300px] px-2 py-2"
+                role="img"
+                aria-label="image"
+            ></div>
+        
+            <div
+                style="background-image: url('/img/asset/YXNzZXRzL2dyZWdvci1yZWJvbGota3Jlc28tZ290b3ZhYy1zaWxpY29uLWdhcmRlbnMta2F0YXB1bHQtNjAweDM1MS0xNzA0Nzk3ODA4LmpwZw/gregor-rebolj-kreso-gotovac-silicon-gardens-katapult-600x351-1704797808.jpg?fm=jpg&s=ce203acc8fcb2391ade6e2b829599d2c'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                class="w-full h-[300px] px-2 py-2"
+                role="img"
+                aria-label="image"
+            ></div>
+        
+            <div
+                style="background-image: url('/img/asset/YXNzZXRzL2thdGFwdWx0LW1hcmVjLTIwMjMtMjEuanBn/katapult-marec-2023-21.jpg?fm=jpg&s=f9ae4348d66c054581868a7e09237445'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                class="w-full h-[300px] px-2 py-2"
+                role="img"
+                aria-label="image"
+            ></div>
+        
+            <div
+                style="background-image: url('/img/asset/YXNzZXRzL2thdGFwdWx0LW1hcmVjLTIwMjMtMjUuanBn/katapult-marec-2023-25.jpg?fm=jpg&s=f0cb30cf1293c322f1cd2cb40601a497'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                class="w-full h-[300px] px-2 py-2"
+                role="img"
+                aria-label="image"
+            ></div>
+        
+            <div
+                style="background-image: url('/img/asset/YXNzZXRzL2dyZWdvci1yZWJvbGota3Jlc28tZ290b3ZhYy1zaWxpY29uLWdhcmRlbnMta2F0YXB1bHQtOS02MDB4Nzk5LmpwZw/gregor-rebolj-kreso-gotovac-silicon-gardens-katapult-9-600x799.jpg?fm=jpg&s=6ce9396b0e45aac444e2b2384252a544'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                class="w-full h-[300px] px-2 py-2"
+                role="img"
+                aria-label="image"
+            ></div>
+        
+            <div
+                style="background-image: url('/img/asset/YXNzZXRzL2thdGFwdWx0LW1hcmVjLTIwMjMtOS5qcGc/katapult-marec-2023-9.jpg?fm=jpg&s=ecbb1c5dd356e49424d5528fdeb8e698'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                class="w-full h-[300px] px-2 py-2"
+                role="img"
+                aria-label="image"
+            ></div>
+        
+            <div
+                style="background-image: url('/img/asset/YXNzZXRzL2thdGFwdWx0LW1hcmVjLTIwMjMuanBn/katapult-marec-2023.jpg?fm=jpg&s=026a67f6311e1c96dce64571640c6572'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                class="w-full h-[300px] px-2 py-2"
+                role="img"
+                aria-label="image"
+            ></div>
+        
+            <div
+                style="background-image: url('/img/asset/YXNzZXRzL2thdGFwdWx0LXBvZGpldG5pc2tpLWlua3ViYXRvci1rYWtvLW5hLXR1amUtdHJnZS1qdXJlLWtuZXotMS02MDB4NDUwLTE3MDQ3OTc3ODAuanBn/katapult-podjetniski-inkubator-kako-na-tuje-trge-jure-knez-1-600x450-1704797780.jpg?fm=jpg&s=b6bd466c78bbd1cb97717821ab8d8ac1'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                class="w-full h-[300px] px-2 py-2"
+                role="img"
+                aria-label="image"
+            ></div>
+        
+            <div
+                style="background-image: url('/img/asset/YXNzZXRzL25hamVtLXByb3N0b3JhLXRyYm92bGplLTQtNjAweDQ1Mi5qcGc/najem-prostora-trbovlje-4-600x452.jpg?fm=jpg&s=0949792b54ad9122b45f9cb12da45a1f'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+                class="w-full h-[300px] px-2 py-2"
+                role="img"
+                aria-label="image"
+            ></div>
+        
+    </div>
+</div>
+
+        
+    
+        
+            <div class="e-text">
+    <p></p><p></p><p></p><p></p>
+</div>
+
+        
+    
+</div>
+
+        </div>
+
+    </section>
+
+    
+</div>
+
+</div>
+
+  <section class="w-full flex flex-col justify-center items-center py-[100px] bg-secondary-light">
+    <div
+        class="w-full flex flex-col justify-center items-center main-container">
+
+        <div class="w-full mx-auto pb-10">
+            
+    <div class="e-title-section w-full flex flex-col items-center justify-center lg:items-start mx-auto lg:flex-row
+
+    ">
+        
+
+        <div class="flex flex-col justify-start items-start lg:justify-center lg:items-center lg:text-center text-left w-full lg:max-w-[679px] ">
+            <div class="w-full flex flex-col md:flex-row justify-start text-left items-start  lg:mx-auto lg:justify-center lg:items-center flex-row ">
+                <div class="flex flex-col justify-start lg:justify-center lg:items-center lg:mx-auto lg:text-center
+                text-center
+                items-center
+                mx-auto
+                ">
+                    <h2 class="headline2 text-primary-orange">
+                        Ostale Novice
+                    </h2>
+                    <div class="w-12 mt-1 lg:mt-3 bg-primary-orange h-[1px]"></div>
+                </div>
+                
+            </div>
+            
+        
+        </div>
+        
+    </div>
+
+
+        </div>
+
+        <div class="e-blog-list w-full flex flex-col justify-center items-center mx-auto">
+
+    
+    
+        
+            <div class="w-full flex lg:hidden flex-col justify-center items-center">
+                <div class="swiper swiper-collection-list w-full block swiper-slider-custom-responsive">
+                    <div class="swiper-wrapper swiper-wrapper-event">
+                        
+                        <div class="swiper-slide classic-swiper-slide-event pb-4 flex flex-col justify-center items-center mx-auto">
+                            <div class="e-blog-list-item clean-typography w-full">
+    <div class="bg-white card-shadow">
+        <div
+            
+            style="
+                background-image: url('/img/asset/YXNzZXRzL3NhbGVzLWthdGFwdWx0LmpwZw/sales-katapult.jpg?fm=jpg&h=216&w=420&s=40c55acb0f445a39ff73545102dfdb2c');
+            "
+            
+            class="w-full h-[180px] bg-cover bg-no-repeat bg-center"
+            role="img">
+
+        </div>
+        <div class="flex min-h-[360px] flex-col justify-between pt-[10px] px-5 pb-6">
+            <div class="w-full flex flex-col justify-start items-start">
+                <span class="body-small-bold text-primary-orange capitalize">
+                    
+                        
+                            
+                                Dogodek
+                            
+                        
+                    
+                </span>
+                <h3 class="headline3"><a href="/novice/scale-it">SCALE IT! Od prvih prodaj do serijske proizvodnje (23., 27. in 29. oktober)</a></h3>
+                <div class="w-12 mt-4 bg-primary-orange h-[1px]"></div>
+                <div class="py-4 body-small-regular">
+                    <p>Tridnevni inkubacijski program za startupe, ki želijo svoj fizični ali tehnološki produkt skalirati od prvih prodaj do stabilne serijske proizvodnje.</p><p><strong>Predavatelji: Robert Goršek, Luka Predovnik in strokovnjaki Dewesofta.</strong></p>
+                </div>
+            </div>
+            
+    <div class="e-button flex
+    
+    ">
+    <a
+        
+        class=" flex items-center
+            
+                btn-simple w-fit gap-x-[9px]  justify-start flex-row-reverse
+            
+
+            pt-4
+        "
+        
+
+        
+            type="novice"
+        
+
+        href="/novice/scale-it"
+
+
+
+>
+        <span class="">
+            Preberi več
+        </span>
+        
+            <svg  class="icon ">
+    <use xlink:href="https://katapult.si/assets/icons/symbol-defs.svg#icon-button-heart"></use>
+</svg>
+
+        
+    </a>
+    </div>
+
+
+        </div>
+    </div>
+</div>
+
+                        </div>
+                        
+                        <div class="swiper-slide classic-swiper-slide-event pb-4 flex flex-col justify-center items-center mx-auto">
+                            <div class="e-blog-list-item clean-typography w-full">
+    <div class="bg-white card-shadow">
+        <div
+            
+            style="
+                background-image: url('/img/asset/YXNzZXRzL29kLW5ldnJvcm9ib3Rpa2UtZG8taW5vdmF0aXZuZWdhLXByb2R1a3RhLWJhbm5lci5wbmc/od-nevrorobotike-do-inovativnega-produkta-banner.png?fm=jpg&h=216&w=420&s=1b8883a4962a5abb1295fd2a866618f4');
+            "
+            
+            class="w-full h-[180px] bg-cover bg-no-repeat bg-center"
+            role="img">
+
+        </div>
+        <div class="flex min-h-[360px] flex-col justify-between pt-[10px] px-5 pb-6">
+            <div class="w-full flex flex-col justify-start items-start">
+                <span class="body-small-bold text-primary-orange capitalize">
+                    
+                        
+                            
+                                Dogodek
+                            
+                        
+                    
+                </span>
+                <h3 class="headline3"><a href="/novice/od-nevrorobotike-do-inovativnega-produkta">Od nevrorobotike do inovativnega produkta: delavnica za študente industrijskega oblikovanja I 14.10.2026</a></h3>
+                <div class="w-12 mt-4 bg-primary-orange h-[1px]"></div>
+                <div class="py-4 body-small-regular">
+                    <p>V Katapultu bomo gostili magistrske študente industrijskega oblikovanja in profesorje Oddelka za industrijsko in unikatno oblikovanje ter Raziskovalnega inštituta ALUO (Univerza v Ljubljani).</p>
+                </div>
+            </div>
+            
+    <div class="e-button flex
+    
+    ">
+    <a
+        
+        class=" flex items-center
+            
+                btn-simple w-fit gap-x-[9px]  justify-start flex-row-reverse
+            
+
+            pt-4
+        "
+        
+
+        
+            type="novice"
+        
+
+        href="/novice/od-nevrorobotike-do-inovativnega-produkta"
+
+
+
+>
+        <span class="">
+            Preberi več
+        </span>
+        
+            <svg  class="icon ">
+    <use xlink:href="https://katapult.si/assets/icons/symbol-defs.svg#icon-button-heart"></use>
+</svg>
+
+        
+    </a>
+    </div>
+
+
+        </div>
+    </div>
+</div>
+
+                        </div>
+                        
+                        <div class="swiper-slide classic-swiper-slide-event pb-4 flex flex-col justify-center items-center mx-auto">
+                            <div class="e-blog-list-item clean-typography w-full">
+    <div class="bg-white card-shadow">
+        <div
+            
+            style="
+                background-image: url('/img/asset/YXNzZXRzL2R1ZnMtbW9ieS5wbmc/dufs-moby.png?fm=jpg&h=216&w=420&s=21d5070fa41955998398e5acaea6d6af');
+            "
+            
+            class="w-full h-[180px] bg-cover bg-no-repeat bg-center"
+            role="img">
+
+        </div>
+        <div class="flex min-h-[360px] flex-col justify-between pt-[10px] px-5 pb-6">
+            <div class="w-full flex flex-col justify-start items-start">
+                <span class="body-small-bold text-primary-orange capitalize">
+                    
+                        
+                            
+                                Dogodek
+                            
+                        
+                    
+                </span>
+                <h3 class="headline3"><a href="/novice/robotika-v-oskrbi">Robotika v oskrbi 22.10.2026</a></h3>
+                <div class="w-12 mt-4 bg-primary-orange h-[1px]"></div>
+                <div class="py-4 body-small-regular">
+                    <p>Kako lahko robotika in umetna inteligenca podpreta delo zaposlenih v oskrbi ter obogatita vsakdan starejših?</p>
+                </div>
+            </div>
+            
+    <div class="e-button flex
+    
+    ">
+    <a
+        
+        class=" flex items-center
+            
+                btn-simple w-fit gap-x-[9px]  justify-start flex-row-reverse
+            
+
+            pt-4
+        "
+        
+
+        
+            type="novice"
+        
+
+        href="/novice/robotika-v-oskrbi"
+
+
+
+>
+        <span class="">
+            Preberi več
+        </span>
+        
+            <svg  class="icon ">
+    <use xlink:href="https://katapult.si/assets/icons/symbol-defs.svg#icon-button-heart"></use>
+</svg>
+
+        
+    </a>
+    </div>
+
+
+        </div>
+    </div>
+</div>
+
+                        </div>
+                        
+                        <div class="swiper-slide classic-swiper-slide-event pb-4 flex flex-col justify-center items-center mx-auto">
+                            <div class="e-blog-list-item clean-typography w-full">
+    <div class="bg-white card-shadow">
+        <div
+            
+            style="
+                background-image: url('/img/asset/YXNzZXRzL2Jhbm5lci1rYXRhcHVsdC5qcGc/banner-katapult.jpg?fm=jpg&h=216&w=420&s=07df10adc23e71976f7f9c1d47cae866');
+            "
+            
+            class="w-full h-[180px] bg-cover bg-no-repeat bg-center"
+            role="img">
+
+        </div>
+        <div class="flex min-h-[360px] flex-col justify-between pt-[10px] px-5 pb-6">
+            <div class="w-full flex flex-col justify-start items-start">
+                <span class="body-small-bold text-primary-orange capitalize">
+                    
+                        
+                            
+                                Dogodek
+                            
+                        
+                    
+                </span>
+                <h3 class="headline3"><a href="/novice/odprta-vrata-2">Katapult odpira vrata: predstavitev podjetniškega okolja za akrobate s fizičnim izdelkom</a></h3>
+                <div class="w-12 mt-4 bg-primary-orange h-[1px]"></div>
+                <div class="py-4 body-small-regular">
+                    <p>Vabljeni na dogodek, kjer vam bomo odprli vrata v naš svet! Spoznajte, kaj delamo, kako pomagamo mladim in startup podjetjem ter kakšno infrastrukturo nudimo za podporo razvoja fizičnega produkta - od prototipa do prodaje. Odkrijte, kaj ustvarjajo naši akrobati in kam se lahko še obrnete po podporo. Pridite, da skupaj soustvarjamo prihodnost ino
+                </div>
+            </div>
+            
+    <div class="e-button flex
+    
+    ">
+    <a
+        
+        class=" flex items-center
+            
+                btn-simple w-fit gap-x-[9px]  justify-start flex-row-reverse
+            
+
+            pt-4
+        "
+        
+
+        
+            type="novice"
+        
+
+        href="/novice/odprta-vrata-2"
+
+
+
+>
+        <span class="">
+            Preberi več
+        </span>
+        
+            <svg  class="icon ">
+    <use xlink:href="https://katapult.si/assets/icons/symbol-defs.svg#icon-button-heart"></use>
+</svg>
+
+        
+    </a>
+    </div>
+
+
+        </div>
+    </div>
+</div>
+
+                        </div>
+                        
+                    </div>
+                </div>
+
+                
+            </div>
+        
+    
+
+    
+    
+        
+            <div class="w-full hidden lg:gap-[31px] lg:items-start lg:grid
+                
+                    sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 hide-last-item-before-xl
+                
+
+                ">
+                
+                    <div class="e-blog-list-item clean-typography w-full">
+    <div class="bg-white card-shadow">
+        <div
+            
+            style="
+                background-image: url('/img/asset/YXNzZXRzL3NhbGVzLWthdGFwdWx0LmpwZw/sales-katapult.jpg?fm=jpg&h=216&w=420&s=40c55acb0f445a39ff73545102dfdb2c');
+            "
+            
+            class="w-full h-[180px] bg-cover bg-no-repeat bg-center"
+            role="img">
+
+        </div>
+        <div class="flex min-h-[360px] flex-col justify-between pt-[10px] px-5 pb-6">
+            <div class="w-full flex flex-col justify-start items-start">
+                <span class="body-small-bold text-primary-orange capitalize">
+                    
+                        
+                            
+                                Dogodek
+                            
+                        
+                    
+                </span>
+                <h3 class="headline3"><a href="/novice/scale-it">SCALE IT! Od prvih prodaj do serijske proizvodnje (23., 27. in 29. oktober)</a></h3>
+                <div class="w-12 mt-4 bg-primary-orange h-[1px]"></div>
+                <div class="py-4 body-small-regular">
+                    <p>Tridnevni inkubacijski program za startupe, ki želijo svoj fizični ali tehnološki produkt skalirati od prvih prodaj do stabilne serijske proizvodnje.</p><p><strong>Predavatelji: Robert Goršek, Luka Predovnik in strokovnjaki Dewesofta.</strong></p>
+                </div>
+            </div>
+            
+    <div class="e-button flex
+    
+    ">
+    <a
+        
+        class=" flex items-center
+            
+                btn-simple w-fit gap-x-[9px]  justify-start flex-row-reverse
+            
+
+            pt-4
+        "
+        
+
+        
+            type="novice"
+        
+
+        href="/novice/scale-it"
+
+
+
+>
+        <span class="">
+            Preberi več
+        </span>
+        
+            <svg  class="icon ">
+    <use xlink:href="https://katapult.si/assets/icons/symbol-defs.svg#icon-button-heart"></use>
+</svg>
+
+        
+    </a>
+    </div>
+
+
+        </div>
+    </div>
+</div>
+
+                
+                    <div class="e-blog-list-item clean-typography w-full">
+    <div class="bg-white card-shadow">
+        <div
+            
+            style="
+                background-image: url('/img/asset/YXNzZXRzL29kLW5ldnJvcm9ib3Rpa2UtZG8taW5vdmF0aXZuZWdhLXByb2R1a3RhLWJhbm5lci5wbmc/od-nevrorobotike-do-inovativnega-produkta-banner.png?fm=jpg&h=216&w=420&s=1b8883a4962a5abb1295fd2a866618f4');
+            "
+            
+            class="w-full h-[180px] bg-cover bg-no-repeat bg-center"
+            role="img">
+
+        </div>
+        <div class="flex min-h-[360px] flex-col justify-between pt-[10px] px-5 pb-6">
+            <div class="w-full flex flex-col justify-start items-start">
+                <span class="body-small-bold text-primary-orange capitalize">
+                    
+                        
+                            
+                                Dogodek
+                            
+                        
+                    
+                </span>
+                <h3 class="headline3"><a href="/novice/od-nevrorobotike-do-inovativnega-produkta">Od nevrorobotike do inovativnega produkta: delavnica za študente industrijskega oblikovanja I 14.10.2026</a></h3>
+                <div class="w-12 mt-4 bg-primary-orange h-[1px]"></div>
+                <div class="py-4 body-small-regular">
+                    <p>V Katapultu bomo gostili magistrske študente industrijskega oblikovanja in profesorje Oddelka za industrijsko in unikatno oblikovanje ter Raziskovalnega inštituta ALUO (Univerza v Ljubljani).</p>
+                </div>
+            </div>
+            
+    <div class="e-button flex
+    
+    ">
+    <a
+        
+        class=" flex items-center
+            
+                btn-simple w-fit gap-x-[9px]  justify-start flex-row-reverse
+            
+
+            pt-4
+        "
+        
+
+        
+            type="novice"
+        
+
+        href="/novice/od-nevrorobotike-do-inovativnega-produkta"
+
+
+
+>
+        <span class="">
+            Preberi več
+        </span>
+        
+            <svg  class="icon ">
+    <use xlink:href="https://katapult.si/assets/icons/symbol-defs.svg#icon-button-heart"></use>
+</svg>
+
+        
+    </a>
+    </div>
+
+
+        </div>
+    </div>
+</div>
+
+                
+                    <div class="e-blog-list-item clean-typography w-full">
+    <div class="bg-white card-shadow">
+        <div
+            
+            style="
+                background-image: url('/img/asset/YXNzZXRzL2R1ZnMtbW9ieS5wbmc/dufs-moby.png?fm=jpg&h=216&w=420&s=21d5070fa41955998398e5acaea6d6af');
+            "
+            
+            class="w-full h-[180px] bg-cover bg-no-repeat bg-center"
+            role="img">
+
+        </div>
+        <div class="flex min-h-[360px] flex-col justify-between pt-[10px] px-5 pb-6">
+            <div class="w-full flex flex-col justify-start items-start">
+                <span class="body-small-bold text-primary-orange capitalize">
+                    
+                        
+                            
+                                Dogodek
+                            
+                        
+                    
+                </span>
+                <h3 class="headline3"><a href="/novice/robotika-v-oskrbi">Robotika v oskrbi 22.10.2026</a></h3>
+                <div class="w-12 mt-4 bg-primary-orange h-[1px]"></div>
+                <div class="py-4 body-small-regular">
+                    <p>Kako lahko robotika in umetna inteligenca podpreta delo zaposlenih v oskrbi ter obogatita vsakdan starejših?</p>
+                </div>
+            </div>
+            
+    <div class="e-button flex
+    
+    ">
+    <a
+        
+        class=" flex items-center
+            
+                btn-simple w-fit gap-x-[9px]  justify-start flex-row-reverse
+            
+
+            pt-4
+        "
+        
+
+        
+            type="novice"
+        
+
+        href="/novice/robotika-v-oskrbi"
+
+
+
+>
+        <span class="">
+            Preberi več
+        </span>
+        
+            <svg  class="icon ">
+    <use xlink:href="https://katapult.si/assets/icons/symbol-defs.svg#icon-button-heart"></use>
+</svg>
+
+        
+    </a>
+    </div>
+
+
+        </div>
+    </div>
+</div>
+
+                
+                    <div class="e-blog-list-item clean-typography w-full">
+    <div class="bg-white card-shadow">
+        <div
+            
+            style="
+                background-image: url('/img/asset/YXNzZXRzL2Jhbm5lci1rYXRhcHVsdC5qcGc/banner-katapult.jpg?fm=jpg&h=216&w=420&s=07df10adc23e71976f7f9c1d47cae866');
+            "
+            
+            class="w-full h-[180px] bg-cover bg-no-repeat bg-center"
+            role="img">
+
+        </div>
+        <div class="flex min-h-[360px] flex-col justify-between pt-[10px] px-5 pb-6">
+            <div class="w-full flex flex-col justify-start items-start">
+                <span class="body-small-bold text-primary-orange capitalize">
+                    
+                        
+                            
+                                Dogodek
+                            
+                        
+                    
+                </span>
+                <h3 class="headline3"><a href="/novice/odprta-vrata-2">Katapult odpira vrata: predstavitev podjetniškega okolja za akrobate s fizičnim izdelkom</a></h3>
+                <div class="w-12 mt-4 bg-primary-orange h-[1px]"></div>
+                <div class="py-4 body-small-regular">
+                    <p>Vabljeni na dogodek, kjer vam bomo odprli vrata v naš svet! Spoznajte, kaj delamo, kako pomagamo mladim in startup podjetjem ter kakšno infrastrukturo nudimo za podporo razvoja fizičnega produkta - od prototipa do prodaje. Odkrijte, kaj ustvarjajo naši akrobati in kam se lahko še obrnete po podporo. Pridite, da skupaj soustvarjamo prihodnost ino
+                </div>
+            </div>
+            
+    <div class="e-button flex
+    
+    ">
+    <a
+        
+        class=" flex items-center
+            
+                btn-simple w-fit gap-x-[9px]  justify-start flex-row-reverse
+            
+
+            pt-4
+        "
+        
+
+        
+            type="novice"
+        
+
+        href="/novice/odprta-vrata-2"
+
+
+
+>
+        <span class="">
+            Preberi več
+        </span>
+        
+            <svg  class="icon ">
+    <use xlink:href="https://katapult.si/assets/icons/symbol-defs.svg#icon-button-heart"></use>
+</svg>
+
+        
+    </a>
+    </div>
+
+
+        </div>
+    </div>
+</div>
+
+                
+            </div>
+
+            
+
+        
+    
+
+</div>
+
+    </div>
+</section>
+
+  <section
+    class="w-full flex flex-col justify-center items-center mx-auto py-[50px] xl:py-[103px]"
+>
+    <div
+        class="main-container flex flex-col justify-center items-center mx-auto pb-20"
+    >
+        <div
+            class="w-full flex flex-col justify-center items-center mx-auto text-center max-w-[592px]"
+        >
+            <h2 class="headline2 text-primary-orange">
+                Če razvijaš svoj produkt in imaš podjetnost v srcu?
+            </h2>
+            <div class="w-12 mt-4 bg-primary-orange h-[1px]"></div>
+        </div>
+        <div
+            class="w-full flex flex-col justify-center items-center mx-auto text-center relative pt-8"
+        >
+            <p class="subtitle-regular max-w-[592px]">
+                Izpolni spodnji vprašalnik (brez skrbi, ni pretežkih vprašanj).
+            </p>
+            <div
+                class="py-[29px] w-full max-w-[592px] xl:pt-12 flex flex-row justify-center items-center mx-auto"
+            >
+                <a
+                    href="https://docs.google.com/forms/d/e/1FAIpQLSebAKQeetJNiVXWdrlZeRtss8Bhq9CTFgWKeuj_WwiYGKXtrA/viewform"
+                    class="space-x-2 btn-orange"
+                    target="_blank"
+                    >
+                        <span class="my-auto">Želim do katapulta</span>
+                        <img
+                            src="/assets/images/m-icon-heart-btn.svg"
+                            alt=""
+                            aria-hidden="true"
+                        /></a>
+            </div>
+        </div>
+        <div
+            class="pb-28 w-full flex flex-row justify-center items-center max-w-[592px] relative "
+        >
+            <img
+                src="/assets/images/Storitve_izpolni vprasalnik.svg"
+                alt=""
+                aria-hidden="true"
+                class="absolute left-0 -top-5 xl:hidden"
+            />
+            <img
+                src="/assets/images/Izpolni obrazec.svg"
+                alt=""
+                aria-hidden="true"
+                class="absolute -left-48 -top-56 hidden xl:block"
+            />
+        </div>
+    </div>
+</section>
+
+</div>
+</div>
+        </main>
+        <div class="fixed z-[9990] bottom-5 -left-5 w-full flex flex-row items-end justify-end">
+    <div>
+        <button class="flex justify-center items-center mx-auto btn-orange w-[50px] h-[50px] hidden" onclick="scrollToTop(event)" id="scrollToTopButton">
+            <img src="/assets/images/m-icon-up-arrow.svg" alt="up arrow button" aria-hidden="true"/>
+        </button>
+        </div>
+</div>
+<footer class="pb-8 md:pb-0 bg-primary-brown">
+    <div class="relative w-full mx-auto max-w-[1280px] px-[20px]">
+        <img
+            src="/assets/images/tabla.svg"
+            alt="tabla mesto akrobatov"
+            aria-hidden="true"
+            class="absolute -top-28 right-0 xl:right-20 xl:-top-36 w-[150px] lg:w-[210px]"
+        />
+    </div>
+    <div
+        class="w-full flex flex-col justify-start items-start text-left main-container mx-auto pt-[41px] xl:grid xl:grid-cols-2 gap-10"
+    >
+        <!-- address -->
+        <div class="w-full">
+            <img src="/assets/images/logo-white.svg" alt="white katapult logo" aria-hidden="true"/>
+            <p class="body-regular text-white pt-4 max-w-[485px]">
+                Širimo pozitivno miselnost, spodbujamo podjetnost in podjetništvo prikazujemo v pozitivni luči.
+            </p>
+            <address class="not-italic text-white pt-[16px]">
+                <p class="body-bold">KATAPULT d.o.o.</p>
+                <p class="body-regular">Gabrsko 12, 1420 Trbovlje</p>
+                <ul class="pt-[18px] space-y-[15px]">
+                    <li
+                        class="flex flex-row justify-start items-center space-x-[22px] w-full"
+                    >
+                        <img src="/assets/images/fon.svg" alt="telefon" aria-hidden="true"/>
+                        <p class="body-regular">+386 (0)3 56 12 420</p>
+                    </li>
+                    <li
+                        class="flex flex-row justify-start items-center space-x-[22px] w-full"
+                    >
+                        <img src="/assets/images/mail.svg" alt="mail" aria-hidden="true"/>
+                        <a class="underline body-regular" href="/cdn-cgi/l/email-protection#e78e898188a78c86938697928b93c9948e"><span class="__cf_email__" data-cfemail="137a7d757c537872677263667f673d607a">[email&#160;protected]</span></a>
+                    </li>
+                </ul>
+            </address>
+            <div class="w-full flex flex-col justify-start items-start">
+                <h6
+                    class="pt-[56px] subtitle-bold uppercase text-primary-orange"
+                >
+                    VIRTUALNi PRIJATELJI
+                </h6>
+                <div class="w-12 mt-1 bg-primary-orange h-[1px]"></div>
+            </div>
+
+            <div class="w-full flex flex-row justify-start items-center space-x-[21px] pt-[28px] relative z-[9999]">
+                <a href="https://www.facebook.com/katapultSI/" target="_blank">
+                    <img src="/assets/images/fb.svg" alt="facebook"/>
+                </a>
+                <a href="https://www.linkedin.com/company/katapult-d.o.o./" target="_blank">
+                    <img src="/assets/images/ln.svg" alt="linkedin"/>
+                </a>
+                <a href="https://www.instagram.com/katapultsi/" target="_blank">
+                    <img src="/assets/images/insta.svg" alt="instagram"/>
+                </a>
+            </div>
+
+        </div>
+        <div class="w-full flex flex-col justify-start items-start">
+            <div
+                class="w-full flex flex-col justify-start items-start space-y-[55px] md:flex-row md:space-y-0 md:justify-between md:pt-[56px]"
+            >
+                <!-- povezave -->
+                <div class="w-full md:w-1/2">
+                    <div class="w-full flex flex-col justify-start items-start">
+                        <h6
+                            class="pt-[56px] md:pt-0 subtitle-bold uppercase text-primary-orange"
+                        >
+                            Povezave
+                        </h6>
+                        <div class="w-12 mt-1 bg-primary-orange h-[1px]"></div>
+                    </div>
+                    <ul
+                        class="w-full flex flex-col justify-start items-start text-left body-regular-nastevanje text-white"
+                    >
+                        <li>
+                            <a href="/storitve">Storitve</a>
+                        </li>
+                        <li>
+                            <a href="/izobrazevanja">Izobraževanja </a>
+                        </li>
+                        <li>
+                            <a href="/zgodbe-akrobatov">Zgodbe akrobatov</a>
+                        </li>
+                        <li><a href="/novice">Novice</a></li>
+                        <li><a href="/o-nas">O nas</a></li>
+                    </ul>
+                </div>
+                <!-- pravna obvestila -->
+                <div class="w-full md:w-1/2">
+                    <div class="w-full flex flex-col justify-start items-start">
+                        <h6 class="subtitle-bold uppercase text-primary-orange">
+                            Pravna obvestila
+                        </h6>
+                    </div>
+                    <ul
+                        class="w-full flex flex-col justify-start items-start text-left body-regular-nastevanje text-white"
+                    >
+                        <li>
+                            <a href="/splosni-pogoji-poslovanja"
+                                >Splošni pogoji poslovanja
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/piskotki">Obvestilo o piškotih </a>
+                        </li>
+                        <li>
+                            <a href="/kontaktni-podatki"
+                                >Podjetje in kontaktni podatki</a
+                            >
+                        </li>
+                        <li>
+                            <a href="/politika-zasebnosti"
+                                >Varstvo osebnih podatkov (GDPR)</a
+                            >
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <!-- quote -->
+
+            <div class="w-full border-t border-secondary-dark mt-[30px]">
+                <blockquote
+                    class="text-white w-full flex flex-col justify-start items-start text-left pt-4"
+                >
+                    <span class="subtitle-bold"
+                        >If you can dream it, you can do it!</span
+                    >
+                    <span>W. Disney</span>
+                </blockquote>
+            </div>
+        </div>
+    </div>
+    <div
+        class="w-full border-t border-secondary-dark mt-[22px] main-container mx-auto"
+    >
+        <p
+            class="body-small-regular text-white text-left pt-[11px] xl:w-full xl:mx-auto xl:text-center"
+        >
+            © 2026 Katapult — Vse pravice pridržane. Naredili:
+            <a href="https://creative37.com" target="_blank">CREATIVE37</a>
+        </p>
+    </div>
+</footer>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+    function scrollToTop(event) {
+        event.preventDefault(); // Prevent the default anchor behavior
+        window.scrollTo({
+            top: 0, // Scroll to the top of the page
+            left: 0,
+            behavior: 'smooth' // Enable smooth scrolling
+        });
+    }
+
+    window.addEventListener('scroll', function() {
+        var scrollPosition = window.scrollY;
+        var scrollToTopButton = document.getElementById('scrollToTopButton');
+    
+        if (scrollPosition > 500) { // Adjust the 100 value as needed
+            scrollToTopButton.classList.remove('hidden');
+        } else {
+            scrollToTopButton.classList.add('hidden');
+        }
+    });
+    
+</script>
+
+        
+            <script>window.onTurnstileLoad = () => window.dispatchEvent(new Event('turnstile-loaded'));</script>
+            <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onTurnstileLoad" async defer></script>
+        
+        <script src="https://katapult.si/livewire-c1c9e76d/livewire.min.js?id=a964a3c8"   data-csrf="fhIlbWLjZ10iNx8Ns27IfeFnw55UtmCXMHgyxb4y" data-module-url="https://katapult.si/livewire-c1c9e76d" data-update-uri="https://katapult.si/livewire-c1c9e76d/update" data-navigate-once="true"></script>
+
+        <div wire:snapshot="{&quot;data&quot;:{&quot;decisionMade&quot;:null},&quot;memo&quot;:{&quot;id&quot;:&quot;uEVa7YDO9EQqJUowvPK3&quot;,&quot;name&quot;:&quot;cookie-consent&quot;,&quot;path&quot;:&quot;novice\/napredna-uporaba-clauda-za-optimizacijo-pogostih-nalog-pri-poslovanju&quot;,&quot;method&quot;:&quot;GET&quot;,&quot;release&quot;:&quot;a-a-a&quot;,&quot;children&quot;:[],&quot;scripts&quot;:[],&quot;assets&quot;:[],&quot;errors&quot;:[],&quot;locale&quot;:&quot;sl&quot;,&quot;islands&quot;:[]},&quot;checksum&quot;:&quot;09135820aade9df90cd525e5d5e51b4317901fae46b7cea1342973deffd20e43&quot;}" wire:effects="[]" wire:id="uEVa7YDO9EQqJUowvPK3" wire:name="cookie-consent">
+    
+        <div
+            role="dialog"
+            aria-labelledby="cookieBannerTitle"
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 transform scale-90"
+            x-transition:enter-end="opacity-100 transform scale-100"
+            x-transition:leave="transition ease-in duration-300"
+            x-transition:leave-start="opacity-100 transform scale-100"
+            x-transition:leave-end="opacity-0 transform scale-90"
+            class="w-full bg-white fixed bottom-0 right-0 lg:max-w-md p-6 flex flex-col z-[9999] cookies-banner ">
+            <div class="w-full flex flex-row justify-between items-center">
+                <div class="flex flex-col justify-start items-start">
+                    <span id="cookieBannerTitle" class="subtitle-bold text-primary-orange">Piškotki</span>
+                    <div class="w-12 mt-1 lg:mt-3 bg-primary-orange h-[1px]"></div>
+                </div>
+            </div>
+            <span class="clean_taxonomy body-small-regular pt-[10px]">
+                Na naši spletni strani uporabljamo piškotke in podobne tehnologije, ki nam omogočajo pridobivanje podatkov o vas. Uporabljamo različne piškotke, pri čemer uporabo piškotkov na naši spletni strani izbirate sami. Več o uporabi piškotkov najdete v naši Politiki piškotkov. Svoje nastavitve lahko kadarkoli spremenite z uporabo našega orodja.
+            </span>
+            <div class="w-full flex flex-row justify-between items-center">
+                <div
+                    role="group"
+                    aria-label="Cookie decision buttons"
+                    class="w-1/2 flex flex-row justify-start items-center space-x-2">
+                    
+    <div class="e-button flex
+    
+    ">
+    <button
+        
+        class=" flex items-center
+            
+                btn-boxed space-x-2
+                btn-orange
+                
+            
+
+            
+        "
+        
+            wire:click="acceptCookies"
+        
+
+        
+            type="novice"
+        
+
+        href="/novice/napredna-uporaba-clauda-za-optimizacijo-pogostih-nalog-pri-poslovanju"
+
+
+
+>
+        <span class="">
+            Dovoli
+        </span>
+        
+            <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--><svg  class="icon ">
+    <use xlink:href="https://katapult.si/assets/icons/symbol-defs.svg#icon-button-heart"></use>
+</svg>
+<!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+        
+    </button>
+    </div>
+
+
+                    
+    <div class="e-button flex
+    
+    ">
+    <button
+        
+        class=" flex items-center
+            
+                btn-boxed space-x-2
+                btn-outline
+                
+            
+
+            
+        "
+        
+            wire:click="declineCookies"
+        
+
+        
+            type="novice"
+        
+
+        href="/novice/napredna-uporaba-clauda-za-optimizacijo-pogostih-nalog-pri-poslovanju"
+
+
+
+>
+        <span class="">
+            Zavrni
+        </span>
+        
+            <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--><svg  class="icon ">
+    <use xlink:href="https://katapult.si/assets/icons/symbol-defs.svg#icon-button-heart"></use>
+</svg>
+<!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+        
+    </button>
+    </div>
+
+
+                </div>
+                <img src="/assets/images/dogright.svg" alt="Decorative Image" class="" aria-hidden="true"/>
+            </div>
+        </div>
+    
+</div>
+
+
+            <div wire:snapshot="{&quot;data&quot;:{&quot;disableNewsletterPopup&quot;:false,&quot;email&quot;:null,&quot;sent&quot;:false,&quot;terms&quot;:false,&quot;leaveOpen&quot;:false,&quot;rules&quot;:[{&quot;email&quot;:[[&quot;required&quot;,&quot;email:rfc,dns&quot;,&quot;max:255&quot;],{&quot;s&quot;:&quot;arr&quot;}],&quot;terms&quot;:[[&quot;accepted&quot;],{&quot;s&quot;:&quot;arr&quot;}]},{&quot;s&quot;:&quot;arr&quot;}],&quot;turnstileToken&quot;:&quot;&quot;},&quot;memo&quot;:{&quot;id&quot;:&quot;As4tLjht4SoBPK614AU6&quot;,&quot;name&quot;:&quot;newsletter.newsletter-popup&quot;,&quot;path&quot;:&quot;novice\/napredna-uporaba-clauda-za-optimizacijo-pogostih-nalog-pri-poslovanju&quot;,&quot;method&quot;:&quot;GET&quot;,&quot;release&quot;:&quot;a-a-a&quot;,&quot;children&quot;:[],&quot;scripts&quot;:[],&quot;assets&quot;:[],&quot;errors&quot;:[],&quot;locale&quot;:&quot;sl&quot;,&quot;islands&quot;:[]},&quot;checksum&quot;:&quot;2b8729e833f04105a429d2ef166ba7581a1cb8a8e5619c97666634f4958d4507&quot;}" wire:effects="[]" wire:id="As4tLjht4SoBPK614AU6" wire:name="newsletter.newsletter-popup">
+    
+    <div
+        role="dialog"
+        aria-labelledby="newsletterTitle"
+        x-transition:enter="transition ease-out duration-300"
+        x-transition:enter-start="opacity-0 transform scale-90"
+        x-transition:enter-end="opacity-100 transform scale-100"
+        x-transition:leave="transition ease-in duration-300"
+        x-transition:leave-start="opacity-100 transform scale-100"
+        x-transition:leave-end="opacity-0 transform scale-90"
+        class="newsletter-banner  w-full bg-white fixed top-12 right-0 md:max-w-sm p-6 flex flex-col z-[9999]">
+        <div class="w-full flex flex-row justify-between items-start">
+            <div class="flex flex-col justify-start items-start">
+                <span id="newsletterTitle" class="m-headline2 text-primary-orange">Prijava na novice</span>
+                <div class="w-12 mt-1 lg:mt-3 bg-primary-orange h-[1px]"></div>
+            </div>
+            <img class="cursor-pointer" src="/assets/images/close-menu.svg" alt="Close Newsletter Popup" wire:click="closePopup" />
+        </div>
+        <span class="clean_taxonomy body-small-regular pt-[10px]">
+            Zaupaj nam svoj email naslov, da te enkrat ali dvakrat v mesecu malo pozdravimo in te obvestimo o dogajanju na Katapultu (dogodki, novosti, uporabna znanja, včasih tudi kaj zabavnega in dobrodelnega …).
+        </span>
+        
+        <form wire:submit.prevent="submit" wire:loading.delay.class="form-loading"
+            class="flex flex-col justify-start items-start w-full pt-5 ">
+            <div class="flex flex-col justify-start items-start w-full relative">
+                <label for="newsletter-email" class="input-label">Email</label>
+                <input
+                    type="email"
+                    placeholder="Vpiši email"
+                    id="newsletter-email"
+                    wire:model="email"
+                    class="w-full px-4"
+                    aria-required="true"
+                />
+                
+                    
+                
+            </div>
+            <div class="w-full flex justify-start items-center space-x-2 pt-4">
+                <input type="checkbox" id="newsletter-checkbox" wire:model="terms" aria-required="true"/>
+                <label for="newsletter-checkbox" class="body-small-regular text-left">
+                    Strinjam se s splošnimi
+                    <a href="" class="underline">pogoji poslovanja</a>
+                    in
+                    <a href="" class="underline">politiko zasebnosti</a>.
+                </label>
+            </div>
+            
+                
+            
+            
+<div class="w-full pt-4">
+    <div
+        wire:ignore
+        x-data="{ widgetId: null }"
+        x-init="
+            const render = () => {
+                widgetId = window.turnstile.render($el, {
+                    sitekey: '0x4AAAAAAFZRqrPvyjEkdjCm',
+                    language: 'sl',
+                    callback: (token) => $wire.set('turnstileToken', token, false),
+                    'expired-callback': () => $wire.set('turnstileToken', '', false),
+                    'error-callback': () => $wire.set('turnstileToken', '', false),
+                });
+            };
+            window.turnstile ? render() : window.addEventListener('turnstile-loaded', render, { once: true });
+        "
+        x-on:turnstile-reset.window="if ($event.detail.id === $wire.$id && widgetId !== null) window.turnstile.reset(widgetId)"
+    ></div>
+    
+        
+    
+</div>
+
+
+
+            <div class="w-full flex flex-row justify-between items-center">
+                <img src="/assets/images/newsletteravion.svg" alt="Decorative Plane" class="" aria-hidden="true"/>
+                
+    <div class="e-button flex
+    
+    ">
+    <button
+        
+        class=" flex items-center
+            
+                btn-boxed space-x-2
+                btn-orange
+                
+            
+
+            
+        "
+        
+
+        
+            type="submit"
+        
+
+        href=""
+
+
+
+>
+        <span class="">
+            Prijavljam se
+        </span>
+        
+            <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--><svg  class="icon ">
+    <use xlink:href="https://katapult.si/assets/icons/symbol-defs.svg#icon-button-heart"></use>
+</svg>
+<!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+        
+    </button>
+    </div>
+
+
+            </div>
+        </form>
+        
+    </div>
+    
+</div>
+
+
+    <script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a5c79f4d197aa280',t:'MTc5NTAxMTY5Mw=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a5c79f4d197aa280',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

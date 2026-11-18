@@ -1,0 +1,24 @@
+{
+ "count": 1,
+ "results": [
+  {
+   "id": "3969",
+   "title": "HPC Vega za industrijo | HPC Vega for industry",
+   "startDate": {
+    "date": "2026-10-15",
+    "time": "09:00:00",
+    "tz": "Europe/Ljubljana"
+   },
+   "endDate": {
+    "date": "2026-10-15",
+    "time": "14:00:00",
+    "tz": "Europe/Ljubljana"
+   },
+   "location": "IZUM",
+   "address": "Prešernova ulica 17, 2000 Maribor\n(Hybrid event - join in person or online via a link that will be sent before the event.)",
+   "room": "Mala dvorana",
+   "roomFullname": "Mala dvorana",
+   "url": "https://indico.ijs.si/event/3969/"
+  }
+ ]
+}

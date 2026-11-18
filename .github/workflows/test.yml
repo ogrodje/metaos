@@ -28,8 +28,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v5
 
       # The front-end's tests, type-check and build beside the app's tests, which take the longest; Testcontainers runs
-      # their Postgres on the runner's Docker. Then patreon-gateway's, a build of its own, which need no browser
-      - name: Test the app, the front-end and patreon-gateway
+      # their Postgres on the runner's Docker. Then patreon-gateway's and the scrapers', builds of their own, which need
+      # no browser
+      - name: Test the app, the front-end, patreon-gateway and the scrapers
         run: |
           (cd fe && yarn test && yarn build) > "$RUNNER_TEMP/fe.log" 2>&1 &
           fe=$!
@@ -44,3 +45,4 @@ jobs:
             exit 1
           fi
           ./gradlew --build-cache -p patreon-gateway test
+          ./gradlew --build-cache -p scrapers test

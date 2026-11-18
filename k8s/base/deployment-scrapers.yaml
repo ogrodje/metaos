@@ -1,0 +1,101 @@
+# scrapers (scrapers/): reads the events of the organisations that gather them, from their websites, Meetup,
+# Eventbrite, iCal, Luma and the rest, as Goo did. A Temporal worker on task queue scrapers: MetaOS's EventsSyncWorkflow
+# asks it for each link and keeps what it finds, so it has no database, no API of its own and no Ingress, and nothing
+# to keep: one pod, which may restart whenever (Temporal asks again).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scrapers
+  namespace: metaos-prod
+  labels: { app: scrapers }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: scrapers } }
+  template:
+    metadata: { labels: { app: scrapers } }
+    spec:
+      terminationGracePeriodSeconds: 30
+      # Nothing in it talks to the Kubernetes API
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001   # pwuser, in Playwright's image
+        runAsGroup: 1001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: scrapers
+          image: registry.folk-decibel.ts.net/metaos/scrapers
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ ALL ] }
+          ports:
+            - { containerPort: 8091, name: http }
+          env:
+            # Temporal's frontend, which any pod of metaos-prod may reach (deployment-temporal.yaml's NetworkPolicy)
+            - name: TEMPORAL_ADDRESS
+              value: "temporal:7233"
+            # Playwright's browser server in the container beside it, in the pod only
+            - name: SCRAPERS_BROWSER_URL
+              value: ws://127.0.0.1:3000/
+            - name: NEW_RELIC_LICENSE_KEY
+              valueFrom: { secretKeyRef: { name: metaos-secret, key: new_relic_license_key, optional: true } }
+            - name: NEW_RELIC_LABELS
+              value: "environment:production"
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: http }
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 50m, memory: 256Mi }
+            limits: { memory: 768Mi }
+        # Chromium, for Eventbrite's and GZS's pages, from Microsoft's Playwright image, which the node pulls from
+        # Microsoft's registry. Its version has to be the scrapers' Playwright's (scrapers/build.gradle.kts).
+        - name: browser
+          image: mcr.microsoft.com/playwright:v1.64.0-noble
+          command: [ npx, -y, playwright@1.64.0, run-server, --port, "3000", --host, 127.0.0.1 ]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ ALL ] }
+          volumeMounts:
+            # Chromium's shared memory; the default 64M crashes it on big pages
+            - { name: shm, mountPath: /dev/shm }
+          resources:
+            requests: { cpu: 50m, memory: 192Mi }
+            limits: { memory: 1Gi }
+      volumes:
+        - name: shm
+          emptyDir: { medium: Memory, sizeLimit: 256Mi }
+---
+# The JVM's metrics, and Temporal's worker's; the actuator is on its one port, which no Ingress routes
+apiVersion: v1
+kind: Service
+metadata:
+  name: scrapers
+  namespace: metaos-prod
+  labels: { app: scrapers }
+spec:
+  type: ClusterIP
+  selector: { app: scrapers }
+  ports:
+    - { name: http, port: 80, targetPort: http }
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: scrapers
+  namespace: metaos-prod
+  labels: { release: prom }
+spec:
+  endpoints:
+    - interval: 30s
+      path: /actuator/prometheus
+      port: http
+  namespaceSelector:
+    matchNames:
+      - metaos-prod
+  selector:
+    matchLabels:
+      app: scrapers
