@@ -1,0 +1,115 @@
+{
+ "props": {
+  "pageProps": {
+   "organizer": {
+    "id": "8627636641",
+    "name": "Kovačnica"
+   },
+   "upcomingEvents": [
+    {
+     "id": "2003811288505",
+     "name": "ENAJSTKA JE PADLA",
+     "url": "https://www.eventbrite.com/e/enajstka-je-padla-tickets-2003811288505",
+     "start_date": "2026-11-19",
+     "start_time": "17:00:00",
+     "end_date": "2026-11-19",
+     "end_time": "17:00:00",
+     "timezone": "Europe/Ljubljana",
+     "is_online_event": false,
+     "hide_start_date": false,
+     "hide_end_date": false,
+     "summary": "",
+     "primary_venue": {
+      "_type": "venue",
+      "name": "Kovačnica - podjetniški inkubator Kranj",
+      "id": "299964519",
+      "address": {
+       "city": "Kranj",
+       "country": "SI",
+       "region": "Kranj",
+       "longitude": "14.3561269",
+       "latitude": "46.23901499999999",
+       "postal_code": "4000",
+       "address_1": "4 Poštna ulica",
+       "localized_address_display": "4 Poštna ulica, 4000 Kranj",
+       "localized_multi_line_address_display": [
+        "4 Poštna ulica",
+        "4000 Kranj"
+       ],
+       "localized_area_display": "Kranj"
+      }
+     }
+    },
+    {
+     "id": "2005014958715",
+     "name": "KAKO DO KEŠA KOT S.P.?",
+     "url": "https://www.eventbrite.com/e/kako-do-kesa-kot-sp-tickets-2005014958715",
+     "start_date": "2026-11-25",
+     "start_time": "10:00:00",
+     "end_date": "2026-11-25",
+     "end_time": "10:00:00",
+     "timezone": "Europe/Ljubljana",
+     "is_online_event": false,
+     "hide_start_date": false,
+     "hide_end_date": false,
+     "summary": "",
+     "primary_venue": {
+      "_type": "venue",
+      "name": "Kovačnica - podjetniški inkubator Kranj",
+      "id": "300281494",
+      "address": {
+       "city": "Kranj",
+       "country": "SI",
+       "region": "Kranj",
+       "longitude": "14.3561269",
+       "latitude": "46.23901499999999",
+       "postal_code": "4000",
+       "address_1": "4 Poštna ulica",
+       "localized_address_display": "4 Poštna ulica, 4000 Kranj",
+       "localized_multi_line_address_display": [
+        "4 Poštna ulica",
+        "4000 Kranj"
+       ],
+       "localized_area_display": "Kranj"
+      }
+     }
+    },
+    {
+     "id": "2003649572809",
+     "name": "PONI GORENJSKA_2024-2028: Predstavitev projekta",
+     "url": "https://www.eventbrite.com/e/poni-gorenjska-2024-2028-predstavitev-projekta-tickets-2003649572809",
+     "start_date": "2026-11-25",
+     "start_time": "16:00:00",
+     "end_date": "2026-11-25",
+     "end_time": "16:00:00",
+     "timezone": "Europe/Ljubljana",
+     "is_online_event": false,
+     "hide_start_date": false,
+     "hide_end_date": false,
+     "summary": "",
+     "primary_venue": {
+      "_type": "venue",
+      "name": "Kovačnica - podjetniški inkubator Kranj",
+      "id": "299917190",
+      "address": {
+       "city": "Kranj",
+       "country": "SI",
+       "region": "Kranj",
+       "longitude": "14.3561269",
+       "latitude": "46.23901499999999",
+       "postal_code": "4000",
+       "address_1": "4 Poštna ulica",
+       "localized_address_display": "4 Poštna ulica, 4000 Kranj",
+       "localized_multi_line_address_display": [
+        "4 Poštna ulica",
+        "4000 Kranj"
+       ],
+       "localized_area_display": "Kranj"
+      }
+     }
+    }
+   ],
+   "upcomingEventsTotal": 3
+  }
+ }
+}

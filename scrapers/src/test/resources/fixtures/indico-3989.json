@@ -1,0 +1,24 @@
+{
+ "count": 1,
+ "results": [
+  {
+   "id": "3989",
+   "title": "Vzpostavljanje podatkovne kulture: zbiranje, upravljanje in hramba podatkov | Building a data culture: data collection, management and preservation",
+   "startDate": {
+    "date": "2027-01-20",
+    "time": "13:00:00",
+    "tz": "Europe/Ljubljana"
+   },
+   "endDate": {
+    "date": "2027-01-20",
+    "time": "15:00:00",
+    "tz": "Europe/Ljubljana"
+   },
+   "location": "VK",
+   "address": "NASLOV",
+   "room": "SOBA",
+   "roomFullname": "SOBA",
+   "url": "https://indico.ijs.si/event/3989/"
+  }
+ ]
+}

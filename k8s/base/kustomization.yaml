@@ -4,6 +4,7 @@ resources:
 - deployment-metaos.yaml
 - deployment-web.yaml
 - deployment-patreon-gateway.yaml
+- deployment-scrapers.yaml
 - deployment-temporal.yaml
 - deployment-unleash.yaml
 
@@ -29,6 +30,8 @@ images:
 - name: registry.folk-decibel.ts.net/metaos/metaos-web
   newTag: "9156827"
 - name: registry.folk-decibel.ts.net/metaos/patreon-gateway
+  newTag: latest
+- name: registry.folk-decibel.ts.net/metaos/scrapers
   newTag: latest
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization

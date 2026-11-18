@@ -1,0 +1,47 @@
+{
+ "props": {
+  "pageProps": {
+   "organizer": {
+    "id": "110471256331",
+    "name": "Klub Ada"
+   },
+   "upcomingEvents": [
+    {
+     "id": "2003306018228",
+     "name": "AdaHack: Code for change",
+     "url": "https://www.eventbrite.com/e/adahack-code-for-change-tickets-2003306018228",
+     "start_date": "2026-11-21",
+     "start_time": "09:00:00",
+     "end_date": "2026-11-21",
+     "end_time": "09:00:00",
+     "timezone": "Europe/Ljubljana",
+     "is_online_event": false,
+     "hide_start_date": false,
+     "hide_end_date": false,
+     "summary": "",
+     "primary_venue": {
+      "_type": "venue",
+      "name": "Epilog",
+      "id": "286701423",
+      "address": {
+       "city": "Ljubljana",
+       "country": "SI",
+       "region": "Ljubljana",
+       "longitude": "14.4608363",
+       "latitude": "46.048366",
+       "postal_code": "1000",
+       "address_1": "22a Tehnološki park",
+       "localized_address_display": "22a Tehnološki park, 1000 Ljubljana",
+       "localized_multi_line_address_display": [
+        "22a Tehnološki park",
+        "1000 Ljubljana"
+       ],
+       "localized_area_display": "Ljubljana"
+      }
+     }
+    }
+   ],
+   "upcomingEventsTotal": 1
+  }
+ }
+}
