@@ -57,11 +57,9 @@ class FRIParserTest {
 
     private val today = LocalDate.of(2026, 11, 11)
 
-    private val events = FRIParser.parse(
-        context(FakeWeb(mapOf("https://fri.uni-lj.si/sl/koledar-dogodkov" to calendar))),
-        URI("https://fri.uni-lj.si"),
-        today,
-    )
+    private val web = FakeWeb(mapOf("https://fri.uni-lj.si/sl/koledar-dogodkov" to calendar))
+
+    private val events = FRIParser.parse(context(web), today)
 
     @Test
     fun `reads events of one day and of several, without a card that doesn't read or doctoral defences`() {
@@ -89,6 +87,25 @@ class FRIParserTest {
         assertEquals(LocalTime.of(10, 0), event.start.atZone(LJUBLJANA).toLocalTime())
         assertEquals("fri-0dd4e911e9b6cad40f42721c65df2b9c5aedb6bc", event.externalId)
         assertEquals("https://fri.uni-lj.si/sl/dogodek/slovenski-okusi-na-fri", event.eventUrl)
+    }
+
+    @Test
+    fun `reads FRI from one address, with www or without, so its events are the same (OG-67)`() {
+        val web = FakeWeb(mapOf("https://fri.uni-lj.si/sl/koledar-dogodkov" to calendar))
+        val www = FRIParser.parse(context(web), URI("https://www.fri.uni-lj.si/"))
+        val bare = FRIParser.parse(context(web), URI("https://fri.uni-lj.si"))
+        assertEquals(bare.map { it.externalId to it.sourceUrl }, www.map { it.externalId to it.sourceUrl })
+        assertTrue(www.all { it.sourceUrl == "https://fri.uni-lj.si" && it.eventUrl!!.startsWith("https://fri.uni-lj.si/sl/dogodek/") })
+        assertTrue(web.asked.filter { "koledar" in it }.all { it == "https://fri.uni-lj.si/sl/koledar-dogodkov" })
+    }
+
+    @Test
+    fun `an event's link is the same without www and a slash at its end`() {
+        val linked = calendar.replace("href=\"/sl/dogodek/slovenski-okusi-na-fri\"", "href=\"https://www.fri.uni-lj.si/sl/dogodek/slovenski-okusi-na-fri/\"")
+        val events = FRIParser.parse(context(FakeWeb(mapOf("https://fri.uni-lj.si/sl/koledar-dogodkov" to linked))), today)
+        val event = events.single { it.title == "Slovenski okusi na FRI" }
+        assertEquals("https://fri.uni-lj.si/sl/dogodek/slovenski-okusi-na-fri", event.eventUrl)
+        assertEquals("fri-0dd4e911e9b6cad40f42721c65df2b9c5aedb6bc", event.externalId)
     }
 
     @Test

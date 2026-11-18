@@ -61,3 +61,13 @@ val URI.site: String get() = (host ?: "").lowercase().removePrefix("www.")
 
 /** The same site at another path, as Goo's parsers ask a site's own events page whatever page the URL is */
 fun URI.at(path: String): URI = URI(scheme, authority, path, null, null)
+
+/**
+ * One way of writing a page's URL, so the same page is the same event however a link wrote it (OG-67): its host
+ * lowercased and without www., and without a slash at the end of its path or a fragment.
+ */
+fun URI.normalised(): URI {
+    val path = (rawPath ?: "").trimEnd('/')
+    val port = if (port == -1) "" else ":$port"
+    return URI("${(scheme ?: "https").lowercase()}://$site$port$path${rawQuery?.let { "?$it" } ?: ""}")
+}
