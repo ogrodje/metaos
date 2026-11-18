@@ -11,8 +11,8 @@ import java.time.format.DateTimeFormatter
 /**
  * GZS's Association for Informatics and Telecommunications (https://www.gzs.si/zdruzenje_za_informatiko_in_telekomunikacije/vsebina/Dogodki):
  * its events page, in a browser, as the list is the page's own script's, switched to the monthly view. Each event
- * has its ID in a hidden field, and its start and end as "dd.MM.yyyy HH:mm - dd.MM.yyyy HH:mm". Events that started
- * over three months ago are left out.
+ * has its ID in a hidden field, its start and end as "dd.MM.yyyy HH:mm - dd.MM.yyyy HH:mm", and its place ("Kraj"),
+ * GZS's house mostly. Events that started over three months ago are left out.
  */
 object GZSParser : Parser {
     override val source = Source.GZS
@@ -43,6 +43,7 @@ object GZSParser : Parser {
             val link = box.select("#naslov a")
             val dates = box.select("#datum span").text().split("-", limit = 2).map(String::trim)
             require(dates.size == 2) { "No dates for GZS's event $id at $url" }
+            val location = place(box.select("#kraj span").text())
             ScrapedEvent(
                 source = source,
                 externalId = "gzs-$id",
@@ -52,10 +53,18 @@ object GZSParser : Parser {
                 end = time(dates[1]),
                 description = box.select("#povzetek").text().trim(),
                 eventUrl = link.attr("href").takeIf { runCatching { URI(it) }.isSuccess },
-                locationName = box.select("#kraj span").text().trim(),
+                locationName = location.name,
+                locationAddress = location.address,
             )
         }.filter { it.start > cutoff }
     }
+
+    /** GZS's own house, which its pages' footer gives the address of, and the events at it say only "GZS" */
+    private val house = Location("Gospodarska zbornica Slovenije", "Dimičeva ulica 13, 1000 Ljubljana")
+
+    /** "Kraj": "GZS", or another place, e.g. "Kongresni center Brdo, Dvorana Grandis", "Grand Palais, Pariz" */
+    internal fun place(kraj: String): Location =
+        if (Locations.clean(kraj)?.equals("GZS", ignoreCase = true) == true) house else Locations.parse(kraj)
 
     private fun time(text: String) = LocalDateTime.parse(text, format).atZone(zone).toInstant()
 }

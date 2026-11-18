@@ -14,7 +14,8 @@ import java.time.LocalTime
 /**
  * A WordPress site that announces events as ordinary posts in an events category ("dogodki"), read through its REST
  * API: the newest [maxPages] pages of the category, 20 posts a page. A post has no event fields, so when and where
- * come from its text ([EventText]); a post that names no date (news, results, calls) is skipped. Of posts about the
+ * come from its text ([EventText]; its place, "KJE: LUI, Vojkova cesta 63, Ljubljana", is a line that [Locations]
+ * splits); a post that names no date (news, results, calls) is skipped. Of posts about the
  * same event (a changed date, a reminder), one a day and title stays: the newest. Its ID is [idPrefix] and the post's
  * ID, as Goo's.
  *
@@ -82,6 +83,7 @@ class WordPressEventsParser(
     private fun event(sourceUrl: String, post: Post): ScrapedEvent? {
         val details = EventText.details(EventText.linesOf(post.contentHtml), post.published, sentences) ?: return null
         val start = at(details.startDate, details.startTime ?: LocalTime.MIDNIGHT)
+        val location = Locations.parse(details.location)
         // A time range on one day gives the end time; a second day gives the end date
         val end = if (details.endDate != null) {
             at(details.endDate, LocalTime.MIDNIGHT)
@@ -101,7 +103,8 @@ class WordPressEventsParser(
             hasEndTime = details.endDate == null && end != null,
             description = post.description,
             eventUrl = post.link,
-            locationName = details.location,
+            locationName = location.name,
+            locationAddress = location.address,
         )
     }
 

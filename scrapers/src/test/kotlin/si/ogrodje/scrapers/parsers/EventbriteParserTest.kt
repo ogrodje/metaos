@@ -53,13 +53,27 @@ class EventbriteParserTest {
     }
 
     @Test
-    fun `an online event has no location`() {
+    fun `an online event is online`() {
         val event = EventbriteParser.events(url, nextData(online)).single()
-        assertNull(event.locationName)
+        assertEquals("Online", event.locationName)
         assertNull(event.locationAddress)
         assertNull(event.description)
         assertFalse(event.hasEndTime)
         assertTrue(event.hasStartTime)
+    }
+
+    @Test
+    fun `gives the saved organizers' events their venues, the street's number last`() {
+        // Kovačnica's and Klub Ada's pages' __NEXT_DATA__, saved on 18 November 2026, trimmed to their events
+        val kovacnica = EventbriteParser.events(URI("https://www.eventbrite.com/o/kovacnica-8627636641"), FakeWeb.fixture("eventbrite-kovacnica.json"))
+        assertEquals(3, kovacnica.size)
+        assertTrue(kovacnica.all { it.locationName == "Kovačnica - podjetniški inkubator Kranj" })
+        assertTrue(kovacnica.all { it.locationAddress == "Poštna ulica 4, 4000 Kranj" })
+
+        val adaHack = EventbriteParser.events(URI("https://www.eventbrite.com/o/klub-ada-110471256331"), FakeWeb.fixture("eventbrite-klub-ada.json")).single()
+        assertEquals("AdaHack: Code for change", adaHack.title)
+        assertEquals("Epilog", adaHack.locationName)
+        assertEquals("Tehnološki park 22a, 1000 Ljubljana", adaHack.locationAddress)
     }
 
     @Test

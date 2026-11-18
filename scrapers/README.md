@@ -18,6 +18,10 @@ Kotlin and Spring Boot like MetaOS, with jsoup, ical4j and Playwright for Java; 
   iCal and Luma by their fields, the rest by the website's host (Tehnološki park Ljubljana, GZS, Primorski tehnološki
   park, Startup.si, DataScience, FRI, KCUI, the incubators, Računalniški muzej, LUI, Spletne urice, SLAIF, Katapult,
   Podbreznik, MPIK). A link no parser takes answers no events, which MetaOS shows as such.
+- Where an event is, its venue's name and its address ("Kovačnica", "Poštna ulica 4, 4000 Kranj"), or "Online", is
+  made alike for every source by `Locations.kt`: from structured data where a source has it (Meetup's and Eventbrite's
+  venues, Luma's Google places, JSON-LD's `Place`, The Events Calendar's and Indico's APIs), else split from the one
+  line it writes (iCal's LOCATION, "Kje: …"). What a source doesn't say stays empty.
 - Events that ended over a year ago are left out (`since`). An event keeps Goo's ID for it (`externalId`, e.g.
   `meetup-123`), so the events MetaOS imported from Goo are the ones found again.
 - Most read the sites over HTTP (`Web.kt`); Eventbrite's and GZS's pages need a browser, Playwright's browser server in

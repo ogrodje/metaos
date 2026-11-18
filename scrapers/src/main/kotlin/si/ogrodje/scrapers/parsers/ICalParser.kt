@@ -37,6 +37,8 @@ object ICalParser : Parser {
                 hasEndTime = it.hasEndTime,
                 description = it.description,
                 eventUrl = it.eventUrl,
+                locationName = it.location.name,
+                locationAddress = it.location.address,
             )
         }
     }

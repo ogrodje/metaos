@@ -42,7 +42,8 @@ class SLAIFParserTest {
         assertEquals(LocalTime.of(15, 0), local(event.end!!).toLocalTime())
         assertTrue(event.hasStartTime)
         assertTrue(event.hasEndTime)
-        assertEquals("VK", event.locationName)
+        // "VK", tagged Online
+        assertEquals("Online", event.locationName)
         assertEquals("Izvajalci: Marko Drobnjak", event.description)
         assertEquals("https://indico.ijs.si/event/3989/", event.eventUrl)
         assertEquals("https://www.slaif.si/events", event.sourceUrl)
@@ -78,5 +79,34 @@ class SLAIFParserTest {
         assertTrue(SLAIFParser.accepts(SourceField.WEBSITE, URI("https://slaif.si")))
         assertTrue(SLAIFParser.accepts(SourceField.WEBSITE, URI("https://www.slaif.si/events")))
         assertFalse(SLAIFParser.accepts(SourceField.WEBSITE, URI("https://notslaif.si")))
+    }
+
+    @Test
+    fun `places the saved events by their tags, locations and Indico`() {
+        // SLAIF's API and five of its events' Indico exports, as they were on 18 November 2026
+        val web = FakeWeb(
+            mapOf("https://www.slaif.si/api/events" to FakeWeb.fixture("slaif-events.json")) +
+                listOf(3989, 4023, 3969, 3977, 3819).associate { "https://indico.ijs.si/export/event/$it.json" to FakeWeb.fixture("indico-$it.json") },
+        )
+        val events = SLAIFParser.parse(context(web), URI("https://www.slaif.si"), LocalDate.of(2026, 6, 1)).associateBy { it.externalId }
+        fun place(id: Int) = Location(events.getValue("slaif-$id").locationName, events.getValue("slaif-$id").locationAddress)
+        fun atIndico(id: Int) = events.values.single { it.eventUrl == "https://indico.ijs.si/event/$id/" }.let { Location(it.locationName, it.locationAddress) }
+
+        // "VK", tagged Online, and Indico isn't asked
+        assertEquals(Location.ONLINE, place(52))
+        assertTrue(web.asked.none { it.endsWith("/3989.json") })
+        // Indico's place, room and address
+        assertEquals(Location("Teslova, Soba 38-39 \"e-predavalnica\", 1. nadstropje", "Teslova 30"), atIndico(4023))
+        assertEquals(Location("IZUM, Mala dvorana", "Prešernova ulica 17, 2000 Maribor"), atIndico(3969))
+        assertEquals(Location("UL FRI, P02", "Večna pot 113, 1000 Ljubljana"), atIndico(3819))
+        assertEquals(
+            Location("Tehnološki park Ljubljana, stavba B, 2. nadstropje, Technology Park Ljubljana d.o.o.", "Tehnološki park 19, 1000 Ljubljana"),
+            atIndico(3977),
+        )
+        // Indico not saved (404): SLAIF's own
+        assertEquals(
+            Location("Fakulteta za informacijske študije, Univerza v Novem mestu", "Ljubljanska cesta 31a, 8000 Novo mesto"),
+            atIndico(3993),
+        )
     }
 }

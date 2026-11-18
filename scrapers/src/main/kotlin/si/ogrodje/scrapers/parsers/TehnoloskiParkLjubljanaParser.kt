@@ -1,5 +1,6 @@
 package si.ogrodje.scrapers.parsers
 
+import org.jsoup.nodes.Document
 import org.slf4j.LoggerFactory
 import si.ogrodje.scrapers.*
 import tools.jackson.databind.JsonNode
@@ -10,8 +11,8 @@ import java.time.LocalDate
 /**
  * Tehnološki park Ljubljana (https://www.tp-lj.si/sl/koledar-dogodkov): its calendar is drawn from the JSON in a script,
  * `dogodkiJSON`, with each event's days. Those from a month ago on are read from their own pages too, for their times
- * (`p.eventDate`, [TehnoloskiParkLjubljanaDurationParser]); one whose page can't be read keeps its days. Its ID is
- * the calendar's, tp-<id>.
+ * (`p.eventDate`, [TehnoloskiParkLjubljanaDurationParser]) and its place, where its text says ("Kje:"); one whose
+ * page can't be read keeps its days. Its ID is the calendar's, tp-<id>.
  */
 object TehnoloskiParkLjubljanaParser : Parser {
     override val source = Source.TEHNOLOSKI_PARK_LJUBLJANA
@@ -52,19 +53,38 @@ object TehnoloskiParkLjubljanaParser : Parser {
         )
     }
 
-    private fun withTimes(context: ScrapeContext, event: ScrapedEvent): ScrapedEvent = try {
-        val raw = context.web.document(URI(event.eventUrl!!)).selectFirst("p.eventDate")?.text()
-            ?.replace("Datum dogodka: ", "")?.trim() ?: throw NoSuchElementException("No duration found")
-        val duration = TehnoloskiParkLjubljanaDurationParser.parse(raw)
-        event.copy(
-            start = duration.start,
-            hasStartTime = duration.hasStartTime,
-            end = duration.end,
-            hasEndTime = duration.hasEndTime,
-        )
-    } catch (e: Exception) {
-        log.warn("Failed getting duration details from {}: {}", event.eventUrl, e.message)
-        event
+    private fun withTimes(context: ScrapeContext, event: ScrapedEvent): ScrapedEvent {
+        val page = try {
+            context.web.document(URI(event.eventUrl!!))
+        } catch (e: Exception) {
+            log.warn("Failed getting duration details from {}: {}", event.eventUrl, e.message)
+            return event
+        }
+        val location = locationIn(page)
+        val placed = event.copy(locationName = location.name, locationAddress = location.address)
+        return try {
+            val raw = page.selectFirst("p.eventDate")?.text()
+                ?.replace("Datum dogodka: ", "")?.trim() ?: throw NoSuchElementException("No duration found")
+            val duration = TehnoloskiParkLjubljanaDurationParser.parse(raw)
+            placed.copy(
+                start = duration.start,
+                hasStartTime = duration.hasStartTime,
+                end = duration.end,
+                hasEndTime = duration.hasEndTime,
+            )
+        } catch (e: Exception) {
+            log.warn("Failed getting duration details from {}: {}", event.eventUrl, e.message)
+            placed
+        }
+    }
+
+    /**
+     * Where the page's text says the event is ("Kje: Tehnološki park Ljubljana", "KJE? G-Gravity Incubator, Milano"),
+     * if it says: the calendar has no place, nor do most pages
+     */
+    internal fun locationIn(page: Document): Location {
+        val text = page.selectFirst("p.eventDate")?.parent() ?: return Location.NONE
+        return Locations.parse(EventText.locationIn(EventText.linesOf(text.html())))
     }
 
     private fun day(text: String) = LocalDate.parse(text).atStartOfDay(LJUBLJANA).toInstant()

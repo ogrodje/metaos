@@ -9,8 +9,10 @@ import java.time.ZonedDateTime
 
 /**
  * A Meetup group (https://www.meetup.com/<group>/events), whatever page of the group the URL is: its events page has
- * them in Next.js's `__NEXT_DATA__`, in the Apollo cache, with their venues as entries of their own. A page without
- * that cache is no events, as Goo had it. Events that started over six months ago are left out.
+ * them in Next.js's `__NEXT_DATA__`, in the Apollo cache, with their venues as entries of their own (a name, a street
+ * and a city). An online event (`isOnline`, `eventType` ONLINE, or Meetup's venue "Online event") is online; a hybrid
+ * one is at its venue. A page without that cache is no events, as Goo had it. Events that started over six months ago
+ * are left out.
  */
 object MeetupComParser : Parser {
     override val source = Source.MEETUP
@@ -40,19 +42,17 @@ object MeetupComParser : Parser {
             .filter { it.start > cutoff }
     }
 
-    private class Venue(val name: String, val address: String)
-
-    private fun venue(node: JsonNode): Pair<String, Venue>? {
+    // Its state is a code, often a wrong one ("al" for Ljubljana), and its country one too, so neither is kept
+    private fun venue(node: JsonNode): Pair<String, Location>? {
         val id = node.text("id")?.split(":")?.first() ?: return null
-        val name = node.text("name") ?: return null
-        val address = listOf("address", "city", "state").mapNotNull { node.text(it)?.takeIf(String::isNotEmpty) }
-            .joinToString(", ").trim()
-        return id to Venue(name, address)
+        return id to Locations.of(node.text("name"), Locations.address(node.text("address"), node.text("city")))
     }
 
-    private fun event(url: URI, node: JsonNode, venues: Map<String, Venue>): ScrapedEvent {
+    private fun event(url: URI, node: JsonNode, venues: Map<String, Location>): ScrapedEvent {
         val id = requireNotNull(node.text("id"))
         val venue = node.path("venue").text("__ref")?.split(":")?.getOrNull(1)?.let(venues::get)
+        val online = node.path("isOnline").booleanValue(false) || node.text("eventType") == "ONLINE"
+        val location = if (online) Location.ONLINE else venue ?: Location.NONE
         return ScrapedEvent(
             source = source,
             externalId = "meetup-$id",
@@ -62,8 +62,8 @@ object MeetupComParser : Parser {
             end = node.text("endTime")?.let { OffsetDateTime.parse(it).toInstant() },
             description = node.text("description")?.trim(),
             eventUrl = node.text("eventUrl")?.also(::URI),
-            locationName = venue?.name,
-            locationAddress = venue?.address,
+            locationName = location.name,
+            locationAddress = location.address,
         )
     }
 

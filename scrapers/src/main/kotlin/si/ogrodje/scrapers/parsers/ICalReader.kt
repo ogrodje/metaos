@@ -2,6 +2,7 @@ package si.ogrodje.scrapers.parsers
 
 import net.fortuna.ical4j.data.CalendarBuilder
 import net.fortuna.ical4j.model.Component
+import net.fortuna.ical4j.model.Property
 import net.fortuna.ical4j.model.component.VEvent
 import java.io.StringReader
 import java.net.URI
@@ -23,13 +24,16 @@ data class ICalEvent(
     val end: Instant? = null,
     val hasStartTime: Boolean = true,
     val hasEndTime: Boolean = true,
+    val location: Location = Location.NONE,
 )
 
 /**
  * Reads an iCal calendar's events with ical4j, as Goo's ICalReader: its ID is the event's UID without Google's
  * `@google.com`, its link the event's URL, else the first link in its description. A day without a time starts at
- * 00:01 and ends at 23:59 of its last day; a time without a zone, or with a TZID, is Ljubljana's. An event it can't
- * read is skipped; the rest are those that start after [ICalReader.read]'s `after`, by start.
+ * 00:01 and ends at 23:59 of its last day; a time without a zone, or with a TZID, is Ljubljana's. Its LOCATION is one
+ * line, its venue's name and its address ("Saša Inkubator, Šaleška cesta 2A, 3320 Velenje"), or a meeting's link
+ * (online), which [Locations.parse] tells apart. An event it can't read is skipped; the rest are those that start
+ * after [ICalReader.read]'s `after`, by start.
  */
 object ICalReader {
     private val zone = ZoneId.of("Europe/Ljubljana")
@@ -69,6 +73,7 @@ object ICalReader {
             end = end?.first,
             hasStartTime = hasStartTime,
             hasEndTime = end?.second ?: false,
+            location = Locations.parse(event.getProperty<Property>(Property.LOCATION).map { it.value }.orElse(null)),
         )
     }
 

@@ -99,7 +99,8 @@ class InkubatorSavinjskeRegijeParserTest {
     @Test
     fun `keeps a place other than the incubator`() {
         val event = events.single { it.title == "Pitchaj prepričljivo" }
-        assertEquals("OOZ Celje, Cesta na Ostrožno 4, Celje", event.locationName)
+        assertEquals("OOZ Celje", event.locationName)
+        assertEquals("Cesta na Ostrožno 4, Celje", event.locationAddress)
         assertTrue(event.hasEndTime)
     }
 

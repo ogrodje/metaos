@@ -120,7 +120,8 @@ class WordPressEventsParserTest {
         assertEquals(t(16, 0), local(event.end!!).toLocalTime())
         assertTrue(event.hasStartTime)
         assertTrue(event.hasEndTime)
-        assertEquals("LUI – Ljubljanski univerzitetni inkubator, Vojkova cesta 63, Ljubljana", event.locationName)
+        assertEquals("LUI – Ljubljanski univerzitetni inkubator", event.locationName)
+        assertEquals("Vojkova cesta 63, Ljubljana", event.locationAddress)
         assertEquals("Opis: Canva Masterclass", event.description)
         assertEquals("https://lui.si/dogodki/canva-masterclass-2/", event.eventUrl)
         assertEquals("https://lui.si/aktualno/", event.sourceUrl)
@@ -186,7 +187,8 @@ class WordPressEventsParserTest {
         assertEquals(t(16, 0), local(ads.start).toLocalTime())
         assertEquals(3600, local(ads.start).offset.totalSeconds)
         assertEquals(t(19, 0), local(ads.end!!).toLocalTime())
-        assertEquals("Pomurski tehnološki park, Plese 9a, 9000 Murska Sobota", ads.locationName)
+        assertEquals("Pomurski tehnološki park", ads.locationName)
+        assertEquals("Plese 9a, 9000 Murska Sobota", ads.locationAddress)
         assertEquals("https://www.p-tech.si/google-ads/", ads.eventUrl)
         assertEquals("https://www.p-tech.si/kategorija/dogodki/", ads.sourceUrl)
 
@@ -219,7 +221,8 @@ class WordPressEventsParserTest {
         assertEquals(d(2026, 11, 20), local(event.start).toLocalDate())
         assertEquals(t(17, 0), local(event.start).toLocalTime())
         assertEquals(t(19, 0), local(event.end!!).toLocalTime())
-        assertEquals("Podjetniški inkubator Bela krajina, Belokranjska cesta 36, 8340 Črnomelj", event.locationName)
+        assertEquals("Podjetniški inkubator Bela krajina", event.locationName)
+        assertEquals("Belokranjska cesta 36, 8340 Črnomelj", event.locationAddress)
         assertEquals(Source.INKUBATOR_BELA_KRAJINA, event.source)
     }
 
@@ -236,7 +239,8 @@ class WordPressEventsParserTest {
         val emoji = events.single { it.externalId == "inkubatorrs-1490" }
         assertEquals(d(2026, 11, 19), local(emoji.start).toLocalDate())
         assertEquals(t(13, 0), local(emoji.start).toLocalTime())
-        assertEquals("Preko spleta", emoji.locationName)
+        assertEquals("Online", emoji.locationName)
+        assertNull(emoji.locationAddress)
         val hour = events.single { it.externalId == "inkubatorrs-1500" }
         assertEquals(d(2026, 11, 26), local(hour.start).toLocalDate())
         assertEquals(t(12, 0), local(hour.start).toLocalTime())

@@ -77,6 +77,7 @@ class SpletneUriceParserTest {
         assertEquals(LocalTime.of(19, 5), local(event).toLocalTime())
         assertEquals(3600, local(event).offset.totalSeconds)
         assertEquals("BarCoda, Vetrinjc", event.locationName)
+        assertNull(event.locationAddress)
         assertEquals(lede, event.description)
         assertEquals("$host/176-firma-na-avtopilotu/", event.eventUrl)
         assertEquals("$host/predavanja/", event.sourceUrl)
@@ -107,12 +108,12 @@ class SpletneUriceParserTest {
         val published = LocalDateTime.of(2021, 5, 4, 10, 0)
         SpletneUriceParser.talkFrom("<p>11. maj @ 18:30 izjemoma!! //ONLINE// Vsak dan proizvedemo več vsebine.</p>", published)!!.let {
             assertEquals(LocalDateTime.of(2021, 5, 11, 18, 30), it.start)
-            assertEquals("ONLINE", it.location)
+            assertEquals(Location.ONLINE, it.location)
         }
         assertEquals(LocalDateTime.of(2022, 1, 11, 19, 5), SpletneUriceParser.talkFrom("<p>11. JANUAR @ 19:05 //ONLINE//</p>", LocalDateTime.of(2022, 1, 5, 10, 0))?.start)
         SpletneUriceParser.talkFrom("<p>torek , 10. oktober @ 19:05 // Pisarna, Mb //</p>", LocalDateTime.of(2023, 10, 2, 10, 0))!!.let {
             assertEquals(LocalDate.of(2023, 10, 10), it.start.toLocalDate())
-            assertEquals("Pisarna, Mb", it.location)
+            assertEquals(Location("Pisarna, Mb"), it.location)
         }
         assertNull(SpletneUriceParser.talkFrom("<p>Prijave do 15. maja.</p>", published))
         assertNull(SpletneUriceParser.talkFrom("<p>30. februar 2026 ob 19:05 // BarCoda</p>", LocalDateTime.of(2026, 2, 1, 10, 0)))

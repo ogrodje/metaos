@@ -108,6 +108,7 @@ class KatapultParserTest {
         assertTrue(event.hasStartTime)
         assertTrue(event.hasEndTime)
         assertEquals("Katapult in Dewesoft, Trbovlje", event.locationName)
+        assertNull(event.locationAddress)
         assertEquals("Kako ideja postane izdelek, ki ga kupci res želijo?", event.description)
         assertEquals("https://katapult.si/novice/od-ideje-do-izdelka", event.eventUrl)
         assertEquals("https://katapult.si/dogodki", event.sourceUrl)
@@ -173,5 +174,12 @@ class KatapultParserTest {
     fun `takes katapult's urls`() {
         assertTrue(KatapultParser.accepts(SourceField.WEBSITE, URI("https://www.katapult.si/")))
         assertFalse(KatapultParser.accepts(SourceField.WEBSITE, URI("https://blog.katapult.si/")))
+    }
+
+    @Test
+    fun `a saved post's place and address`() {
+        // https://katapult.si/novice/napredna-uporaba-clauda-za-optimizacijo-pogostih-nalog-pri-poslovanju, 18 November 2026
+        val post = KatapultParser.postIn(org.jsoup.Jsoup.parse(FakeWeb.fixture("katapult-napredna-uporaba-clauda.html")))!!
+        assertEquals(Location("Katapult", "Gabrsko 12, Trbovlje"), post.place)
     }
 }

@@ -16,7 +16,8 @@ import java.time.ZoneId
 /**
  * An Eventbrite organizer (https://www.eventbrite.com/o/<organizer>): its page, in a browser, as Eventbrite turns away
  * plain requests, has its upcoming events in Next.js's `__NEXT_DATA__`, each with its date, time and time zone apart.
- * A page with neither the organizer nor its events is Eventbrite's bot check, which fails so it's tried again.
+ * A page with neither the organizer nor its events is Eventbrite's bot check, which fails so it's tried again. An
+ * event is at its `primary_venue`, or online.
  */
 object EventbriteParser : Parser {
     override val source = Source.EVENTBRITE
@@ -76,9 +77,27 @@ object EventbriteParser : Parser {
             hasEndTime = !item.path("hide_end_date").booleanValue(false),
             description = item.text("summary")?.takeIf(String::isNotEmpty),
             eventUrl = eventUrl.toString(),
-            locationName = if (online) null else venue.text("name")?.takeIf(String::isNotEmpty),
-            locationAddress = if (online) null else venue.path("address").text("localized_address_display")?.takeIf(String::isNotEmpty),
+            locationName = location(online, venue).name,
+            locationAddress = location(online, venue).address,
         )
+    }
+
+    // "4 Poštna ulica": Eventbrite writes the number first, as in English, which a Slovenian street has last
+    private val numberFirst = Regex("""^(\d{1,4}[a-zA-Z]?)\s+(\p{L}.*)$""")
+
+    /**
+     * An online event is online; else its venue, with its street (the number put last in Slovenia), postcode and
+     * city, or Eventbrite's own line of them
+     */
+    internal fun location(online: Boolean, venue: JsonNode): Location {
+        if (online) return Location.ONLINE
+        val address = venue.path("address")
+        val slovenian = address.text("country").let { it == null || it == "SI" }
+        val street = listOfNotNull(address.text("address_1"), address.text("address_2")).joinToString(", ")
+            .let { if (slovenian) numberFirst.replace(it, "$2 $1") else it }
+        val line = Locations.address(street, Locations.postcodeCity(address.text("postal_code"), address.text("city")))
+            ?: address.text("localized_address_display")
+        return Locations.of(venue.text("name"), line)
     }
 
     private fun time(date: String, time: String, zone: String) =

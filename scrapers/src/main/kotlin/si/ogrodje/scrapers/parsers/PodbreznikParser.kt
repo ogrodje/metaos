@@ -18,8 +18,8 @@ import java.time.LocalDateTime
  * The REST API has no event fields, so each event's page is read: its schema.org `Event` (`startDate`, `endDate`,
  * `eventAttendanceMode`), whose times are Ljubljana's with a wrong "+00:00", so the offset is ignored; and its sidebar,
  * whose `.single-event-meta-schedule-time-start/-end` say whether there's a time at all (one without has "00:00" in its
- * `startDate`), and whose `.event-location` has the place and its address, a line each. A page without an `Event` is
- * skipped. Its ID is the post's, as Goo's.
+ * `startDate`), and whose `.event-location` has the place and its address, a line each, else the `Event`'s `location`
+ * (a `Place`, or online). A page without an `Event` is skipped. Its ID is the post's, as Goo's.
  */
 object PodbreznikParser : Parser {
     override val source = Source.PODJETNISKI_INKUBATOR_PODBREZNIK
@@ -124,17 +124,17 @@ object PodbreznikParser : Parser {
         val document = Jsoup.parse(html)
         val event = eventIn(document) ?: throw IllegalArgumentException("No schema.org Event on the page")
         val start = event.string("startDate")?.let(::localOf) ?: throw IllegalArgumentException("No startDate")
-        val online = event.string("eventAttendanceMode")?.contains("Online") == true
         val lines = document.selectFirst(".event-location")?.html()?.split(Regex("(?i)<br\\s*/?>")).orEmpty()
-            .map { Jsoup.parse(it).text().replace(' ', ' ').trim() }
-            .filter { it.isNotEmpty() }
+            .mapNotNull { Locations.clean(Jsoup.parse(it).text()) }
+        // The sidebar's place and its address, a line each; else the Event's own place, or online
+        val location = if (lines.isEmpty()) Locations.fromJsonLd(event) else Locations.of(lines.first(), Locations.address(*lines.drop(1).toTypedArray()))
         return Page(
             start = start,
             end = event.string("endDate")?.let(::localOf),
             hasStartTime = hasTime(document, ".single-event-meta-schedule-time-start"),
             hasEndTime = hasTime(document, ".single-event-meta-schedule-time-end"),
-            place = lines.firstOrNull() ?: if (online) "Online" else null,
-            address = lines.drop(1).joinToString(", ").ifEmpty { null },
+            place = location.name,
+            address = location.address,
             description = event.string("description")?.trim()?.ifEmpty { null },
         )
     }

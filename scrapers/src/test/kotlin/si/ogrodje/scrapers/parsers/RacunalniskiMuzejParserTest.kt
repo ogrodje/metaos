@@ -86,6 +86,8 @@ class RacunalniskiMuzejParserTest {
         assertEquals(LocalTime.of(19, 0), event.end!!.atZone(LJUBLJANA).toLocalTime())
         assertTrue(event.hasStartTime && event.hasEndTime)
         assertEquals("Računalniški muzej", event.locationName)
+        // The page names the place, never its address
+        assertNull(event.locationAddress)
         assertEquals("Opis dogodka Obisk Dedka Mraza.", event.description)
         assertEquals("$host/event/dedek-mraz/", event.eventUrl)
     }

@@ -80,9 +80,29 @@ class KCUIParserTest {
         assertEquals(LocalDateTime.of(2026, 4, 17, 10, 0), event.start.atZone(LJUBLJANA).toLocalDateTime())
         assertTrue(event.hasStartTime)
         assertFalse(event.hasEndTime)
-        assertEquals("Spletni dogodek", event.locationName)
+        assertEquals("Online", event.locationName)
+        assertEquals(null, event.locationAddress)
         assertEquals("https://kcui.si/izobrazevanja/agentna-ui", event.eventUrl)
         assertTrue(event.description!!.contains("avtonomnim AI agentom"))
+    }
+
+    @Test
+    fun `places the saved pages' events`() {
+        // Three trainings' pages, saved on 18 November 2026
+        val pages = mapOf("ui-kot-pomocnik" to "kcui-ui-kot-pomocnik.html", "razumevanje-llm" to "kcui-razumevanje-llm.html", "trendi" to "kcui-trendi-dostopnosti.html")
+        val web = FakeWeb(
+            mapOf("https://kcui.si/izobrazevanja" to pages.keys.joinToString("") { """<a href="/izobrazevanja/$it">x</a>""" }) +
+                pages.map { (slug, file) -> "https://kcui.si/izobrazevanja/$slug" to FakeWeb.fixture(file) },
+        )
+        val events = KCUIParser.parse(context(web), URI("https://kcui.si/")).associateBy { it.eventUrl!!.substringAfterLast('/') }
+        // "Gospodarska zbornica Slovenije, Dimičeva 13, 1000 Ljubljana, dvorana A (hibridno)"
+        assertEquals("Gospodarska zbornica Slovenije, dvorana A (hibridno)", events.getValue("ui-kot-pomocnik").locationName)
+        assertEquals("Dimičeva 13, 1000 Ljubljana", events.getValue("ui-kot-pomocnik").locationAddress)
+        assertEquals("Fakulteta za računalništvo in informatiko, predavalnica P03", events.getValue("razumevanje-llm").locationName)
+        assertEquals("Večna pot 113, 1000 Ljubljana", events.getValue("razumevanje-llm").locationAddress)
+        // "Na spletu (Zoom)"
+        assertEquals("Online", events.getValue("trendi").locationName)
+        assertEquals(null, events.getValue("trendi").locationAddress)
     }
 
     @Test

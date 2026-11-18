@@ -13,8 +13,9 @@ import java.time.LocalTime
  * Slovenska tovarna UI (SLAIF, https://www.slaif.si/events): a single-page app that reads its events from a public
  * JSON API, `/api/events`. A title holds both languages, "slovensko | English", of which it takes the first, as the
  * site in Slovenian does. An empty `time_range` is a time not known yet: the event is all-day. The event links to its
- * Indico page, where registration is, else to SLAIF's events page. Drafts are left out, and an item that doesn't fit
- * is skipped. Its ID is the item's, as Goo's.
+ * Indico page, where registration is, else to SLAIF's events page. Its place is its `location` ("Teslova", "Online"),
+ * online by its tags too, or, for the recent and upcoming ones, the place, room and address on Indico, where they're
+ * filled in. Drafts are left out, and an item that doesn't fit is skipped. Its ID is the item's, as Goo's.
  */
 object SLAIFParser : Parser {
     override val source = Source.SLAIF
@@ -23,19 +24,56 @@ object SLAIFParser : Parser {
 
     override fun accepts(field: SourceField, url: URI) = url.host.orEmpty().let { it == "slaif.si" || it.endsWith(".slaif.si") }
 
-    override fun parse(context: ScrapeContext, url: URI): List<ScrapedEvent> {
+    override fun parse(context: ScrapeContext, url: URI) = parse(context, url, LocalDate.now(LJUBLJANA))
+
+    internal fun parse(context: ScrapeContext, url: URI, today: LocalDate): List<ScrapedEvent> {
         val eventsPage = url.at("/events").toString()
-        return context.web.json(url.at("/api/events")).items().mapNotNull { node ->
+        val items = context.web.json(url.at("/api/events")).items().mapNotNull { node ->
             try {
                 item(node)
             } catch (e: RuntimeException) {
                 log.warn("Skipping SLAIF event ${node.get("id") ?: "?"}: ${e.message}")
                 null
             }
-        }.filter { it.status == "published" }.map { event(eventsPage, it) }
+        }.filter { it.status == "published" }
+        // Indico's pages of the recent and upcoming ones only: older events keep what SLAIF says
+        val withIndico = items.filter { !it.date.isBefore(today.minusDays(INDICO_DAYS_BACK)) && !it.online }.take(MAX_INDICO).toSet()
+        return items.map { item ->
+            val place = (if (item in withIndico) indicoPlace(context.web, item) else null) ?: item.place
+            event(eventsPage, item, place)
+        }
     }
 
-    private fun event(eventsPage: String, item: Item): ScrapedEvent {
+    private const val INDICO_DAYS_BACK = 30L
+    private const val MAX_INDICO = 20
+    private val indicoEvent = Regex("""^(https?://[^/]+)/event/(\d+)""")
+    // What Indico's form has until it's filled in, as SLAIF's has it: "NASLOV", "SOBA"; and "TBA"
+    private val placeholders = setOf("naslov", "soba", "lokacija", "prostor", "tba", "tbd", "n/a", "-")
+
+    /**
+     * Where Indico says the event is, from its export API (`/export/event/<id>.json`): its place, room and address,
+     * e.g. "IZUM", "Mala dvorana" and "Prešernova ulica 17, 2000 Maribor"; null when it doesn't answer or only has its
+     * form's placeholders
+     */
+    internal fun indicoPlace(web: Web, item: Item): Location? {
+        val (base, id) = indicoEvent.find(item.indicoUrl ?: return null)?.destructured ?: return null
+        val event = try {
+            web.json(URI("$base/export/event/$id.json")).path("results").values().firstOrNull() ?: return null
+        } catch (e: Exception) {
+            log.warn("No Indico details for SLAIF event ${item.id}: ${e.message}")
+            return null
+        }
+        fun text(name: String) = Locations.clean(event.get(name)?.takeIf { it.isString }?.stringValue())
+            ?.takeUnless { it.lowercase() in placeholders }
+        val address = Locations.parse(text("address"))
+        val place = text("location")
+        val room = text("room")
+        val names = listOfNotNull(if (room != null && place != null && room.startsWith(place)) null else place, room, address.name)
+        val location = Locations.of(names.joinToString(", ").ifEmpty { null }, address.address)
+        return location.takeUnless { it.isEmpty }
+    }
+
+    private fun event(eventsPage: String, item: Item, place: Location): ScrapedEvent {
         val times = timesOf(item.timeRange)
         val start = at(item.date, times?.first ?: LocalTime.MIDNIGHT)
         val end = times?.second?.let { at(item.date, it) }?.takeIf { it.isAfter(start) }
@@ -50,11 +88,12 @@ object SLAIFParser : Parser {
             hasEndTime = end != null,
             description = item.lecturer?.let { "Izvajalci: $it" },
             eventUrl = item.indicoUrl ?: eventsPage,
-            locationName = item.location,
+            locationName = place.name,
+            locationAddress = place.address,
         )
     }
 
-    private data class Item(
+    internal data class Item(
         val id: Long,
         val title: String,
         val date: LocalDate,
@@ -63,7 +102,13 @@ object SLAIFParser : Parser {
         val lecturer: String?,
         val indicoUrl: String?,
         val status: String,
-    )
+        val tags: Set<String> = emptySet(),
+    ) {
+        /** Online by its tags ("Online", not "On-site"), whatever its location says ("VK") */
+        val online: Boolean get() = "online" in tags && "on-site" !in tags
+
+        val place: Location get() = if (online) Location.ONLINE else Locations.parse(location)
+    }
 
     private fun item(node: JsonNode): Item {
         fun optional(name: String): String? {
@@ -85,6 +130,8 @@ object SLAIFParser : Parser {
             lecturer = nonEmpty(optional("lecturer")),
             indicoUrl = nonEmpty(optional("indico_url"))?.takeIf { runCatching { URI(it) }.isSuccess },
             status = optional("status") ?: "published",
+            tags = node.get("tags")?.takeIf { it.isArray }?.values()?.mapNotNull { it.takeIf { t -> t.isString }?.stringValue()?.lowercase() }
+                .orEmpty().toSet(),
         )
     }
 

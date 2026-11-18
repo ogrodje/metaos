@@ -10,7 +10,7 @@ import java.time.LocalDate
 /**
  * KCUI (https://kcui.si/izobrazevanja): its trainings, current and past on one page, each read from its own page: the
  * title (`h1`), the lede under it, and the "Kdaj" and "Kje" fields, e.g. "Petek, 17. april 2026 ob 10:00", whose time
- * is optional. A page that doesn't read is left out. Its ID is the SHA-1 of the event's URL, kcui-<sha1>.
+ * is optional, and "GZS, dvorana G, Dimičeva ulica 13, Ljubljana" or "Na spletu (Zoom)", a line. A page that doesn't read is left out. Its ID is the SHA-1 of the event's URL, kcui-<sha1>.
  */
 object KCUIParser : Parser {
     override val source = Source.KCUI
@@ -52,6 +52,7 @@ object KCUIParser : Parser {
         val date = LocalDate.of(m.groupValues[3].toInt(), month, m.groupValues[1].toInt())
         val hour = m.groups[4]
         val start = if (hour != null) date.atTime(hour.value.toInt(), m.groupValues[5].toInt()) else date.atStartOfDay()
+        val location = Locations.parse(field(page, "Kje"))
         return ScrapedEvent(
             source = source,
             externalId = "kcui-${sha1(eventUrl.toString())}",
@@ -62,7 +63,8 @@ object KCUIParser : Parser {
             hasEndTime = false,
             description = page.selectFirst("h1 + p")?.text()?.trim()?.takeIf { it.isNotEmpty() },
             eventUrl = eventUrl.toString(),
-            locationName = field(page, "Kje"),
+            locationName = location.name,
+            locationAddress = location.address,
         )
     }
 

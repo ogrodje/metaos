@@ -107,7 +107,8 @@ class DataScienceParserTest {
         assertEquals(LocalTime.of(17, 0), start.toLocalTime())
         assertEquals(LocalTime.of(20, 0), event.end!!.atZone(LJUBLJANA).toLocalTime())
         assertTrue(event.hasStartTime && event.hasEndTime)
-        assertEquals("Faculty of Computer and Information Science, Večna pot 113, Ljubljana. Lecture room 3", event.locationName)
+        assertEquals("Faculty of Computer and Information Science, Lecture room 3", event.locationName)
+        assertEquals("Večna pot 113, Ljubljana", event.locationAddress)
         assertEquals("Get into the flow of AI-assisted …", event.description)
         assertEquals("https://datascience.fri.uni-lj.si/news/workshop_2026-11-26/", event.eventUrl)
         assertEquals("https://datascience.fri.uni-lj.si/events/", event.sourceUrl)
@@ -122,10 +123,14 @@ class DataScienceParserTest {
 
         val talks = event("datascience-datasciencetalks001")
         assertFalse(talks.hasStartTime)
-        assertEquals("Teads Ljubljana, Dunajska cesta 5, 1000 Ljubljana", talks.locationName)
+        assertEquals("Teads Ljubljana", talks.locationName)
+        assertEquals("Dunajska cesta 5, 1000 Ljubljana", talks.locationAddress)
         assertEquals("The Data Science Talks are a recurring event of the Data Science Initiative …", talks.description)
 
         assertNull(event("datascience-workshop_x").locationName)
+        assertNull(event("datascience-workshop_x").locationAddress)
+        assertEquals("Faculty of Computer and Information Science", spark.locationName)
+        assertEquals("Večna pot 113, Ljubljana", spark.locationAddress)
 
         val careerDay = event("datascience-workshop_2026-10-21-3")
         assertEquals("Lobby FRI", careerDay.locationName)
@@ -167,5 +172,21 @@ class DataScienceParserTest {
     fun `takes datascience's own host only`() {
         assertTrue(DataScienceParser.accepts(SourceField.WEBSITE, URI("https://datascience.fri.uni-lj.si/")))
         assertFalse(DataScienceParser.accepts(SourceField.WEBSITE, URI("https://fri.uni-lj.si/")))
+    }
+
+    @Test
+    fun `places the saved page's events`() {
+        // The events page as it was on 18 November 2026
+        val web = FakeWeb(mapOf("https://datascience.fri.uni-lj.si/events/" to FakeWeb.fixture("datascience-events.html")))
+        val events = DataScienceParser.parse(context(web), DataScienceParser.homepage, LocalDate.of(2026, 11, 18))
+            .associateBy { it.title }
+        val quiz = events.getValue("Data Science Pub Quiz")
+        assertEquals("Kazina Jazz Club", quiz.locationName)
+        assertEquals("Kongresni trg 1, 1000 Ljubljana", quiz.locationAddress)
+        val luxonis = events.values.single { it.title.startsWith("Computer Vision on the Edge") }
+        assertEquals("Faculty of Computer and Information Science, Lecture room 03", luxonis.locationName)
+        assertEquals("Večna pot 113, Ljubljana", luxonis.locationAddress)
+        assertEquals("FRI", events.getValue("Spark sessions 007").locationName)
+        assertEquals("Večna pot 113, Ljubljana", events.getValue("Spark sessions 007").locationAddress)
     }
 }

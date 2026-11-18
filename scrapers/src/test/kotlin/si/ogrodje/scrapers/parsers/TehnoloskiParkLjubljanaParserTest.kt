@@ -72,6 +72,19 @@ class TehnoloskiParkLjubljanaParserTest {
         }
     }
 
+    private fun place(page: String) = TehnoloskiParkLjubljanaParser.locationIn(org.jsoup.Jsoup.parse(fixture(page)))
+
+    @Test
+    fun `an event is where its page says, when it says`() {
+        // Pages saved on 18 November 2026
+        assertEquals(Location("Tehnološki park Ljubljana"), place("tp-arena-podjetnistva.html"))
+        // Without the remark in brackets after it
+        assertEquals(Location("G-Gravity Incubator, Milano, Italija"), place("tp-tiger-hackathon.html"))
+        // A webinar that doesn't say where, and "Kje začeti z avtomatizacijo:" isn't a place
+        assertEquals(Location.NONE, place("tp-avtomatizacija-marketinga.html"))
+        assertTrue(events.all { it.locationName == null && it.locationAddress == null })
+    }
+
     @Test
     fun `a page without the calendar's JSON fails`() {
         val web = FakeWeb(mapOf("$site/sl/koledar-dogodkov" to "<html><body>Vzdrževanje</body></html>"))

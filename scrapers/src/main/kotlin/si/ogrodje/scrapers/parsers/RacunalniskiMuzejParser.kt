@@ -69,6 +69,7 @@ object RacunalniskiMuzejParser : Parser {
         val end: LocalDateTime? = calendarParam(page, "date_end")?.let(::calendarDateTime)
             ?.let { (date, time) -> time?.let { date.atTime(it) } }
             ?.takeIf { it.isAfter(start) }
+        val location = Locations.parse(info(page, "Lokacija:"))
         val id = page.selectFirst("body")?.let { postIdClass.find(it.className())?.groupValues?.get(1) }
             ?: eventUrl.path.removeSuffix("/").split('/').last()
         return ScrapedEvent(
@@ -82,7 +83,8 @@ object RacunalniskiMuzejParser : Parser {
             hasEndTime = end != null,
             description = page.selectFirst("meta[name=description]")?.attr("content")?.trim()?.takeIf { it.isNotEmpty() },
             eventUrl = eventUrl.toString(),
-            locationName = info(page, "Lokacija:"),
+            locationName = location.name,
+            locationAddress = location.address,
         )
     }
 

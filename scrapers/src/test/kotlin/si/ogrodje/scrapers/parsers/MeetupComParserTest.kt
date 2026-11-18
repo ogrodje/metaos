@@ -53,7 +53,36 @@ class MeetupComParserTest {
     fun `gives an event its venue`() {
         val venue = MeetupComParser.events(eventsUrl, html, now).single { it.externalId == "meetup-456" }
         assertEquals("Test Venue Ljubljana", venue.locationName)
-        assertEquals("Main Street 1, Ljubljana, Slovenia", venue.locationAddress)
+        assertEquals("Main Street 1, Ljubljana", venue.locationAddress)
+    }
+
+    private val longAgo = ZonedDateTime.parse("2020-01-01T12:00:00+01:00[Europe/Ljubljana]")
+
+    private fun saved(group: String) =
+        MeetupComParser.events(URI("https://www.meetup.com/$group/events"), FakeWeb.fixture("meetup-$group.html"), longAgo)
+            .associateBy { it.externalId }
+
+    @Test
+    fun `gives the saved groups' events their venues, and online ones Online`() {
+        val js = saved("js-ljubljana")
+        val connectIt = js.getValue("meetup-308105204")
+        assertEquals("Situla building - 1st floor", connectIt.locationName)
+        assertEquals("Vilharjeva cesta 46, Ljubljana", connectIt.locationAddress)
+        assertEquals("13|37 Ljubljana", js.getValue("meetup-286399566").locationName)
+        assertEquals("Slovenska cesta 28, Ljubljana", js.getValue("meetup-286399566").locationAddress)
+        val online = js.getValue("meetup-275117880")
+        assertEquals("Online", online.locationName)
+        assertNull(online.locationAddress)
+        // Without a venue, nowhere
+        assertNull(js.getValue("meetup-306530495").locationName)
+
+        val python = saved("ljubljana-python-group")
+        assertEquals("Visionect office", python.getValue("meetup-315532949").locationName)
+        assertEquals("Trzaska cesta 118, Ljubljana", python.getValue("meetup-315532949").locationAddress)
+        // A venue named by its street is its address
+        val street = python.getValue("meetup-299732452")
+        assertNull(street.locationName)
+        assertEquals("Vilharjeva cesta 40, Ljubljana", street.locationAddress)
     }
 
     @Test

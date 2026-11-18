@@ -76,14 +76,15 @@ object KatapultParser : Parser {
             hasEndTime = end != null && whenIs.endTime != null,
             description = post.description,
             eventUrl = base.at("/novice/$slug").toString(),
-            locationName = post.place,
+            locationName = post.place.name,
+            locationAddress = post.place.address,
         )
     }
 
     /** When an event happens: its first (and last, for several days) day, and the time of day */
     data class When(val startDate: LocalDate, val startTime: LocalTime?, val endDate: LocalDate?, val endTime: LocalTime?)
 
-    data class Post(val title: String, val whenIs: When, val place: String?, val description: String?)
+    data class Post(val title: String, val whenIs: When, val place: Location, val description: String?)
 
     /** The posts a listing page links to, in order */
     fun slugsIn(doc: Document): List<String> =
@@ -106,7 +107,7 @@ object KatapultParser : Parser {
         return Post(
             title = title,
             whenIs = whenIs,
-            place = paragraphs.firstNotNullOfOrNull { whereLine.matchEntire(it)?.groupValues?.get(1)?.trim() }?.ifEmpty { null },
+            place = Locations.parse(paragraphs.firstNotNullOfOrNull { whereLine.matchEntire(it)?.groupValues?.get(1) }),
             description = doc.selectFirst(".blog-single-subtitle")?.text()?.trim()?.ifEmpty { null },
         )
     }

@@ -88,6 +88,7 @@ object InkubatorSavinjskeRegijeParser : Parser {
         val page = context.web.document(post.link)
         val (day, location) = fields(page)
         val times = timesFrom(post.contentText)
+        val place = Locations.parse(location)
         return ScrapedEvent(
             source = source,
             externalId = "inkubatorsr-${post.id}",
@@ -99,7 +100,8 @@ object InkubatorSavinjskeRegijeParser : Parser {
             hasEndTime = times?.second != null,
             description = page.selectFirst("meta[name=description]")?.attr("content")?.trim()?.takeIf { it.isNotEmpty() },
             eventUrl = post.link.toString(),
-            locationName = location,
+            locationName = place.name,
+            locationAddress = place.address,
         )
     }
 

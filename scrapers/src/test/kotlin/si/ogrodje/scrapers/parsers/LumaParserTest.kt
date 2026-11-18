@@ -68,13 +68,35 @@ class LumaParserTest {
         assertEquals(Instant.parse("2026-11-12T19:00:00Z"), event.end)
         assertTrue(event.hasStartTime && event.hasEndTime)
         assertEquals("Celtra, razvoj informacijskih tehnologij, d.o.o.", event.locationName)
-        assertTrue(event.locationAddress!!.contains("Kongresni trg 3, 1000 Ljubljana"))
+        // Its full address without the name it starts with, and without Slovenia
+        assertEquals("Kongresni trg 3, 1000 Ljubljana", event.locationAddress)
         assertEquals("https://luma.com/rfb719i8", event.eventUrl)
         assertEquals("https://luma.com/sloai", event.sourceUrl)
 
         val online = events.getValue("luma-evt-online1")
         assertEquals("Online", online.locationName)
         assertNull(online.locationAddress)
+        // No place yet
+        assertNull(events.getValue("luma-evt-summer1").locationName)
+        assertNull(events.getValue("luma-evt-summer1").locationAddress)
+    }
+
+    @Test
+    fun `a place by its street, and one only its city is told of`() {
+        val street = entry(
+            "street", "At a street", "street1", "2026-12-01T17:00:00.000Z", "2026-12-01T19:00:00.000Z",
+            geo = """{"address":"Trg mladih 9","full_address":"Trg mladih 9, 1000 Ljubljana, Slovenia","city":"Ljubljana"}""",
+        )
+        val hidden = entry(
+            "hidden", "Register to see", "hidden1", "2026-12-02T17:00:00.000Z", "2026-12-02T19:00:00.000Z",
+            geo = """{"city":"Ljubljana","city_state":"Ljubljana, Slovenia","mode":"obfuscated"}""",
+        )
+        val web = FakeWeb(mapOf("$items&period=future" to page(listOf(street, hidden), null), "$items&period=past" to page(emptyList(), null)))
+        val events = LumaParser.parse(context(web), URI("https://luma.com/calendar/$calendar")).associateBy { it.externalId }
+        assertNull(events.getValue("luma-evt-street").locationName)
+        assertEquals("Trg mladih 9, 1000 Ljubljana", events.getValue("luma-evt-street").locationAddress)
+        assertNull(events.getValue("luma-evt-hidden").locationName)
+        assertEquals("Ljubljana", events.getValue("luma-evt-hidden").locationAddress)
     }
 
     @Test

@@ -151,9 +151,12 @@ object EventText {
     private fun cutAtStop(text: String): String =
         stopMarker.find(text)?.takeIf { it.range.first > 0 }?.let { text.substring(0, it.range.first) } ?: text
 
-    // The place after "KJE:"/"Lokacija:"/📍 (without a "Kraj:" label after the pin), or on the next line when the
-    // marker stands alone. Per-day directions ("Petek, 16. oktober 2026 – zbirno mesto …") are not a place.
-    private fun locationIn(lines: List<String>): String? =
+    /**
+     * The place after "KJE:"/"Lokacija:"/📍 (without a "Kraj:" label after the pin), or on the next line when the
+     * marker stands alone, as the post writes it. Per-day directions ("Petek, 16. oktober 2026 – zbirno mesto …") are
+     * not a place.
+     */
+    fun locationIn(lines: List<String>): String? =
         lines.indices.asSequence()
             .mapNotNull { i ->
                 whereMarker.find(lines[i])?.let { m ->

@@ -48,9 +48,12 @@ object DataScienceParser : Parser {
             hasEndTime = endAt != null,
             description = item.description,
             eventUrl = base.resolve(item.path).toString(),
-            locationName = item.location,
+            locationName = item.location.name,
+            locationAddress = item.location.address,
         )
     }
+
+    private val sentence = Regex("""\.\s+(?=\p{Lu})""")
 
     internal data class Item(
         val path: String,
@@ -72,11 +75,20 @@ object DataScienceParser : Parser {
 
         val whenLine: String? get() = line("When?")
 
-        val location: String?
-            get() = (line("Where?")?.removeSuffix(".")?.trim()
-                ?: meta?.takeIf { it.contains(" · ") }?.split(" · ", limit = 2)?.get(1)?.trim()
-                ?: meta?.takeIf { kind == "meetup" })
-                ?.takeIf { it.isNotEmpty() }
+        /**
+         * "Where? Faculty of Computer and Information Science, Večna pot 113, Ljubljana. Lecture room 3.", its room
+         * with the place; else the `meta` after its time ("16:00 · FRI, lecture room 03"), or a meetup's, which is
+         * its place ("FRI, Večna pot 113, Ljubljana"), where a workshop's is its speakers
+         */
+        val location: Location
+            get() {
+                val where = line("Where?")?.split(sentence)?.joinToString(", ") { it.trim().removeSuffix(".") }
+                return Locations.parse(
+                    where
+                        ?: meta?.takeIf { it.contains(" · ") }?.split(" · ", limit = 2)?.get(1)
+                        ?: meta?.takeIf { kind == "meetup" },
+                )
+            }
 
         /** The excerpt's "What?" part, else the excerpt itself when it has no When/Where */
         val description: String?

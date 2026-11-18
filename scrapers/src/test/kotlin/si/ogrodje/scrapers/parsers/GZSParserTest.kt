@@ -41,11 +41,23 @@ class GZSParserTest {
         assertEquals(Instant.parse("2026-11-18T13:00:00Z"), first.start)
         assertEquals(Instant.parse("2026-11-25T15:30:00Z"), first.end)
         assertEquals("Za podjetja", first.description)
-        assertEquals("GZS", first.locationName)
+        assertEquals("Gospodarska zbornica Slovenije", first.locationName)
+        assertEquals("Dimičeva ulica 13, 1000 Ljubljana", first.locationAddress)
         assertEquals("https://www.gzs.si/zdruzenje_za_informatiko_in_telekomunikacije/vsebina/Dogodki?ID=6784", first.eventUrl)
         assertEquals(url.toString(), first.sourceUrl)
         assertEquals(Source.GZS, first.source)
         assertEquals("Ljubljana", events[1].locationName)
+    }
+
+    @Test
+    fun `reads the saved page's places`() {
+        // GZS's events page as it was on 18 November 2026, its list only
+        val events = GZSParser.events(url, FakeWeb.fixture("gzs-dogodki.html"), now).associateBy { it.externalId }
+        assertEquals(setOf("gzs-6784", "gzs-7196", "gzs-7327"), events.keys)
+        assertEquals("Gospodarska zbornica Slovenije", events.getValue("gzs-6784").locationName)
+        assertEquals("Grand Palais, Pariz", events.getValue("gzs-7327").locationName)
+        assertEquals(null, events.getValue("gzs-7327").locationAddress)
+        assertEquals("Kongresni center Brdo, Dvorana Grandis", events.getValue("gzs-7196").locationName)
     }
 
     @Test

@@ -12,7 +12,7 @@ import java.time.OffsetDateTime
  * A Luma calendar, from an organisation's Luma link: https://luma.com/sloai (its slug) or
  * https://luma.com/calendar/cal-… (its ID). It reads Luma's API, the one its own pages use: `/url?url=<slug>` says
  * which calendar a slug is, and `/calendar/get-items` lists its events, future then past, in pages. Only public
- * events are kept, each at its page, https://luma.com/<url>.
+ * events are kept, each at its page, https://luma.com/<url>, and at its Google place, or online.
  */
 object LumaParser : Parser {
     override val source = Source.LUMA
@@ -73,14 +73,11 @@ object LumaParser : Parser {
 
     private class Item(
         val id: String, val name: String, val path: String, val start: Instant, val end: Instant?,
-        val public: Boolean, val place: String?, val address: String?,
+        val public: Boolean, val location: Location,
     )
 
     private fun item(entry: JsonNode): Item {
         val event = entry.path("event")
-        val geo = event.path("geo_address_info")
-        val venue = geo.text("address")?.trim()?.takeIf(String::isNotEmpty)
-        val full = geo.text("full_address")?.trim()?.takeIf(String::isNotEmpty)
         val online = event.text("location_type") in onlineTypes
         return Item(
             id = requireNotNull(event.text("api_id")),
@@ -89,9 +86,17 @@ object LumaParser : Parser {
             start = OffsetDateTime.parse(requireNotNull(event.text("start_at"))).toInstant(),
             end = event.text("end_at")?.let { OffsetDateTime.parse(it).toInstant() },
             public = event.text("visibility").let { it == null || it == "public" },
-            place = venue ?: "Online".takeIf { online },
-            address = full?.takeIf { it != venue },
+            location = if (online) Location.ONLINE else location(event.path("geo_address_info")),
         )
+    }
+
+    /**
+     * Where Google's place for the event is (`geo_address_info`): its name (`address`) and its full address, which
+     * starts with the name; only its city while Luma hides the rest until one registers
+     */
+    private fun location(geo: JsonNode): Location {
+        val place = Locations.of(geo.text("address"), geo.text("full_address"))
+        return if (place.isEmpty) Location(null, Locations.address(geo.text("city_state") ?: geo.text("city"))) else place
     }
 
     private fun event(url: URI, item: Item): ScrapedEvent {
@@ -106,8 +111,8 @@ object LumaParser : Parser {
             hasStartTime = true,
             hasEndTime = end != null,
             eventUrl = "$SITE/${item.path}",
-            locationName = item.place,
-            locationAddress = item.address,
+            locationName = item.location.name,
+            locationAddress = item.location.address,
         )
     }
 

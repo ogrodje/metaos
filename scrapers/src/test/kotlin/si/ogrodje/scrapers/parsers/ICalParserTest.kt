@@ -22,6 +22,10 @@ class ICalParserTest {
         assertTrue(events.map { it.title }.containsAll(setOf("SRC Tech day 2025", "Dnevi slovenske informatike 2025")))
         assertTrue(events.none { it.id.endsWith("@google.com") })
         assertEquals(events.sortedBy { it.start }, events)
+        // Google Maps' places, a line each
+        val src = events.first { it.title == "SRC Tech day 2025" }
+        assertEquals(Location("SRC Infonet d.o.o.", "Cesta na Okroglo 7, 4202 Naklo"), src.location)
+        assertTrue(events.count { it.location.address != null } > 15)
     }
 
     @Test
@@ -29,6 +33,8 @@ class ICalParserTest {
         val after = at(2025, 8, 8).minusMonths(2)
         val events = ICalReader.read(FakeWeb.fixture("sasa.ical"), after.toInstant(), after.plusMonths(6).toInstant())
         assertEquals(setOf("STARTUP CHALLENGE 2025", "SAŠA za mlade"), events.map { it.title }.toSet())
+        // "Saša Inkubator, Šaleška cesta 2A, Velenje, 3320 Velenje", the city once
+        assertEquals(setOf(Location("Saša Inkubator", "Šaleška cesta 2A, 3320 Velenje"), Location("Moravske Toplice")), events.map { it.location }.toSet())
     }
 
     private val calendar = """BEGIN:VCALENDAR
@@ -51,6 +57,20 @@ SUMMARY:Meetup
 URL:https://example.si/meetup
 END:VEVENT
 BEGIN:VEVENT
+UID:venue
+DTSTAMP:20260101T000000Z
+DTSTART:20991102T170000Z
+SUMMARY:At a venue
+LOCATION:Kongresni center Brdo\, Predoslje 39\, 4000 Kranj\, Slovenija
+END:VEVENT
+BEGIN:VEVENT
+UID:online
+DTSTAMP:20260101T000000Z
+DTSTART:20991103T170000Z
+SUMMARY:Webinar
+LOCATION:https://us02web.zoom.us/j/123456
+END:VEVENT
+BEGIN:VEVENT
 UID:old
 DTSTAMP:20260101T000000Z
 DTSTART:20200101T170000Z
@@ -63,7 +83,7 @@ END:VCALENDAR
     fun `days, times, ids and links as goo had them`() {
         val url = URI("https://calendar.example.si/basic.ics")
         val events = ICalParser.parse(context(FakeWeb(mapOf(url.toString() to calendar))), url)
-        assertEquals(listOf("abc123", "def456"), events.map { it.externalId })
+        assertEquals(listOf("abc123", "def456", "venue", "online"), events.map { it.externalId })
 
         val day = events[0]
         assertEquals("Konferenca", day.title)
@@ -82,6 +102,11 @@ END:VCALENDAR
         assertEquals("https://example.si/meetup", time.eventUrl)
         assertNull(time.description)
         assertNull(time.locationName)
+
+        assertEquals("Kongresni center Brdo", events[2].locationName)
+        assertEquals("Predoslje 39, 4000 Kranj", events[2].locationAddress)
+        assertEquals("Online", events[3].locationName)
+        assertNull(events[3].locationAddress)
     }
 
     @Test

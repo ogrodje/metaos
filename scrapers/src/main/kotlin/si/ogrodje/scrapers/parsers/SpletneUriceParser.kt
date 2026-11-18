@@ -67,10 +67,11 @@ object SpletneUriceParser : Parser {
         hasEndTime = false,
         description = talk.description,
         eventUrl = post.link,
-        locationName = talk.location,
+        locationName = talk.location.name,
+        locationAddress = talk.location.address,
     )
 
-    data class Talk(val start: LocalDateTime, val location: String?, val description: String?)
+    data class Talk(val start: LocalDateTime, val location: Location, val description: String?)
 
     /** The talk's start, place and lede from a post's content HTML, given when the post was published */
     fun talkFrom(contentHtml: String, published: LocalDateTime): Talk? {
@@ -91,7 +92,7 @@ object SpletneUriceParser : Parser {
             inferYear(day, month, published)
         } ?: return null
         // "date // place //": the place is the segment after the date
-        val location = text.split("//").getOrNull(1)?.trim()?.ifEmpty { null }
+        val location = Locations.parse(text.split("//").getOrNull(1))
         // The first real paragraph after it: words, not the "+ + + +" divider of the old posts
         val description = texts.drop(i + 1).find { t -> t.count { it.isLetter() } >= 40 && dateLine.find(t) == null }
         return Talk(date.atTime(time), location, description)

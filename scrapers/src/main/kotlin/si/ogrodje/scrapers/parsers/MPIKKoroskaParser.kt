@@ -84,7 +84,8 @@ object MPIKKoroskaParser : Parser {
                 hasEndTime = day.to == null && card.end != null && end != null,
                 description = details.description,
                 eventUrl = site.at(card.path).toString(),
-                locationName = details.place,
+                locationName = details.location.name,
+                locationAddress = details.location.address,
             )
         }
 
@@ -97,7 +98,9 @@ object MPIKKoroskaParser : Parser {
         val lastDay: LocalDate get() = days.maxOf { it.to ?: it.from }
     }
 
-    data class Details(val place: String?, val description: String?)
+    data class Details(val place: String?, val description: String?) {
+        val location: Location get() = Locations.parse(place)
+    }
 
     private val spaces = Regex("\\s+")
 
