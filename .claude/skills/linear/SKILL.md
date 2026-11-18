@@ -35,6 +35,9 @@ Statuses of `OG`: Backlog, Todo, In Progress, In Review, Done, Canceled, Duplica
   triggers and `History.kt` for new tables, CLAUDE.md itself where it describes what changed.
 - Test what you changed: `./gradlew test` (or the relevant test classes) and, for the front-end, `cd fe && yarn test`
   and `yarn build`. Look at UI changes in the running app.
+- A change someone should see or click through (pages, sign-in, what the API answers) gets a preview (CLAUDE.md's
+  Previews): `just preview up` in its worktree, check it there yourself, and put its address, with what to look at, in
+  the report. `just preview down` once they've seen it or it's merged.
 - Commit on the branch only your own files, in the repo's style: a short title, a body saying what changed and why in
   plain words, and the `Co-authored-by` line. Put `OG-123` at the end of the title, e.g. `Search by season (OG-123)`.
 
@@ -44,6 +47,6 @@ Statuses of `OG`: Backlog, Todo, In Progress, In Review, Done, Canceled, Duplica
   the end. A PR's body ends with `Fixes OG-123`, so Linear closes the issue when it merges.
 - With a PR: move the issue to In Review and attach the PR (`save_issue` with `links`). Never move it to Done
   yourself: merging does that, or the user.
-- Comment on the issue (`save_comment`): what was done, the branch or PR, how it was tested, and anything left open or
+- Comment on the issue (`save_comment`): what was done, the branch or PR, its preview's address if it has one, how it was tested, and anything left open or
   decided along the way. Short, as a teammate would write it.
 - If you stop before it's done (blocked, a question), leave it In Progress, comment what's missing, and tell the user.
