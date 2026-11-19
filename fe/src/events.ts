@@ -84,6 +84,18 @@ export function regionOptions(
 export const inRegion = (event: Pick<ListedEvent, 'region'>, slug: string) =>
   slug === ALL_REGIONS || (!!event.region && regionSlug(event.region) === slug)
 
+/** Which events the page shows: all of them, or Ogrodje's picks alone (?show=promoted) */
+export const SHOWN = ['all', 'promoted'] as const
+export type Shown = typeof SHOWN[number]
+
+/** The chips for it, each with how many of [events] it shows */
+export function shownOptions(events: Pick<ListedEvent, 'promoted'>[], t: Translate): { value: Shown, title: string, count: number }[] {
+  return [
+    { value: 'all', title: t('events.showAll'), count: events.length },
+    { value: 'promoted', title: t('events.showPromoted'), count: events.filter((event) => event.promoted).length },
+  ]
+}
+
 /** What an event is found by in the list: its title, who it's by and where it is */
 export function eventText(event: Pick<ListedEvent, 'title' | 'meetup' | 'place' | 'locationName' | 'locationAddress'>) {
   const place = event.place ?? { name: event.locationName, address: event.locationAddress }

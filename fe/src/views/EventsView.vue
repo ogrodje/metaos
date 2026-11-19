@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { I18nT } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
 import { keepUnchanged, useLiveRefresh } from '@/changes'
+import ChipGroup from '@/components/ChipGroup.vue'
 import EventForm from '@/components/EventForm.vue'
 import EventRow from '@/components/EventRow.vue'
 import FilterBar from '@/components/FilterBar.vue'
@@ -12,8 +13,8 @@ import NoMatch from '@/components/NoMatch.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import SelectFilter from '@/components/SelectFilter.vue'
 import {
-  ALL_REGIONS, byWeek, EVENT_FIELDS, eventText, inRegion, type ListedEvent, regionOptions, shortDay, TEAM_EVENTS, type TeamEvent,
-  weekdayName, weekRange,
+  ALL_REGIONS, byWeek, EVENT_FIELDS, eventText, inRegion, type ListedEvent, regionOptions, shortDay, SHOWN, type Shown,
+  shownOptions, TEAM_EVENTS, type TeamEvent, weekdayName, weekRange,
 } from '@/events'
 import { useEventsRefresh } from '@/eventsRefresh'
 import { graphql } from '@/graphql'
@@ -28,7 +29,8 @@ import { useLocale } from '@/useLocale'
 // links, as ogrodje.si's Dogodki page listed them: by week, then by day, in the page's language (the events themselves
 // are as their organisers write them). Everyone sees the same, so the server renders it. Once the page knows it's the
 // team's, it loads them again with the hidden ones and what's the team's, to hide, pick, add and refresh them.
-// Filtered by region (OG-71) and found as you type, in the address, e.g. /dogodki?region=gorenjska, on what's loaded.
+// Filtered by region and to Ogrodje's picks (OG-71), and found as you type, in the address, e.g.
+// /dogodki?region=gorenjska&show=promoted, on what's loaded.
 const auth = useAuthStore()
 const { t, dateLocale, path } = useLocale()
 const events = ref<(ListedEvent | TeamEvent)[]>()
@@ -87,14 +89,18 @@ usePageMeta(() => ({
   description: t('events.description'),
 }))
 
-// Which, as the address says: a region's events, online ones or those abroad, and those found by what's typed
+// Which, as the address says: a region's events, online ones or those abroad, Ogrodje's picks alone, and those found
+// by what's typed
 const region = useQueryState('region', ALL_REGIONS)
+const show = useQueryState<Shown>('show', 'all', SHOWN)
 const find = useQueryState('q', '')
 const clear = useClearQuery()
 
 const regions = computed(() => regionOptions(events.value ?? [], t, region.value))
-const filtering = computed(() => region.value !== ALL_REGIONS || find.value.trim() !== '')
-const shown = computed(() => (events.value ?? []).filter((event) => inRegion(event, region.value) && matches(eventText(event), find.value)))
+const shows = computed(() => shownOptions(events.value ?? [], t))
+const filtering = computed(() => region.value !== ALL_REGIONS || show.value !== 'all' || find.value.trim() !== '')
+const shown = computed(() => (events.value ?? []).filter((event) =>
+  inRegion(event, region.value) && (show.value === 'all' || event.promoted) && matches(eventText(event), find.value)))
 
 const weeks = computed(() => byWeek(shown.value))
 </script>
@@ -134,6 +140,7 @@ const weeks = computed(() => byWeek(shown.value))
     </template>
 
     <FilterBar v-model:find="find" :placeholder="t('events.find')">
+      <ChipGroup v-if="shows[1]!.count || show !== 'all'" v-model="show" :label="t('events.showLabel')" :options="shows"/>
       <template #end>
         <SelectFilter v-if="regions.length > 2 || region !== ALL_REGIONS" v-model="region" :label="t('events.region')" :options="regions"/>
       </template>
@@ -142,7 +149,7 @@ const weeks = computed(() => byWeek(shown.value))
     <LoadError v-if="error" :what="t('events.what')" :error="error" @retry="loadEvents()"/>
     <LoadingRows v-else-if="!events" :rows="6" tall :label="t('events.loading')"/>
     <p v-else-if="!events.length" class="note">{{ t('events.none') }}</p>
-    <NoMatch v-else-if="!shown.length" :find="find" @clear="clear(['region', 'q'])">{{ t('events.noMatch') }}</NoMatch>
+    <NoMatch v-else-if="!shown.length" :find="find" @clear="clear(['region', 'show', 'q'])">{{ t('events.noMatch') }}</NoMatch>
 
     <template v-else>
       <section v-for="week in weeks" :key="week.monday" :aria-labelledby="`week-${week.monday}`">

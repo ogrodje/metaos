@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ALL_REGIONS, eventText, inRegion, regionName, regionOptions, regionSlug } from '@/events'
+import { ALL_REGIONS, eventText, inRegion, regionName, regionOptions, regionSlug, shownOptions } from '@/events'
 import { badgeColors, byWeek, colorOf, dayOf, eventPath, eventSchedule, eventTime, isPast, paragraphs, formTime, inputTime, isManual, isOnline, mapUrl, placeLine, shortDay, sourceName, weekdayName, weekOf, weekRange } from '@/events'
 import { t, tSl } from './i18n'
 
@@ -199,5 +199,14 @@ describe('the regions', () => {
     expect(eventText({ ...event, place: { name: 'Kovačnica', address: 'Poštna ulica 4, 4000 Kranj', fromOrganisation: true } }))
       .toBe('Kotlin večer Kotlin Slovenija Kovačnica Poštna ulica 4, 4000 Kranj')
     expect(eventText({ ...event, meetup: null })).toBe('Kotlin večer FRI')
+  })
+})
+
+describe('the picks', () => {
+  it('are a chip beside all of them, each with how many', () => {
+    expect(shownOptions([{ promoted: true }, { promoted: false }, { promoted: false }], tSl)).toEqual([
+      { value: 'all', title: 'Vsi', count: 3 },
+      { value: 'promoted', title: 'Izpostavljeni', count: 1 },
+    ])
   })
 })

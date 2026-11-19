@@ -443,6 +443,9 @@
       "SAVINJSKA": "Savinjska",
       "ZASAVSKA": "Zasavska"
     },
+    "showAll": "Vsi",
+    "showLabel": "Prikaži",
+    "showPromoted": "Izpostavljeni",
     "team": {
       "add": "Dodaj dogodek",
       "editLabel": "Uredi {title}",

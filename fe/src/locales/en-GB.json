@@ -443,6 +443,9 @@
       "SAVINJSKA": "Savinjska",
       "ZASAVSKA": "Zasavska"
     },
+    "showAll": "All",
+    "showLabel": "Show",
+    "showPromoted": "Featured",
     "team": {
       "add": "Add event",
       "editLabel": "Edit {title}",

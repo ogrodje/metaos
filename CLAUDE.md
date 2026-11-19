@@ -269,8 +269,8 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   them from the organisers' public pages, and that Ogrodje doesn't organise them nor vouch for them. They're MetaOS's own (Events, below),
   through the `events` query: those that haven't ended, or started when they have no end, and aren't hidden. Under
   its heading, a `FilterBar` (OG-71): a box that finds by title, organiser and place, and a `SelectFilter` of the
-  regions that have events, each with how many, then online and abroad (`regionOptions`, `inRegion`), both in the
-  address (`?region=gorenjska`, `?q=`), as the other lists'; an event with no region shows only under All regions. The team
+  regions that have events, each with how many, then online and abroad (`regionOptions`, `inRegion`), and, where there are any, chips for all or Ogrodje's picks
+  alone (`shownOptions`), all in the address (`?region=gorenjska`, `?show=promoted`, `?q=`), as the other lists'; an event with no region shows only under All regions. The team
   also gets the hidden ones, dimmed, and on each its region (`RegionSelect.vue`: Automatic, what its place or its
   organisation tells, or one chosen), Hide, Pick and Edit (Edit only for its own), Add event and Refresh; an
   organisation's form has its region too.
