@@ -280,6 +280,10 @@
           "description" : "One of Ogrodje's picks, which stand out",
           "type" : "boolean"
         },
+        "region" : {
+          "description" : "Its region, one of Slovenia's 12 statistical regions (POMURSKA, PODRAVSKA, KOROSKA, SAVINJSKA, ZASAVSKA, POSAVSKA, JUGOVZHODNA, OSREDNJESLOVENSKA, GORENJSKA, PRIMORSKO_NOTRANJSKA, GORISKA, OBALNO_KRASKA), ONLINE or ABROAD; by default the one its place tells, else its organisation's",
+          "type" : "string"
+        },
         "start" : {
           "description" : "When it starts: a time, e.g. 2026-11-16T18:00 (in Ljubljana) or 2026-11-16T17:00:00Z, or a day, e.g. 2026-11-16, which has no time of day",
           "type" : "string"
@@ -1607,7 +1611,7 @@
       "readOnlyHint" : true,
       "title" : "List events"
     },
-    "description" : "List Slovenia's tech, developer and startup events on the Events page: those that haven't ended, the soonest first, as the scrapers gather them from organisations' links and the team adds them; or every event of one organisation, the latest first",
+    "description" : "List Slovenia's tech, developer and startup events on the Events page: those that haven't ended, the soonest first, as the scrapers gather them from organisations' links and the team adds them; or every event of one organisation, the latest first. Each has its region, which region narrows them to",
     "inputSchema" : {
       "$schema" : "https://json-schema.org/draft/2020-12/schema",
       "properties" : {
@@ -1618,6 +1622,10 @@
         "organisationId" : {
           "description" : "Only this organisation's, past ones too (list_organisations)",
           "format" : "uuid",
+          "type" : "string"
+        },
+        "region" : {
+          "description" : "Only those in this region: Its region, one of Slovenia's 12 statistical regions (POMURSKA, PODRAVSKA, KOROSKA, SAVINJSKA, ZASAVSKA, POSAVSKA, JUGOVZHODNA, OSREDNJESLOVENSKA, GORENJSKA, PRIMORSKO_NOTRANJSKA, GORISKA, OBALNO_KRASKA), ONLINE or ABROAD",
           "type" : "string"
         }
       },
@@ -3738,7 +3746,7 @@
       "readOnlyHint" : false,
       "title" : "Update event"
     },
-    "description" : "Change an event: hide it from the Events page or show it again, or make it one of Ogrodje's picks; and the team's own (source MANUAL) wholly, as a scraper keeps what it found as the site says. Omitted fields are left as they are; empty text clears one. Nothing is deleted",
+    "description" : "Change an event: hide it from the Events page or show it again, make it one of Ogrodje's picks, or give it its region; and the team's own (source MANUAL) wholly, as a scraper keeps what it found as the site says. Omitted fields are left as they are; empty text clears one. Nothing is deleted",
     "inputSchema" : {
       "$schema" : "https://json-schema.org/draft/2020-12/schema",
       "properties" : {
@@ -3776,6 +3784,10 @@
           "description" : "One of Ogrodje's picks",
           "type" : "boolean"
         },
+        "region" : {
+          "description" : "Its region, one of Slovenia's 12 statistical regions (POMURSKA, PODRAVSKA, KOROSKA, SAVINJSKA, ZASAVSKA, POSAVSKA, JUGOVZHODNA, OSREDNJESLOVENSKA, GORENJSKA, PRIMORSKO_NOTRANJSKA, GORISKA, OBALNO_KRASKA), ONLINE or ABROAD; empty for the one its place tells, else its organisation's",
+          "type" : "string"
+        },
         "start" : {
           "description" : "When it starts: a time, e.g. 2026-11-16T18:00 (in Ljubljana) or 2026-11-16T17:00:00Z, or a day, e.g. 2026-11-16, which has no time of day (the team's own only)",
           "type" : "string"
@@ -3802,7 +3814,7 @@
       "readOnlyHint" : false,
       "title" : "Update organisation"
     },
-    "description" : "Change an organisation: its name, description, tier and when it supported Ogrodje, its links, its finance details (VAT ID, company ID, address, who to contact), which are the team's, where it announces its events (its website too, which the scrapers read every hour) and its badge's colours on the Events page, where its events usually are (its venue and address, for those that don't say), and whether it collects events or is archived (listed apart, its events no longer gathered; nothing is deleted). Omitted fields are left as they are; empty text clears one. It's listed as a supporter or partner while its tier isn't NONE, from when its support started (or always, without a start) till when it ended (or for good, without an end)",
+    "description" : "Change an organisation: its name, description, tier and when it supported Ogrodje, its links, its finance details (VAT ID, company ID, address, who to contact), which are the team's, where it announces its events (its website too, which the scrapers read every hour) and its badge's colours on the Events page, where its events usually are (its venue and address, for those that don't say, and its region, which its venue tells unless it's given), and whether it collects events or is archived (listed apart, its events no longer gathered; nothing is deleted). Omitted fields are left as they are; empty text clears one. It's listed as a supporter or partner while its tier isn't NONE, from when its support started (or always, without a start) till when it ended (or for good, without an end)",
     "inputSchema" : {
       "$schema" : "https://json-schema.org/draft/2020-12/schema",
       "properties" : {
@@ -3881,6 +3893,10 @@
         },
         "name" : {
           "description" : "New unique name",
+          "type" : "string"
+        },
+        "region" : {
+          "description" : "Its region, one of Slovenia's 12 statistical regions (POMURSKA, PODRAVSKA, KOROSKA, SAVINJSKA, ZASAVSKA, POSAVSKA, JUGOVZHODNA, OSREDNJESLOVENSKA, GORENJSKA, PRIMORSKO_NOTRANJSKA, GORISKA, OBALNO_KRASKA), ONLINE or ABROAD, where its events usually are, for those with no region of their own; empty for the one its venue tells",
           "type" : "string"
         },
         "supportEndedAt" : {

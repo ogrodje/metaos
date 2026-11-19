@@ -39,11 +39,12 @@ data class OrganisationInput(
     val archived: Boolean? = null,
     val venueName: String? = null,
     val venueAddress: String? = null,
+    val region: String? = null,
 ) {
     fun changes() = OrganisationChanges(
         name, description, tier, supportStartedAt, supportEndedAt, websiteUrl, linkedinUrl, twitterUrl, instagramUrl,
         facebookUrl, vatId, companyId, address, contactPerson, meetupUrl, eventbriteUrl, icalUrl, lumaUrl, discordUrl,
-        kompotUrl, mainColor, backgroundColor, collectsEvents, archived, venueName, venueAddress,
+        kompotUrl, mainColor, backgroundColor, collectsEvents, archived, venueName, venueAddress, region,
     )
 }
 

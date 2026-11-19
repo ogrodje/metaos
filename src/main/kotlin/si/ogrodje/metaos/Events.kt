@@ -61,6 +61,13 @@ class Event(
     var hiddenAt: OffsetDateTime? = null
     var promotedAt: OffsetDateTime? = null
 
+    // Its own region: told from where it says it is (Regions), or the team's ([regionManual]), which its scraper leaves
+    @Enumerated(EnumType.STRING) @Column(name = "region", columnDefinition = "text") var ownRegion: Region? = null
+    @Column(nullable = false) var regionManual: Boolean = false
+
+    /** Where it is, for the Events page's filter: its own region, else its organisation's, as its place is its venue's */
+    fun region(): Region? = ownRegion ?: organisation.region
+
     val manual: Boolean get() = source == MANUAL_SOURCE
 
     /** It's listed until it ends, or until it starts when it has no end */
@@ -167,6 +174,8 @@ data class EventChanges(
     val locationAddress: String? = null,
     val hidden: Boolean? = null,
     val promoted: Boolean? = null,
+    // Its region, by its key or name ([Region.parse]), a scraper's too; empty for the one its place tells
+    val region: String? = null,
 )
 
 /** One that a scraper found, as MetaOS keeps it (the scrapers' ScrapedEvent, of the same shape) */
@@ -203,6 +212,7 @@ class Events(
     private val events: EventsRepository,
     private val scrapes: EventScrapesRepository,
     private val organisations: Organisations,
+    private val regions: Regions,
 ) {
 
     fun find(id: UUID): Event = requireNotNull(events.findByIdOrNull(id)) { "Event $id not found" }
@@ -241,13 +251,13 @@ class Events(
         return events.save(event)
     }
 
-    /** Changes [id]: the team's own wholly, a scraper's only whether it's hidden or promoted, as its scraper keeps the rest */
+    /** Changes [id]: the team's own wholly, a scraper's only whether it's hidden or promoted and its region, as its scraper keeps the rest */
     @Transactional
     fun update(id: UUID, changes: EventChanges): Event {
         val event = find(id)
         require(event.manual || listOf(changes.title, changes.start, changes.end, changes.description, changes.url,
             changes.locationName, changes.locationAddress, changes.organisation).all { it == null }) {
-            "${event.title} is found by a scraper (${event.source}), which keeps what it says: only whether it's hidden or promoted changes"
+            "${event.title} is found by a scraper (${event.source}), which keeps what it says: only whether it's hidden or promoted and its region change"
         }
         change(event, changes)
         return event
@@ -275,6 +285,16 @@ class Events(
         changes.locationAddress?.let { event.locationAddress = it.trim().ifEmpty { null } }
         changes.hidden?.let { hidden -> if (hidden != (event.hiddenAt != null)) event.hiddenAt = if (hidden) OffsetDateTime.now() else null }
         changes.promoted?.let { promoted -> if (promoted != (event.promotedAt != null)) event.promotedAt = if (promoted) OffsetDateTime.now() else null }
+        changes.region?.let { region ->
+            event.ownRegion = region.trim().ifEmpty { null }?.let(Region::parse)
+            event.regionManual = event.ownRegion != null
+        }
+        tellRegion(event)
+    }
+
+    // Its region as its place tells it, unless the team gave it one
+    private fun tellRegion(event: Event) {
+        if (!event.regionManual) event.ownRegion = regions.of(event.locationName, event.locationAddress)
     }
 
     /**
@@ -315,6 +335,7 @@ class Events(
         val (name, address) = usualVenue(events.findByOrganisations(listOf(organisation))) ?: return false
         organisation.venueName = name
         organisation.venueAddress = address
+        if (!organisation.regionManual) organisation.region = regions.of(name, address)
         return true
     }
 
@@ -336,6 +357,7 @@ class Events(
         event.locationName = f.locationName?.trim()?.ifEmpty { null }
         event.locationAddress = f.locationAddress?.trim()?.ifEmpty { null }
         event.sourceUrl = f.sourceUrl
+        tellRegion(event)
     }
 
     /** That [field] of [organisationId] was scraped just now, at [url], finding [count] events, or failing with [error] */

@@ -19,7 +19,7 @@ import PersonAvatar from '@/components/PersonAvatar.vue'
 import SignInPrompt from '@/components/SignInPrompt.vue'
 import SocialLinks from '@/components/SocialLinks.vue'
 import { type Episode, EPISODE_FIELDS, LIST_PICTURE_FIELDS } from '@/episodes'
-import { mapUrl, placeLine, sourceName, TEAM_EVENT_FIELDS, type TeamEvent } from '@/events'
+import { mapUrl, placeLine, regionName, sourceName, TEAM_EVENT_FIELDS, type TeamEvent } from '@/events'
 import { useEventsRefresh } from '@/eventsRefresh'
 import { errorMessage, graphql } from '@/graphql'
 import { TIME_ZONE } from '@/i18n'
@@ -304,6 +304,7 @@ const hasFinance = computed(() => {
               <a v-if="venueMap" :href="venueMap" target="_blank" rel="noopener">{{ venue }}</a>
               <template v-else>{{ venue }}</template>
             </Fact>
+            <Fact v-if="organisation.region" :label="t('organisation.region')">{{ regionName(organisation.region, t) }}</Fact>
             <Fact v-for="link in eventLinks" :key="link.key" :label="link.name" stacked>
               <a :href="link.url" target="_blank" rel="noopener">{{ siteName(link.url) }}</a>
               <template v-if="link.field !== 'DISCORD'">

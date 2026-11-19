@@ -3,23 +3,36 @@ import { computed, ref, watch } from 'vue'
 import { I18nT } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
 import { keepUnchanged, useLiveRefresh } from '@/changes'
+import ChipGroup from '@/components/ChipGroup.vue'
 import EventForm from '@/components/EventForm.vue'
+import EventPick from '@/components/EventPick.vue'
 import EventRow from '@/components/EventRow.vue'
+import FilterBar from '@/components/FilterBar.vue'
 import LoadError from '@/components/LoadError.vue'
 import LoadingRows from '@/components/LoadingRows.vue'
+import NoMatch from '@/components/NoMatch.vue'
 import PageHeader from '@/components/PageHeader.vue'
-import { byWeek, EVENT_FIELDS, type ListedEvent, shortDay, TEAM_EVENTS, type TeamEvent, weekdayName, weekRange } from '@/events'
+import SelectFilter from '@/components/SelectFilter.vue'
+import {
+  ALL_REGIONS, bucketTitle, byBucket, dayOf, EVENT_FIELDS, eventText, firstEvents, inRegion, type ListedEvent, regionOptions,
+  SHOWN, type Shown, shownOptions, TEAM_EVENTS, type TeamEvent,
+} from '@/events'
 import { useEventsRefresh } from '@/eventsRefresh'
 import { graphql } from '@/graphql'
+import { matches } from '@/lists'
+import { useClearQuery, useQueryState } from '@/query'
 import { usePageMeta } from '@/seo'
 import { useFirstLoad } from '@/ssr'
 import { useAuthStore } from '@/stores/auth'
 import { useLocale } from '@/useLocale'
 
 // Slovenia's tech, developer and startup events that haven't ended yet, as MetaOS gathers them from organisations'
-// links, as ogrodje.si's Dogodki page listed them: by week, then by day, in the page's language (the events themselves
+// links: Ogrodje's picks first, as cards, then by how soon they are (today, this week, next week, the next two months,
+// then the rest, those past next week folded to their first few), a line an event, in the page's language (the events themselves
 // are as their organisers write them). Everyone sees the same, so the server renders it. Once the page knows it's the
 // team's, it loads them again with the hidden ones and what's the team's, to hide, pick, add and refresh them.
+// Filtered by region and to Ogrodje's picks (OG-71), and found as you type, in the address, e.g.
+// /dogodki?region=gorenjska&show=promoted, on what's loaded.
 const auth = useAuthStore()
 const { t, dateLocale, path } = useLocale()
 const events = ref<(ListedEvent | TeamEvent)[]>()
@@ -78,12 +91,41 @@ usePageMeta(() => ({
   description: t('events.description'),
 }))
 
-const weeks = computed(() => byWeek(events.value ?? []))
+// Which, as the address says: a region's events, online ones or those abroad, Ogrodje's picks alone, and those found
+// by what's typed
+const region = useQueryState('region', ALL_REGIONS)
+const show = useQueryState<Shown>('show', 'all', SHOWN)
+const find = useQueryState('q', '')
+const clear = useClearQuery()
+
+const regions = computed(() => regionOptions(events.value ?? [], t, region.value))
+const shows = computed(() => shownOptions(events.value ?? [], t))
+const filtering = computed(() => region.value !== ALL_REGIONS || show.value !== 'all' || find.value.trim() !== '')
+const shown = computed(() => (events.value ?? []).filter((event) =>
+  inRegion(event, region.value) && (show.value === 'all' || event.promoted) && matches(eventText(event), find.value)))
+
+// Today in Ljubljana, as the page is rendered; the parts and the picks' Today and Tomorrow go by it
+const today = dayOf(new Date().toISOString())
+
+// How many of a later part's events are shown until it's opened
+const FOLDED = 5
+const opened = ref(new Set<string>())
+
+const buckets = computed(() => byBucket(shown.value, today).map((bucket) => {
+  const folds = (bucket.kind === 'month' || bucket.kind === 'later') && !filtering.value && !opened.value.has(bucket.key) && bucket.count > FOLDED
+  return { ...bucket, title: bucketTitle(bucket, t, dateLocale.value), folds, events: (folds ? firstEvents(bucket.days, FOLDED) : bucket.days).flatMap((day) => day.events) }
+}))
+
+// Ogrodje's picks, the soonest three, over the list; not while only they are shown, or something's looked for
+const PICKS = 3
+const picked = computed(() => shown.value.filter((event) => event.promoted))
+const picks = computed(() => (show.value === 'all' && !find.value.trim() ? picked.value.slice(0, PICKS) : []))
+
 </script>
 
 <template>
   <main class="content">
-    <PageHeader :title="t('pages.events')" :count="events?.length">
+    <PageHeader :title="t('pages.events')" :count="events?.length" :shown="filtering && events ? shown.length : undefined">
       <I18nT v-if="organisers" keypath="events.intro" :plural="organisers" scope="global">
         <template #n>{{ organisers }}</template>
         <template #discord>
@@ -115,22 +157,48 @@ const weeks = computed(() => byWeek(events.value ?? []))
       <EventForm v-if="adding" id="add-event" @saved="added" @close="adding = false"/>
     </template>
 
+    <div class="filters">
+      <FilterBar v-model:find="find" :placeholder="t('events.find')">
+        <ChipGroup v-if="shows[1]!.count || show !== 'all'" v-model="show" :label="t('events.showLabel')" :options="shows"/>
+        <template #end>
+          <SelectFilter v-if="regions.length > 2 || region !== ALL_REGIONS" v-model="region" :label="t('events.region')" :options="regions"/>
+        </template>
+      </FilterBar>
+      <nav v-if="events && buckets.length > 1" class="jump" :aria-label="t('events.jump')">
+        <a v-for="bucket in buckets" :key="bucket.key" :href="`#when-${bucket.key}`">{{ bucket.title }}<span class="count">{{ bucket.count }}</span></a>
+      </nav>
+    </div>
+
     <LoadError v-if="error" :what="t('events.what')" :error="error" @retry="loadEvents()"/>
     <LoadingRows v-else-if="!events" :rows="6" tall :label="t('events.loading')"/>
     <p v-else-if="!events.length" class="note">{{ t('events.none') }}</p>
+    <NoMatch v-else-if="!shown.length" :find="find" @clear="clear(['region', 'show', 'q'])">{{ t('events.noMatch') }}</NoMatch>
 
     <template v-else>
-      <section v-for="week in weeks" :key="week.monday" :aria-labelledby="`week-${week.monday}`">
+      <section v-if="picks.length" aria-labelledby="picks">
         <div class="heading">
-          <h2 :id="`week-${week.monday}`">{{ t('events.week', { range: weekRange(week.monday, dateLocale) }) }}</h2>
-          <span class="count">{{ week.count }}</span>
+          <h2 id="picks">{{ t('events.picks') }}</h2>
+          <span class="count">{{ picked.length }}</span>
+          <button v-if="picked.length > picks.length" type="button" class="text-button more" @click="show = 'promoted'">
+            {{ t('events.showAllN', { n: picked.length }) }}
+          </button>
         </div>
-        <template v-for="day in week.days" :key="day.day">
-          <h3 class="day">{{ weekdayName(day.day, dateLocale) }} <span class="date">{{ shortDay(day.day, dateLocale) }}</span></h3>
-          <ul class="events">
-            <EventRow v-for="event in day.events" :key="event.id" :event="event" :manage="auth.team" @changed="changed"/>
-          </ul>
-        </template>
+        <ul class="picks">
+          <EventPick v-for="event in picks" :key="event.id" :event="event" :today="today"/>
+        </ul>
+      </section>
+
+      <section v-for="bucket in buckets" :id="`when-${bucket.key}`" :key="bucket.key" class="when" :aria-labelledby="`when-${bucket.key}-title`">
+        <div class="heading">
+          <h2 :id="`when-${bucket.key}-title`">{{ bucket.title }}</h2>
+          <span class="count">{{ bucket.count }}</span>
+        </div>
+        <ul class="events">
+          <EventRow v-for="event in bucket.events" :key="event.id" :event="event" :part="bucket.kind" :manage="auth.team" @changed="changed"/>
+        </ul>
+        <button v-if="bucket.folds" type="button" class="text-button all" @click="opened = new Set([...opened, bucket.key])">
+          {{ t('events.showAllN', { n: bucket.count }) }}
+        </button>
       </section>
     </template>
 
@@ -158,22 +226,78 @@ const weeks = computed(() => byWeek(events.value ?? []))
   list-style: none;
 }
 
-// A day's name over its events, with its date
-.day {
-  padding: 20px 0 8px;
-  font-size: var(--text-body);
-  line-height: 20px;
-  font-weight: 600;
+// Where on the page each part is: links as chips are, each with how many; on phones a row that scrolls sideways
+.jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 
-  .date {
-    margin-left: 4px;
-    font-weight: 400;
+  a {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    font-size: var(--text-small);
+    line-height: 20px;
+    color: var(--secondary);
+    white-space: nowrap;
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+
+    &:hover {
+      border-color: var(--hairline-strong);
+    }
+  }
+
+  .count {
     color: var(--muted);
+    font-variant-numeric: tabular-nums;
   }
 }
 
-.heading + .day {
-  padding-top: 0;
+// The filters, and under them where each part of the page is
+.filters {
+  display: grid;
+  gap: 16px;
+}
+
+// Ogrodje's picks, three cards across
+.picks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  padding: 0;
+  list-style: none;
+}
+
+// A part of the page a link from .jump leads to, clear of the header
+.when {
+  scroll-margin-top: 16px;
+}
+
+// Show all of a later part, under its first few
+.all {
+  margin-top: 12px;
+}
+
+@media (max-width: 800px) {
+  .picks {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .jump {
+    flex-wrap: nowrap;
+    margin: 0 -16px;
+    padding: 0 16px;
+    overflow-x: auto;
+
+    a {
+      padding: 7px 12px;
+    }
+  }
 }
 
 .note {

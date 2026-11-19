@@ -26,8 +26,9 @@ data class EventInput(
     val locationAddress: String? = null,
     val hidden: Boolean? = null,
     val promoted: Boolean? = null,
+    val region: String? = null,
 ) {
-    fun changes() = EventChanges(organisation, title, start, end, description, url, locationName, locationAddress, hidden, promoted)
+    fun changes() = EventChanges(organisation, title, start, end, description, url, locationName, locationAddress, hidden, promoted, region)
 }
 
 /**
@@ -63,6 +64,13 @@ class EventsGraphQL(
 
     @SchemaMapping(typeName = "Event")
     fun place(event: Event): EventPlace? = event.place()
+
+    @SchemaMapping(typeName = "Event")
+    fun region(event: Event): Region? = event.region()
+
+    // Whether the team gave it its region, rather than its place or its organisation telling it
+    @SchemaMapping(typeName = "Event")
+    fun regionManual(event: Event): Boolean = event.regionManual
 
     @SchemaMapping(typeName = "Event")
     fun start(event: Event): String = event.startsAt.toInstant().toString()

@@ -1,4 +1,4 @@
-import type { DateLocale } from '@/i18n'
+import type { DateLocale, Translate } from '@/i18n'
 import { TIME_ZONE } from '@/i18n'
 import { type Image, IMAGE_FIELDS } from '@/images'
 
@@ -30,6 +30,8 @@ export interface ListedEvent {
   locationAddress: string | null
   /** Where it is: its own location, else its organisation's venue (fromOrganisation) */
   place?: EventPlace | null
+  /** Where that is, for the page's filter: its own region, else its organisation's; none where nothing says */
+  region?: Region | null
   promoted: boolean
   meetup: Meetup | null
 }
@@ -41,6 +43,65 @@ export interface EventPlace {
   fromOrganisation: boolean
 }
 
+/**
+ * Where an event is, for the Events page's filter (Regions.kt): Slovenia's 12 statistical regions, in the order
+ * Wikipedia lists them, then online and abroad
+ */
+export const REGIONS = [
+  'POMURSKA', 'PODRAVSKA', 'KOROSKA', 'SAVINJSKA', 'ZASAVSKA', 'POSAVSKA', 'JUGOVZHODNA', 'OSREDNJESLOVENSKA', 'GORENJSKA',
+  'PRIMORSKO_NOTRANJSKA', 'GORISKA', 'OBALNO_KRASKA', 'ONLINE', 'ABROAD',
+] as const
+
+export type Region = typeof REGIONS[number]
+
+/** A region's name in the page's language: the regions' are Slovenian in both, e.g. Gorenjska */
+export const regionName = (region: Region, t: Translate) => t(`events.regions.${region}`)
+
+/** A region as the address has it, e.g. ?region=primorsko-notranjska */
+export const regionSlug = (region: Region) => region.toLowerCase().replace(/_/g, '-')
+
+/** What the filter shows every event by */
+export const ALL_REGIONS = 'all'
+
+/**
+ * The filter's choices: every region, then those of [events], each with how many are in it, in the regions' own order;
+ * those with none are left out, but the one the address says ([selected]), as are the events nothing tells the region
+ * of, which only every region shows
+ */
+export function regionOptions(
+  events: Pick<ListedEvent, 'region'>[], t: Translate, selected: string = ALL_REGIONS,
+): { value: string, title: string, count?: number }[] {
+  const counts = new Map<Region, number>()
+  for (const event of events) if (event.region) counts.set(event.region, (counts.get(event.region) ?? 0) + 1)
+  return [
+    { value: ALL_REGIONS, title: t('events.regionAll') },
+    ...REGIONS.filter((region) => counts.has(region) || regionSlug(region) === selected)
+      .map((region) => ({ value: regionSlug(region), title: regionName(region, t), count: counts.get(region) ?? 0 })),
+  ]
+}
+
+/** Whether [event] is in the region the address says ([slug]); every one is in all of them */
+export const inRegion = (event: Pick<ListedEvent, 'region'>, slug: string) =>
+  slug === ALL_REGIONS || (!!event.region && regionSlug(event.region) === slug)
+
+/** Which events the page shows: all of them, or Ogrodje's picks alone (?show=promoted) */
+export const SHOWN = ['all', 'promoted'] as const
+export type Shown = typeof SHOWN[number]
+
+/** The chips for it, each with how many of [events] it shows */
+export function shownOptions(events: Pick<ListedEvent, 'promoted'>[], t: Translate): { value: Shown, title: string, count: number }[] {
+  return [
+    { value: 'all', title: t('events.showAll'), count: events.length },
+    { value: 'promoted', title: t('events.showPromoted'), count: events.filter((event) => event.promoted).length },
+  ]
+}
+
+/** What an event is found by in the list: its title, who it's by and where it is */
+export function eventText(event: Pick<ListedEvent, 'title' | 'meetup' | 'place' | 'locationName' | 'locationAddress'>) {
+  const place = event.place ?? { name: event.locationName, address: event.locationAddress }
+  return [event.title, event.meetup?.name, place.name, place.address].filter(Boolean).join(' ')
+}
+
 /** Which scraper found an event, or MANUAL for the team's own */
 export type EventSource = 'MANUAL' | string
 
@@ -48,16 +109,18 @@ export type EventSource = 'MANUAL' | string
 export interface TeamEvent extends ListedEvent {
   description: string | null
   hidden: boolean
+  /** Whether the team gave it its region, rather than its place or its organisation telling it */
+  regionManual: boolean
   source: EventSource
   sourceUrl: string | null
   organisation: { id: string, name: string }
 }
 
-export const EVENT_FIELDS = `id title url start end hasStartTime hasEndTime locationName locationAddress promoted
+export const EVENT_FIELDS = `id title url start end hasStartTime hasEndTime locationName locationAddress promoted region
   place { name address fromOrganisation } meetup { name logo mainColor backgroundColor }`
 
 /** An event's fields for the team, on top of everyone's */
-export const TEAM_EVENT_FIELDS = `${EVENT_FIELDS} description hidden source sourceUrl organisation { id name }`
+export const TEAM_EVENT_FIELDS = `${EVENT_FIELDS} description hidden regionManual source sourceUrl organisation { id name }`
 
 /** Whether the team may change [event] wholly: their own; one a scraper found only hides or is picked */
 export const isManual = (event: Pick<TeamEvent, 'source'>) => event.source === 'MANUAL'
@@ -86,6 +149,8 @@ export interface EventInput {
   locationAddress?: string
   hidden?: boolean
   promoted?: boolean
+  /** Its region, a scraper's event's too; empty for the one its place tells, else its organisation's */
+  region?: Region | ''
 }
 
 export const CREATE_EVENT = `mutation ($input: EventInput!) { event: createEvent(input: $input) { ${TEAM_EVENT_FIELDS} } }`
@@ -183,6 +248,103 @@ export function byWeek<E extends Pick<ListedEvent, 'start'>>(events: E[]): Event
     days: [...days].map(([day, events]) => ({ day, events })),
     count: [...days.values()].reduce((sum, events) => sum + events.length, 0),
   }))
+}
+
+/** The day after [day] */
+export function nextDay(day: string) {
+  const date = utc(day)
+  date.setUTCDate(date.getUTCDate() + 1)
+  return dayString(date)
+}
+
+/**
+ * A part of the Events page, by how soon its events are: today's (those on already too), the rest of this week's, next
+ * week's, the next two months that have any (month: YYYY-MM), then everything later
+ */
+export interface EventBucket<E> {
+  key: string
+  kind: 'today' | 'thisWeek' | 'nextWeek' | 'month' | 'later'
+  days: EventDay<E>[]
+  count: number
+}
+
+/** [events], the soonest first, by how soon they are from [today] (a day in Ljubljana), then by the day they start */
+export function byBucket<E extends Pick<ListedEvent, 'start'>>(events: E[], today: string): EventBucket<E>[] {
+  const thisWeek = weekOf(today)
+  const nextWeek = weekOf(dayString(new Date(utc(thisWeek).getTime() + 7 * 86_400_000)))
+  const buckets = new Map<string, EventBucket<E>>()
+  for (const event of [...events].sort((a, b) => a.start.localeCompare(b.start))) {
+    const day = dayOf(event.start)
+    const kind = day <= today ? 'today' : weekOf(day) === thisWeek ? 'thisWeek' : weekOf(day) === nextWeek ? 'nextWeek' : 'month'
+    const key = kind === 'month' ? day.slice(0, 7) : kind
+    const bucket = buckets.get(key) ?? { key, kind, days: [], count: 0 }
+    const last = bucket.days[bucket.days.length - 1]
+    if (last?.day === day) last.events.push(event)
+    else bucket.days.push({ day, events: [event] })
+    bucket.count++
+    buckets.set(key, bucket)
+  }
+  // Months further off have an event or two each: one part for all of them
+  const all = [...buckets.values()]
+  const months = all.filter((bucket) => bucket.kind === 'month')
+  if (months.length <= MONTHS_APART + 1) return all
+  const later = months.slice(MONTHS_APART)
+  return [
+    ...all.filter((bucket) => !later.includes(bucket)),
+    { key: 'later', kind: 'later', days: later.flatMap((bucket) => bucket.days), count: later.reduce((sum, bucket) => sum + bucket.count, 0) },
+  ]
+}
+
+// How many months have a part of their own before Later
+const MONTHS_APART = 2
+
+/**
+ * When an event is, on its row in a part of the Events page ([kind]): its day, left out today as the part says it, a
+ * weekday in the two weeks, with its date further off, or its days when it's on for several; and its time, where it
+ * has one, with its end's on the same day
+ */
+export function rowWhen(
+  event: Pick<ListedEvent, 'start' | 'end' | 'hasStartTime' | 'hasEndTime'>, kind: EventBucket<unknown>['kind'], dateLocale: DateLocale,
+): { day: string, time: string } {
+  const startDay = dayOf(event.start)
+  const endDay = event.end ? dayOf(event.end) : startDay
+  if (endDay !== startDay) return { day: `${shortDay(startDay, dateLocale)} – ${shortDay(endDay, dateLocale)}`, time: '' }
+  const weekday = utc(startDay).toLocaleDateString(dateLocale, { weekday: 'short', timeZone: 'UTC' })
+  const day = kind === 'today' ? '' : kind === 'thisWeek' || kind === 'nextWeek' ? weekday : `${weekday} ${shortDay(startDay, dateLocale)}`
+  if (!event.hasStartTime) return { day, time: '' }
+  const start = time(event.start, dateLocale)
+  const ends = event.end && event.hasEndTime && event.end !== event.start
+  return { day, time: ends ? `${start} – ${time(event.end!, dateLocale)}` : start }
+}
+
+/**
+ * When one of Ogrodje's picks is, on its card: Today or Tomorrow, else its weekday, then its date and its time, e.g.
+ * Jutri, 20. 11. · 18:00, or Sobota, 21. 11. · 09:00
+ */
+export function pickWhen(event: Pick<ListedEvent, 'start' | 'hasStartTime'>, today: string, t: Translate, dateLocale: DateLocale) {
+  const day = dayOf(event.start)
+  const name = day <= today ? t('events.today') : day === nextDay(today) ? t('events.tomorrow') : weekdayName(day, dateLocale)
+  const date = `${name}, ${shortDay(day, dateLocale)}`
+  return event.hasStartTime ? `${date} · ${time(event.start, dateLocale)}` : date
+}
+
+/** A bucket's heading: Today, This week, Next week, its month, e.g. December 2026, or Later */
+export function bucketTitle(bucket: Pick<EventBucket<unknown>, 'key' | 'kind'>, t: Translate, dateLocale: DateLocale) {
+  if (bucket.kind !== 'month') return t(`events.buckets.${bucket.kind}`)
+  // (events.buckets.today, .thisWeek, .nextWeek and .later)
+  return capitalized(utc(`${bucket.key}-01`).toLocaleDateString(dateLocale, { month: 'long', year: 'numeric', timeZone: 'UTC' }), dateLocale)
+}
+
+/** The first [limit] events of [days], as a folded part of the page shows them */
+export function firstEvents<E>(days: EventDay<E>[], limit: number): EventDay<E>[] {
+  const shown: EventDay<E>[] = []
+  let left = limit
+  for (const day of days) {
+    if (left <= 0) break
+    shown.push({ day: day.day, events: day.events.slice(0, left) })
+    left -= day.events.length
+  }
+  return shown
 }
 
 /** When an event starts or ends, as its form has it: a day (YYYY-MM-DD) and a time in Ljubljana (HH:mm), or none */

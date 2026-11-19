@@ -5,18 +5,25 @@ import { computed, nextTick, ref, useId } from 'vue'
 import { RouterLink } from 'vue-router'
 import EventForm from '@/components/EventForm.vue'
 import MeetupBadge from '@/components/MeetupBadge.vue'
-import { eventPath, eventTime, type EventInput, isManual, type ListedEvent, mapUrl, placeLine, type TeamEvent, UPDATE_EVENT } from '@/events'
+import RegionSelect from '@/components/RegionSelect.vue'
+import {
+  type EventBucket, eventPath, eventTime, type EventInput, isManual, type ListedEvent, mapUrl, placeLine, rowWhen, type TeamEvent,
+  UPDATE_EVENT,
+} from '@/events'
 import { errorMessage, graphql } from '@/graphql'
 import { organisationPath } from '@/organisations'
 import { useLocale } from '@/useLocale'
 
-// manage: the team's, with the event's team fields: Hide or Show, Pick (promoted) or Unpick, and Edit for their own;
+// manage: the team's, with the event's team fields: its region, Hide or Show, Pick (promoted) or Unpick, and Edit for their own;
 // a hidden one dimmed, with a tag. The page passes it only once it knows it's the team's, so the server renders it as
 // anyone sees it. Its organisation's badge leads the team to its page, but on that page (here: false).
 const props = withDefaults(defineProps<{
   event: ListedEvent | TeamEvent
   manage?: boolean
   linked?: boolean
+  // On the Events page, in a part of it (Today, This week, ...): a line of columns, when it is first, as short as the
+  // part allows, then its title, who it's by and where
+  part?: EventBucket<unknown>['kind']
 }>(), { linked: true })
 
 const emit = defineEmits<{ changed: [event: TeamEvent] }>()
@@ -49,6 +56,7 @@ function stopEditing() {
 }
 
 const when = computed(() => eventTime(props.event, dateLocale.value))
+const at = computed(() => (props.part ? rowWhen(props.event, props.part, dateLocale.value) : null))
 // Where it is: as it says, else at its organisation's venue (place), with a link to the map; online, without one
 const place = computed(() => props.event.place ?? { name: props.event.locationName, address: props.event.locationAddress })
 const where = computed(() => placeLine(place.value))
@@ -59,8 +67,27 @@ const map = computed(() => mapUrl(place.value))
      colours with their logo, and where it is; when it is at the right, or on phones under the title. Promoted ones, Ogrodje's
      picks, stand out in the accent. -->
 <template>
-  <li class="event" :class="{ promoted: event.promoted, hidden: team?.hidden }">
-    <div class="main">
+  <li class="event" :class="{ promoted: event.promoted, hidden: team?.hidden, columns: at }">
+    <template v-if="at">
+      <time class="at" :datetime="event.start"><span v-if="at.day" class="on">{{ at.day }}</span>{{ at.time }}</time>
+      <p class="title">
+        <RouterLink class="page" :to="path(eventPath(event))">{{ event.title }}</RouterLink>
+        <a v-if="event.url" class="announced" :href="event.url" target="_blank" rel="noopener"
+           :aria-label="t('events.announcedLabel', { title: event.title })"><FontAwesomeIcon class="external" :icon="faArrowUpRightFromSquare"/></a>
+        <span v-if="event.promoted" class="tag">{{ t('events.promoted') }}</span>
+        <span v-if="team?.hidden" class="tag quiet">{{ t('events.team.hidden') }}</span>
+      </p>
+      <p class="meta">
+        <span class="by">
+          <MeetupBadge v-if="event.meetup" :meetup="event.meetup"
+                       :to="team && linked ? path(organisationPath(team.organisation)) : undefined"/>
+        </span>
+        <a v-if="where && map" class="where" :href="map" target="_blank" rel="noopener"
+           :aria-label="t('events.onMap', { place: where })">{{ where }}</a>
+        <span v-else class="where">{{ where }}</span>
+      </p>
+    </template>
+    <div v-if="!at" class="main">
       <p class="title">
         <RouterLink class="page" :to="path(eventPath(event))">{{ event.title }}</RouterLink>
         <a v-if="event.url" class="announced" :href="event.url" target="_blank" rel="noopener"
@@ -76,11 +103,15 @@ const map = computed(() => mapUrl(place.value))
         <span v-else-if="where" class="where"><FontAwesomeIcon class="icon" :icon="faLocationDot"/>{{ where }}</span>
       </p>
     </div>
-    <time class="when" :datetime="event.start">{{ when }}</time>
+    <time v-if="!at" class="when" :datetime="event.start">{{ when }}</time>
 
     <div v-if="team && !editing" class="manage">
       <span v-if="isManual(team)" class="source">{{ t('events.team.manual') }}</span>
       <span class="actions">
+        <RegionSelect class="region small" :model-value="team.regionManual ? team.region ?? '' : ''"
+                      :found="team.regionManual ? null : team.region" :disabled="busy"
+                      :aria-label="t('events.regionLabel', { title: event.title })"
+                      @update:model-value="(region) => update({ region })"/>
         <button type="button" class="button small quiet" :aria-disabled="busy || undefined"
                 :aria-label="team.hidden ? t('events.team.showLabel', { title: event.title }) : t('events.team.hideLabel', { title: event.title })"
                 @click="update({ hidden: !team.hidden })">{{ team.hidden ? t('events.team.show') : t('events.team.hide') }}</button>
@@ -183,6 +214,12 @@ const map = computed(() => mapUrl(place.value))
   margin-top: 6px;
 }
 
+// Its region, as small as the buttons beside it
+.region {
+  width: auto;
+  max-width: 190px;
+}
+
 .source {
   font-size: var(--text-caption);
   line-height: 18px;
@@ -247,6 +284,96 @@ a.where {
   color: var(--secondary);
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+// On the Events page: a line of columns that line up from row to row, when it is first
+.columns {
+  grid-template-columns: 148px minmax(0, 1fr) minmax(0, 210px) minmax(0, 220px);
+  align-items: baseline;
+
+  &.promoted {
+    // The wash is 12 px wider at each side, so its columns stay in line with the other rows'
+    grid-template-columns: 148px minmax(0, 1fr) minmax(0, 210px) minmax(0, 220px);
+  }
+
+  .at {
+    font-size: var(--text-small);
+    line-height: 22px;
+    color: var(--secondary);
+    font-variant-numeric: tabular-nums;
+
+    .on {
+      margin-right: 6px;
+      font-weight: 500;
+      color: var(--ink);
+    }
+  }
+
+  // Who it's by and where are columns of their own
+  .meta {
+    display: contents;
+    font-size: var(--text-small);
+    line-height: 22px;
+    color: var(--muted);
+  }
+
+  .by {
+    min-width: 0;
+
+    // A long name ends in an ellipsis, rather than run into where it is
+    :deep(.meetup) {
+      display: inline-block;
+      // As tall as the badge is elsewhere, its name in its middle
+      line-height: 20px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      vertical-align: middle;
+
+      img {
+        margin-right: 6px;
+        vertical-align: -5px;
+      }
+    }
+  }
+
+  .where {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.hidden .at, .hidden .meta {
+  opacity: .55;
+}
+
+// Narrower: when it is over the title, who it's by and where on a line under it
+@media (max-width: 900px) {
+  .columns, .columns.promoted {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 2px;
+
+    .at {
+      font-size: var(--text-caption);
+      line-height: 18px;
+    }
+
+    .meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      margin-top: 4px;
+      line-height: 20px;
+    }
+
+    .by {
+      flex: none;
+      max-width: 60%;
+    }
+  }
 }
 
 // On phones when it is goes under the title, above who it's by

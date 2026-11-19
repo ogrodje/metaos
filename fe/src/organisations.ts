@@ -2,6 +2,7 @@
 // supporters and partners, and the companies people work at
 
 import type { RouteLocationRaw } from 'vue-router'
+import type { Region } from '@/events'
 import type { Translate } from '@/i18n'
 import { type Image, IMAGE_FIELDS } from '@/images'
 
@@ -56,6 +57,9 @@ export interface Organisation extends Supporter {
   /** Where its events usually are, which those that don't say where they are go by */
   venueName: string | null
   venueAddress: string | null
+  /** Where its events usually are, for those with no region of their own: told from its venue, or the team's (regionManual) */
+  region: Region | null
+  regionManual: boolean
 }
 
 /** How one of an organisation's links was last scraped for events */
@@ -85,7 +89,7 @@ export const EVENT_LINKS = [
 export type OrganisationInput = Partial<Record<
   'name' | 'description' | 'supportStartedAt' | 'supportEndedAt' | 'websiteUrl' | 'linkedinUrl' | 'twitterUrl'
   | 'instagramUrl' | 'facebookUrl' | 'vatId' | 'companyId' | 'address' | 'meetupUrl' | 'eventbriteUrl' | 'icalUrl'
-  | 'lumaUrl' | 'discordUrl' | 'kompotUrl' | 'mainColor' | 'backgroundColor' | 'venueName' | 'venueAddress', string>> & {
+  | 'lumaUrl' | 'discordUrl' | 'kompotUrl' | 'mainColor' | 'backgroundColor' | 'venueName' | 'venueAddress' | 'region', string>> & {
   tier?: OrganisationTier
   collectsEvents?: boolean
   archived?: boolean
@@ -98,7 +102,7 @@ export const SUPPORTER_FIELDS = `id name tier websiteUrl logo { ${IMAGE_FIELDS} 
 export const ORGANISATION_FIELDS = `
   ${SUPPORTER_FIELDS} description supporting supportStartedAt supportEndedAt linkedinUrl twitterUrl instagramUrl
   facebookUrl vatId companyId address contactPerson { id name } meetupUrl eventbriteUrl icalUrl lumaUrl discordUrl
-  kompotUrl mainColor backgroundColor collectsEvents archived venueName venueAddress
+  kompotUrl mainColor backgroundColor collectsEvents archived venueName venueAddress region regionManual
 `
 
 export const CREATE_ORGANISATION = `mutation ($input: OrganisationInput!) {

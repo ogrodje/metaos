@@ -82,6 +82,11 @@ class Organisation(
     @Column(columnDefinition = "text") var venueName: String? = null
     @Column(columnDefinition = "text") var venueAddress: String? = null
 
+    // Where its events usually are, for the Events page's filter: told from its venue (Regions), or the team's
+    // ([regionManual]), which a change to its venue leaves. An event without a region of its own goes by it.
+    @Enumerated(EnumType.STRING) @Column(columnDefinition = "text") var region: Region? = null
+    @Column(nullable = false) var regionManual: Boolean = false
+
     // Whether its events are gathered from its links: not by default, as most organisations don't announce events
     @Column(nullable = false) var collectsEvents: Boolean = false
 
@@ -272,6 +277,8 @@ data class OrganisationChanges(
     val archived: Boolean? = null,
     val venueName: String? = null,
     val venueAddress: String? = null,
+    // Its region, by its key or name ([Region.parse]); empty for the one its venue tells
+    val region: String? = null,
 )
 
 /** What changes about a person's work at an organisation, as [OrganisationChanges] */
@@ -288,6 +295,7 @@ class Organisations(
     private val work: PersonOrganisationsRepository,
     private val supported: EpisodeOrganisationsRepository,
     private val episodes: EpisodesRepository,
+    private val regions: Regions,
 ) {
 
     fun find(id: UUID): Organisation = requireNotNull(organisations.findByIdOrNull(id)) { "Organisation $id not found" }
@@ -349,9 +357,19 @@ class Organisations(
         changes.collectsEvents?.let { organisation.collectsEvents = it }
         changes.venueName?.let { organisation.venueName = it.cleared() }
         changes.venueAddress?.let { organisation.venueAddress = it.cleared() }
+        changes.region?.let { region ->
+            organisation.region = region.cleared()?.let(Region::parse)
+            organisation.regionManual = organisation.region != null
+        }
+        tellRegion(organisation)
         changes.archived?.let { archived ->
             if (archived != organisation.archived) organisation.archivedAt = if (archived) OffsetDateTime.now() else null
         }
+    }
+
+    /** [organisation]'s region as its venue tells it, unless the team gave it one */
+    fun tellRegion(organisation: Organisation) {
+        if (!organisation.regionManual) organisation.region = regions.of(organisation.venueName, organisation.venueAddress)
     }
 
     // A link, or none for empty text

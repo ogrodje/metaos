@@ -115,7 +115,20 @@ INSERT INTO events (id, organisation_id, source, external_id, source_url, title,
   ('0e000000-0000-4000-8000-000000000005', '0a000000-0000-4000-8000-000000000002', 'MANUAL', NULL,
    NULL, 'Ogrodje meetup (added by hand)', NULL, 'https://ogrodje.si',
    date_trunc('day', now()) + interval '6 days 17 hours', date_trunc('day', now()) + interval '6 days 19 hours',
-   TRUE, TRUE, NULL, NULL, NULL, NULL);
+   TRUE, TRUE, NULL, NULL, NULL, NULL),
+  ('0e000000-0000-4000-8000-000000000006', '0a000000-0000-4000-8000-000000000002', 'ICAL', 'ical-preview-3',
+   'https://example.com/hekerji/cal.ics', 'Capture the flag, online', NULL, 'https://example.com/hekerji/ctf',
+   date_trunc('day', now()) + interval '4 days 18 hours', date_trunc('day', now()) + interval '4 days 21 hours',
+   TRUE, TRUE, 'Online', NULL, NULL, NULL),
+  ('0e000000-0000-4000-8000-000000000007', '0a000000-0000-4000-8000-000000000001', 'MEETUP', 'meetup-preview-3',
+   'https://www.meetup.com/kotlin-ljubljana-preview/events', 'Kotlin on tour: Kranj', NULL,
+   'https://www.meetup.com/kotlin-ljubljana-preview/events/3', date_trunc('day', now()) + interval '16 days 17 hours',
+   NULL, TRUE, FALSE, 'Kovačnica Kranj', 'Poštna ulica 4, 4000 Kranj', NULL, NULL);
+
+-- Their regions (V39), for the Events page's filter, as MetaOS tells them when it keeps them: the organisations' from
+-- their venues, the events' from where they say they are; the one added by hand, which doesn't, has none
+UPDATE organisations SET region = region_of(venue_name, venue_address) WHERE venue_name IS NOT NULL OR venue_address IS NOT NULL;
+UPDATE events SET region = region_of(location_name, location_address) WHERE location_name IS NOT NULL OR location_address IS NOT NULL;
 
 INSERT INTO event_scrapes (organisation_id, field, url, source, scraped_at, events, error) VALUES
   ('0a000000-0000-4000-8000-000000000001', 'WEBSITE', 'https://example.com/kotlin', NULL, now() - interval '20 minutes', 0, NULL),

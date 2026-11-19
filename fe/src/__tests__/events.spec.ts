@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { ALL_REGIONS, eventText, inRegion, regionName, regionOptions, regionSlug, shownOptions, bucketTitle, byBucket, firstEvents, nextDay, pickWhen, rowWhen } from '@/events'
 import { badgeColors, byWeek, colorOf, dayOf, eventPath, eventSchedule, eventTime, isPast, paragraphs, formTime, inputTime, isManual, isOnline, mapUrl, placeLine, shortDay, sourceName, weekdayName, weekOf, weekRange } from '@/events'
 import { t, tSl } from './i18n'
 
@@ -153,5 +154,123 @@ describe("an event's page", () => {
     expect(paragraphs('First line\nsecond line\r\n\r\n  Next  \n\n\n\nLast')).toEqual(['First line\nsecond line', 'Next', 'Last'])
     expect(paragraphs('   ')).toEqual([])
     expect(paragraphs(null)).toEqual([])
+  })
+})
+
+describe('the regions', () => {
+  const events = [
+    { region: 'GORENJSKA' as const }, { region: 'OSREDNJESLOVENSKA' as const }, { region: 'GORENJSKA' as const },
+    { region: 'ONLINE' as const }, { region: 'PRIMORSKO_NOTRANJSKA' as const }, { region: null }, {},
+  ]
+
+  it('are named in Slovenian in both languages, but online and abroad', () => {
+    expect(regionName('JUGOVZHODNA', t)).toBe('Jugovzhodna Slovenija')
+    expect(regionName('OBALNO_KRASKA', tSl)).toBe('Obalno-kraška')
+    expect(regionName('ONLINE', t)).toBe('Online')
+    expect(regionName('ONLINE', tSl)).toBe('Na spletu')
+    expect(regionName('ABROAD', tSl)).toBe('Tujina')
+  })
+
+  it('are offered where there are events, in their own order, with how many', () => {
+    expect(regionOptions(events, t)).toEqual([
+      { value: ALL_REGIONS, title: 'All regions' },
+      { value: 'osrednjeslovenska', title: 'Osrednjeslovenska', count: 1 },
+      { value: 'gorenjska', title: 'Gorenjska', count: 2 },
+      { value: 'primorsko-notranjska', title: 'Primorsko-notranjska', count: 1 },
+      { value: 'online', title: 'Online', count: 1 },
+    ])
+  })
+
+  it('keep the one the address says, though it has no events', () => {
+    expect(regionOptions(events, t, 'zasavska')).toContainEqual({ value: 'zasavska', title: 'Zasavska', count: 0 })
+    expect(regionOptions([], t, 'kranjska')).toEqual([{ value: ALL_REGIONS, title: 'All regions' }])
+  })
+
+  it('filter the events, and one with no region is only among all', () => {
+    expect(regionSlug('PRIMORSKO_NOTRANJSKA')).toBe('primorsko-notranjska')
+    expect(events.filter((event) => inRegion(event, 'gorenjska'))).toHaveLength(2)
+    expect(events.filter((event) => inRegion(event, 'primorsko-notranjska'))).toHaveLength(1)
+    expect(events.filter((event) => inRegion(event, 'zasavska'))).toHaveLength(0)
+    expect(events.filter((event) => inRegion(event, ALL_REGIONS))).toHaveLength(events.length)
+  })
+
+  it('find an event by its title, who it is by and where it is, its organisation\'s venue too', () => {
+    const event = { title: 'Kotlin večer', meetup: { name: 'Kotlin Slovenija', logo: null, mainColor: null, backgroundColor: null }, locationName: 'FRI', locationAddress: null }
+    expect(eventText({ ...event, place: { name: 'Kovačnica', address: 'Poštna ulica 4, 4000 Kranj', fromOrganisation: true } }))
+      .toBe('Kotlin večer Kotlin Slovenija Kovačnica Poštna ulica 4, 4000 Kranj')
+    expect(eventText({ ...event, meetup: null })).toBe('Kotlin večer FRI')
+  })
+})
+
+describe('the picks', () => {
+  it('are a chip beside all of them, each with how many', () => {
+    expect(shownOptions([{ promoted: true }, { promoted: false }, { promoted: false }], tSl)).toEqual([
+      { value: 'all', title: 'Vsi', count: 3 },
+      { value: 'promoted', title: 'Izpostavljeni', count: 1 },
+    ])
+  })
+})
+
+describe('byBucket', () => {
+  // Thursday 19 Nov 2026 in Ljubljana
+  const today = '2026-11-19'
+  const events = [
+    { id: 'on', start: '2026-11-18T13:00:00Z' }, { id: 'now', start: '2026-11-19T17:00:00Z' },
+    { id: 'sat', start: '2026-11-21T08:00:00Z' }, { id: 'sun-late', start: '2026-11-22T23:30:00Z' },
+    { id: 'next', start: '2026-11-25T09:00:00Z' }, { id: 'nov', start: '2026-11-30T09:00:00Z' },
+    { id: 'dec-a', start: '2026-12-01T09:00:00Z' }, { id: 'dec-b', start: '2026-12-01T10:00:00Z' }, { id: 'dec-c', start: '2026-12-09T10:00:00Z' },
+    { id: 'jan', start: '2027-01-18T09:00:00Z' },
+  ]
+
+  it('groups by how soon: today with what is on already, this week, next week, then months', () => {
+    const buckets = byBucket(events, today)
+    expect(buckets.map((b) => [b.key, b.count])).toEqual([
+      ['today', 2], ['thisWeek', 1], ['nextWeek', 2], ['2026-11', 1], ['2026-12', 3], ['2027-01', 1],
+    ])
+    // Months past the next two are one part
+    const further = [...events, { id: 'feb', start: '2027-02-15T09:00:00Z' }, { id: 'may', start: '2027-05-17T09:00:00Z' }]
+    expect(byBucket(further, today).map((b) => [b.key, b.count])).toEqual([
+      ['today', 2], ['thisWeek', 1], ['nextWeek', 2], ['2026-11', 1], ['2026-12', 3], ['later', 3],
+    ])
+    // 23:30 UTC on Sunday is Monday in Ljubljana, so next week
+    expect(buckets[2]!.days.map((d) => d.day)).toEqual(['2026-11-23', '2026-11-25'])
+    expect(buckets[4]!.days.map((d) => d.events.map((e) => e.id))).toEqual([['dec-a', 'dec-b'], ['dec-c']])
+  })
+
+  it('names them in the page\'s language', () => {
+    const [todays, , , , december] = byBucket(events, today)
+    expect(bucketTitle(todays!, tSl, 'sl-SI')).toBe('Danes')
+    expect(bucketTitle(december!, tSl, 'sl-SI')).toBe('December 2026')
+    expect(bucketTitle(december!, t, 'en-GB')).toBe('December 2026')
+  })
+
+  it('folds a part to its first events, and knows tomorrow', () => {
+    const december = byBucket(events, today)[4]!
+    expect(firstEvents(december.days, 1).map((d) => d.events.map((e) => e.id))).toEqual([['dec-a']])
+    expect(firstEvents(december.days, 2).map((d) => d.events.length)).toEqual([2])
+    expect(firstEvents(december.days, 5)).toEqual(december.days)
+    expect(nextDay('2026-11-30')).toBe('2026-12-01')
+  })
+})
+
+describe('when an event is, on its row and on a pick\'s card', () => {
+  const talk = { start: '2026-11-20T17:00:00Z', end: '2026-11-20T19:00:00Z', hasStartTime: true, hasEndTime: true }
+
+  it('is as short as its part of the page allows', () => {
+    expect(rowWhen(talk, 'today', 'sl-SI')).toEqual({ day: '', time: '18:00 – 20:00' })
+    expect(rowWhen(talk, 'thisWeek', 'sl-SI')).toEqual({ day: 'pet.', time: '18:00 – 20:00' })
+    expect(rowWhen(talk, 'month', 'sl-SI')).toEqual({ day: 'pet. 20. 11.', time: '18:00 – 20:00' })
+    expect(rowWhen({ ...talk, end: null }, 'later', 'en-GB')).toEqual({ day: 'Fri 20 Nov', time: '18:00' })
+  })
+
+  it('says the days of one on for several, and no time for one without', () => {
+    expect(rowWhen({ ...talk, end: '2026-11-25T15:30:00Z' }, 'today', 'sl-SI')).toEqual({ day: '20. 11. – 25. 11.', time: '' })
+    expect(rowWhen({ ...talk, end: null, hasStartTime: false }, 'nextWeek', 'sl-SI')).toEqual({ day: 'pet.', time: '' })
+  })
+
+  it('says Today and Tomorrow on a card, else the weekday', () => {
+    expect(pickWhen(talk, '2026-11-20', tSl, 'sl-SI')).toBe('Danes, 20. 11. · 18:00')
+    expect(pickWhen(talk, '2026-11-19', tSl, 'sl-SI')).toBe('Jutri, 20. 11. · 18:00')
+    expect(pickWhen({ ...talk, hasStartTime: false }, '2026-11-10', t, 'en-GB')).toBe('Friday, 20 Nov')
   })
 })
