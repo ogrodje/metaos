@@ -849,6 +849,21 @@
     "what": "Oseba",
     "worksAt": "Zaposlitev"
   },
+  "pictureEdit": {
+    "avatar": {
+      "ask": "Želite odstraniti sliko osebe?",
+      "change": "Zamenjaj sliko",
+      "upload": "Naloži sliko"
+    },
+    "failed": "{name}: nalaganje ni uspelo. {error}",
+    "formats": "PNG, JPEG, WebP ali GIF, do 50 MB",
+    "logo": {
+      "ask": "Želite odstraniti logotip?",
+      "change": "Zamenjaj logotip",
+      "upload": "Naloži logotip"
+    },
+    "uploading": "Nalagamo … {percent} %"
+  },
   "pictures": {
     "missing": {
       "cover": "Naloži naslovnico",
@@ -862,6 +877,7 @@
       "size": "Meri {width} × {height}, {name} pa mora meriti {size}.",
       "type": "{label} mora biti PNG ali JPEG, ta datoteka pa ni."
     },
+    "removeAsk": "Želite odstraniti to sliko?",
     "slot": {
       "COVER": "Naslovnica za podcast",
       "THUMBNAIL": "Sličica A",
@@ -889,6 +905,7 @@
       "titles": "Naslovi in sličice"
     },
     "titleOf": "Naslov {letter}:",
+    "unsupported": "{name} ni PNG, JPEG, WebP ali GIF.",
     "upload": {
       "announce": {
         "failed": "{label}: nalaganje ni uspelo. {message}",
@@ -949,6 +966,10 @@
   },
   "privacy": {
     "description": "Katere osebne podatke Ogrodje obdeluje na ogrodje.si, ob prijavi in v e-pošti Ogrodja, in kako dolgo jih hrani."
+  },
+  "removeAsked": {
+    "failed": "Odstranitev ni uspela: {error}",
+    "removing": "Odstranjujemo …"
   },
   "search": {
     "archived": "Arhivirana",
@@ -1134,19 +1155,20 @@
       "search_documents": "Poišče dokumente Google po besedah v naslovu ali besedilu",
       "search_dropbox": "Poišče datoteke in mape po imenu",
       "search_koofr": "Poišče datoteke in mape po imenu",
-      "set_episode_image": "Sliko iz Dropboxa ali Koofra nastavi za sličico epizode, sličico B ali C (za nadomestne naslove) ali spletno sliko, 1920 × 1080, ali za njeno naslovnico, 3000 × 3000",
+      "set_episode_image": "Sliko nastavi za sličico epizode, sličico B ali C (za nadomestne naslove) ali spletno sliko, 1920 × 1080, ali za njeno naslovnico, 3000 × 3000: iz Dropboxa, Koofra, s spleta ali naloženo",
       "set_episode_link": "Nastavi ali počisti povezavo do YouTuba, Spotifyja ali Apple Podcasts ali eno od njenih štirih na Patreonu: celotno epizodo ali bonus, kot video ali samo zvok; vsaka je tudi v njeni distribuciji",
       "set_episode_recommended_by": "Nastavi ali počisti predlagatelja epizode",
       "set_episode_session": "Premakne epizodo v snemanje ali iz njega",
       "set_episode_show": "Premakne epizodo v oddajo ali iz nje",
       "set_episode_status": "Premakne epizodo skozi njen življenjski cikel, od ideje do objave, korak za korakom",
-      "set_organisation_logo": "Sliko iz Hygrapha, Dropboxa ali Koofra nastavi za logotip organizacije",
+      "set_organisation_logo": "Sliko nastavi za logotip organizacije: iz Dropboxa, Koofra, s spleta ali naloženo",
       "set_patreon_post_image": "Nastavi sličico objave, eno od slik epizode v MetaOS",
       "set_patreon_post_media": "Naloži eno od datotek epizode v MetaOS v osnutek, kot objavo podkasta ali videa",
-      "set_person_avatar": "Sliko iz Hygrapha, Dropboxa ali Koofra nastavi za avatar osebe",
+      "set_person_avatar": "Sliko nastavi za avatar osebe: iz Dropboxa, Koofra, s spleta ali naloženo",
       "set_person_bio": "Nastavi ali počisti vrstico o tem, kdo je oseba, na primer njeno vlogo in podjetje",
       "set_person_email": "Nastavi ali počisti e-poštni naslov osebe; računi, ki se prijavljajo z njim, se povežejo z njo",
       "set_person_link": "Nastavi ali počisti njeno domačo stran, LinkedIn, Twitter/X, Instagram ali Facebook",
+      "start_image_upload": "Pridobi podpisan naslov za nalaganje slike neposredno v vedro MetaOS, do 50 MB, za sliko epizode, avatar ali logotip",
       "transcribe_episode": "Prepiše celoten zvok ali video epizode ali drugo njeno datoteko, z Googlovim Speech-to-Text ali s Sonioxom; ko je ponudnik zaseden, počaka na vrsto",
       "unlink_account": "Odveže račun od osebe, na primer če je povezan z napačno; to sme le Oto",
       "unlink_episode_document": "Odveže dokument Google od epizode; dokument ostane v Drivu",

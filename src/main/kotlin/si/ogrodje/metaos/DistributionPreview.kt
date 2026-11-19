@@ -134,7 +134,7 @@ class PublicWeb(@Value("\${metaos.previews.allow-local:false}") private val allo
 
     private fun check(uri: URI) {
         val local = allowLocal && uri.scheme == "http"
-        if (uri.scheme != "https" && !local) throw PreviewUnavailable("MetaOS fetches previews over https only, not $uri")
+        if (uri.scheme != "https" && !local) throw PreviewUnavailable("MetaOS fetches from the web over https only, not $uri")
         val host = uri.host ?: throw PreviewUnavailable("$uri has no host")
         val addresses = try {
             InetAddress.getAllByName(host)
