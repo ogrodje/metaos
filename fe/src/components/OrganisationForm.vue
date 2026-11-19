@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, useId } from 'vue'
 import MeetupBadge from '@/components/MeetupBadge.vue'
+import RegionSelect from '@/components/RegionSelect.vue'
+import type { Region } from '@/events'
 import { errorMessage, graphql } from '@/graphql'
 import { src } from '@/images'
 import {
@@ -23,7 +25,7 @@ const emit = defineEmits<{
 const { t } = useLocale()
 const id = useId()
 
-type TextField = Exclude<keyof OrganisationInput, 'tier' | 'collectsEvents' | 'archived'>
+type TextField = Exclude<keyof OrganisationInput, 'tier' | 'collectsEvents' | 'archived' | 'region'>
 
 const TEXT_FIELDS: TextField[] = [
   'name', 'description', 'supportStartedAt', 'supportEndedAt', 'websiteUrl', 'linkedinUrl', 'twitterUrl', 'instagramUrl',
@@ -34,6 +36,8 @@ const TEXT_FIELDS: TextField[] = [
 const text = ref(Object.fromEntries(TEXT_FIELDS.map((field) => [field, props.organisation?.[field] ?? ''])) as Record<TextField, string>)
 const tier = ref<OrganisationTier>(props.organisation?.tier ?? 'NONE')
 const collectsEvents = ref(props.organisation?.collectsEvents ?? false)
+// Its region when the team gave it one; else Automatic, what its venue tells
+const region = ref<Region | ''>(props.organisation?.regionManual ? props.organisation.region ?? '' : '')
 
 const TIER_OPTIONS: OrganisationTier[] = ['NONE', 'SUPPORTER', 'PARTNER']
 
@@ -79,6 +83,7 @@ async function save() {
     // A new one gets only what's given; a change clears what was emptied
     if (value || props.organisation) input[field] = value
   }
+  if (region.value || props.organisation) input.region = region.value
   try {
     const { organisation } = props.organisation
       ? await graphql<{ organisation: Organisation }>(UPDATE_ORGANISATION, { id: props.organisation.id, input })
@@ -176,6 +181,13 @@ function picked(field: 'mainColor' | 'backgroundColor', value: string) {
         </label>
       </div>
       <p class="hint">{{ t('organisationForm.venueHint') }}</p>
+      <div class="fields">
+        <label>
+          <span class="label">{{ t('organisation.region') }}</span>
+          <RegionSelect v-model="region" :found="organisation && !organisation.regionManual ? organisation.region : null"/>
+        </label>
+      </div>
+      <p class="hint">{{ t('organisationForm.regionHint') }}</p>
       <p class="preview">
         <span class="label">{{ t('organisationForm.badge') }}</span>
         <MeetupBadge :meetup="badge"/>

@@ -130,6 +130,12 @@ class OrganisationMerges(
         field("backgroundColor", { it.backgroundColor }) { into.backgroundColor = it }
         field("venueName", { it.venueName }) { into.venueName = it }
         field("venueAddress", { it.venueAddress }) { into.venueAddress = it }
+        // A region the team gave it; one its venue tells follows the venue it has now
+        field("region", { o -> o.region.takeIf { o.regionManual } }) {
+            into.region = it
+            into.regionManual = true
+        }
+        if (!dryRun) organisations.tellRegion(into)
         // Its support, whole: the tier with its dates, where into supports Ogrodje in no way
         if (from.tier != OrganisationTier.NONE) {
             if (into.tier == OrganisationTier.NONE) {

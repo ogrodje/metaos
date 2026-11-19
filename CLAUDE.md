@@ -267,8 +267,13 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   for one online (`mapUrl`; `EventRow.vue`, `MeetupBadge.vue`); promoted ones, Ogrodje's picks, stand out in the accent.
   Its heading's line says how many organisations' events it gathers (`eventOrganisers`); under them, that MetaOS gathers
   them from the organisers' public pages, and that Ogrodje doesn't organise them nor vouch for them. They're MetaOS's own (Events, below),
-  through the `events` query: those that haven't ended, or started when they have no end, and aren't hidden. The team
-  also gets the hidden ones, dimmed, and on each Hide, Pick and Edit (Edit only for its own), Add event and Refresh.
+  through the `events` query: those that haven't ended, or started when they have no end, and aren't hidden. Under
+  its heading, a `FilterBar` (OG-71): a box that finds by title, organiser and place, and a `SelectFilter` of the
+  regions that have events, each with how many, then online and abroad (`regionOptions`, `inRegion`), both in the
+  address (`?region=gorenjska`, `?q=`), as the other lists'; an event with no region shows only under All regions. The team
+  also gets the hidden ones, dimmed, and on each its region (`RegionSelect.vue`: Automatic, what its place or its
+  organisation tells, or one chosen), Hide, Pick and Edit (Edit only for its own), Add event and Refresh; an
+  organisation's form has its region too.
 - An event's page, `/dogodki/<ID>` (`EventView.vue`, OG-68), is anyone's, a past one's too, but a hidden one's,
   which is the team's and not found for anyone else, as one that isn't there: a workspace, its title with its
   organisation's badge, Featured and Past in its lead; in its panel when it is (its weekday and date in Ljubljana, and
@@ -330,6 +335,10 @@ them (OG-64): the start of its CRM. Finance is to build on them.
   Events page (`main_color`, the text's, and `background_color`, `#rrggbb`), and whether its events are gathered
   (`collects_events`: Goo's meetups, and one made with an event link but its website; not the rest). `goo_id` is the
   Hygraph meetup it was imported from, once, from Goo (OG-64; the import's gone since, OG-66).
+- Its region (V39, `Region` in [`Regions.kt`](src/main/kotlin/si/ogrodje/metaos/Regions.kt), Events): where its events
+  usually are, which one with no region of its own goes by. Told from its venue, each time that changes, never from
+  its registered address, which is finance's; or the team's (`region_manual`), which a change to its venue leaves,
+  until it's cleared. Merged, the kept one takes a region the team gave the other, where it has none.
 - Its venue (V37: `venue_name`, `venue_address`, public, unlike its registered `address`): where its events usually
   are, which an event that doesn't say where it is goes by (`Event.place`: one with no address whose place is none, the
   organisation's name or the venue's, as some sources give them; one online keeps what it says), as GraphQL's
@@ -383,6 +392,22 @@ Slovenia's tech, developer and startup events, which MetaOS gathers from the org
   not listed for anyone else) or picks it (`promoted_at`), which a scraper's keeps when it's found again; a scraper's
   changes only so, the team's own wholly. It has its audit trigger, so it's in the live updates; the organisation's
   history and Home's tell the team's changes (`ChangeKind.EVENT`), not the scrapers' (`metaos-workflows`).
+- An event has a region (OG-71, [`Regions.kt`](src/main/kotlin/si/ogrodje/metaos/Regions.kt),
+  [`V39__regions.sql`](src/main/resources/db/migration/V39__regions.sql)), which the Events page filters by: one of
+  Slovenia's 12 statistical regions, as they are since 2015 and Wikipedia lists them (`Region`, by their Slovenian
+  names), `ONLINE` or `ABROAD`. Postgres tells it from where the event says it is, `region_of(place, address)`, with
+  `places`, a table of patterns by rank: abroad first (a few countries and cities, as Austria's postcodes have four
+  digits too), then Pošta Slovenije's 478 postcodes, each with its post's region, then names (the municipalities, but
+  those that are words too, e.g. Grad and Tabor, posts of more than a word, and towns as they're said, v Novi Gorici),
+  as whole words, whatever the case and diacritics (`fold_sl`), the longest first, then a region's own name
+  (Savinjske regije), last, as streets have them (Koroška cesta, in Maribor); a name that's online, with no address,
+  is `ONLINE`. A postcode in a place is optional: where there is one it decides. MetaOS asks when an event's place
+  changes (`Regions.of`, in `Events.keep` only for those that changed) and keeps the answer (`events.region`); the
+  team gives any event one instead, a scraper's too (`region_manual`), which its scraper leaves, until it's cleared.
+  One with none of its own, as it doesn't say where it is or says what tells nothing (Računalniški muzej), goes by its
+  organisation's (`Event.region()`); with neither, it has none, and is listed only when no region is chosen. The
+  migration's data says where it's from; a post's region is its municipality's, so a new post or municipality is a
+  new row there. Its backfill wasn't audited, as nobody changed those rows.
 - The scrapers ([`scrapers/`](scrapers/README.md)) are a service of their own, Goo's parsers in Kotlin, one pod with
   Playwright's browser beside it, which works on Temporal's task queue `scrapers` (`ScraperActivities`: MetaOS has the
   same interface by the same name, so changing one is changing both). `EventsSyncWorkflow` asks them for each link of
@@ -398,10 +423,11 @@ Slovenia's tech, developer and startup events, which MetaOS gathers from the org
 - Goo's meetups and upcoming events were imported once (OG-64), and the import is gone since (OG-66): the
   organisations and events are MetaOS's own, and nothing reads Hygraph or Goo for them. Goo's weekly Discord post
   stays Goo's until it's ported (OG-65).
-- MCP: `list_events`, `create_event`, `update_event`, `refresh_events` (`EventsMCP`), and the organisations' tools take
-  the new fields. GraphQL: `events(hidden)`, `event` (a past one too, for its page), `Event.moreFromOrganiser`,
+- MCP: `list_events` (also by `region`), `create_event`, `update_event`, `refresh_events` (`EventsMCP`), and the
+  organisations' tools take the new fields, `region` too. GraphQL: `events(hidden)`, `event` (a past one too, for its page), `Event.moreFromOrganiser`,
   `eventsRefresh`, `Organisation.events` and `eventScrapes`, and `createEvent`, `updateEvent`, `refreshEvents`
-  (`EventsGraphQL`). Public: the upcoming events that aren't hidden, and any one that isn't by its ID, with their
+  (`EventsGraphQL`), and `Event.region` and `Organisation.region`, with `regionManual`; the `events` query takes no
+  region, as the page filters what it loaded. Public: the upcoming events that aren't hidden, and any one that isn't by its ID, with their
   organisations' names, logos and colours (`meetup`); the rest is the team's.
 - `EventsTest` has the rules, `EventsSyncTest` the workflow in Temporal's test server against a stand-in scraper; the
   scrapers' own tests read saved pages.

@@ -5,12 +5,13 @@ import { computed, nextTick, ref, useId } from 'vue'
 import { RouterLink } from 'vue-router'
 import EventForm from '@/components/EventForm.vue'
 import MeetupBadge from '@/components/MeetupBadge.vue'
+import RegionSelect from '@/components/RegionSelect.vue'
 import { eventPath, eventTime, type EventInput, isManual, type ListedEvent, mapUrl, placeLine, type TeamEvent, UPDATE_EVENT } from '@/events'
 import { errorMessage, graphql } from '@/graphql'
 import { organisationPath } from '@/organisations'
 import { useLocale } from '@/useLocale'
 
-// manage: the team's, with the event's team fields: Hide or Show, Pick (promoted) or Unpick, and Edit for their own;
+// manage: the team's, with the event's team fields: its region, Hide or Show, Pick (promoted) or Unpick, and Edit for their own;
 // a hidden one dimmed, with a tag. The page passes it only once it knows it's the team's, so the server renders it as
 // anyone sees it. Its organisation's badge leads the team to its page, but on that page (here: false).
 const props = withDefaults(defineProps<{
@@ -81,6 +82,10 @@ const map = computed(() => mapUrl(place.value))
     <div v-if="team && !editing" class="manage">
       <span v-if="isManual(team)" class="source">{{ t('events.team.manual') }}</span>
       <span class="actions">
+        <RegionSelect class="region small" :model-value="team.regionManual ? team.region ?? '' : ''"
+                      :found="team.regionManual ? null : team.region" :disabled="busy"
+                      :aria-label="t('events.regionLabel', { title: event.title })"
+                      @update:model-value="(region) => update({ region })"/>
         <button type="button" class="button small quiet" :aria-disabled="busy || undefined"
                 :aria-label="team.hidden ? t('events.team.showLabel', { title: event.title }) : t('events.team.hideLabel', { title: event.title })"
                 @click="update({ hidden: !team.hidden })">{{ team.hidden ? t('events.team.show') : t('events.team.hide') }}</button>
@@ -181,6 +186,12 @@ const map = computed(() => mapUrl(place.value))
   align-items: center;
   gap: 4px 12px;
   margin-top: 6px;
+}
+
+// Its region, as small as the buttons beside it
+.region {
+  width: auto;
+  max-width: 190px;
 }
 
 .source {

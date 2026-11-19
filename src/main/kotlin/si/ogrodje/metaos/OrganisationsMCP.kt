@@ -39,13 +39,16 @@ data class OrganisationDto(
     // Where its events usually are, which an event that doesn't say where it is goes by
     val venueName: String?,
     val venueAddress: String?,
+    // Where its events usually are, for the Events page's filter: told from its venue, or the team's (regionManual)
+    val region: Region?,
+    val regionManual: Boolean,
 )
 
 fun Organisation.toDto() = OrganisationDto(
     id, name, description, tier, supportStartedAt, supportEndedAt, supports(ogrodjeToday()), websiteUrl, linkedinUrl,
     twitterUrl, instagramUrl, facebookUrl, vatId, companyId, address, contactPerson?.id, contactPerson?.name, meetupUrl,
     eventbriteUrl, icalUrl, lumaUrl, discordUrl, kompotUrl, mainColor, backgroundColor, collectsEvents, archived,
-    venueName, venueAddress,
+    venueName, venueAddress, region, regionManual,
 )
 
 /** One of two organisations that may be one */
@@ -187,7 +190,8 @@ class OrganisationsMCP(
         description = "Change an organisation: its name, description, tier and when it supported Ogrodje, its links, " +
             "its finance details (VAT ID, company ID, address, who to contact), which are the team's, where it " +
             "announces its events (its website too, which the scrapers read every hour) and its badge's colours on the " +
-            "Events page, where its events usually are (its venue and address, for those that don't say), and " +
+            "Events page, where its events usually are (its venue and address, for those that don't say, and its " +
+            "region, which its venue tells unless it's given), and " +
             "whether it collects events or is archived (listed apart, its events no longer gathered; " +
             "nothing is deleted). Omitted fields are left as they are; empty text clears one. It's listed as a " +
             "supporter or partner while its tier isn't NONE, from when its support started (or always, without a " +
@@ -221,12 +225,13 @@ class OrganisationsMCP(
         @McpToolParam(description = "Archive it (true), or bring it back (false)", required = false) archived: Boolean? = null,
         @McpToolParam(description = "Where its events usually are, e.g. Kovačnica, for those that don't say; $CLEARS", required = false) venueName: String? = null,
         @McpToolParam(description = "That venue's address, e.g. Trubarjeva cesta 5, 1000 Ljubljana; $CLEARS", required = false) venueAddress: String? = null,
+        @McpToolParam(description = "$REGION, where its events usually are, for those with no region of their own; empty for the one its venue tells", required = false) region: String? = null,
     ): OrganisationDto = organisations.update(
         id,
         OrganisationChanges(
             name, description, tier, supportStartedAt, supportEndedAt, websiteUrl, linkedinUrl, twitterUrl, instagramUrl,
             facebookUrl, vatId, companyId, address, contactPerson, meetupUrl, eventbriteUrl, icalUrl, lumaUrl, discordUrl,
-            kompotUrl, mainColor, backgroundColor, collectsEvents, archived, venueName, venueAddress,
+            kompotUrl, mainColor, backgroundColor, collectsEvents, archived, venueName, venueAddress, region,
         ),
     ).toDto()
 

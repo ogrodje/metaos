@@ -99,13 +99,13 @@ private val ORGANISATION_COLUMNS = linkedMapOf(
     "company_id" to "Company ID", "address" to "Address", "contact_person_id" to "Contact", "meetup_url" to "Meetup",
     "eventbrite_url" to "Eventbrite", "ical_url" to "Calendar", "luma_url" to "Luma", "discord_url" to "Discord",
     "kompot_url" to "Kompot", "main_color" to "Badge text", "background_color" to "Badge background",
-    "collects_events" to "Collects events", "venue_name" to "Venue", "venue_address" to "Venue address",
+    "collects_events" to "Collects events", "venue_name" to "Venue", "venue_address" to "Venue address", "region" to "Region",
 )
 
 // An event's, as the team gives them to its own
 private val EVENT_COLUMNS = linkedMapOf(
     "title" to "Title", "starts_at" to "Starts", "ends_at" to "Ends", "url" to "Link", "location_name" to "Where",
-    "location_address" to "Address", "description" to "Description", "organisation_id" to "By",
+    "location_address" to "Address", "region" to "Region", "description" to "Description", "organisation_id" to "By",
 )
 
 // A person's work at an organisation
@@ -439,6 +439,7 @@ private class Names(
         column == "session_id" -> sessions[value.toString()] ?: "a session deleted since"
         column == "recommended_by" || column == "contact_person_id" -> people[value.toString()] ?: "someone deleted since"
         column == "tier" -> value.toString().lowercase()
+        column == "region" -> runCatching { Region.valueOf(value.toString()).label }.getOrDefault(value.toString())
         column == "organisation_id" -> organisations[value.toString()] ?: "an organisation deleted since"
         column == "starts_at" || column == "ends_at" ->
             runCatching { EVENT_TIME.format(OffsetDateTime.parse(value.toString()).atZoneSameInstant(LJUBLJANA)) }.getOrDefault(value.toString())

@@ -36,6 +36,7 @@ class EventsTest @Autowired constructor(
     private val events: Events,
     private val organisationsMCP: OrganisationsMCP,
     private val history: History,
+    private val regions: Regions,
 ) {
 
     private val writer = jwt().jwt {
@@ -236,6 +237,106 @@ class EventsTest @Autowired constructor(
         graphql("{ events { title place { name address fromOrganisation } } eventOrganisers }")
             .andExpect(jsonPath("$.data.events[?(@.title == 'Talk v-6')].place.address", hasItem("Večna pot 113")))
             .andExpect(jsonPath("$.data.eventOrganisers").isNumber)
+    }
+
+    @Test
+    fun `a place's region is its postcode's, else its name's, online or abroad, and none when nothing says`() {
+        // A postcode decides, whatever else is said
+        assertEquals(Region.GORENJSKA, regions.of("Kovačnica - podjetniški inkubator Kranj", "Poštna ulica 4, 4000 Kranj"))
+        assertEquals(Region.JUGOVZHODNA, regions.of("Podjetniški inkubator Bela krajina", "Belokranjska cesta 36, 8340 Črnomelj"))
+        assertEquals(Region.SAVINJSKA, regions.of("PC Vrelec, Celjska cesta 30, 3250 Rog. Slatina – Sejna soba v 1. nadstropju", null))
+        assertEquals(Region.KOROSKA, regions.of("Stara železarna Ravne", "Koroška cesta 12, 2390 Ravne na Koroškem"))
+        assertEquals(Region.POMURSKA, regions.of("Pomurski tehnološki park", "Plese 9a, 9000 Murska Sobota"))
+        assertEquals(Region.ZASAVSKA, regions.of(null, "Trg revolucije 1, 1420 Trbovlje"))
+        assertEquals(Region.POSAVSKA, regions.of(null, "8270 Krško"))
+        assertEquals(Region.PRIMORSKO_NOTRANJSKA, regions.of(null, "6230 Postojna"))
+        assertEquals(Region.OBALNO_KRASKA, regions.of(null, "Titov trg 4, 6000 Koper - Capodistria"))
+        assertEquals(Region.PODRAVSKA, regions.of("Vetrinjc BarCoda Vetrinjska ulica 30, 2000 Maribor", null))
+        // Without one, a municipality's or a post's name, as whole words, whatever its case and diacritics
+        assertEquals(Region.OSREDNJESLOVENSKA, regions.of("Tehnološki park Ljubljana", null))
+        assertEquals(Region.ZASAVSKA, regions.of("Katapult", "Gabrsko 12, Trbovlje"))
+        assertEquals(Region.OSREDNJESLOVENSKA, regions.of("LUI", "Vojkova cesta 63, LJUBLJANA"))
+        assertEquals(Region.GORISKA, regions.of("Vinoteka Restavracije Eda v Novi Gorici", null))
+        assertEquals(Region.GORENJSKA, regions.of("Hotel v Skofji Loki", null))
+        assertEquals(Region.SAVINJSKA, regions.of("Inkubator Savinjske regije", null))
+        // A street named after a region or a town isn't there: Maribor's Koroška cesta, Ljubljana's Dunajska
+        assertEquals(Region.PODRAVSKA, regions.of(null, "Koroška cesta 160, Maribor"))
+        assertEquals(Region.OSREDNJESLOVENSKA, regions.of(null, "Dunajska cesta 5, Ljubljana"))
+        assertNull(regions.of(null, "Celovška cesta 111"))
+        // Online only by its name alone, and abroad before a postcode, as Austria's have four digits too
+        assertEquals(Region.ONLINE, regions.of("Online", null))
+        assertEquals(Region.ONLINE, regions.of("Na spletu (Zoom)", " "))
+        assertEquals(Region.OSREDNJESLOVENSKA, regions.of("Online in v živo", "Večna pot 113, 1000 Ljubljana"))
+        assertEquals(Region.ABROAD, regions.of("G-Gravity Incubator, Milano, Italija", null))
+        assertEquals(Region.ABROAD, regions.of("Lakeside Park", "Lakeside B01, 9020 Klagenfurt"))
+        // What says nothing has none: a venue alone, a year, a house number
+        assertNull(regions.of("Računalniški muzej", null))
+        assertNull(regions.of("MCC Kavarna 2026", "Teslova 30"))
+        assertNull(regions.of(null, null))
+        assertNull(regions.of(" ", ""))
+    }
+
+    @Test
+    fun `an event's region is its place's, else its organisation's, unless the team gives it one, which its scraper leaves`() {
+        val by = organisation("Region Test")
+        fun at(id: String, name: String?, address: String?) = found(id, "Talk $id").copy(locationName = name, locationAddress = address)
+        keep(by, listOf(
+            at("r-1", "Kovačnica", "Poštna ulica 4, 4000 Kranj"), at("r-2", "Kovačnica", "Poštna ulica 4, 4000 Kranj"),
+            at("r-3", null, null), at("r-4", "Online", null), at("r-5", "Računalniški muzej", null), at("r-6", "FRI", "Večna pot 113, 1000 Ljubljana"),
+            at("r-7", "Kovačnica", "Poštna ulica 4, 4000 Kranj"),
+        ))
+        // Its venue, which its events gave it, tells the organisation's region
+        val organisation = organisationsMCP.get(by).organisation
+        assertEquals(Region.GORENJSKA, organisation.region)
+        assertFalse(organisation.regionManual)
+
+        fun regions() = eventsMCP.list(organisationId = by).associate { it.title to it.region }
+        assertEquals(Region.GORENJSKA, regions()["Talk r-1"])
+        assertEquals(Region.OSREDNJESLOVENSKA, regions()["Talk r-6"])
+        assertEquals(Region.ONLINE, regions()["Talk r-4"])
+        // Those that don't say, or say what tells nothing, go by their organisation's
+        assertEquals(Region.GORENJSKA, regions()["Talk r-3"])
+        assertEquals(Region.GORENJSKA, regions()["Talk r-5"])
+        assertEquals(setOf("Talk r-1", "Talk r-2", "Talk r-3", "Talk r-5", "Talk r-7"), eventsMCP.list(organisationId = by, region = "gorenjska").map { it.title }.toSet())
+        assertEquals(listOf("Talk r-4"), eventsMCP.list(organisationId = by, region = "ONLINE").map { it.title })
+        assertFailsWith<IllegalArgumentException> { eventsMCP.list(region = "Kranjska") }
+
+        // The team gives a scraper's event its region, which stays when it's found again, elsewhere too
+        val museum = checkNotNull(eventsMCP.list(organisationId = by).first { it.title == "Talk r-5" }.id)
+        val given = eventsMCP.update(museum, region = "Osrednjeslovenska")
+        assertEquals(Region.OSREDNJESLOVENSKA, given.region)
+        assertTrue(given.regionManual)
+        keep(by, listOf(at("r-5", "Računalniški muzej", "Celovška cesta 111, 4000 Kranj")))
+        assertEquals(Region.OSREDNJESLOVENSKA, regions()["Talk r-5"])
+        assertTrue(history.of(by).any { it.summary == "Changed the event \"Talk r-5\"" && it.fields.any { f -> f.field == "Region" && f.to == "Osrednjeslovenska" } })
+        // Cleared, it's what its place tells again
+        val cleared = eventsMCP.update(museum, region = "")
+        assertEquals(Region.GORENJSKA, cleared.region)
+        assertFalse(cleared.regionManual)
+
+        // The organisation's follows its venue, until the team gives it one
+        assertEquals(Region.PODRAVSKA, organisationsMCP.update(by, venueName = "Maribox", venueAddress = "Loška ulica 13, 2000 Maribor").region)
+        assertEquals(Region.PODRAVSKA, regions()["Talk r-3"])
+        val pinned = organisationsMCP.update(by, region = "ZASAVSKA")
+        assertTrue(pinned.regionManual)
+        assertEquals(Region.ZASAVSKA, organisationsMCP.update(by, venueAddress = "Poštna ulica 4, 4000 Kranj").region)
+        assertEquals(Region.ZASAVSKA, regions()["Talk r-3"])
+        assertEquals(Region.GORENJSKA, organisationsMCP.update(by, region = "").region)
+
+        // The team's own says where it is, or is given its region
+        val own = eventsMCP.create(by, "Hekaton", "2030-06-01", locationName = "Katapult", locationAddress = "Gabrsko 12, Trbovlje")
+        assertEquals(Region.ZASAVSKA, own.region)
+        assertEquals(Region.ABROAD, eventsMCP.create(by, "Izlet", "2030-06-02", region = "abroad").region)
+
+        graphql("{ events { title region regionManual } }")
+            .andExpect(jsonPath("$.data.events[?(@.title == 'Talk r-6')].region", hasItem("OSREDNJESLOVENSKA")))
+            .andExpect(jsonPath("$.data.events[?(@.title == 'Talk r-4')].region", hasItem("ONLINE")))
+        graphql("""mutation { updateEvent(id: "$museum", input: { region: "POSAVSKA" }) { region regionManual } }""", writer)
+            .andExpect(jsonPath("$.data.updateEvent.region").value("POSAVSKA"))
+            .andExpect(jsonPath("$.data.updateEvent.regionManual").value(true))
+        graphql("""mutation { updateOrganisation(id: "$by", input: { region: "KOROSKA" }) { region regionManual } }""", writer)
+            .andExpect(jsonPath("$.data.updateOrganisation.region").value("KOROSKA"))
+            .andExpect(jsonPath("$.data.updateOrganisation.regionManual").value(true))
     }
 
     @Test

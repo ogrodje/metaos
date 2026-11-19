@@ -5,12 +5,20 @@ import { RouterLink } from 'vue-router'
 import { keepUnchanged, useLiveRefresh } from '@/changes'
 import EventForm from '@/components/EventForm.vue'
 import EventRow from '@/components/EventRow.vue'
+import FilterBar from '@/components/FilterBar.vue'
 import LoadError from '@/components/LoadError.vue'
 import LoadingRows from '@/components/LoadingRows.vue'
+import NoMatch from '@/components/NoMatch.vue'
 import PageHeader from '@/components/PageHeader.vue'
-import { byWeek, EVENT_FIELDS, type ListedEvent, shortDay, TEAM_EVENTS, type TeamEvent, weekdayName, weekRange } from '@/events'
+import SelectFilter from '@/components/SelectFilter.vue'
+import {
+  ALL_REGIONS, byWeek, EVENT_FIELDS, eventText, inRegion, type ListedEvent, regionOptions, shortDay, TEAM_EVENTS, type TeamEvent,
+  weekdayName, weekRange,
+} from '@/events'
 import { useEventsRefresh } from '@/eventsRefresh'
 import { graphql } from '@/graphql'
+import { matches } from '@/lists'
+import { useClearQuery, useQueryState } from '@/query'
 import { usePageMeta } from '@/seo'
 import { useFirstLoad } from '@/ssr'
 import { useAuthStore } from '@/stores/auth'
@@ -20,6 +28,7 @@ import { useLocale } from '@/useLocale'
 // links, as ogrodje.si's Dogodki page listed them: by week, then by day, in the page's language (the events themselves
 // are as their organisers write them). Everyone sees the same, so the server renders it. Once the page knows it's the
 // team's, it loads them again with the hidden ones and what's the team's, to hide, pick, add and refresh them.
+// Filtered by region (OG-71) and found as you type, in the address, e.g. /dogodki?region=gorenjska, on what's loaded.
 const auth = useAuthStore()
 const { t, dateLocale, path } = useLocale()
 const events = ref<(ListedEvent | TeamEvent)[]>()
@@ -78,12 +87,21 @@ usePageMeta(() => ({
   description: t('events.description'),
 }))
 
-const weeks = computed(() => byWeek(events.value ?? []))
+// Which, as the address says: a region's events, online ones or those abroad, and those found by what's typed
+const region = useQueryState('region', ALL_REGIONS)
+const find = useQueryState('q', '')
+const clear = useClearQuery()
+
+const regions = computed(() => regionOptions(events.value ?? [], t, region.value))
+const filtering = computed(() => region.value !== ALL_REGIONS || find.value.trim() !== '')
+const shown = computed(() => (events.value ?? []).filter((event) => inRegion(event, region.value) && matches(eventText(event), find.value)))
+
+const weeks = computed(() => byWeek(shown.value))
 </script>
 
 <template>
   <main class="content">
-    <PageHeader :title="t('pages.events')" :count="events?.length">
+    <PageHeader :title="t('pages.events')" :count="events?.length" :shown="filtering && events ? shown.length : undefined">
       <I18nT v-if="organisers" keypath="events.intro" :plural="organisers" scope="global">
         <template #n>{{ organisers }}</template>
         <template #discord>
@@ -115,9 +133,16 @@ const weeks = computed(() => byWeek(events.value ?? []))
       <EventForm v-if="adding" id="add-event" @saved="added" @close="adding = false"/>
     </template>
 
+    <FilterBar v-model:find="find" :placeholder="t('events.find')">
+      <template #end>
+        <SelectFilter v-if="regions.length > 2 || region !== ALL_REGIONS" v-model="region" :label="t('events.region')" :options="regions"/>
+      </template>
+    </FilterBar>
+
     <LoadError v-if="error" :what="t('events.what')" :error="error" @retry="loadEvents()"/>
     <LoadingRows v-else-if="!events" :rows="6" tall :label="t('events.loading')"/>
     <p v-else-if="!events.length" class="note">{{ t('events.none') }}</p>
+    <NoMatch v-else-if="!shown.length" :find="find" @clear="clear(['region', 'q'])">{{ t('events.noMatch') }}</NoMatch>
 
     <template v-else>
       <section v-for="week in weeks" :key="week.monday" :aria-labelledby="`week-${week.monday}`">

@@ -1,4 +1,4 @@
-import type { DateLocale } from '@/i18n'
+import type { DateLocale, Translate } from '@/i18n'
 import { TIME_ZONE } from '@/i18n'
 import { type Image, IMAGE_FIELDS } from '@/images'
 
@@ -30,6 +30,8 @@ export interface ListedEvent {
   locationAddress: string | null
   /** Where it is: its own location, else its organisation's venue (fromOrganisation) */
   place?: EventPlace | null
+  /** Where that is, for the page's filter: its own region, else its organisation's; none where nothing says */
+  region?: Region | null
   promoted: boolean
   meetup: Meetup | null
 }
@@ -41,6 +43,53 @@ export interface EventPlace {
   fromOrganisation: boolean
 }
 
+/**
+ * Where an event is, for the Events page's filter (Regions.kt): Slovenia's 12 statistical regions, in the order
+ * Wikipedia lists them, then online and abroad
+ */
+export const REGIONS = [
+  'POMURSKA', 'PODRAVSKA', 'KOROSKA', 'SAVINJSKA', 'ZASAVSKA', 'POSAVSKA', 'JUGOVZHODNA', 'OSREDNJESLOVENSKA', 'GORENJSKA',
+  'PRIMORSKO_NOTRANJSKA', 'GORISKA', 'OBALNO_KRASKA', 'ONLINE', 'ABROAD',
+] as const
+
+export type Region = typeof REGIONS[number]
+
+/** A region's name in the page's language: the regions' are Slovenian in both, e.g. Gorenjska */
+export const regionName = (region: Region, t: Translate) => t(`events.regions.${region}`)
+
+/** A region as the address has it, e.g. ?region=primorsko-notranjska */
+export const regionSlug = (region: Region) => region.toLowerCase().replace(/_/g, '-')
+
+/** What the filter shows every event by */
+export const ALL_REGIONS = 'all'
+
+/**
+ * The filter's choices: every region, then those of [events], each with how many are in it, in the regions' own order;
+ * those with none are left out, but the one the address says ([selected]), as are the events nothing tells the region
+ * of, which only every region shows
+ */
+export function regionOptions(
+  events: Pick<ListedEvent, 'region'>[], t: Translate, selected: string = ALL_REGIONS,
+): { value: string, title: string, count?: number }[] {
+  const counts = new Map<Region, number>()
+  for (const event of events) if (event.region) counts.set(event.region, (counts.get(event.region) ?? 0) + 1)
+  return [
+    { value: ALL_REGIONS, title: t('events.regionAll') },
+    ...REGIONS.filter((region) => counts.has(region) || regionSlug(region) === selected)
+      .map((region) => ({ value: regionSlug(region), title: regionName(region, t), count: counts.get(region) ?? 0 })),
+  ]
+}
+
+/** Whether [event] is in the region the address says ([slug]); every one is in all of them */
+export const inRegion = (event: Pick<ListedEvent, 'region'>, slug: string) =>
+  slug === ALL_REGIONS || (!!event.region && regionSlug(event.region) === slug)
+
+/** What an event is found by in the list: its title, who it's by and where it is */
+export function eventText(event: Pick<ListedEvent, 'title' | 'meetup' | 'place' | 'locationName' | 'locationAddress'>) {
+  const place = event.place ?? { name: event.locationName, address: event.locationAddress }
+  return [event.title, event.meetup?.name, place.name, place.address].filter(Boolean).join(' ')
+}
+
 /** Which scraper found an event, or MANUAL for the team's own */
 export type EventSource = 'MANUAL' | string
 
@@ -48,16 +97,18 @@ export type EventSource = 'MANUAL' | string
 export interface TeamEvent extends ListedEvent {
   description: string | null
   hidden: boolean
+  /** Whether the team gave it its region, rather than its place or its organisation telling it */
+  regionManual: boolean
   source: EventSource
   sourceUrl: string | null
   organisation: { id: string, name: string }
 }
 
-export const EVENT_FIELDS = `id title url start end hasStartTime hasEndTime locationName locationAddress promoted
+export const EVENT_FIELDS = `id title url start end hasStartTime hasEndTime locationName locationAddress promoted region
   place { name address fromOrganisation } meetup { name logo mainColor backgroundColor }`
 
 /** An event's fields for the team, on top of everyone's */
-export const TEAM_EVENT_FIELDS = `${EVENT_FIELDS} description hidden source sourceUrl organisation { id name }`
+export const TEAM_EVENT_FIELDS = `${EVENT_FIELDS} description hidden regionManual source sourceUrl organisation { id name }`
 
 /** Whether the team may change [event] wholly: their own; one a scraper found only hides or is picked */
 export const isManual = (event: Pick<TeamEvent, 'source'>) => event.source === 'MANUAL'
@@ -86,6 +137,8 @@ export interface EventInput {
   locationAddress?: string
   hidden?: boolean
   promoted?: boolean
+  /** Its region, a scraper's event's too; empty for the one its place tells, else its organisation's */
+  region?: Region | ''
 }
 
 export const CREATE_EVENT = `mutation ($input: EventInput!) { event: createEvent(input: $input) { ${TEAM_EVENT_FIELDS} } }`

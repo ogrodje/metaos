@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, useId } from 'vue'
+import RegionSelect from '@/components/RegionSelect.vue'
 import {
-  CREATE_EVENT, type EventInput, formTime, inputTime, type TeamEvent, UPDATE_EVENT,
+  CREATE_EVENT, type EventInput, formTime, inputTime, type Region, type TeamEvent, UPDATE_EVENT,
 } from '@/events'
 import { errorMessage, graphql } from '@/graphql'
 import { useLocale } from '@/useLocale'
@@ -9,7 +10,8 @@ import { useLocale } from '@/useLocale'
 // An event of the team's own, added (createEvent) or changed wholly (updateEvent), as those a scraper found only hide
 // and are picked: who it's by, its title, when it starts and ends (a day, and a time in Ljubljana where it has one),
 // where it's announced, where it is and what it's about. Who it's by is chosen among the organisations that aren't
-// archived, unless the page is the organisation's own (organisation).
+// archived, unless the page is the organisation's own (organisation). Its region is what its place tells, unless one is
+// chosen.
 const props = defineProps<{
   event?: TeamEvent
   organisation?: { id: string, name: string }
@@ -36,6 +38,7 @@ const form = ref({
   locationName: props.event?.locationName ?? '',
   locationAddress: props.event?.locationAddress ?? '',
   description: props.event?.description ?? '',
+  region: (props.event?.regionManual ? props.event.region ?? '' : '') as Region | '',
 })
 
 // The organisations to choose from, by name
@@ -82,6 +85,8 @@ async function save() {
     locationName: value.locationName.trim(),
     locationAddress: value.locationAddress.trim(),
     description: value.description.trim(),
+    // A new one says its region only when chosen; a change clears one that was
+    ...(value.region || props.event ? { region: value.region } : {}),
   }
   try {
     const { event } = props.event
@@ -133,6 +138,10 @@ async function save() {
       <label>
         <span class="label">{{ t('eventForm.locationAddress') }}</span>
         <input v-model="form.locationAddress" class="input" type="text" lang="sl" autocomplete="off">
+      </label>
+      <label>
+        <span class="label">{{ t('eventForm.region') }}</span>
+        <RegionSelect v-model="form.region" :found="event && !event.regionManual ? event.region : null"/>
       </label>
       <label class="wide">
         <span class="label">{{ t('eventForm.description') }}</span>
