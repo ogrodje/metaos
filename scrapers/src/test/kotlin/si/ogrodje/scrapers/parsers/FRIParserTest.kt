@@ -85,6 +85,16 @@ class FRIParserTest {
     }
 
     @Test
+    fun `keeps headings lists and explicit line breaks in source order`() {
+        val page = """<div id="eventOpis">Uvod<h2>Program</h2><p>Prva
+            vrstica<br>Druga <strong>vrstica</strong></p><ul><li>Ena</li><li>Dve</li></ul>
+            <h3>Prijava</h3>Zaključek</div><footer>Izven opisa</footer>"""
+        val web = FakeWeb(pages + (detailUrl to page))
+        val result = FRIParser.parse(context(web), today).single { it.eventUrl == detailUrl }
+        assertEquals("Uvod\n\nProgram\n\nPrva vrstica\nDruga vrstica\n\nEna\n\nDve\n\nPrijava\n\nZaključek", result.description)
+    }
+
+    @Test
     fun `a successful response missing eventOpis cannot overwrite the saved event`() {
         val changedPage = FakeWeb(pages + (detailUrl to "<html><p>Maintenance</p></html>"))
         val refreshed = FRIParser.parse(context(changedPage), today)
