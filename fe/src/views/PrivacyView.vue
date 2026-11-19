@@ -31,7 +31,7 @@ onMounted(() => {
       <header>
         <h1 id="policy">Politika zasebnosti</h1>
         <p class="meta">
-          Velja od 16. novembra 2026.
+          Velja od 19. novembra 2026.
           <RouterLink class="link" :to="switchLocalePath('en')" hreflang="en" lang="en" @click="rememberLocale('en')">
             In English
           </RouterLink>
@@ -49,9 +49,9 @@ onMounted(() => {
       <p>
         Stran in MetaOS tečeta na strežnikih, ki jih upravlja Ogrodje. Pred njimi je Cloudflare, ki strani pošilja iz
         svojega omrežja in kot vsak spletni strežnik beleži tehnične podatke o zahtevah (na primer IP naslov in vrsto
-        brskalnika). Slike epizod in ljudi ter logotipi naših podpornikov se nalagajo z <a class="link" href="https://media.ogrodje.si">media.ogrodje.si</a>,
-        naše shrambe v Google Cloud Storage, prav tako prek Cloudflara; logotipi organizatorjev na strani Dogodki pa s
-        Hygraph, kjer jih hrani <a class="link" href="https://goo.ogrodje.si">Goo</a>.
+        brskalnika). Slike epizod in ljudi ter logotipi naših podpornikov in organizatorjev na strani Dogodki se nalagajo
+        z <a class="link" href="https://media.ogrodje.si">media.ogrodje.si</a>, naše shrambe v Google Cloud Storage,
+        prav tako prek Cloudflara.
       </p>
       <p>
         <strong>Delovanje strani.</strong> Za spremljanje napak in hitrosti uporabljamo New Relic, katerega skripta v
@@ -146,7 +146,7 @@ onMounted(() => {
       <header>
         <h1 id="policy">Privacy policy</h1>
         <p class="meta">
-          Effective 16 November 2026.
+          Effective 19 November 2026.
           <RouterLink class="link" :to="switchLocalePath('sl')" hreflang="sl" lang="sl" @click="rememberLocale('sl')">
             V slovenščini
           </RouterLink>
@@ -164,9 +164,9 @@ onMounted(() => {
       <p>
         The site and MetaOS run on servers managed by Ogrodje. In front of them is Cloudflare, which serves the pages
         from its network and, like any web server, logs technical request data (such as IP address and browser type).
-        Pictures of episodes and people, and our supporters’ logos, load from <a class="link" href="https://media.ogrodje.si">media.ogrodje.si</a>,
-        our storage in Google Cloud Storage, through Cloudflare too; the organizers’ logos on the Events page from
-        Hygraph, where <a class="link" href="https://goo.ogrodje.si">Goo</a> keeps them.
+        Pictures of episodes and people, and the logos of our supporters and of the organizers on the Events page, load
+        from <a class="link" href="https://media.ogrodje.si">media.ogrodje.si</a>, our storage in Google Cloud Storage,
+        through Cloudflare too.
       </p>
       <p>
         <strong>How the site works.</strong> We use New Relic to follow errors and speed: its script in the browser

@@ -194,20 +194,6 @@ type EventsRefresh {
     startedAt: String
 }
 
-"What importing from Goo did"
-type GooImportSummary {
-    "Organisations made of Goo's meetups"
-    created: Int!
-    "Organisations that were there, given what they hadn't got"
-    updated: Int!
-    "Goo's upcoming events added"
-    events: Int!
-    "Logos published from Hygraph"
-    logos: Int!
-    "Organisations given the venue where their events usually are"
-    venues: Int!
-}
-
 type Mutation {
     "Comment on an episode (ideas too) by its code or ID, in Markdown"
     commentOnEpisode(ref: String!, body: String!): Comment!
@@ -335,11 +321,6 @@ type Mutation {
     already; it goes on after the answer, and the events come as they're found
     """
     refreshEvents(organisation: ID): EventsRefresh!
-    """
-    Import Goo's meetups from Hygraph as organisations, and Goo's upcoming events, once (OG-64); again, it fills in only
-    what's missing
-    """
-    importFromGoo: GooImportSummary!
 }
 
 "What an event is to be, for createEvent and updateEvent: what's left out stays as it is; empty text clears it"

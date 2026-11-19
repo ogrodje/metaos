@@ -109,17 +109,6 @@ export const UPDATE_ORGANISATION = `mutation ($id: ID!, $input: OrganisationInpu
 }`
 export const DELETE_ORGANISATION = 'mutation ($id: ID!) { deleteOrganisation(id: $id) }'
 
-/** What importing Goo's meetups and events did */
-export interface GooImportSummary {
-  created: number
-  updated: number
-  events: number
-  logos: number
-  venues: number
-}
-
-export const IMPORT_FROM_GOO = 'mutation { summary: importFromGoo { created updated events logos venues } }'
-
 /** A colour as the badge takes it, #rrggbb, or none; what the colour field can't show, e.g. #fff, is none */
 export function isColor(value: string | null | undefined): value is string {
   return !!value && /^#[0-9a-fA-F]{6}$/.test(value)

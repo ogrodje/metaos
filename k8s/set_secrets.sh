@@ -89,7 +89,6 @@ kubectl create secret generic metaos-secret -n "$NS" \
   --from-literal=dropbox_refresh_token="${DROPBOX_REFRESH_TOKEN:-}" \
   --from-literal=new_relic_license_key="${PROD_NEW_RELIC_LICENSE_KEY:-}" \
   --from-literal=soniox_api_key="${PROD_SONIOX_API_KEY:-${SONIOX_API_KEY:-}}" \
-  --from-literal=hygraph_endpoint="${HYGRAPH_ENDPOINT:-}" \
   --dry-run=client -o yaml | kubectl apply -f -
 
 kubectl create secret generic temporal-secret -n "$NS" \

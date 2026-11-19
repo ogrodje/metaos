@@ -756,18 +756,6 @@
     "fold": "Fold",
     "formerly": "{tier}, formerly",
     "gathersEvents": "Gathers events",
-    "goo": {
-      "ask": "Import Goo's meetups as organisations, and its upcoming events? Only what's missing is filled in.",
-      "confirm": "Import",
-      "created": "{n} new organisation | {n} new organisations",
-      "done": "Imported from Goo: {created}, {updated}, {events}, {logos} and {venues}.",
-      "events": "{n} event | {n} events",
-      "import": "Import from Goo",
-      "importing": "Importing…",
-      "logos": "{n} logo | {n} logos",
-      "updated": "{n} filled in | {n} filled in",
-      "venues": "{n} venue | {n} venues"
-    },
     "lede": "Ogrodje's supporters and partners, and the companies people work at.",
     "loading": "Loading the organisations",
     "noMatch": "No organisations match",
