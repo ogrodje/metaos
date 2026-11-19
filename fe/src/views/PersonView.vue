@@ -12,6 +12,7 @@ import LoadError from '@/components/LoadError.vue'
 import LoadingRows from '@/components/LoadingRows.vue'
 import NotFound from '@/components/NotFound.vue'
 import PersonAvatar from '@/components/PersonAvatar.vue'
+import PictureEdit from '@/components/PictureEdit.vue'
 import PersonSignIns, { type MyAccount } from '@/components/PersonSignIns.vue'
 import SocialLinks from '@/components/SocialLinks.vue'
 import ViewToggle, { type ListView } from '@/components/ViewToggle.vue'
@@ -200,6 +201,8 @@ const hasLinks = computed(() => (person.value ? socialLinks(person.value).length
             <h1>{{ person.name }}</h1>
             <p v-if="person.episodes.length" class="meta">{{ rolesOf(person, t) }}</p>
             <p v-if="person.bio" class="subtitle">{{ person.bio }}</p>
+            <!-- Their avatar, the team's to change -->
+            <PictureEdit v-if="auth.team" class="avatar-edit" :of="{ person: person.id }" :image="person.avatar" @changed="reloadQuietly"/>
           </div>
         </header>
       </div>
@@ -300,6 +303,11 @@ const hasLinks = computed(() => (person.value ? socialLinks(person.value).length
   display: flex;
   align-items: center;
   gap: 20px;
+}
+
+// Under what it is, as the team changes it
+.avatar-edit {
+  margin-top: 8px;
 }
 
 // How many episodes as what, a line each, as Home's stages are; each a button that shows only those, pressed while it

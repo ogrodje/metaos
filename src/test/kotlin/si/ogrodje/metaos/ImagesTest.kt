@@ -45,7 +45,6 @@ import javax.imageio.ImageIO
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -246,7 +245,7 @@ class ImagesTest @Autowired constructor(
     }
 
     @Test
-    fun `refuses what isn't a picture, ones too big, and URLs other than Hygraph's`() {
+    fun `refuses what isn't a picture, ones too big, and URLs that aren't https or public`() {
         episodes.saveAndFlush(Episode(title = "Refused", code = "S09E72"))
         dropbox.put("2001", "/S09E72", null)
         dropbox.put("2001", "/S09E72/brief.md", "# Naslovnica".toByteArray())
@@ -262,14 +261,11 @@ class ImagesTest @Autowired constructor(
         assertTrue("There's no" in set(ImageSource.DROPBOX, "/S09E72/nope.png"))
         assertTrue("needs its path" in set(ImageSource.DROPBOX))
         assertTrue("needs the url" in set(ImageSource.URL))
-        assertTrue("only from Hygraph" in set(ImageSource.URL, url = "https://example.com/avatar.png"))
+        assertTrue("over https only" in set(ImageSource.URL, url = "http://example.com/avatar.png"))
+        assertTrue("is a private address" in set(ImageSource.URL, url = "https://127.0.0.1/avatar.png"))
+        assertTrue("is a private address" in set(ImageSource.URL, url = "https://169.254.169.254/avatar.png"))
         assertEquals(uploads, bucket.uploads)
         assertNull(episodes.findByCode("S09E72")?.thumbnailImageId)
-
-        assertTrue(isImageUrl("https://eu-central-1-shared-euc1-02.graphassets.com/abc/def"))
-        assertFalse(isImageUrl("http://eu-central-1-shared-euc1-02.graphassets.com/abc/def"))
-        assertFalse(isImageUrl("https://graphassets.com.example.com/abc"))
-        assertFalse(isImageUrl("https://notgraphassets.com/abc"))
     }
 
     @Test

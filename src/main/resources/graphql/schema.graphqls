@@ -218,16 +218,28 @@ type Mutation {
     """
     updateSession(id: ID!, date: String, name: String, location: String, address: String): Session!
     """
-    Start uploading a picture for an episode, PNG or JPEG of size bytes, up to 50 MB: the browser sends it straight to
-    MetaOS's bucket, then setEpisodeImage makes it one of the episode's pictures
+    Start uploading a picture, PNG, JPEG, WebP or GIF of size bytes, up to 50 MB: it's sent straight to MetaOS's bucket,
+    then setEpisodeImage, setPersonAvatar or setOrganisationLogo makes it theirs
     """
-    artworkUpload(ref: String!, contentType: String!, size: Int!): ArtworkUpload!
+    imageUpload(contentType: String!, size: Int!): ImageUpload!
+    "Start uploading a picture for an episode, PNG or JPEG, as imageUpload does"
+    artworkUpload(ref: String!, contentType: String!, size: Int!): ImageUpload! @deprecated(reason: "Use imageUpload")
     """
     Make an upload, of a file called name, one of an episode's pictures, which it has to be the size of, and put it in
     the episode's first Dropbox folder too, unless it's there already. Another picture the episode has there already is
     only replaced with replace. The upload is gone afterwards, also when it's refused.
     """
     setEpisodeImage(ref: String!, kind: EpisodeImage!, upload: ID!, name: String!, replace: Boolean! = false): EpisodeImageSet!
+    "Take one of an episode's pictures off it; the one it had"
+    removeEpisodeImage(ref: String!, kind: EpisodeImage!): Image
+    "Make an upload, of a file called name, of any size, the person's avatar. The upload is gone afterwards."
+    setPersonAvatar(personId: ID!, upload: ID!, name: String!): Image!
+    "Take the person's avatar off them; the one they had"
+    removePersonAvatar(personId: ID!): Image
+    "Make an upload, of a file called name, of any size, the organisation's logo. The upload is gone afterwards."
+    setOrganisationLogo(organisationId: ID!, upload: ID!, name: String!): Image!
+    "Take the organisation's logo off it; the one it had"
+    removeOrganisationLogo(organisationId: ID!): Image
     """
     Start uploading a video or audio file for an episode, of size bytes, up to 50 GB: video (MP4 or MOV) for a video,
     audio (MP3, M4A, WAV or FLAC) for an audio. The browser sends it straight to MetaOS's bucket, then addEpisodeMedia
@@ -573,8 +585,8 @@ enum EpisodeImage {
 Where the browser sends a picture: a resumable upload, started with a POST to url with exactly these headers and no
 body, after which the file is PUT to the Location that answers. It only starts until expires.
 """
-type ArtworkUpload {
-    "What setEpisodeImage takes"
+type ImageUpload {
+    "What setEpisodeImage, setPersonAvatar and setOrganisationLogo take"
     id: ID!
     url: String!
     headers: [Header!]!
@@ -594,7 +606,7 @@ enum MediaKind {
     BONUS_AUDIO
 }
 
-"Where the browser sends a video or audio file: a resumable upload, as ArtworkUpload says"
+"Where the browser sends a video or audio file: a resumable upload, as ImageUpload says"
 type MediaUpload {
     "What addEpisodeMedia takes"
     id: ID!

@@ -646,8 +646,12 @@ from the devenv shell.
 Pictures everyone may see are copied to the public bucket ([`Images.kt`](src/main/kotlin/si/ogrodje/metaos/Images.kt)):
 an episode's thumbnail, thumbnails B and C, which go with its alternative titles as they're A/B tested together, and its
 web picture, the thumbnail without its words, for ogrodje.si, all 1920 × 1080; and its cover, 3000 × 3000, for podcast
-apps; a person's avatar. `ImagesMCP` sets them from Dropbox or Koofr (a place and a path), or from Hygraph (an https URL
-on `*.graphassets.com`, the only hosts MetaOS fetches pictures from, but for the previews of posts, see Distribution).
+apps; a person's avatar; an organisation's logo. One set of rules sets and removes them all, for MCP and GraphQL alike
+([`ImageUploads.kt`](src/main/kotlin/si/ogrodje/metaos/ImageUploads.kt), OG-70), from wherever the picture is
+(`PictureFrom`): Dropbox or Koofr (a place and a path), the web (an https URL on any public site, fetched as previews are,
+by `PublicWeb`: public addresses only, checked at each redirect; Hygraph's too), or an upload, sent to the private bucket
+(`imageUpload`, `start_image_upload`) or, over MCP, inline as base64 (`data`, up to 7 MB, `MAX_DATA_BYTES`). Uploads
+are kept as `ImageSource.UPLOAD`, by their file's name.
 
 - An episode's pictures are PNG or JPEG of exactly their size (`EpisodeImage`), as the Artwork folder in Dropbox has
   them, wherever they come from: anything else is refused, by its header before it's decoded, and also when MetaOS has
@@ -667,13 +671,15 @@ on `*.graphassets.com`, the only hosts MetaOS fetches pictures from, but for the
   take one (`name`).
 - GraphQL has them as `Image` (`thumbnail`, `thumbnailB`, `thumbnailC`, `web` and `cover` on `Episode`, `avatar` on
   `Person` and `EpisodePerson`), with the original's `sha256`, batched for lists; thumbnails B and C only for the team, as titles B and C are.
-- The team uploads an episode's pictures from its page ([`Artwork.kt`](src/main/kotlin/si/ogrodje/metaos/Artwork.kt)):
-  `artworkUpload` gives the browser a signed URL in the private bucket (`uploads/<id>`), where it sends the file itself,
-  and `setEpisodeImage` publishes it as from Dropbox (`ImageSource.UPLOAD`, kept by its file's name), refusing another
-  size; it replaces a picture the episode has only with `replace`, and the upload goes either way. Then it's saved in
-  the episode's first Dropbox folder too, unless the same content (Dropbox's content hash) is right in it or in a folder
+- Uploads: `imageUpload` (GraphQL) and `start_image_upload` (MCP, with the `curl` commands that send it) give a signed
+  URL in the private bucket (`uploads/<id>`, PNG, JPEG, WebP or GIF up to 50 MB), where the browser or the agent sends
+  the file itself; then `setEpisodeImage`, `setPersonAvatar` or `setOrganisationLogo` (and the MCP tools' `from: UPLOAD`
+  with `upload`) publish it, an episode's refused at another size, and the upload goes either way. GraphQL's
+  `setEpisodeImage` replaces a picture the episode has only with `replace`; MCP's always does. `artworkUpload`, the
+  episode's page's before (OG-70), is deprecated. An episode's uploaded picture (an upload or `data`) is saved in the
+  episode's first Dropbox folder too, unless the same content (Dropbox's content hash) is right in it or in a folder
   right in it, under another name ("(1)") when its own is taken; a read-only place or a missing folder only says so
-  (`dropbox.error`). MCP's `set_episode_image` doesn't take uploads.
+  (`dropbox.error`). `removeEpisodeImage`, `removePersonAvatar` and `removeOrganisationLogo` take them off.
 - On the front-end, Upload artwork in the episode's pictures (`EpisodePictures.vue`, which shows the team its five
   places) opens `ArtworkUpload.vue`, as a missing picture's place does, at its row: drop the episode's folder or
   pictures, or choose them, or one on its row. [`fe/src/artwork.ts`](fe/src/artwork.ts) reads each file's size from its
@@ -683,8 +689,10 @@ on `*.graphassets.com`, the only hosts MetaOS fetches pictures from, but for the
   (`fe/src/uploads.ts`), each with its progress; one refused or failed holds nothing back, and Try again sends only that
   one. The front-end shows an episode's on its page (its thumbnail large, and to the team in `EpisodePictures.vue`) and
   avatars on the People, person and episode pages (`PersonAvatar.vue`, initials without one), with `srcset` from the
-  copies (`fe/src/images.ts`), never the original, which may be 16 MB.
-- `ImagesTest` and `ArtworkTest` run against buckets in memory (`FakeStorage`), with fake Dropbox and Koofr.
+  copies (`fe/src/images.ts`), never the original, which may be 16 MB. Each of an episode's five has Remove, asked on
+  its place (`RemoveAsked.vue`). A person's page and an organisation's give the team Upload (or Change) and Remove of
+  the avatar or logo under their name (`PictureEdit.vue`, `uploadPicture` in `uploads.ts`).
+- `ImagesTest` and `ImageUploadsTest` run against buckets in memory (`FakeStorage`), with fake Dropbox and Koofr.
 
 ### Video and audio
 

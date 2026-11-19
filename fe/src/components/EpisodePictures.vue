@@ -5,13 +5,16 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { type ArtworkKind, slotLabel } from '@/artwork'
 import ArtworkUpload from '@/components/ArtworkUpload.vue'
 import PhotoStrip from '@/components/PhotoStrip.vue'
+import RemoveAsked from '@/components/RemoveAsked.vue'
 import { type DropboxPicture, type EpisodeDetails, isRecorded, type KoofrPhoto } from '@/episodes'
 import { type Image, src, srcset } from '@/images'
+import { removeArtwork } from '@/uploads'
 import { useLocale } from '@/useLocale'
 
 // An episode's pictures, the team's, behind the episode on its page: tabs of its titles with the thumbnails they're A/B
 // tested with, its web picture and its cover; its artwork (its Dropbox folders' pictures, each marked with what it's
-// used as); and its photos (its Koofr folders'). Upload artwork (ArtworkUpload), or a missing one from its place.
+// used as); and its photos (its Koofr folders'). Upload artwork (ArtworkUpload), or a missing one from its place;
+// Remove one, asked on its place.
 const props = defineProps<{
   episode: EpisodeDetails
   artwork: DropboxPicture[]
@@ -19,7 +22,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  // One of its pictures was uploaded
+  // One of its pictures was uploaded or removed
   changed: []
 }>()
 
@@ -80,6 +83,8 @@ const uses = computed(() => {
 })
 
 const folder = computed(() => props.artwork[0]?.url)
+
+const remove = (kind: ArtworkKind) => () => removeArtwork(props.episode.id, kind)
 </script>
 
 <template>
@@ -106,6 +111,9 @@ const folder = computed(() => props.artwork[0]?.url)
           </a>
           <button v-else type="button" class="shot missing" aria-haspopup="dialog" @click="open('COVER')">{{ t('pictures.missing.cover') }}</button>
           <p class="title">{{ t('pictures.use.cover') }}</p>
+          <p v-if="episode.cover" class="file">{{ episode.cover.name }}</p>
+          <RemoveAsked v-if="episode.cover" class="remove" :ask="t('pictures.removeAsk')" :remove="remove('COVER')"
+                       @removed="emit('changed')"/>
         </li>
         <li v-for="variant in variants" :key="variant.letter">
           <a v-if="variant.image" class="shot" :href="variant.image.url" target="_blank" rel="noopener"
@@ -120,6 +128,8 @@ const folder = computed(() => props.artwork[0]?.url)
           <p v-if="variant.title" class="title" lang="sl"><span class="visually-hidden">{{ t('pictures.titleOf', { letter: variant.letter }) }} </span>{{ variant.title }}</p>
           <p v-else class="title none">{{ t('pictures.noTitle', { letter: variant.letter }) }}</p>
           <p v-if="variant.image" class="file">{{ variant.image.name }}</p>
+          <RemoveAsked v-if="variant.image" class="remove" :ask="t('pictures.removeAsk')"
+                       :remove="remove(variant.kind)" @removed="emit('changed')"/>
         </li>
         <li class="web">
           <a v-if="episode.web" class="shot" :href="episode.web.url" target="_blank" rel="noopener"
@@ -130,6 +140,8 @@ const folder = computed(() => props.artwork[0]?.url)
           <button v-else type="button" class="shot missing" aria-haspopup="dialog" @click="open('WEB')">{{ t('pictures.missing.web') }}</button>
           <p class="title">{{ slotLabel('WEB', t) }}</p>
           <p v-if="episode.web" class="file">{{ episode.web.name }}</p>
+          <RemoveAsked v-if="episode.web" class="remove" :ask="t('pictures.removeAsk')" :remove="remove('WEB')"
+                       @removed="emit('changed')"/>
         </li>
       </ul>
       <!-- Before the recording, the titles only -->
@@ -284,6 +296,10 @@ const folder = computed(() => props.artwork[0]?.url)
 .none {
   font-weight: 400;
   color: var(--muted);
+}
+
+.remove {
+  margin-top: 4px;
 }
 
 .file {

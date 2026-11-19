@@ -17,9 +17,10 @@ as the old ogrodje.si's Dogodki page did, which it gathers every hour from the p
 them (Meetup, Eventbrite, iCal, Luma, their websites) in a workflow, through the scrapers, a pod of its own that works
 on it as Temporal's worker; they were [Goo](https://github.com/ogrodje/goo)'s. Postgres also
 tells MetaOS what changed, which it passes on to the open pages, so they show it without being reloaded. Pictures everyone may see, like episodes'
-thumbnails from Dropbox and people's avatars from Hygraph, MetaOS copies to its public bucket in Google Cloud Storage,
-from which browsers load them at media.ogrodje.si, cached by Cloudflare; the team uploads an episode's artwork from
-its page straight to MetaOS's private bucket, and MetaOS publishes it from there. Its video and audio go there the
+thumbnails from Dropbox and people's avatars from Hygraph or anywhere on the web, MetaOS copies to its public bucket in
+Google Cloud Storage, from which browsers load them at media.ogrodje.si, cached by Cloudflare; the team uploads an
+episode's artwork, avatars and logos from their pages, and agents theirs over MCP, straight to MetaOS's private bucket,
+and MetaOS publishes them from there. Its video and audio go there the
 same way, and stay there, the team's only, with what ffprobe read of them. Ogrodje's Patreon MetaOS reaches through
 patreon-gateway, a pod of its own beside it, which reads through Patreon's API and makes and changes drafts, with an
 episode's audio or video from MetaOS's bucket, in Patreon's web app, signed in as the bot, in a headless Chromium in a
