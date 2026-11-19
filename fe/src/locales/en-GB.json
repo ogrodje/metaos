@@ -779,18 +779,6 @@
     "fold": "Fold",
     "formerly": "{tier}, formerly",
     "gathersEvents": "Gathers events",
-    "goo": {
-      "ask": "Import Goo's meetups as organisations, and its upcoming events? Only what's missing is filled in.",
-      "confirm": "Import",
-      "created": "{n} new organisation | {n} new organisations",
-      "done": "Imported from Goo: {created}, {updated}, {events}, {logos} and {venues}.",
-      "events": "{n} event | {n} events",
-      "import": "Import from Goo",
-      "importing": "Importing…",
-      "logos": "{n} logo | {n} logos",
-      "updated": "{n} filled in | {n} filled in",
-      "venues": "{n} venue | {n} venues"
-    },
     "lede": "Ogrodje's supporters and partners, and the companies people work at.",
     "loading": "Loading the organisations",
     "noMatch": "No organisations match",
@@ -885,6 +873,21 @@
     "what": "The person",
     "worksAt": "Works at"
   },
+  "pictureEdit": {
+    "avatar": {
+      "ask": "Remove their picture?",
+      "change": "Change picture",
+      "upload": "Upload a picture"
+    },
+    "failed": "{name} didn't upload: {error}",
+    "formats": "PNG, JPEG, WebP or GIF, up to 50 MB",
+    "logo": {
+      "ask": "Remove the logo?",
+      "change": "Change logo",
+      "upload": "Upload the logo"
+    },
+    "uploading": "Uploading… {percent} %"
+  },
   "pictures": {
     "missing": {
       "cover": "Upload the cover",
@@ -898,6 +901,7 @@
       "size": "It's {width} × {height}; the {name} has to be {size}.",
       "type": "It isn't PNG or JPEG, which the {name} has to be."
     },
+    "removeAsk": "Remove this picture?",
     "slot": {
       "COVER": "Podcast cover",
       "THUMBNAIL": "Thumbnail A",
@@ -925,6 +929,7 @@
       "titles": "Titles and thumbnails"
     },
     "titleOf": "Title {letter}:",
+    "unsupported": "{name} isn't PNG, JPEG, WebP or GIF.",
     "upload": {
       "announce": {
         "failed": "{label} didn't upload: {message}",
@@ -985,6 +990,10 @@
   },
   "privacy": {
     "description": "Which personal data Ogrodje processes on ogrodje.si, when you sign in and in Ogrodje's email, and for how long it keeps it."
+  },
+  "removeAsked": {
+    "failed": "It wasn't removed: {error}",
+    "removing": "Removing…"
   },
   "search": {
     "archived": "Archived",
@@ -1170,19 +1179,20 @@
       "search_documents": "Search Google Docs by the words in their title or text",
       "search_dropbox": "Search for files and folders by name",
       "search_koofr": "Search for files and folders by name",
-      "set_episode_image": "Make a picture from Dropbox or Koofr an episode's thumbnail, thumbnail B or C (for its alternative titles) or web picture, 1920 × 1080, or its cover, 3000 × 3000",
+      "set_episode_image": "Make a picture an episode's thumbnail, thumbnail B or C (for its alternative titles) or web picture, 1920 × 1080, or its cover, 3000 × 3000: from Dropbox, Koofr, the web or an upload",
       "set_episode_link": "Set or clear its YouTube, Spotify or Apple Podcasts link, or one of its four on Patreon: the full episode or its bonus, as video or audio only; each is in its distribution too",
       "set_episode_recommended_by": "Set or clear who recommended an episode",
       "set_episode_session": "Move an episode into a session, or out of one",
       "set_episode_show": "Move an episode into a show, or out of one",
       "set_episode_status": "Move an episode through its lifecycle, from idea to published, one step at a time",
-      "set_organisation_logo": "Make a picture from Hygraph, Dropbox or Koofr an organisation's logo",
+      "set_organisation_logo": "Make a picture an organisation's logo: from Dropbox, Koofr, the web or an upload",
       "set_patreon_post_image": "Set a post's thumbnail, one of the episode's pictures in MetaOS",
       "set_patreon_post_media": "Upload one of an episode's files in MetaOS to a draft, as a podcast or video post",
-      "set_person_avatar": "Make a picture from Hygraph, Dropbox or Koofr a person's avatar",
+      "set_person_avatar": "Make a picture a person's avatar: from Dropbox, Koofr, the web or an upload",
       "set_person_bio": "Set or clear the line about who a person is, e.g. their role and company",
       "set_person_email": "Set or clear a person's email; accounts that sign in with it are linked to them",
       "set_person_link": "Set or clear their homepage, LinkedIn, Twitter/X, Instagram or Facebook",
+      "start_image_upload": "Get a signed address to upload a picture straight to MetaOS's bucket, up to 50 MB, for setting it as an episode's picture, an avatar or a logo",
       "transcribe_episode": "Transcribe an episode's full audio or video, or another of its files, with Google's Speech-to-Text or Soniox; it waits its turn when the provider is busy",
       "unlink_account": "Unlink an account from its person, e.g. one linked to the wrong person; only Oto may",
       "unlink_episode_document": "Unlink a Google Doc from an episode; the doc stays in Drive",

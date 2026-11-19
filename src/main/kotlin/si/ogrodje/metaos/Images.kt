@@ -9,12 +9,8 @@ import org.springframework.stereotype.Component
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
-import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
 import java.security.MessageDigest
-import java.time.Duration
+import java.util.Base64
 import java.util.HexFormat
 import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
@@ -131,15 +127,47 @@ private const val JPEG_QUALITY = 0.85f
 // Paths change with what's in them, so what's there never changes
 private const val CACHE_CONTROL = "public, max-age=31536000, immutable"
 
-// Hygraph's, where the CMS keeps its pictures, e.g. people's avatars
-private val URL_HOSTS = setOf("graphassets.com")
+// What an agent may send inline (MCP's data), as base64, which takes a third more than that
+const val MAX_DATA_BYTES = 7 * 1024 * 1024
 
-/** Whether MetaOS fetches pictures from this URL: https, from Hygraph's hosts only */
-fun isImageUrl(url: String): Boolean {
-    val uri = runCatching { URI(url) }.getOrNull() ?: return false
-    val host = uri.host ?: return false
-    return uri.scheme == "https" && URL_HOSTS.any { host == it || host.endsWith(".$it") }
+/**
+ * Where a picture comes from, as MCP and GraphQL say it: a file in a place in Dropbox or Koofr, a page's address on the
+ * web, or an upload, sent to MetaOS's bucket by the browser or an agent ([Upload]) or inline, as base64 ([Data]); both
+ * are kept as [UPLOAD][ImageSource.UPLOAD], by the file's name
+ */
+sealed interface PictureFrom {
+    data class Dropbox(val place: String, val path: String) : PictureFrom
+    data class Koofr(val place: String, val path: String) : PictureFrom
+    data class Url(val url: String, val name: String? = null) : PictureFrom
+    data class Upload(val id: UUID, val name: String) : PictureFrom {
+        val path get() = uploadPath(id)
+    }
+    class Data(val bytes: ByteArray, val name: String) : PictureFrom
+
+    companion object {
+        /** A picture sent inline: base64, also as a data: URL's, of at most [MAX_DATA_BYTES] */
+        fun data(base64: String, name: String): Data {
+            val encoded = base64.trim().let { if (it.startsWith("data:")) it.substringAfter(',') else it }
+            require(encoded.isNotEmpty()) { "The picture's data is empty" }
+            // Base64 takes a third more than what it encodes, and line breaks, so twice as much is too much anyway
+            require(encoded.length <= MAX_DATA_BYTES * 2) { TOO_BIG_DATA }
+            val bytes = runCatching { Base64.getMimeDecoder().decode(encoded) }
+                .getOrElse { throw IllegalArgumentException("The picture's data isn't base64") }
+            require(bytes.size <= MAX_DATA_BYTES) { TOO_BIG_DATA }
+            return Data(bytes, fileName(name))
+        }
+
+        private val TOO_BIG_DATA = "A picture sent as data is up to ${MAX_DATA_BYTES / 1024 / 1024} MB; upload a bigger one " +
+            "(start_image_upload)"
+
+        /** A file's name without its folders, which a picture needs where it has no path to be named by */
+        fun fileName(name: String) =
+            name.substringAfterLast('/').trim().ifEmpty { throw IllegalArgumentException("A picture needs its file's name") }
+    }
 }
+
+/** Where an upload is in MetaOS's private bucket, a picture's or a video's, until it's kept (a lifecycle rule deletes it after a day) */
+fun uploadPath(id: UUID) = "uploads/$id"
 
 private class Fetched(val name: String, val bytes: ByteArray, val place: String?, val path: String)
 
@@ -156,9 +184,9 @@ class Images(
     private val dropbox: ObjectProvider<Dropbox>,
     private val koofr: ObjectProvider<Koofr>,
     private val storage: ObjectProvider<Storage>,
+    private val web: PublicWeb,
 ) {
 
-    private val http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build()
     private val making = ReentrantLock()
 
     init {
@@ -169,18 +197,26 @@ class Images(
     }
 
     /**
-     * The picture at [path] in a place in Dropbox or Koofr, at a [URL][ImageSource.URL] (in [path]), or uploaded to
-     * MetaOS's bucket ([UPLOAD][ImageSource.UPLOAD], at [path] there), in the public bucket. A URL's picture is named
-     * after its last part, unless it has a [name], e.g. Hygraph's, whose URLs have none; an upload by its file's [name].
-     * One of an episode's pictures ([artwork]) has to be what that one is: PNG or JPEG, exactly as big as it says.
+     * The picture [from] wherever it is, in the public bucket: a file in Dropbox or Koofr, on the web (MetaOS fetches over
+     * https only, from public addresses only, [PublicWeb]), or uploaded. A URL's picture is named after its last part,
+     * unless it has a name, e.g. Hygraph's, whose URLs have none; an upload by its file's name. One of an episode's
+     * pictures ([artwork]) has to be what that one is: PNG or JPEG, exactly as big as it says.
      */
-    fun publish(source: ImageSource, place: String?, path: String, name: String? = null, artwork: EpisodeImage? = null): Image =
+    fun publish(from: PictureFrom, artwork: EpisodeImage? = null): Image =
         making.withLock {
             // Fetched only once it's its turn, so pictures asked for at once wait rather than all be in memory together
-            val fetched = fetch(source, place, path, name)
+            val fetched = fetch(from)
             val sha256 = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(fetched.bytes))
             images.findBySha256(sha256)?.also { artwork?.check(fetched.name, it.contentType, it.width, it.height) }
-                ?: images.save(make(sha256, source, fetched, artwork))
+                ?: images.save(make(sha256, from.source, fetched, artwork))
+        }
+
+    private val PictureFrom.source
+        get() = when (this) {
+            is PictureFrom.Dropbox -> ImageSource.DROPBOX
+            is PictureFrom.Koofr -> ImageSource.KOOFR
+            is PictureFrom.Url -> ImageSource.URL
+            is PictureFrom.Upload, is PictureFrom.Data -> ImageSource.UPLOAD
         }
 
     /**
@@ -200,38 +236,40 @@ class Images(
         image.sha256,
     )
 
-    private fun fetch(source: ImageSource, place: String?, path: String, name: String?): Fetched = when (source) {
-        ImageSource.DROPBOX -> {
+    private fun fetch(from: PictureFrom): Fetched = when (from) {
+        is PictureFrom.Dropbox -> {
             val dropbox = checkNotNull(dropbox.ifAvailable) { "Dropbox is off" }
-            val shared = dropbox.sharedPlace(requireNotNull(place) { "A picture in Dropbox needs its place" })
-            val file = requireNotNull(dropbox.file(shared.id, dropboxPath(path))) { "There's no $path in ${shared.name}" }
-            require(!file.folder) { "$path is a folder" }
-            Fetched(file.name, limited(path, file.size) { dropbox.read(shared.id, file.path, it) }, shared.id, file.path)
+            val shared = dropbox.sharedPlace(from.place)
+            val file = requireNotNull(dropbox.file(shared.id, dropboxPath(from.path))) { "There's no ${from.path} in ${shared.name}" }
+            require(!file.folder) { "${from.path} is a folder" }
+            Fetched(file.name, limited(from.path, file.size) { dropbox.read(shared.id, file.path, it) }, shared.id, file.path)
         }
-        ImageSource.KOOFR -> {
+        is PictureFrom.Koofr -> {
             val koofr = checkNotNull(koofr.ifAvailable) { "Koofr is off" }
-            val shared = koofr.sharedPlace(requireNotNull(place) { "A picture in Koofr needs its place" })
-            val file = requireNotNull(koofr.file(shared.id, koofrPath(path))) { "There's no $path in ${shared.name}" }
-            require(!file.folder) { "$path is a folder" }
-            Fetched(file.name, limited(path, file.size) { koofr.read(shared.id, file.path, it) }, shared.id, file.path)
+            val shared = koofr.sharedPlace(from.place)
+            val file = requireNotNull(koofr.file(shared.id, koofrPath(from.path))) { "There's no ${from.path} in ${shared.name}" }
+            require(!file.folder) { "${from.path} is a folder" }
+            Fetched(file.name, limited(from.path, file.size) { koofr.read(shared.id, file.path, it) }, shared.id, file.path)
         }
-        ImageSource.URL -> {
-            require(isImageUrl(path)) { "MetaOS fetches pictures only from Hygraph (https://*.${URL_HOSTS.first()})" }
-            val request = HttpRequest.newBuilder(URI(path)).timeout(Duration.ofSeconds(60)).GET().build()
-            val response = http.send(request, HttpResponse.BodyHandlers.ofInputStream())
-            val bytes = response.body().use { body ->
-                require(response.statusCode() == 200) { "$path answered ${response.statusCode()}" }
-                limited(path, null) { body.readNBytes(it) }
+        is PictureFrom.Url -> {
+            val page = try {
+                web.get(from.url, "image/*", MAX_IMAGE_BYTES + 1)
+            } catch (e: PreviewUnavailable) {
+                throw IllegalArgumentException(e.message, e)
             }
-            Fetched(name ?: URI(path).path.substringAfterLast('/').ifEmpty { path }, bytes, null, path)
+            require(page.status == 200) { "${from.url} answered ${page.status}" }
+            val bytes = limited(from.url, null) { page.body }
+            val url = page.url.toString()
+            Fetched(from.name?.let(PictureFrom::fileName) ?: page.url.path.orEmpty().substringAfterLast('/').ifEmpty { url }, bytes, null, url)
         }
         // Kept by the file's name, as the upload goes once it's published
-        ImageSource.UPLOAD -> {
+        is PictureFrom.Upload -> {
             val storage = checkNotNull(storage.ifAvailable) { "MetaOS has no bucket for uploads" }
-            val named = requireNotNull(name) { "An upload needs its file's name" }
-            val file = requireNotNull(storage.file(path)) { "$named didn't arrive in MetaOS's bucket; upload it again" }
-            Fetched(named, limited(named, file.size) { storage.read(path, it) }, null, named)
+            val named = PictureFrom.fileName(from.name)
+            val file = requireNotNull(storage.file(from.path)) { "$named didn't arrive in MetaOS's bucket; upload it again" }
+            Fetched(named, limited(named, file.size) { storage.read(from.path, it) }, null, named)
         }
+        is PictureFrom.Data -> Fetched(from.name, from.bytes, null, from.name)
     }
 
     // Reads one byte more than it takes, to tell a file that's too big from one that isn't

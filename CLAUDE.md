@@ -328,14 +328,13 @@ them (OG-64): the start of its CRM. Finance is to build on them.
   webcal), `luma_url` and `kompot_url`, which the scrapers read (Events), and `discord_url`; its badge's colours on the
   Events page (`main_color`, the text's, and `background_color`, `#rrggbb`), and whether its events are gathered
   (`collects_events`: Goo's meetups, and one made with an event link but its website; not the rest). `goo_id` is the
-  Hygraph meetup it was imported from.
+  Hygraph meetup it was imported from, once, from Goo (OG-64; the import's gone since, OG-66).
 - Its venue (V37: `venue_name`, `venue_address`, public, unlike its registered `address`): where its events usually
   are, which an event that doesn't say where it is goes by (`Event.place`: one with no address whose place is none, the
   organisation's name or the venue's, as some sources give them; one online keeps what it says), as GraphQL's
   `Event.place` and MCP's `place` have it, with `fromOrganisation`. Where it has none, MetaOS gives it the one most of its
   events say (`usualVenue`: one place, by its address, else its name, as many sources put the whole address there; at
-  least two events and three in five, leaving out online ones), after each scrape and the Goo import, as Hygraph has
-  no venues.
+  least two events and three in five, leaving out online ones), after each scrape.
 - People work at them (`person_organisations`: a title, free text, and from when till when, days; again after they
   left, not twice at once), and they support episodes (`episode_organisations`, once each). Unlinking deletes those
   rows; the audit log keeps them, and `restore_link` brings them back. `History.kt` tells them on the episode's,
@@ -366,7 +365,7 @@ them (OG-64): the start of its CRM. Finance is to build on them.
   (`organisationPath`, `path({ name })`); the list by tier (`OrganisationsView.vue`), and an organisation's workspace
   (`OrganisationView.vue`): its logo and name, who works and worked there, the episodes it supported, and in its panel
   its support, links and finance details, and its events (Events): each link's last scrape, Refresh events, and its events with Add event. The team creates
-  (`OrganisationForm.vue`), edits, archives and deletes them there, and imports Goo from the list (Import from Goo). A released episode's page says Supported by its organisations
+  (`OrganisationForm.vue`), edits, archives and deletes them there. A released episode's page says Supported by its organisations
   (`SupportedBy.vue`: to their websites, for the team to their pages), and a person's panel where they work (the
   team's).
 
@@ -388,22 +387,23 @@ Slovenia's tech, developer and startup events, which MetaOS gathers from the org
   same interface by the same name, so changing one is changing both). `EventsSyncWorkflow` asks them for each link of
   every organisation that gathers events (not archived, `collects_events`), at once, keeps what they found
   (`Events.keep`: writes only what changed, nothing that ended over a year ago, `EVENTS_KEPT_FOR`) and how each link
-  went (`event_scrapes`, without an audit trigger: when, by which scraper, how many, or why it failed). Every hour
+  went (`event_scrapes`, without an audit trigger: when, by which scraper, how many, or why it failed). A scraper whose
+  IDs come from its events' URLs writes them one way (`normalised`: no `www.`, no slash at the end), and reads its site
+  from one address, whichever of its addresses the link has: FRI's events were twice, from `https://www.fri.uni-lj.si/`
+  and `https://fri.uni-lj.si` (OG-67, `FRIParser.homepage`, `V38__fri_duplicate_events.sql`). Every hour
   (`EventsSyncs`, `events-sync-<hour>`, so two pods start it once), and when the team asks, for all or one
   organisation (`refreshEvents`, `refresh_events`, the Refresh buttons; once at a time). Without Temporal, nothing's
   gathered, and Refresh says so (previews).
-- `importFromGoo` (GraphQL, staff; [`GooImport.kt`](src/main/kotlin/si/ogrodje/metaos/GooImport.kt)) imports Goo once:
-  its meetups from Hygraph (`HYGRAPH_ENDPOINT`, secretspec) as organisations (by `goo_id`, else by name, else by
-  website; filling only what's empty; the hidden or unpublished archived), their logos, and Goo's upcoming events from
-  its timeline (`metaos.goo.url`). Again, it adds only what's missing. Goo's weekly Discord post stays Goo's until it's
-  ported (OG-65).
+- Goo's meetups and upcoming events were imported once (OG-64), and the import is gone since (OG-66): the
+  organisations and events are MetaOS's own, and nothing reads Hygraph or Goo for them. Goo's weekly Discord post
+  stays Goo's until it's ported (OG-65).
 - MCP: `list_events`, `create_event`, `update_event`, `refresh_events` (`EventsMCP`), and the organisations' tools take
-  the new fields. GraphQL: `events(hidden)`, `event` (a past one too, for its page), `Event.moreFromOrganiser`, `eventsRefresh`, `Organisation.events` and `eventScrapes`, and
-  `createEvent`, `updateEvent`, `refreshEvents`, `importFromGoo` (`EventsGraphQL`). Public: the upcoming events that
-  aren't hidden, and any one that isn't by its ID, with their organisations' names, logos and colours (`meetup`); the
-  rest is the team's.
-- `EventsTest` has the rules, `EventsSyncTest` the workflow in Temporal's test server against a stand-in scraper,
-  `GooImportTest` the import against stand-ins of Hygraph and Goo; the scrapers' own tests read saved pages.
+  the new fields. GraphQL: `events(hidden)`, `event` (a past one too, for its page), `Event.moreFromOrganiser`,
+  `eventsRefresh`, `Organisation.events` and `eventScrapes`, and `createEvent`, `updateEvent`, `refreshEvents`
+  (`EventsGraphQL`). Public: the upcoming events that aren't hidden, and any one that isn't by its ID, with their
+  organisations' names, logos and colours (`meetup`); the rest is the team's.
+- `EventsTest` has the rules, `EventsSyncTest` the workflow in Temporal's test server against a stand-in scraper; the
+  scrapers' own tests read saved pages.
 
 ### Authentication (Keycloak)
 
@@ -656,8 +656,12 @@ from the devenv shell.
 Pictures everyone may see are copied to the public bucket ([`Images.kt`](src/main/kotlin/si/ogrodje/metaos/Images.kt)):
 an episode's thumbnail, thumbnails B and C, which go with its alternative titles as they're A/B tested together, and its
 web picture, the thumbnail without its words, for ogrodje.si, all 1920 × 1080; and its cover, 3000 × 3000, for podcast
-apps; a person's avatar. `ImagesMCP` sets them from Dropbox or Koofr (a place and a path), or from Hygraph (an https URL
-on `*.graphassets.com`, the only hosts MetaOS fetches pictures from, but for the previews of posts, see Distribution).
+apps; a person's avatar; an organisation's logo. One set of rules sets and removes them all, for MCP and GraphQL alike
+([`ImageUploads.kt`](src/main/kotlin/si/ogrodje/metaos/ImageUploads.kt), OG-70), from wherever the picture is
+(`PictureFrom`): Dropbox or Koofr (a place and a path), the web (an https URL on any public site, fetched as previews are,
+by `PublicWeb`: public addresses only, checked at each redirect; Hygraph's too), or an upload, sent to the private bucket
+(`imageUpload`, `start_image_upload`) or, over MCP, inline as base64 (`data`, up to 7 MB, `MAX_DATA_BYTES`). Uploads
+are kept as `ImageSource.UPLOAD`, by their file's name.
 
 - An episode's pictures are PNG or JPEG of exactly their size (`EpisodeImage`), as the Artwork folder in Dropbox has
   them, wherever they come from: anything else is refused, by its header before it's decoded, and also when MetaOS has
@@ -677,13 +681,15 @@ on `*.graphassets.com`, the only hosts MetaOS fetches pictures from, but for the
   take one (`name`).
 - GraphQL has them as `Image` (`thumbnail`, `thumbnailB`, `thumbnailC`, `web` and `cover` on `Episode`, `avatar` on
   `Person` and `EpisodePerson`), with the original's `sha256`, batched for lists; thumbnails B and C only for the team, as titles B and C are.
-- The team uploads an episode's pictures from its page ([`Artwork.kt`](src/main/kotlin/si/ogrodje/metaos/Artwork.kt)):
-  `artworkUpload` gives the browser a signed URL in the private bucket (`uploads/<id>`), where it sends the file itself,
-  and `setEpisodeImage` publishes it as from Dropbox (`ImageSource.UPLOAD`, kept by its file's name), refusing another
-  size; it replaces a picture the episode has only with `replace`, and the upload goes either way. Then it's saved in
-  the episode's first Dropbox folder too, unless the same content (Dropbox's content hash) is right in it or in a folder
+- Uploads: `imageUpload` (GraphQL) and `start_image_upload` (MCP, with the `curl` commands that send it) give a signed
+  URL in the private bucket (`uploads/<id>`, PNG, JPEG, WebP or GIF up to 50 MB), where the browser or the agent sends
+  the file itself; then `setEpisodeImage`, `setPersonAvatar` or `setOrganisationLogo` (and the MCP tools' `from: UPLOAD`
+  with `upload`) publish it, an episode's refused at another size, and the upload goes either way. GraphQL's
+  `setEpisodeImage` replaces a picture the episode has only with `replace`; MCP's always does. `artworkUpload`, the
+  episode's page's before (OG-70), is deprecated. An episode's uploaded picture (an upload or `data`) is saved in the
+  episode's first Dropbox folder too, unless the same content (Dropbox's content hash) is right in it or in a folder
   right in it, under another name ("(1)") when its own is taken; a read-only place or a missing folder only says so
-  (`dropbox.error`). MCP's `set_episode_image` doesn't take uploads.
+  (`dropbox.error`). `removeEpisodeImage`, `removePersonAvatar` and `removeOrganisationLogo` take them off.
 - On the front-end, Upload artwork in the episode's pictures (`EpisodePictures.vue`, which shows the team its five
   places) opens `ArtworkUpload.vue`, as a missing picture's place does, at its row: drop the episode's folder or
   pictures, or choose them, or one on its row. [`fe/src/artwork.ts`](fe/src/artwork.ts) reads each file's size from its
@@ -693,8 +699,10 @@ on `*.graphassets.com`, the only hosts MetaOS fetches pictures from, but for the
   (`fe/src/uploads.ts`), each with its progress; one refused or failed holds nothing back, and Try again sends only that
   one. The front-end shows an episode's on its page (its thumbnail large, and to the team in `EpisodePictures.vue`) and
   avatars on the People, person and episode pages (`PersonAvatar.vue`, initials without one), with `srcset` from the
-  copies (`fe/src/images.ts`), never the original, which may be 16 MB.
-- `ImagesTest` and `ArtworkTest` run against buckets in memory (`FakeStorage`), with fake Dropbox and Koofr.
+  copies (`fe/src/images.ts`), never the original, which may be 16 MB. Each of an episode's five has Remove, asked on
+  its place (`RemoveAsked.vue`). A person's page and an organisation's give the team Upload (or Change) and Remove of
+  the avatar or logo under their name (`PictureEdit.vue`, `uploadPicture` in `uploads.ts`).
+- `ImagesTest` and `ImageUploadsTest` run against buckets in memory (`FakeStorage`), with fake Dropbox and Koofr.
 
 ### Video and audio
 

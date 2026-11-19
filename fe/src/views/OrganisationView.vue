@@ -14,6 +14,7 @@ import MeetupBadge from '@/components/MeetupBadge.vue'
 import NotFound from '@/components/NotFound.vue'
 import OrganisationForm from '@/components/OrganisationForm.vue'
 import OrganisationLogo from '@/components/OrganisationLogo.vue'
+import PictureEdit from '@/components/PictureEdit.vue'
 import PersonAvatar from '@/components/PersonAvatar.vue'
 import SignInPrompt from '@/components/SignInPrompt.vue'
 import SocialLinks from '@/components/SocialLinks.vue'
@@ -252,6 +253,9 @@ const hasFinance = computed(() => {
               {{ [organisation.archived ? t('organisation.archived') : null, support].filter(Boolean).join(' · ') }}
             </p>
             <p v-if="organisation.description" class="subtitle">{{ organisation.description }}</p>
+            <!-- Its logo, best see-through around it, as it's shown on the home page and in the footer -->
+            <PictureEdit class="logo-edit" :of="{ organisation: organisation.id }" :image="organisation.logo"
+                         @changed="load(true).catch(() => undefined)"/>
           </div>
         </header>
         <div v-if="!editing" class="manage">
@@ -394,6 +398,11 @@ const hasFinance = computed(() => {
   display: flex;
   align-items: center;
   gap: 20px;
+}
+
+// Under what it is, as the team changes it
+.logo-edit {
+  margin-top: 8px;
 }
 
 .people {

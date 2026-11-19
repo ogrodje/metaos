@@ -104,9 +104,6 @@ spec:
             # Soniox, the second speech-to-text provider (Soniox.kt), is off without it
             - name: SONIOX_API_KEY
               valueFrom: { secretKeyRef: { name: metaos-secret, key: soniox_api_key, optional: true } }
-            # Hygraph, for the one-time import from Goo (GooImport.kt); Import from Goo fails without it (OG-66 removes it)
-            - name: HYGRAPH_ENDPOINT
-              valueFrom: { secretKeyRef: { name: metaos-secret, key: hygraph_endpoint, optional: true } }
             # Patreon, through patreon-gateway (deployment-patreon-gateway.yaml); off without its token
             - name: PATREON_GATEWAY_URL
               value: http://patreon-gateway

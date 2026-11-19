@@ -14,7 +14,7 @@ import SignInPrompt from '@/components/SignInPrompt.vue'
 import { errorMessage, graphql } from '@/graphql'
 import { matches } from '@/lists'
 import {
-  type GooImportSummary, IMPORT_FROM_GOO, type Organisation, ORGANISATION_FIELDS, organisationPath, type OrganisationTier,
+  type Organisation, ORGANISATION_FIELDS, organisationPath, type OrganisationTier,
   siteName, tierName,
 } from '@/organisations'
 import { useClearQuery, useQueryState } from '@/query'
@@ -87,25 +87,6 @@ function created(organisation: Organisation) {
   void router.push(path(organisationPath(organisation)))
 }
 
-// Importing Goo's meetups as organisations, and its upcoming events, once asked
-const importing = ref<'asking' | 'busy'>()
-const imported = ref<GooImportSummary>()
-const importError = ref<string>()
-
-async function importFromGoo() {
-  if (importing.value === 'busy') return
-  importing.value = 'busy'
-  importError.value = undefined
-  try {
-    imported.value = (await graphql<{ summary: GooImportSummary }>(IMPORT_FROM_GOO)).summary
-    importing.value = undefined
-    void load(true).catch(() => undefined)
-  } catch (e) {
-    importError.value = errorMessage(e, t)
-    importing.value = 'asking'
-  }
-}
-
 // What's said about it in its row: what it is, else its website
 function line(organisation: Listed) {
   return organisation.description ?? (organisation.websiteUrl ? siteName(organisation.websiteUrl) : null)
@@ -135,8 +116,6 @@ function counts(organisation: Listed) {
                   :shown="find.trim() && organisations ? shown.length : undefined">
         {{ t('organisations.lede') }}
         <template v-if="auth.team" #actions>
-          <button type="button" class="button quiet" :aria-expanded="!!importing" aria-controls="goo-import"
-                  @click="importing = importing ? undefined : 'asking'; imported = undefined">{{ t('organisations.goo.import') }}</button>
           <button type="button" class="button" :class="{ primary: !creating }" :aria-expanded="creating" aria-controls="new-organisation"
                   @click="creating = !creating">
             {{ creating ? t('common.cancel') : t('organisations.create') }}
@@ -145,25 +124,6 @@ function counts(organisation: Listed) {
       </PageHeader>
 
       <template v-if="auth.team">
-        <div v-if="importing" id="goo-import" class="ask" role="group" aria-labelledby="goo-ask" @keydown.esc="importing = undefined">
-          <p id="goo-ask">{{ t('organisations.goo.ask') }}</p>
-          <span class="buttons">
-            <button type="button" class="button small primary" :aria-disabled="importing === 'busy' || undefined" @click="importFromGoo">
-              {{ importing === 'busy' ? t('organisations.goo.importing') : t('organisations.goo.confirm') }}
-            </button>
-            <button type="button" class="button small" :disabled="importing === 'busy'" @click="importing = undefined">{{ t('common.cancel') }}</button>
-          </span>
-          <p v-if="importError" class="error" role="alert">{{ importError }}</p>
-        </div>
-        <p v-if="imported" class="done" role="status">
-          {{ t('organisations.goo.done', {
-            created: t('organisations.goo.created', { n: imported.created }, imported.created),
-            updated: t('organisations.goo.updated', { n: imported.updated }, imported.updated),
-            events: t('organisations.goo.events', { n: imported.events }, imported.events),
-            logos: t('organisations.goo.logos', { n: imported.logos }, imported.logos),
-            venues: t('organisations.goo.venues', { n: imported.venues }, imported.venues),
-          }) }}
-        </p>
         <OrganisationForm v-if="creating" id="new-organisation" @saved="created" @close="creating = false"/>
       </template>
 
@@ -278,32 +238,6 @@ function counts(organisation: Listed) {
 
 .archived :deep(img), .archived .name {
   opacity: .7;
-}
-
-// Asked before importing from Goo, under the heading
-.ask {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
-  font-size: var(--text-small);
-  line-height: 20px;
-
-  .buttons {
-    display: flex;
-    gap: 8px;
-  }
-
-  .error {
-    flex-basis: 100%;
-    color: var(--accent-text);
-  }
-}
-
-.done {
-  font-size: var(--text-small);
-  line-height: 20px;
-  color: var(--success);
 }
 
 .usage {

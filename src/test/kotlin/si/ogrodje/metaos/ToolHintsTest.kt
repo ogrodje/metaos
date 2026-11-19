@@ -16,11 +16,11 @@ import kotlin.test.assertTrue
  *   So does prepare_patreon_post, which checks a draft is ready for a person to publish.
  * - destructiveHint: changes or removes what's there. Adding isn't, a comment included (add_episode_distribution is, as
  *   it changes the entry a URL has, or one of the episode's links), nor is restore_link, which only
- *   puts a removed link back as it was; the other restore_* can rename, recode or clear the email of what they bring back.
+ *   puts a removed link back as it was, nor start_image_upload, which only makes a place to upload to; the other restore_* can rename, recode or clear the email of what they bring back.
  * - idempotentHint: a second call changes nothing more. Only creating episodes, people, sessions, organisations, events and Patreon drafts,
- *   and commenting, isn't: the others find what's there (shows by name, folders and files by path, links) and fail or
+ *   commenting, and starting an upload (a new place each time) isn't: the others find what's there (shows by name, folders and files by path, links) and fail or
  *   keep it.
- * - openWorldHint: reaches out to anyone. Only setting a picture is: it may fetch it from Hygraph and publishes it at
+ * - openWorldHint: reaches out to anyone. Only setting a picture is: it may fetch it from anywhere on the web and publishes it at
  *   the public bucket; and logging where an episode went out, or setting its link, changing one or fetching its preview
  *   again, as MetaOS fetches its page, from anywhere on the web, and publishes its picture; and refreshing events, as the
  *   scrapers read the organisers' pages. Drive, Dropbox and Koofr aren't, as MetaOS works only in the folders shared with its bot, nor are
@@ -56,9 +56,10 @@ class ToolHintsTest {
     }
 
     private val reads = Regex("^(list_|get_|read_|search|view_)|^(whoami|my_episodes|prepare_patreon_post)$")
-    private val adds = Regex("^(create_|link_|assign_|comment_on_)|^(match_episode_documents|restore_link)$")
+    private val adds = Regex("^(create_|link_|assign_|comment_on_)|^(match_episode_documents|restore_link|start_image_upload)$")
     private val repeatsAdd = setOf(
         "create_episode", "create_person", "create_session", "create_organisation", "create_event", "comment_on_episode", "comment_on_session", "create_patreon_draft",
+        "start_image_upload",
     )
     private val openWorld = setOf(
         "set_episode_image", "set_person_avatar", "set_organisation_logo", "set_episode_link", "add_episode_distribution", "update_episode_distribution",

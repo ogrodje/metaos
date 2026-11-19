@@ -39,7 +39,6 @@ class EventsGraphQL(
     private val events: Events,
     private val organisations: Organisations,
     private val syncs: EventsSyncs,
-    private val goo: GooImport,
     private val imagesRepository: ImagesRepository,
     private val images: ObjectProvider<Images>,
 ) {
@@ -124,8 +123,4 @@ class EventsGraphQL(
     @MutationMapping
     @PreAuthorize(WRITES)
     fun refreshEvents(@Argument organisation: UUID?): EventsRefresh = syncs.refresh(organisation)
-
-    @MutationMapping
-    @PreAuthorize(WRITES)
-    fun importFromGoo(): GooImportSummary = goo.import()
 }

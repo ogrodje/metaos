@@ -108,8 +108,6 @@ private val PROBE_FOR = Duration.ofMinutes(15)
 private const val MAX_TITLE_LENGTH = 200
 private const val MAX_NAME_LENGTH = 255
 
-private fun uploadPath(id: UUID) = "uploads/$id"
-
 // Downloaded as a file by its name, rather than played in the browser: in ASCII for old browsers, and as it is
 private fun attachment(name: String): String {
     val ascii = name.map { if (it.code in 32..126 && it != '"' && it != '\\') it else '_' }.joinToString("")
