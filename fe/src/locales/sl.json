@@ -410,17 +410,24 @@
     "announcedLabel": "Kje je objavljen dogodek {title} (odpre se v novem zavihku)",
     "api": "Dogodki so na voljo tudi {api} (poizvedba {query}).",
     "apiLink": "prek API-ja GraphQL MetaOS",
+    "buckets": {
+      "nextWeek": "Naslednji teden",
+      "thisWeek": "Ta teden",
+      "today": "Danes"
+    },
     "description": "Tehnološki, razvijalski in startup dogodki ter konference v Sloveniji, ki jih spremlja Ogrodje, po tednih.",
     "disclaimer": "Dogodke in konference Ogrodje MetaOS zbira z javnih strani in koledarjev organizatorjev, zato preverite podatke na njihovih straneh. Ogrodje ni organizator dogodkov in ne jamči za točnost zbranih podatkov.",
     "discord": "strežniku Discord",
     "find": "Iščite po naslovu, organizatorju ali kraju",
     "intro": "Tehnološki, razvijalski in startup dogodki {n} organizatorja na enem mestu. Obvestila o njih so tudi na našem {discord}, na kanalu {channel}. | Tehnološki, razvijalski in startup dogodki {n} organizatorjev na enem mestu. Obvestila o njih so tudi na našem {discord}, na kanalu {channel}. | Tehnološki, razvijalski in startup dogodki {n} organizatorjev na enem mestu. Obvestila o njih so tudi na našem {discord}, na kanalu {channel}. | Tehnološki, razvijalski in startup dogodki {n} organizatorjev na enem mestu. Obvestila o njih so tudi na našem {discord}, na kanalu {channel}.",
     "introNoCount": "Tehnološki, razvijalski in startup dogodki na enem mestu. Obvestila o njih so tudi na našem {discord}, na kanalu {channel}.",
+    "jump": "Kdaj",
     "loading": "Nalagamo dogodke",
     "newTab": "(odpre se v novem zavihku)",
     "noMatch": "Noben dogodek ne ustreza iskanju",
     "none": "Ta hip ni prihajajočih dogodkov.",
     "onMap": "{place}, na zemljevidu (odpre se v novem zavihku)",
+    "picks": "Izbor Ogrodja",
     "promoted": "Izpostavljeno",
     "region": "Regija",
     "regionAll": "Vse regije",
@@ -444,6 +451,7 @@
       "ZASAVSKA": "Zasavska"
     },
     "showAll": "Vsi",
+    "showAllN": "Pokaži vseh {n}",
     "showLabel": "Prikaži",
     "showPromoted": "Izpostavljeni",
     "team": {
@@ -463,6 +471,8 @@
       "showLabel": "Pokaži {title} vsem",
       "unpick": "Ne izpostavljaj"
     },
+    "today": "Danes",
+    "tomorrow": "Jutri",
     "week": "Teden / {range}",
     "what": "Dogodki"
   },

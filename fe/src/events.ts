@@ -250,6 +250,61 @@ export function byWeek<E extends Pick<ListedEvent, 'start'>>(events: E[]): Event
   }))
 }
 
+/** The day after [day] */
+export function nextDay(day: string) {
+  const date = utc(day)
+  date.setUTCDate(date.getUTCDate() + 1)
+  return dayString(date)
+}
+
+/**
+ * A part of the Events page, by how soon its events are: today's (those on already too), the rest of this week's, next
+ * week's, then a month each (month: YYYY-MM)
+ */
+export interface EventBucket<E> {
+  key: string
+  kind: 'today' | 'thisWeek' | 'nextWeek' | 'month'
+  days: EventDay<E>[]
+  count: number
+}
+
+/** [events], the soonest first, by how soon they are from [today] (a day in Ljubljana), then by the day they start */
+export function byBucket<E extends Pick<ListedEvent, 'start'>>(events: E[], today: string): EventBucket<E>[] {
+  const thisWeek = weekOf(today)
+  const nextWeek = weekOf(dayString(new Date(utc(thisWeek).getTime() + 7 * 86_400_000)))
+  const buckets = new Map<string, EventBucket<E>>()
+  for (const event of [...events].sort((a, b) => a.start.localeCompare(b.start))) {
+    const day = dayOf(event.start)
+    const kind = day <= today ? 'today' : weekOf(day) === thisWeek ? 'thisWeek' : weekOf(day) === nextWeek ? 'nextWeek' : 'month'
+    const key = kind === 'month' ? day.slice(0, 7) : kind
+    const bucket = buckets.get(key) ?? { key, kind, days: [], count: 0 }
+    const last = bucket.days[bucket.days.length - 1]
+    if (last?.day === day) last.events.push(event)
+    else bucket.days.push({ day, events: [event] })
+    bucket.count++
+    buckets.set(key, bucket)
+  }
+  return [...buckets.values()]
+}
+
+/** A bucket's heading: Today, This week, Next week, or its month, e.g. December 2026 */
+export function bucketTitle(bucket: Pick<EventBucket<unknown>, 'key' | 'kind'>, t: Translate, dateLocale: DateLocale) {
+  if (bucket.kind !== 'month') return t(`events.buckets.${bucket.kind}`)
+  return capitalized(utc(`${bucket.key}-01`).toLocaleDateString(dateLocale, { month: 'long', year: 'numeric', timeZone: 'UTC' }), dateLocale)
+}
+
+/** The first [limit] events of [days], as a folded part of the page shows them */
+export function firstEvents<E>(days: EventDay<E>[], limit: number): EventDay<E>[] {
+  const shown: EventDay<E>[] = []
+  let left = limit
+  for (const day of days) {
+    if (left <= 0) break
+    shown.push({ day: day.day, events: day.events.slice(0, left) })
+    left -= day.events.length
+  }
+  return shown
+}
+
 /** When an event starts or ends, as its form has it: a day (YYYY-MM-DD) and a time in Ljubljana (HH:mm), or none */
 export interface FormTime {
   day: string

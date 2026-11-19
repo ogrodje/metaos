@@ -410,17 +410,24 @@
     "announcedLabel": "Where {title} is announced (opens in a new tab)",
     "api": "The events are also available {api} (its {query} query).",
     "apiLink": "through MetaOS's GraphQL API",
+    "buckets": {
+      "nextWeek": "Next week",
+      "thisWeek": "This week",
+      "today": "Today"
+    },
     "description": "Slovenia's tech, developer and startup events and conferences that Ogrodje follows, by week.",
     "disclaimer": "Ogrodje MetaOS gathers the events and conferences from the organisers' public pages and calendars, so please check the details on their pages. Ogrodje doesn't organise the events and doesn't vouch for the accuracy of what's gathered.",
     "discord": "Discord server",
     "find": "Find by title, organiser or place",
     "intro": "Tech, developer and startup events from {n} organiser in one place. They're on our {discord} too, in the {channel} channel. | Tech, developer and startup events from {n} organisers in one place. They’re on our {discord} too, in the {channel} channel.",
     "introNoCount": "Tech, developer and startup events in one place. They're on our {discord} too, in the {channel} channel.",
+    "jump": "When",
     "loading": "Loading the events",
     "newTab": "(opens in a new tab)",
     "noMatch": "No events match",
     "none": "There are no upcoming events at the moment.",
     "onMap": "{place}, on the map (opens in a new tab)",
+    "picks": "Ogrodje's picks",
     "promoted": "Featured",
     "region": "Region",
     "regionAll": "All regions",
@@ -444,6 +451,7 @@
       "ZASAVSKA": "Zasavska"
     },
     "showAll": "All",
+    "showAllN": "Show all {n}",
     "showLabel": "Show",
     "showPromoted": "Featured",
     "team": {
@@ -463,6 +471,8 @@
       "showLabel": "Show {title} to everyone",
       "unpick": "Unfeature"
     },
+    "today": "Today",
+    "tomorrow": "Tomorrow",
     "week": "Week of {range}",
     "what": "The events"
   },

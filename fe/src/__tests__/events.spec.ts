@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ALL_REGIONS, eventText, inRegion, regionName, regionOptions, regionSlug, shownOptions } from '@/events'
+import { ALL_REGIONS, eventText, inRegion, regionName, regionOptions, regionSlug, shownOptions, bucketTitle, byBucket, firstEvents, nextDay } from '@/events'
 import { badgeColors, byWeek, colorOf, dayOf, eventPath, eventSchedule, eventTime, isPast, paragraphs, formTime, inputTime, isManual, isOnline, mapUrl, placeLine, shortDay, sourceName, weekdayName, weekOf, weekRange } from '@/events'
 import { t, tSl } from './i18n'
 
@@ -208,5 +208,42 @@ describe('the picks', () => {
       { value: 'all', title: 'Vsi', count: 3 },
       { value: 'promoted', title: 'Izpostavljeni', count: 1 },
     ])
+  })
+})
+
+describe('byBucket', () => {
+  // Thursday 19 Nov 2026 in Ljubljana
+  const today = '2026-11-19'
+  const events = [
+    { id: 'on', start: '2026-11-18T13:00:00Z' }, { id: 'now', start: '2026-11-19T17:00:00Z' },
+    { id: 'sat', start: '2026-11-21T08:00:00Z' }, { id: 'sun-late', start: '2026-11-22T23:30:00Z' },
+    { id: 'next', start: '2026-11-25T09:00:00Z' }, { id: 'nov', start: '2026-11-30T09:00:00Z' },
+    { id: 'dec-a', start: '2026-12-01T09:00:00Z' }, { id: 'dec-b', start: '2026-12-01T10:00:00Z' }, { id: 'dec-c', start: '2026-12-09T10:00:00Z' },
+    { id: 'jan', start: '2027-01-18T09:00:00Z' },
+  ]
+
+  it('groups by how soon: today with what is on already, this week, next week, then months', () => {
+    const buckets = byBucket(events, today)
+    expect(buckets.map((b) => [b.key, b.count])).toEqual([
+      ['today', 2], ['thisWeek', 1], ['nextWeek', 2], ['2026-11', 1], ['2026-12', 3], ['2027-01', 1],
+    ])
+    // 23:30 UTC on Sunday is Monday in Ljubljana, so next week
+    expect(buckets[2]!.days.map((d) => d.day)).toEqual(['2026-11-23', '2026-11-25'])
+    expect(buckets[4]!.days.map((d) => d.events.map((e) => e.id))).toEqual([['dec-a', 'dec-b'], ['dec-c']])
+  })
+
+  it('names them in the page\'s language', () => {
+    const [todays, , , , december] = byBucket(events, today)
+    expect(bucketTitle(todays!, tSl, 'sl-SI')).toBe('Danes')
+    expect(bucketTitle(december!, tSl, 'sl-SI')).toBe('December 2026')
+    expect(bucketTitle(december!, t, 'en-GB')).toBe('December 2026')
+  })
+
+  it('folds a part to its first events, and knows tomorrow', () => {
+    const december = byBucket(events, today)[4]!
+    expect(firstEvents(december.days, 1).map((d) => d.events.map((e) => e.id))).toEqual([['dec-a']])
+    expect(firstEvents(december.days, 2).map((d) => d.events.length)).toEqual([2])
+    expect(firstEvents(december.days, 5)).toEqual(december.days)
+    expect(nextDay('2026-11-30')).toBe('2026-12-01')
   })
 })
