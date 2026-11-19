@@ -3,6 +3,7 @@ package si.ogrodje.scrapers.parsers
 import org.jsoup.nodes.Element
 import org.slf4j.LoggerFactory
 import si.ogrodje.scrapers.*
+import java.io.IOException
 import java.net.URI
 import java.security.MessageDigest
 import java.time.LocalDate
@@ -68,6 +69,20 @@ object FRIParser : Parser {
             .filterNot { e ->
                 val day = e.start.atZone(LJUBLJANA).toLocalDate()
                 ownedByDataScience.any { DataScienceParser.sameEvent(day, e.title, it) }
+            }
+            .mapNotNull { event ->
+                val detail = URI(checkNotNull(event.eventUrl))
+                if (detail.scheme !in setOf("https", "http") || detail.host != homepage.host) return@mapNotNull event
+                try {
+                    val body = context.web.document(detail).getElementById("eventOpis") ?: return@mapNotNull event
+                    val paragraphs = body.select("p").map { it.text() }.filter { it.isNotBlank() }
+                    val description = paragraphs.joinToString("\n\n").ifEmpty { body.text() }
+                    event.copy(description = description.ifBlank { null })
+                } catch (e: IOException) {
+                    // Skip this record for this refresh so a failed fetch cannot erase a saved description.
+                    log.warn("Could not read FRI event {}: {}", detail, e.message)
+                    null
+                }
             }
     }
 
