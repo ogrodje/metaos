@@ -68,6 +68,13 @@ const pages: RouteRecordRaw[] = [
     meta: { title: 'pages.events' },
     component: () => import('../views/EventsView.vue'),
   },
+  // An event's own page, anyone's, a past one's too, unless it's hidden
+  {
+    path: '/dogodki/:id',
+    name: 'event',
+    meta: { title: 'pages.event' },
+    component: () => import('../views/EventView.vue'),
+  },
   // Everything a search finds, behind sign-in: where the header's search leads for all of it
   {
     path: '/search',
