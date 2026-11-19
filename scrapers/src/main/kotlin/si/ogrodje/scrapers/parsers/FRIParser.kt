@@ -74,7 +74,11 @@ object FRIParser : Parser {
                 val detail = URI(checkNotNull(event.eventUrl))
                 if (detail.scheme !in setOf("https", "http") || detail.host != homepage.host) return@mapNotNull event
                 try {
-                    val body = context.web.document(detail).getElementById("eventOpis") ?: return@mapNotNull event
+                    val body = context.web.document(detail).getElementById("eventOpis")
+                    if (body == null) {
+                        log.warn("Skipping FRI event {}: missing #eventOpis", detail)
+                        return@mapNotNull null
+                    }
                     val paragraphs = body.select("p").map { it.text() }.filter { it.isNotBlank() }
                     val description = paragraphs.joinToString("\n\n").ifEmpty { body.text() }
                     event.copy(description = description.ifBlank { null })

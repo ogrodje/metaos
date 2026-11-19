@@ -60,7 +60,7 @@ class FRIParserTest {
     private val detailUrl = "https://fri.uni-lj.si/sl/dogodek/uporabna-orodja-za-slovenscino"
     private val pages = mapOf(
         "https://fri.uni-lj.si/sl/koledar-dogodkov" to calendar,
-        "https://fri.uni-lj.si/sl/dogodek/" to "<html></html>",
+        "https://fri.uni-lj.si/sl/dogodek/" to "<div id=eventOpis></div>",
         detailUrl to """<div id="eventOpis"><p><strong>Portal <em>CJVT Igre</em>.</strong></p>
             <p>&nbsp;</p><p>Dogodek bo interaktiven.</p></div><p>Preglej dogodke</p>""",
     )
@@ -82,6 +82,13 @@ class FRIParserTest {
         assertEquals("Portal CJVT Igre.\n\nDogodek bo interaktiven.", events.single { it.eventUrl == detailUrl }.description)
         assertNull(events.first { it.eventUrl != detailUrl }.description)
         assertFalse(web.asked.any { "javna-predstavitev" in it })
+    }
+
+    @Test
+    fun `a successful response missing eventOpis cannot overwrite the saved event`() {
+        val changedPage = FakeWeb(pages + (detailUrl to "<html><p>Maintenance</p></html>"))
+        val refreshed = FRIParser.parse(context(changedPage), today)
+        assertEquals(events.filter { it.eventUrl != detailUrl }, refreshed)
     }
 
     @Test
