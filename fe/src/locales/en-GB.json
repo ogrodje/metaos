@@ -411,6 +411,7 @@
     "api": "The events are also available {api} (its {query} query).",
     "apiLink": "through MetaOS's GraphQL API",
     "buckets": {
+      "later": "Later",
       "nextWeek": "Next week",
       "thisWeek": "This week",
       "today": "Today"

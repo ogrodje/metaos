@@ -411,6 +411,7 @@
     "api": "Dogodki so na voljo tudi {api} (poizvedba {query}).",
     "apiLink": "prek API-ja GraphQL MetaOS",
     "buckets": {
+      "later": "Kasneje",
       "nextWeek": "Naslednji teden",
       "thisWeek": "Ta teden",
       "today": "Danes"

@@ -259,10 +259,12 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   only; a member gets a note.
 - The Events page, `/dogodki` (ogrodje.si's address of it, which links keep; `/events` is the live updates'), lists
   Slovenia's tech, developer and startup events as ogrodje.si's Dogodki page did, for anyone, in Slovenian, as the
-  events are: Ogrodje's picks first, the soonest three (`EventPick.vue`, as a session on the home page: its day as on
-  a calendar, how far away it is), then by how soon they are (`byBucket`: Today, with what's on already, This week,
-  Next week, then a month each, the months folded to their first five until opened or filtered), with links to each
-  part at the top (on phones a row that scrolls sideways), then by day, Today and Tomorrow said, each event with its title,
+  events are: Ogrodje's picks first, the soonest three, as cards (`EventPick.vue`: when it is, in the accent, Today
+  and Tomorrow said, its title, who it's by and where), then by how soon they are (`byBucket`: Today, with what's on
+  already, This week, Next week, the next two months, then Later; those past next week folded to their first five
+  until opened or filtered), with links to each part under the filters (on phones a row that scrolls sideways). An
+  event is a line of columns there (`EventRow`'s `part`, `rowWhen`): when it is first, as short as its part allows
+  (a time today, a weekday in the two weeks, its date further off, its days when it's on for several), then its title,
   which opens its page (below), and an icon that opens where it's announced in a new tab, when it is (`eventTime` in [`fe/src/events.ts`](fe/src/events.ts):
   its times only where its source says it has them, in Ljubljana's time, where ogrodje.si took every time for summer
   time's), its organisation as a badge in its colours with its logo (a colour from its name where it has none; for the team, a link to its page), and

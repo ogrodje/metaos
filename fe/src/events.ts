@@ -259,11 +259,11 @@ export function nextDay(day: string) {
 
 /**
  * A part of the Events page, by how soon its events are: today's (those on already too), the rest of this week's, next
- * week's, then a month each (month: YYYY-MM)
+ * week's, the next two months that have any (month: YYYY-MM), then everything later
  */
 export interface EventBucket<E> {
   key: string
-  kind: 'today' | 'thisWeek' | 'nextWeek' | 'month'
+  kind: 'today' | 'thisWeek' | 'nextWeek' | 'month' | 'later'
   days: EventDay<E>[]
   count: number
 }
@@ -284,12 +284,54 @@ export function byBucket<E extends Pick<ListedEvent, 'start'>>(events: E[], toda
     bucket.count++
     buckets.set(key, bucket)
   }
-  return [...buckets.values()]
+  // Months further off have an event or two each: one part for all of them
+  const all = [...buckets.values()]
+  const months = all.filter((bucket) => bucket.kind === 'month')
+  if (months.length <= MONTHS_APART + 1) return all
+  const later = months.slice(MONTHS_APART)
+  return [
+    ...all.filter((bucket) => !later.includes(bucket)),
+    { key: 'later', kind: 'later', days: later.flatMap((bucket) => bucket.days), count: later.reduce((sum, bucket) => sum + bucket.count, 0) },
+  ]
 }
 
-/** A bucket's heading: Today, This week, Next week, or its month, e.g. December 2026 */
+// How many months have a part of their own before Later
+const MONTHS_APART = 2
+
+/**
+ * When an event is, on its row in a part of the Events page ([kind]): its day, left out today as the part says it, a
+ * weekday in the two weeks, with its date further off, or its days when it's on for several; and its time, where it
+ * has one, with its end's on the same day
+ */
+export function rowWhen(
+  event: Pick<ListedEvent, 'start' | 'end' | 'hasStartTime' | 'hasEndTime'>, kind: EventBucket<unknown>['kind'], dateLocale: DateLocale,
+): { day: string, time: string } {
+  const startDay = dayOf(event.start)
+  const endDay = event.end ? dayOf(event.end) : startDay
+  if (endDay !== startDay) return { day: `${shortDay(startDay, dateLocale)} – ${shortDay(endDay, dateLocale)}`, time: '' }
+  const weekday = utc(startDay).toLocaleDateString(dateLocale, { weekday: 'short', timeZone: 'UTC' })
+  const day = kind === 'today' ? '' : kind === 'thisWeek' || kind === 'nextWeek' ? weekday : `${weekday} ${shortDay(startDay, dateLocale)}`
+  if (!event.hasStartTime) return { day, time: '' }
+  const start = time(event.start, dateLocale)
+  const ends = event.end && event.hasEndTime && event.end !== event.start
+  return { day, time: ends ? `${start} – ${time(event.end!, dateLocale)}` : start }
+}
+
+/**
+ * When one of Ogrodje's picks is, on its card: Today or Tomorrow, else its weekday, then its date and its time, e.g.
+ * Jutri, 20. 11. · 18:00, or Sobota, 21. 11. · 09:00
+ */
+export function pickWhen(event: Pick<ListedEvent, 'start' | 'hasStartTime'>, today: string, t: Translate, dateLocale: DateLocale) {
+  const day = dayOf(event.start)
+  const name = day <= today ? t('events.today') : day === nextDay(today) ? t('events.tomorrow') : weekdayName(day, dateLocale)
+  const date = `${name}, ${shortDay(day, dateLocale)}`
+  return event.hasStartTime ? `${date} · ${time(event.start, dateLocale)}` : date
+}
+
+/** A bucket's heading: Today, This week, Next week, its month, e.g. December 2026, or Later */
 export function bucketTitle(bucket: Pick<EventBucket<unknown>, 'key' | 'kind'>, t: Translate, dateLocale: DateLocale) {
   if (bucket.kind !== 'month') return t(`events.buckets.${bucket.kind}`)
+  // (events.buckets.today, .thisWeek, .nextWeek and .later)
   return capitalized(utc(`${bucket.key}-01`).toLocaleDateString(dateLocale, { month: 'long', year: 'numeric', timeZone: 'UTC' }), dateLocale)
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ALL_REGIONS, eventText, inRegion, regionName, regionOptions, regionSlug, shownOptions, bucketTitle, byBucket, firstEvents, nextDay } from '@/events'
+import { ALL_REGIONS, eventText, inRegion, regionName, regionOptions, regionSlug, shownOptions, bucketTitle, byBucket, firstEvents, nextDay, pickWhen, rowWhen } from '@/events'
 import { badgeColors, byWeek, colorOf, dayOf, eventPath, eventSchedule, eventTime, isPast, paragraphs, formTime, inputTime, isManual, isOnline, mapUrl, placeLine, shortDay, sourceName, weekdayName, weekOf, weekRange } from '@/events'
 import { t, tSl } from './i18n'
 
@@ -227,6 +227,11 @@ describe('byBucket', () => {
     expect(buckets.map((b) => [b.key, b.count])).toEqual([
       ['today', 2], ['thisWeek', 1], ['nextWeek', 2], ['2026-11', 1], ['2026-12', 3], ['2027-01', 1],
     ])
+    // Months past the next two are one part
+    const further = [...events, { id: 'feb', start: '2027-02-15T09:00:00Z' }, { id: 'may', start: '2027-05-17T09:00:00Z' }]
+    expect(byBucket(further, today).map((b) => [b.key, b.count])).toEqual([
+      ['today', 2], ['thisWeek', 1], ['nextWeek', 2], ['2026-11', 1], ['2026-12', 3], ['later', 3],
+    ])
     // 23:30 UTC on Sunday is Monday in Ljubljana, so next week
     expect(buckets[2]!.days.map((d) => d.day)).toEqual(['2026-11-23', '2026-11-25'])
     expect(buckets[4]!.days.map((d) => d.events.map((e) => e.id))).toEqual([['dec-a', 'dec-b'], ['dec-c']])
@@ -245,5 +250,27 @@ describe('byBucket', () => {
     expect(firstEvents(december.days, 2).map((d) => d.events.length)).toEqual([2])
     expect(firstEvents(december.days, 5)).toEqual(december.days)
     expect(nextDay('2026-11-30')).toBe('2026-12-01')
+  })
+})
+
+describe('when an event is, on its row and on a pick\'s card', () => {
+  const talk = { start: '2026-11-20T17:00:00Z', end: '2026-11-20T19:00:00Z', hasStartTime: true, hasEndTime: true }
+
+  it('is as short as its part of the page allows', () => {
+    expect(rowWhen(talk, 'today', 'sl-SI')).toEqual({ day: '', time: '18:00 – 20:00' })
+    expect(rowWhen(talk, 'thisWeek', 'sl-SI')).toEqual({ day: 'pet.', time: '18:00 – 20:00' })
+    expect(rowWhen(talk, 'month', 'sl-SI')).toEqual({ day: 'pet. 20. 11.', time: '18:00 – 20:00' })
+    expect(rowWhen({ ...talk, end: null }, 'later', 'en-GB')).toEqual({ day: 'Fri 20 Nov', time: '18:00' })
+  })
+
+  it('says the days of one on for several, and no time for one without', () => {
+    expect(rowWhen({ ...talk, end: '2026-11-25T15:30:00Z' }, 'today', 'sl-SI')).toEqual({ day: '20. 11. – 25. 11.', time: '' })
+    expect(rowWhen({ ...talk, end: null, hasStartTime: false }, 'nextWeek', 'sl-SI')).toEqual({ day: 'pet.', time: '' })
+  })
+
+  it('says Today and Tomorrow on a card, else the weekday', () => {
+    expect(pickWhen(talk, '2026-11-20', tSl, 'sl-SI')).toBe('Danes, 20. 11. · 18:00')
+    expect(pickWhen(talk, '2026-11-19', tSl, 'sl-SI')).toBe('Jutri, 20. 11. · 18:00')
+    expect(pickWhen({ ...talk, hasStartTime: false }, '2026-11-10', t, 'en-GB')).toBe('Friday, 20 Nov')
   })
 })

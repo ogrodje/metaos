@@ -2,111 +2,86 @@
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import MeetupBadge from '@/components/MeetupBadge.vue'
-import { relativeDate } from '@/episodes'
-import { dayOf, eventPath, type ListedEvent, placeLine } from '@/events'
-import { TIME_ZONE } from '@/i18n'
+import { eventPath, type ListedEvent, pickWhen, placeLine } from '@/events'
 import { useLocale } from '@/useLocale'
 
-// One of Ogrodje's picks at the top of the Events page, as a recording session is on the home page (SessionCard): its
-// day as on a calendar, its title, which opens its page, how far away it is, who it's by and where
-const props = defineProps<{ event: ListedEvent }>()
+// One of Ogrodje's picks at the top of the Events page: a card, as it stands alone there, the whole of it a link to the
+// event's page: when it is, in the accent, as it's what to look at, its title, who it's by and where
+const props = defineProps<{ event: ListedEvent, today: string }>()
 
-const { dateLocale, path } = useLocale()
+const { t, dateLocale, path } = useLocale()
 
-const day = computed(() => {
-  const date = new Date(props.event.start)
-  return {
-    month: date.toLocaleDateString(dateLocale.value, { month: 'short', timeZone: TIME_ZONE }),
-    day: date.toLocaleDateString(dateLocale.value, { day: 'numeric', timeZone: TIME_ZONE }),
-  }
-})
-const when = computed(() => relativeDate(dayOf(props.event.start), dateLocale.value))
+const when = computed(() => pickWhen(props.event, props.today, t, dateLocale.value))
 const where = computed(() => placeLine(props.event.place ?? { name: props.event.locationName, address: props.event.locationAddress }))
 </script>
 
 <template>
   <li class="pick">
-    <span class="calendar" aria-hidden="true"><span class="month">{{ day.month }}</span><span class="day">{{ day.day }}</span></span>
-    <div class="what">
-      <RouterLink class="title" :to="path(eventPath(event))">{{ event.title }}</RouterLink>
+    <RouterLink class="card" :to="path(eventPath(event))">
       <time class="when" :datetime="event.start">{{ when }}</time>
-      <p v-if="event.meetup || where" class="details">
+      <span class="title">{{ event.title }}</span>
+      <span v-if="event.meetup || where" class="details">
         <MeetupBadge v-if="event.meetup" :meetup="event.meetup"/>
         <span v-if="where" class="where">{{ where }}</span>
-      </p>
-    </div>
+      </span>
+    </RouterLink>
   </li>
 </template>
 
 <style scoped lang="scss">
-// Under a hairline, as a session on the home page is, not a box
 .pick {
-  display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
-  column-gap: 16px;
-  align-items: start;
-  padding-top: 14px;
-  border-top: 1px solid var(--hairline);
-}
-
-// The day, as on a calendar: the month over it, as SessionCard's
-.calendar {
-  display: grid;
-  padding: 4px 0;
-  text-align: center;
-  border: 1px solid var(--hairline);
-  border-radius: var(--radius);
-
-  .month {
-    font-size: var(--text-micro);
-    line-height: 14px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-
-  .day {
-    font-size: var(--text-section);
-    line-height: 22px;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-  }
-}
-
-.what {
-  display: grid;
-  gap: 2px;
+  display: flex;
   min-width: 0;
 }
 
-.title {
-  font-size: var(--text-lead);
-  line-height: 22px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  text-wrap: pretty;
+// What stands alone is a card: outlined, not lifted, its edge stronger while it's pointed at
+.card {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
 
   &:hover {
-    color: var(--accent-text);
+    border-color: var(--hairline-strong);
   }
 }
 
 .when {
   font-size: var(--text-small);
   line-height: 20px;
-  color: var(--secondary);
+  font-weight: 500;
+  color: var(--accent-text);
 }
 
+.title {
+  font-size: var(--text-lead);
+  line-height: 24px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-wrap: pretty;
+}
+
+// Who it's by and where, at the card's end, on a line: the place gives way
 .details {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 4px 8px;
-  padding-top: 4px;
+  gap: 8px;
+  min-width: 0;
+  margin-top: auto;
   font-size: var(--text-small);
   line-height: 20px;
   color: var(--muted);
+
+  :deep(.meetup) {
+    flex: none;
+    max-width: 60%;
+    overflow: hidden;
+    white-space: nowrap;
+  }
 }
 
 .where {

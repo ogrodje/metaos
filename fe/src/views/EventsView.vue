@@ -14,8 +14,8 @@ import NoMatch from '@/components/NoMatch.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import SelectFilter from '@/components/SelectFilter.vue'
 import {
-  ALL_REGIONS, bucketTitle, byBucket, dayOf, EVENT_FIELDS, eventText, firstEvents, inRegion, type ListedEvent, nextDay,
-  regionOptions, shortDay, SHOWN, type Shown, shownOptions, TEAM_EVENTS, type TeamEvent, weekdayName,
+  ALL_REGIONS, bucketTitle, byBucket, dayOf, EVENT_FIELDS, eventText, firstEvents, inRegion, type ListedEvent, regionOptions,
+  SHOWN, type Shown, shownOptions, TEAM_EVENTS, type TeamEvent,
 } from '@/events'
 import { useEventsRefresh } from '@/eventsRefresh'
 import { graphql } from '@/graphql'
@@ -27,8 +27,8 @@ import { useAuthStore } from '@/stores/auth'
 import { useLocale } from '@/useLocale'
 
 // Slovenia's tech, developer and startup events that haven't ended yet, as MetaOS gathers them from organisations'
-// links: Ogrodje's picks first, then by how soon they are (today, this week, next week, then a month each, the later
-// ones folded to their first few), and by day, in the page's language (the events themselves
+// links: Ogrodje's picks first, as cards, then by how soon they are (today, this week, next week, the next two months,
+// then the rest, those past next week folded to their first few), a line an event, in the page's language (the events themselves
 // are as their organisers write them). Everyone sees the same, so the server renders it. Once the page knows it's the
 // team's, it loads them again with the hidden ones and what's the team's, to hide, pick, add and refresh them.
 // Filtered by region and to Ogrodje's picks (OG-71), and found as you type, in the address, e.g.
@@ -104,17 +104,16 @@ const filtering = computed(() => region.value !== ALL_REGIONS || show.value !== 
 const shown = computed(() => (events.value ?? []).filter((event) =>
   inRegion(event, region.value) && (show.value === 'all' || event.promoted) && matches(eventText(event), find.value)))
 
-// Today in Ljubljana, as the page is rendered; the buckets and the days' Today and Tomorrow go by it
+// Today in Ljubljana, as the page is rendered; the parts and the picks' Today and Tomorrow go by it
 const today = dayOf(new Date().toISOString())
-const tomorrow = nextDay(today)
 
 // How many of a later part's events are shown until it's opened
 const FOLDED = 5
 const opened = ref(new Set<string>())
 
 const buckets = computed(() => byBucket(shown.value, today).map((bucket) => {
-  const folds = bucket.kind === 'month' && !filtering.value && !opened.value.has(bucket.key) && bucket.count > FOLDED
-  return { ...bucket, title: bucketTitle(bucket, t, dateLocale.value), folds, shownDays: folds ? firstEvents(bucket.days, FOLDED) : bucket.days }
+  const folds = (bucket.kind === 'month' || bucket.kind === 'later') && !filtering.value && !opened.value.has(bucket.key) && bucket.count > FOLDED
+  return { ...bucket, title: bucketTitle(bucket, t, dateLocale.value), folds, events: (folds ? firstEvents(bucket.days, FOLDED) : bucket.days).flatMap((day) => day.events) }
 }))
 
 // Ogrodje's picks, the soonest three, over the list; not while only they are shown, or something's looked for
@@ -122,7 +121,6 @@ const PICKS = 3
 const picked = computed(() => shown.value.filter((event) => event.promoted))
 const picks = computed(() => (show.value === 'all' && !find.value.trim() ? picked.value.slice(0, PICKS) : []))
 
-const soon = (day: string) => (day === today ? t('events.today') : day === tomorrow ? t('events.tomorrow') : null)
 </script>
 
 <template>
@@ -159,12 +157,17 @@ const soon = (day: string) => (day === today ? t('events.today') : day === tomor
       <EventForm v-if="adding" id="add-event" @saved="added" @close="adding = false"/>
     </template>
 
-    <FilterBar v-model:find="find" :placeholder="t('events.find')">
-      <ChipGroup v-if="shows[1]!.count || show !== 'all'" v-model="show" :label="t('events.showLabel')" :options="shows"/>
-      <template #end>
-        <SelectFilter v-if="regions.length > 2 || region !== ALL_REGIONS" v-model="region" :label="t('events.region')" :options="regions"/>
-      </template>
-    </FilterBar>
+    <div class="filters">
+      <FilterBar v-model:find="find" :placeholder="t('events.find')">
+        <ChipGroup v-if="shows[1]!.count || show !== 'all'" v-model="show" :label="t('events.showLabel')" :options="shows"/>
+        <template #end>
+          <SelectFilter v-if="regions.length > 2 || region !== ALL_REGIONS" v-model="region" :label="t('events.region')" :options="regions"/>
+        </template>
+      </FilterBar>
+      <nav v-if="events && buckets.length > 1" class="jump" :aria-label="t('events.jump')">
+        <a v-for="bucket in buckets" :key="bucket.key" :href="`#when-${bucket.key}`">{{ bucket.title }}<span class="count">{{ bucket.count }}</span></a>
+      </nav>
+    </div>
 
     <LoadError v-if="error" :what="t('events.what')" :error="error" @retry="loadEvents()"/>
     <LoadingRows v-else-if="!events" :rows="6" tall :label="t('events.loading')"/>
@@ -172,10 +175,6 @@ const soon = (day: string) => (day === today ? t('events.today') : day === tomor
     <NoMatch v-else-if="!shown.length" :find="find" @clear="clear(['region', 'show', 'q'])">{{ t('events.noMatch') }}</NoMatch>
 
     <template v-else>
-      <nav v-if="buckets.length > 1" class="jump" :aria-label="t('events.jump')">
-        <a v-for="bucket in buckets" :key="bucket.key" :href="`#when-${bucket.key}`">{{ bucket.title }}<span class="count">{{ bucket.count }}</span></a>
-      </nav>
-
       <section v-if="picks.length" aria-labelledby="picks">
         <div class="heading">
           <h2 id="picks">{{ t('events.picks') }}</h2>
@@ -185,7 +184,7 @@ const soon = (day: string) => (day === today ? t('events.today') : day === tomor
           </button>
         </div>
         <ul class="picks">
-          <EventPick v-for="event in picks" :key="event.id" :event="event"/>
+          <EventPick v-for="event in picks" :key="event.id" :event="event" :today="today"/>
         </ul>
       </section>
 
@@ -194,15 +193,9 @@ const soon = (day: string) => (day === today ? t('events.today') : day === tomor
           <h2 :id="`when-${bucket.key}-title`">{{ bucket.title }}</h2>
           <span class="count">{{ bucket.count }}</span>
         </div>
-        <template v-for="day in bucket.shownDays" :key="day.day">
-          <h3 class="day">
-            <span v-if="soon(day.day)" class="soon">{{ soon(day.day) }}</span>
-            {{ weekdayName(day.day, dateLocale) }} <span class="date">{{ shortDay(day.day, dateLocale) }}</span>
-          </h3>
-          <ul class="events">
-            <EventRow v-for="event in day.events" :key="event.id" :event="event" :manage="auth.team" @changed="changed"/>
-          </ul>
-        </template>
+        <ul class="events">
+          <EventRow v-for="event in bucket.events" :key="event.id" :event="event" :part="bucket.kind" :manage="auth.team" @changed="changed"/>
+        </ul>
         <button v-if="bucket.folds" type="button" class="text-button all" @click="opened = new Set([...opened, bucket.key])">
           {{ t('events.showAllN', { n: bucket.count }) }}
         </button>
@@ -263,11 +256,17 @@ const soon = (day: string) => (day === today ? t('events.today') : day === tomor
   }
 }
 
-// Ogrodje's picks, three across, each under a hairline as a session on the home page is
+// The filters, and under them where each part of the page is
+.filters {
+  display: grid;
+  gap: 16px;
+}
+
+// Ogrodje's picks, three cards across
 .picks {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px 32px;
+  gap: 16px;
   padding: 0;
   list-style: none;
 }
@@ -299,30 +298,6 @@ const soon = (day: string) => (day === today ? t('events.today') : day === tomor
       padding: 7px 12px;
     }
   }
-}
-
-// A day's name over its events, with its date
-.day {
-  padding: 20px 0 8px;
-  font-size: var(--text-body);
-  line-height: 20px;
-  font-weight: 600;
-
-  .date {
-    margin-left: 4px;
-    font-weight: 400;
-    color: var(--muted);
-  }
-
-  // Today and Tomorrow, before the day's name
-  .soon {
-    margin-right: 6px;
-    color: var(--accent-text);
-  }
-}
-
-.heading + .day {
-  padding-top: 0;
 }
 
 .note {
