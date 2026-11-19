@@ -273,7 +273,8 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   which is the team's and not found for anyone else, as one that isn't there: a workspace, its title with its
   organisation's badge, Featured and Past in its lead; in its panel when it is (its weekday and date in Ljubljana, and
   its times where it has them, `eventSchedule`), where (a map for a place, online as text, and the organisation's
-  usual venue said as such), a link to the organiser's page of it, and More from this organiser (`moreFromOrganiser`:
+  usual venue said as such), a link to the organiser's page of it, the organiser (its logo, name, description
+  and where it's online; its name leads to its website, for the team to its page), and More from this organiser (`moreFromOrganiser`:
   up to three of its organisation's other events that aren't hidden, those still to come the soonest first, then the
   past ones, the latest first, each with its date and whether it's past); its description in the main column, its
   paragraphs as written (`paragraphs`). The sitemap has the upcoming ones'. The Events page itself stays the upcoming

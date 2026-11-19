@@ -1,5 +1,6 @@
 import type { DateLocale } from '@/i18n'
 import { TIME_ZONE } from '@/i18n'
+import { type Image, IMAGE_FIELDS } from '@/images'
 
 // Slovenia's tech, developer and startup events, as MetaOS's scrapers gather them from organisations' links, and the
 // team adds them (Events.kt), as ogrodje.si's Dogodki page listed them when Goo gathered them: by week, Monday to Sunday,
@@ -253,15 +254,30 @@ export function mapUrl(place: Pick<EventPlace, 'name' | 'address'> | null | unde
 /** An event's own page, at ogrodje.si's address of the events: /dogodki/<ID> */
 export const eventPath = (event: Pick<ListedEvent, 'id'>) => `/dogodki/${event.id}`
 
+/** An event's organisation, as its page's panel has it */
+export interface EventOrganiser {
+  id: string
+  name: string
+  description: string | null
+  logo: Image | null
+  websiteUrl: string | null
+  linkedinUrl: string | null
+  twitterUrl: string | null
+  instagramUrl: string | null
+  facebookUrl: string | null
+}
+
 /** An event as its page has it: its description, and up to three of its organiser's others (moreFromOrganiser) */
 export interface EventDetails extends ListedEvent {
   description: string | null
   hidden: boolean
-  organisation: { id: string, name: string }
+  /** Who it's by, as its page's panel shows them: what it is, its logo and where it's online, all public */
+  organisation: EventOrganiser
   moreFromOrganiser: ListedEvent[]
 }
 
-export const EVENT_PAGE = `query ($id: ID!) { event(id: $id) { ${EVENT_FIELDS} description hidden organisation { id name }
+export const EVENT_PAGE = `query ($id: ID!) { event(id: $id) { ${EVENT_FIELDS} description hidden
+  organisation { id name description logo { ${IMAGE_FIELDS} } websiteUrl linkedinUrl twitterUrl instagramUrl facebookUrl }
   moreFromOrganiser { ${EVENT_FIELDS} } } }`
 
 /** Whether [event] is over at [now]: it ended, or started when it has no end, as Events.kt's upcoming */

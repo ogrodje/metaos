@@ -11,6 +11,8 @@ import LoadError from '@/components/LoadError.vue'
 import LoadingRows from '@/components/LoadingRows.vue'
 import MeetupBadge from '@/components/MeetupBadge.vue'
 import NotFound from '@/components/NotFound.vue'
+import OrganisationLogo from '@/components/OrganisationLogo.vue'
+import SocialLinks from '@/components/SocialLinks.vue'
 import { EVENT_PAGE, type EventDetails, eventPath, eventSchedule, eventTime, isPast, mapUrl, paragraphs, placeLine } from '@/events'
 import { errorMessage, graphql } from '@/graphql'
 import { organisationPath } from '@/organisations'
@@ -100,6 +102,19 @@ const where = computed(() => placeLine(place.value))
 const map = computed(() => mapUrl(place.value))
 const over = computed(() => !!event.value && isPast(event.value, now.value))
 const text = computed(() => paragraphs(event.value?.description))
+
+// Who it's by: their logo, what they are, and where they're online, as SocialLinks shows a person's
+const organiser = computed(() => event.value?.organisation)
+const organiserLinks = computed(() => organiser.value && {
+  name: organiser.value.name,
+  homepageUrl: organiser.value.websiteUrl,
+  linkedinUrl: organiser.value.linkedinUrl,
+  twitterUrl: organiser.value.twitterUrl,
+  instagramUrl: organiser.value.instagramUrl,
+  facebookUrl: organiser.value.facebookUrl,
+})
+const organiserOnline = computed(() => !!organiserLinks.value && Object.entries(organiserLinks.value)
+  .some(([key, url]) => key !== 'name' && !!url))
 </script>
 
 <template>
@@ -139,11 +154,21 @@ const text = computed(() => paragraphs(event.value?.description))
               <span v-else>{{ where }}</span>
               <span v-if="place?.fromOrganisation" class="line aside">{{ t('event.usualVenue') }}</span>
             </Fact>
-            <Fact v-if="event.meetup" :label="t('event.organiser')">{{ event.meetup.name }}</Fact>
           </dl>
           <a v-if="event.url" class="button primary announced" :href="event.url" target="_blank" rel="noopener">
             {{ t('event.announced') }}<FontAwesomeIcon class="external" :icon="faArrowUpRightFromSquare"/><span class="visually-hidden"> {{ t('events.newTab') }}</span>
           </a>
+        </FactGroup>
+
+        <FactGroup v-if="organiser" :title="t('event.organiser')">
+          <div class="organiser">
+            <OrganisationLogo :image="organiser.logo" :name="organiser.name" :size="40"/>
+            <RouterLink v-if="auth.team" class="name" :to="path(organisationPath(organiser))">{{ organiser.name }}</RouterLink>
+            <a v-else-if="organiser.websiteUrl" class="name" :href="organiser.websiteUrl" target="_blank" rel="noopener">{{ organiser.name }}</a>
+            <span v-else class="name">{{ organiser.name }}</span>
+          </div>
+          <p v-if="organiser.description" class="organiser-about">{{ organiser.description }}</p>
+          <span v-if="organiserOnline && organiserLinks" class="icons"><SocialLinks :person="organiserLinks"/></span>
         </FactGroup>
 
         <FactGroup v-if="event.moreFromOrganiser.length" :title="t('event.more')">
@@ -208,7 +233,7 @@ dl {
   gap: 8px;
 }
 
-dd a, .more a {
+dd a, .more a, a.name {
   @include page.link;
 }
 
@@ -248,6 +273,34 @@ dd a, .more a {
     display: grid;
     gap: 2px;
   }
+}
+
+// Its logo beside its name; what it is under them, its first lines, all of it in the page for search engines
+.organiser {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+
+  .name {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+}
+
+.organiser-about {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+  font-size: var(--text-small);
+  line-height: 20px;
+  color: var(--secondary);
+}
+
+.icons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 // Running text, at its measure, its line breaks as its organiser wrote them
