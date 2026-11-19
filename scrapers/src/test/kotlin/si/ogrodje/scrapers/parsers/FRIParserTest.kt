@@ -57,7 +57,14 @@ class FRIParserTest {
 
     private val today = LocalDate.of(2026, 11, 11)
 
-    private val web = FakeWeb(mapOf("https://fri.uni-lj.si/sl/koledar-dogodkov" to calendar))
+    private val detailUrl = "https://fri.uni-lj.si/sl/dogodek/uporabna-orodja-za-slovenscino"
+    private val pages = mapOf(
+        "https://fri.uni-lj.si/sl/koledar-dogodkov" to calendar,
+        "https://fri.uni-lj.si/sl/dogodek/" to "<div id=eventOpis></div>",
+        detailUrl to """<div id="eventOpis"><p><strong>Portal <em>CJVT Igre</em>.</strong></p>
+            <p>&nbsp;</p><p>Dogodek bo interaktiven.</p></div><p>Preglej dogodke</p>""",
+    )
+    private val web = FakeWeb(pages)
 
     private val events = FRIParser.parse(context(web), today)
 
@@ -68,6 +75,36 @@ class FRIParserTest {
             events.map { it.title }.sorted(),
         )
         assertTrue(events.all { it.source == Source.FRI && it.locationAddress == "Večna pot 113, 1000 Ljubljana" })
+    }
+
+    @Test
+    fun `reads only the event description and keeps its paragraphs`() {
+        assertEquals("Portal CJVT Igre.\n\nDogodek bo interaktiven.", events.single { it.eventUrl == detailUrl }.description)
+        assertNull(events.first { it.eventUrl != detailUrl }.description)
+        assertFalse(web.asked.any { "javna-predstavitev" in it })
+    }
+
+    @Test
+    fun `keeps headings lists and explicit line breaks in source order`() {
+        val page = """<div id="eventOpis">Uvod<h2>Program</h2><p>Prva
+            vrstica<br>Druga <strong>vrstica</strong></p><ul><li>Ena</li><li>Dve</li></ul>
+            <h3>Prijava</h3>Zaključek</div><footer>Izven opisa</footer>"""
+        val web = FakeWeb(pages + (detailUrl to page))
+        val result = FRIParser.parse(context(web), today).single { it.eventUrl == detailUrl }
+        assertEquals("Uvod\n\nProgram\n\nPrva vrstica\nDruga vrstica\n\nEna\n\nDve\n\nPrijava\n\nZaključek", result.description)
+    }
+
+    @Test
+    fun `a successful response missing eventOpis cannot overwrite the saved event`() {
+        val changedPage = FakeWeb(pages + (detailUrl to "<html><p>Maintenance</p></html>"))
+        val refreshed = FRIParser.parse(context(changedPage), today)
+        assertEquals(events.filter { it.eventUrl != detailUrl }, refreshed)
+    }
+
+    @Test
+    fun `unavailable details do not overwrite saved events or prevent other updates`() {
+        val onlyOneDetail = FakeWeb(pages - "https://fri.uni-lj.si/sl/dogodek/")
+        assertEquals(listOf(detailUrl), FRIParser.parse(context(onlyOneDetail), today).map { it.eventUrl })
     }
 
     @Test
@@ -91,7 +128,7 @@ class FRIParserTest {
 
     @Test
     fun `reads FRI from one address, with www or without, so its events are the same (OG-67)`() {
-        val web = FakeWeb(mapOf("https://fri.uni-lj.si/sl/koledar-dogodkov" to calendar))
+        val web = FakeWeb(pages)
         val www = FRIParser.parse(context(web), URI("https://www.fri.uni-lj.si/"))
         val bare = FRIParser.parse(context(web), URI("https://fri.uni-lj.si"))
         assertEquals(bare.map { it.externalId to it.sourceUrl }, www.map { it.externalId to it.sourceUrl })
@@ -102,7 +139,7 @@ class FRIParserTest {
     @Test
     fun `an event's link is the same without www and a slash at its end`() {
         val linked = calendar.replace("href=\"/sl/dogodek/slovenski-okusi-na-fri\"", "href=\"https://www.fri.uni-lj.si/sl/dogodek/slovenski-okusi-na-fri/\"")
-        val events = FRIParser.parse(context(FakeWeb(mapOf("https://fri.uni-lj.si/sl/koledar-dogodkov" to linked))), today)
+        val events = FRIParser.parse(context(FakeWeb(pages + ("https://fri.uni-lj.si/sl/koledar-dogodkov" to linked))), today)
         val event = events.single { it.title == "Slovenski okusi na FRI" }
         assertEquals("https://fri.uni-lj.si/sl/dogodek/slovenski-okusi-na-fri", event.eventUrl)
         assertEquals("fri-0dd4e911e9b6cad40f42721c65df2b9c5aedb6bc", event.externalId)

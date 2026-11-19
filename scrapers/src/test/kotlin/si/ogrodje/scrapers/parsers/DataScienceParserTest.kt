@@ -74,6 +74,7 @@ class DataScienceParserTest {
         buildMap {
             if (dataScienceUp) put("https://datascience.fri.uni-lj.si/events/", eventsHtml)
             put("https://fri.uni-lj.si/sl/koledar-dogodkov", friHtml)
+            put("https://fri.uni-lj.si/sl/dogodek/", "<div id=eventOpis></div>")
         }
     )
 

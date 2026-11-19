@@ -1,8 +1,11 @@
 package si.ogrodje.scrapers.parsers
 
 import org.jsoup.nodes.Element
+import org.jsoup.nodes.Node
+import org.jsoup.nodes.TextNode
 import org.slf4j.LoggerFactory
 import si.ogrodje.scrapers.*
+import java.io.IOException
 import java.net.URI
 import java.security.MessageDigest
 import java.time.LocalDate
@@ -69,6 +72,45 @@ object FRIParser : Parser {
                 val day = e.start.atZone(LJUBLJANA).toLocalDate()
                 ownedByDataScience.any { DataScienceParser.sameEvent(day, e.title, it) }
             }
+            .mapNotNull { event ->
+                val detail = URI(checkNotNull(event.eventUrl))
+                if (detail.scheme !in setOf("https", "http") || detail.host != homepage.host) return@mapNotNull event
+                try {
+                    val body = context.web.document(detail).getElementById("eventOpis")
+                    if (body == null) {
+                        log.warn("Skipping FRI event {}: missing #eventOpis", detail)
+                        return@mapNotNull null
+                    }
+                    event.copy(description = description(body))
+                } catch (e: IOException) {
+                    // Skip this record for this refresh so a failed fetch cannot erase a saved description.
+                    log.warn("Could not read FRI event {}: {}", detail, e.message)
+                    null
+                }
+            }
+    }
+
+    /** Preserve HTML block boundaries, but treat whitespace inside inline text as ordinary spaces. */
+    private fun description(body: Element): String? {
+        val text = StringBuilder()
+        fun append(node: Node) {
+            when (node) {
+                is TextNode -> text.append(node.text())
+                is Element -> {
+                    val boundary = when (node.normalName()) {
+                        "p", "h1", "h2", "h3", "h4", "h5", "h6" -> "\n\n"
+                        "br", "li", "div", "ol", "ul" -> "\n"
+                        else -> if (node.isBlock) "\n" else ""
+                    }
+                    text.append(boundary)
+                    node.childNodes().forEach(::append)
+                    if (node.normalName() != "br") text.append(boundary)
+                }
+            }
+        }
+        body.childNodes().forEach(::append)
+        return text.toString().replace(' ', ' ').replace(Regex(" +"), " ")
+            .replace(Regex(" *\n *"), "\n").replace(Regex("\n{3,}"), "\n\n").trim().ifEmpty { null }
     }
 
     private fun event(url: URI, today: LocalDate, card: Element): ScrapedEvent {
