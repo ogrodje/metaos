@@ -756,18 +756,6 @@
     "fold": "Skrij",
     "formerly": "{tier}, prej",
     "gathersEvents": "Zbira dogodke",
-    "goo": {
-      "ask": "Uvozim srečanja iz Gooja kot organizacije in njegove prihajajoče dogodke? Dopolni se le, kar manjka.",
-      "confirm": "Uvozi",
-      "created": "{n} nova organizacija | {n} novi organizaciji | {n} nove organizacije | {n} novih organizacij",
-      "done": "Uvoženo iz Gooja: {created}, {updated}, {events}, {logos} in {venues}.",
-      "events": "{n} dogodek | {n} dogodka | {n} dogodki | {n} dogodkov",
-      "import": "Uvozi iz Gooja",
-      "importing": "Uvažamo …",
-      "logos": "{n} logotip | {n} logotipa | {n} logotipi | {n} logotipov",
-      "updated": "{n} dopolnjena | {n} dopolnjeni | {n} dopolnjene | {n} dopolnjenih",
-      "venues": "{n} prizorišče | {n} prizorišči | {n} prizorišča | {n} prizorišč"
-    },
     "lede": "Podporniki in partnerji Ogrodja ter podjetja, v katerih ljudje delajo.",
     "loading": "Nalagamo organizacije",
     "noMatch": "Nobena organizacija ne ustreza iskanju",

@@ -319,14 +319,13 @@ them (OG-64): the start of its CRM. Finance is to build on them.
   webcal), `luma_url` and `kompot_url`, which the scrapers read (Events), and `discord_url`; its badge's colours on the
   Events page (`main_color`, the text's, and `background_color`, `#rrggbb`), and whether its events are gathered
   (`collects_events`: Goo's meetups, and one made with an event link but its website; not the rest). `goo_id` is the
-  Hygraph meetup it was imported from.
+  Hygraph meetup it was imported from, once, from Goo (OG-64; the import's gone since, OG-66).
 - Its venue (V37: `venue_name`, `venue_address`, public, unlike its registered `address`): where its events usually
   are, which an event that doesn't say where it is goes by (`Event.place`: one with no address whose place is none, the
   organisation's name or the venue's, as some sources give them; one online keeps what it says), as GraphQL's
   `Event.place` and MCP's `place` have it, with `fromOrganisation`. Where it has none, MetaOS gives it the one most of its
   events say (`usualVenue`: one place, by its address, else its name, as many sources put the whole address there; at
-  least two events and three in five, leaving out online ones), after each scrape and the Goo import, as Hygraph has
-  no venues.
+  least two events and three in five, leaving out online ones), after each scrape.
 - People work at them (`person_organisations`: a title, free text, and from when till when, days; again after they
   left, not twice at once), and they support episodes (`episode_organisations`, once each). Unlinking deletes those
   rows; the audit log keeps them, and `restore_link` brings them back. `History.kt` tells them on the episode's,
@@ -357,7 +356,7 @@ them (OG-64): the start of its CRM. Finance is to build on them.
   (`organisationPath`, `path({ name })`); the list by tier (`OrganisationsView.vue`), and an organisation's workspace
   (`OrganisationView.vue`): its logo and name, who works and worked there, the episodes it supported, and in its panel
   its support, links and finance details, and its events (Events): each link's last scrape, Refresh events, and its events with Add event. The team creates
-  (`OrganisationForm.vue`), edits, archives and deletes them there, and imports Goo from the list (Import from Goo). A released episode's page says Supported by its organisations
+  (`OrganisationForm.vue`), edits, archives and deletes them there. A released episode's page says Supported by its organisations
   (`SupportedBy.vue`: to their websites, for the team to their pages), and a person's panel where they work (the
   team's).
 
@@ -386,17 +385,15 @@ Slovenia's tech, developer and startup events, which MetaOS gathers from the org
   (`EventsSyncs`, `events-sync-<hour>`, so two pods start it once), and when the team asks, for all or one
   organisation (`refreshEvents`, `refresh_events`, the Refresh buttons; once at a time). Without Temporal, nothing's
   gathered, and Refresh says so (previews).
-- `importFromGoo` (GraphQL, staff; [`GooImport.kt`](src/main/kotlin/si/ogrodje/metaos/GooImport.kt)) imports Goo once:
-  its meetups from Hygraph (`HYGRAPH_ENDPOINT`, secretspec) as organisations (by `goo_id`, else by name, else by
-  website; filling only what's empty; the hidden or unpublished archived), their logos, and Goo's upcoming events from
-  its timeline (`metaos.goo.url`). Again, it adds only what's missing. Goo's weekly Discord post stays Goo's until it's
-  ported (OG-65).
+- Goo's meetups and upcoming events were imported once (OG-64), and the import is gone since (OG-66): the
+  organisations and events are MetaOS's own, and nothing reads Hygraph or Goo for them. Goo's weekly Discord post
+  stays Goo's until it's ported (OG-65).
 - MCP: `list_events`, `create_event`, `update_event`, `refresh_events` (`EventsMCP`), and the organisations' tools take
   the new fields. GraphQL: `events(hidden)`, `event`, `eventsRefresh`, `Organisation.events` and `eventScrapes`, and
-  `createEvent`, `updateEvent`, `refreshEvents`, `importFromGoo` (`EventsGraphQL`). Public: the upcoming events that
+  `createEvent`, `updateEvent`, `refreshEvents` (`EventsGraphQL`). Public: the upcoming events that
   aren't hidden, with their organisations' names, logos and colours (`meetup`); the rest is the team's.
-- `EventsTest` has the rules, `EventsSyncTest` the workflow in Temporal's test server against a stand-in scraper,
-  `GooImportTest` the import against stand-ins of Hygraph and Goo; the scrapers' own tests read saved pages.
+- `EventsTest` has the rules, `EventsSyncTest` the workflow in Temporal's test server against a stand-in scraper; the
+  scrapers' own tests read saved pages.
 
 ### Authentication (Keycloak)
 

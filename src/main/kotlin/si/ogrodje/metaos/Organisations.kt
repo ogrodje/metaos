@@ -88,7 +88,7 @@ class Organisation(
     // Archived: listed apart, and its events no longer gathered; nothing of it is deleted
     var archivedAt: OffsetDateTime? = null
 
-    // The meetup in Hygraph it was imported from (GooImport.kt)
+    // The meetup in Hygraph it was imported from, once, from Goo (OG-64); kept, though the import is gone (OG-66)
     @Column(columnDefinition = "text") var gooId: String? = null
 
     val archived: Boolean get() = archivedAt != null
