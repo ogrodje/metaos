@@ -1,5 +1,6 @@
 package si.ogrodje.scrapers.parsers
 
+import org.jsoup.Jsoup
 import org.slf4j.LoggerFactory
 import si.ogrodje.scrapers.*
 import tools.jackson.databind.JsonNode
@@ -37,10 +38,16 @@ object SLAIFParser : Parser {
             }
         }.filter { it.status == "published" }
         // Indico's pages of the recent and upcoming ones only: older events keep what SLAIF says
-        val withIndico = items.filter { !it.date.isBefore(today.minusDays(INDICO_DAYS_BACK)) && !it.online }.take(MAX_INDICO).toSet()
+        val recent = items.filter { !it.date.isBefore(today.minusDays(INDICO_DAYS_BACK)) && it.indicoUrl != null }
+        // Keep the existing on-site lookup budget for venues and bound online lookups separately.
+        val withIndico = recent.groupBy { it.online }.values.flatMap { it.take(MAX_INDICO) }.toSet()
         return items.map { item ->
-            val place = (if (item in withIndico) indicoPlace(context.web, item) else null) ?: item.place
-            event(eventsPage, item, place)
+            val details = if (item in withIndico) indicoDetails(context.web, item) else null
+            val place = if (item.online) item.place else details?.let(::indicoPlace) ?: item.place
+            val description = details?.get("description")?.takeIf { it.isString }?.stringValue()?.let {
+                EventText.description(Jsoup.parseBodyFragment(it).body())
+            }
+            event(eventsPage, item, place, description)
         }
     }
 
@@ -50,19 +57,17 @@ object SLAIFParser : Parser {
     // What Indico's form has until it's filled in, as SLAIF's has it: "NASLOV", "SOBA"; and "TBA"
     private val placeholders = setOf("naslov", "soba", "lokacija", "prostor", "tba", "tbd", "n/a", "-")
 
-    /**
-     * Where Indico says the event is, from its export API (`/export/event/<id>.json`): its place, room and address,
-     * e.g. "IZUM", "Mala dvorana" and "Prešernova ulica 17, 2000 Maribor"; null when it doesn't answer or only has its
-     * form's placeholders
-     */
-    internal fun indicoPlace(web: Web, item: Item): Location? {
+    private fun indicoDetails(web: Web, item: Item): JsonNode? {
         val (base, id) = indicoEvent.find(item.indicoUrl ?: return null)?.destructured ?: return null
-        val event = try {
-            web.json(URI("$base/export/event/$id.json")).path("results").values().firstOrNull() ?: return null
+        return try {
+            web.json(URI("$base/export/event/$id.json")).path("results").values().firstOrNull()
         } catch (e: Exception) {
             log.warn("No Indico details for SLAIF event ${item.id}: ${e.message}")
-            return null
+            null
         }
+    }
+
+    private fun indicoPlace(event: JsonNode): Location? {
         fun text(name: String) = Locations.clean(event.get(name)?.takeIf { it.isString }?.stringValue())
             ?.takeUnless { it.lowercase() in placeholders }
         val address = Locations.parse(text("address"))
@@ -73,7 +78,7 @@ object SLAIFParser : Parser {
         return location.takeUnless { it.isEmpty }
     }
 
-    private fun event(eventsPage: String, item: Item, place: Location): ScrapedEvent {
+    private fun event(eventsPage: String, item: Item, place: Location, description: String?): ScrapedEvent {
         val times = timesOf(item.timeRange)
         val start = at(item.date, times?.first ?: LocalTime.MIDNIGHT)
         val end = times?.second?.let { at(item.date, it) }?.takeIf { it.isAfter(start) }
@@ -86,7 +91,7 @@ object SLAIFParser : Parser {
             end = end,
             hasStartTime = times != null,
             hasEndTime = end != null,
-            description = item.lecturer?.let { "Izvajalci: $it" },
+            description = description ?: item.lecturer?.let { "Izvajalci: $it" },
             eventUrl = item.indicoUrl ?: eventsPage,
             locationName = place.name,
             locationAddress = place.address,

@@ -92,9 +92,10 @@ class SLAIFParserTest {
         fun place(id: Int) = Location(events.getValue("slaif-$id").locationName, events.getValue("slaif-$id").locationAddress)
         fun atIndico(id: Int) = events.values.single { it.eventUrl == "https://indico.ijs.si/event/$id/" }.let { Location(it.locationName, it.locationAddress) }
 
-        // "VK", tagged Online, and Indico isn't asked
+        // An online course uses the Indico description but keeps its online venue.
         assertEquals(Location.ONLINE, place(52))
-        assertTrue(web.asked.none { it.endsWith("/3989.json") })
+        assertEquals(1, web.asked.count { it.endsWith("/3989.json") })
+        assertEquals("Learning objectives:\n\nPlanning the data life cycle.", events.getValue("slaif-52").description)
         // Indico's place, room and address
         assertEquals(Location("Teslova, Soba 38-39 \"e-predavalnica\", 1. nadstropje", "Teslova 30"), atIndico(4023))
         assertEquals(Location("IZUM, Mala dvorana", "Prešernova ulica 17, 2000 Maribor"), atIndico(3969))
