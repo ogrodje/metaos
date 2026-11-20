@@ -44,6 +44,7 @@ class SLAIFParserTest {
         assertTrue(event.hasEndTime)
         // "VK", tagged Online
         assertEquals("Online", event.locationName)
+        assertTrue(event.descriptionIsFallback)
         assertEquals("Izvajalci: Marko Drobnjak", event.description)
         assertEquals("https://indico.ijs.si/event/3989/", event.eventUrl)
         assertEquals("https://www.slaif.si/events", event.sourceUrl)
@@ -94,6 +95,7 @@ class SLAIFParserTest {
 
         // An online course uses the Indico description but keeps its online venue.
         assertEquals(Location.ONLINE, place(52))
+        assertFalse(events.getValue("slaif-52").descriptionIsFallback)
         assertEquals(1, web.asked.count { it.endsWith("/3989.json") })
         assertEquals("Learning objectives:\n\nPlanning the data life cycle.", events.getValue("slaif-52").description)
         // Indico's place, room and address

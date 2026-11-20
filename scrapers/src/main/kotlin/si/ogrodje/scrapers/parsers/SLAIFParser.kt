@@ -91,6 +91,7 @@ object SLAIFParser : Parser {
             end = end,
             hasStartTime = times != null,
             hasEndTime = end != null,
+            descriptionIsFallback = description == null,
             description = description ?: item.lecturer?.let { "Izvajalci: $it" },
             eventUrl = item.indicoUrl ?: eventsPage,
             locationName = place.name,
