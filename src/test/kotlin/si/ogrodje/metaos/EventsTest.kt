@@ -55,6 +55,26 @@ class EventsTest @Autowired constructor(
     private fun keep(organisation: UUID, found: List<FoundEvent>) = actingFor(Actor(null, null)) { events.keep(organisation, found) }
 
     @Test
+    fun `a fallback fills an empty description and preserves a full one across refreshes`() {
+        val by = organisation("Partial refresh test")
+        val listing = found("partial-1", "Workshop")
+        fun refresh(event: FoundEvent) = keep(by, listOf(event))
+        fun saved() = eventsMCP.list(organisationId = by).single().description
+
+        val fallback = listing.copy(description = "Instructor", descriptionIsFallback = true)
+        assertEquals(FoundCounts(1, 0), refresh(fallback))
+        assertEquals("Instructor", saved())
+        val full = listing.copy(description = "Full workshop details")
+        assertEquals(FoundCounts(0, 1), refresh(full))
+        assertEquals(FoundCounts(0, 0), refresh(fallback))
+        assertEquals("Full workshop details", saved())
+        assertEquals(FoundCounts(0, 1), refresh(fallback.copy(title = "Updated workshop", description = null)))
+        assertEquals("Full workshop details", saved())
+        assertEquals(FoundCounts(0, 1), refresh(full.copy(description = "Revised details")))
+        assertEquals("Revised details", saved())
+    }
+
+    @Test
     fun `keeps what a scraper found, writes only what changed, and nothing older than a year`() {
         val by = organisation("Scraped Test")
         val first = keep(by, listOf(found("meetup-1", "Kotlin night"), found("meetup-old", "Long ago", Instant.now().minus(400, ChronoUnit.DAYS))))

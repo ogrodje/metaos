@@ -43,6 +43,8 @@ data class ScrapedEvent(
     val eventUrl: String? = null,
     val locationName: String? = null,
     val locationAddress: String? = null,
+    // A partial refresh may supply a description for new events only.
+    val descriptionIsFallback: Boolean = false,
 )
 
 /** What scraping a URL found: by which parser ([source], none when no parser takes the URL), and its events */
