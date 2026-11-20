@@ -192,6 +192,8 @@ data class FoundEvent(
     val eventUrl: String? = null,
     val locationName: String? = null,
     val locationAddress: String? = null,
+    // A partial refresh may supply a description for new events only.
+    val descriptionIsFallback: Boolean = false,
 )
 
 /** How many of what a scraper found were new, and how many changed */
@@ -313,11 +315,13 @@ class Events(
         var changed = 0
         wanted.forEach { f ->
             val event = known[f.externalId]
+            val description = if (f.descriptionIsFallback && event?.description != null) event.description
+                else f.description?.trim()?.ifEmpty { null }
             if (event == null) {
-                events.save(Event(organisation, f.source, f.externalId, f.title.trim(), f.start.atOffset(java.time.ZoneOffset.UTC)).also { found(it, f) })
+                events.save(Event(organisation, f.source, f.externalId, f.title.trim(), f.start.atOffset(java.time.ZoneOffset.UTC)).also { found(it, f, description) })
                 added++
-            } else if (differs(event, f)) {
-                found(event, f)
+            } else if (differs(event, f, description)) {
+                found(event, f, description)
                 changed++
             }
         }
@@ -339,20 +343,20 @@ class Events(
         return true
     }
 
-    private fun differs(event: Event, f: FoundEvent) =
+    private fun differs(event: Event, f: FoundEvent, description: String?) =
         event.title != f.title.trim() || event.startsAt.toInstant() != f.start || event.endsAt?.toInstant() != f.end ||
-            event.hasStartTime != f.hasStartTime || event.hasEndTime != f.hasEndTime || event.description != f.description?.trim()?.ifEmpty { null } ||
+            event.hasStartTime != f.hasStartTime || event.hasEndTime != f.hasEndTime || event.description != description ||
             event.url != f.eventUrl || event.locationName != f.locationName?.trim()?.ifEmpty { null } ||
             event.locationAddress != f.locationAddress?.trim()?.ifEmpty { null } || event.sourceUrl != f.sourceUrl
 
-    private fun found(event: Event, f: FoundEvent) {
+    private fun found(event: Event, f: FoundEvent, description: String?) {
         event.title = f.title.trim()
         event.startsAt = f.start.atOffset(java.time.ZoneOffset.UTC)
         // A scraper's end before its start is no end
         event.endsAt = f.end?.takeIf { it >= f.start }?.atOffset(java.time.ZoneOffset.UTC)
         event.hasStartTime = f.hasStartTime
         event.hasEndTime = f.hasEndTime
-        event.description = f.description?.trim()?.ifEmpty { null }
+        event.description = description
         event.url = f.eventUrl?.takeIf { it.matches(Regex("^https?://.+")) }
         event.locationName = f.locationName?.trim()?.ifEmpty { null }
         event.locationAddress = f.locationAddress?.trim()?.ifEmpty { null }
