@@ -72,6 +72,16 @@ class TehnoloskiParkLjubljanaParserTest {
         }
     }
 
+    @Test
+    fun `reads event paragraphs and list items without page controls or sidebar events`() {
+        val description = requireNotNull(event("tp-9008").description)
+        assertTrue(description.startsWith("Pridružite se nacionalni finančni kliniki"))
+        assertTrue(description.contains("\nProgram:\n"))
+        assertTrue(description.contains("\nPrimer dobre prakse"))
+        assertFalse(description.contains("Prijava na dogodek"))
+        assertFalse(description.contains("Zadnji dogodki"))
+    }
+
     private fun place(page: String) = TehnoloskiParkLjubljanaParser.locationIn(org.jsoup.Jsoup.parse(fixture(page)))
 
     @Test
