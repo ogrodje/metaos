@@ -52,25 +52,13 @@ object InkubatorSavinjskeRegijeParser : Parser {
     private fun listingUrl(url: URI, page: Int) =
         URI("${url.at("/wp-json/wp/v2/dogodki")}?per_page=$PER_PAGE&page=$page&_fields=id,link,title,content")
 
-    /**
-     * The newest posts, up to [MAX_PAGES] pages: older ones are long past. A full page may have another after it;
-     * WordPress answers one past the end with 400.
-     */
-    private fun posts(web: Web, url: URI): List<Post> {
-        val all = mutableListOf<Post>()
-        for (page in 1..MAX_PAGES) {
-            val json = try {
-                web.json(listingUrl(url, page))
-            } catch (e: WebException) {
-                if (page > 1 && e.status == 400) break else throw e
-            }
-            require(json.isArray) { "${listingUrl(url, page)} isn't a list of posts" }
-            val posts = json.values().map(::post)
-            all += posts
-            if (posts.size < PER_PAGE) break
+    private fun posts(web: Web, url: URI): List<Post> =
+        wordPressPages(MAX_PAGES, PER_PAGE) { page ->
+            val listing = listingUrl(url, page)
+            val json = web.json(listing)
+            require(json.isArray) { "$listing isn't a list of posts" }
+            json.values().map(::post)
         }
-        return all
-    }
 
     private fun post(node: JsonNode): Post {
         fun text(vararg path: String) = path.fold(node as JsonNode?) { n, name -> n?.get(name) }
