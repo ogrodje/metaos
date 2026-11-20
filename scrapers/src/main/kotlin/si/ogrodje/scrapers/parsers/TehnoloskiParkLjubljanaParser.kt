@@ -58,13 +58,18 @@ object TehnoloskiParkLjubljanaParser : Parser {
             context.web.document(URI(event.eventUrl!!))
         } catch (e: Exception) {
             log.warn("Failed getting duration details from {}: {}", event.eventUrl, e.message)
-            return event
+            return event.copy(descriptionIsFallback = true)
         }
         val location = locationIn(page)
         val body = page.selectFirst(".eventDetail")?.clone()
         body?.select(".pageTitle, .figure, .eventDate, .btn, .eli")?.remove()
         val description = body?.let { EventText.linesOf(it.html()).joinToString("\n").ifBlank { null } }
-        val placed = event.copy(description = description, locationName = location.name, locationAddress = location.address)
+        val placed = event.copy(
+            description = description,
+            descriptionIsFallback = description == null,
+            locationName = location.name,
+            locationAddress = location.address,
+        )
         return try {
             val raw = page.selectFirst("p.eventDate")?.text()
                 ?.replace("Datum dogodka: ", "")?.trim() ?: throw NoSuchElementException("No duration found")
