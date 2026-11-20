@@ -417,7 +417,9 @@ Slovenia's tech, developer and startup events, which MetaOS gathers from the org
   Playwright's browser beside it, which works on Temporal's task queue `scrapers` (`ScraperActivities`: MetaOS has the
   same interface by the same name, so changing one is changing both). `EventsSyncWorkflow` asks them for each link of
   every organisation that gathers events (not archived, `collects_events`), at once, keeps what they found
-  (`Events.keep`: writes only what changed, nothing that ended over a year ago, `EVENTS_KEPT_FOR`) and how each link
+  (`Events.keep`: writes only what changed, nothing that ended over a year ago, `EVENTS_KEPT_FOR`; an event a
+  scraper knew only the days of this time, `onlyDays`, e.g. as Tehnološki park Ljubljana's page didn't answer, keeps
+  the times it has on those days, OG-75) and how each link
   went (`event_scrapes`, without an audit trigger: when, by which scraper, how many, or why it failed). A scraper whose
   IDs come from its events' URLs writes them one way (`normalised`: no `www.`, no slash at the end), and reads its site
   from one address, whichever of its addresses the link has: FRI's events were twice, from `https://www.fri.uni-lj.si/`

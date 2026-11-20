@@ -28,7 +28,9 @@ data class ScrapeRequest(
 /**
  * An event as a parser found it. [externalId] is the parser's own, as Goo had it (e.g. meetup-123, gzs-456, an
  * iCal UID), so the same event found again is the same event; [source] says which parser found it. Its start and end
- * are instants, with a time of day only where [hasStartTime] and [hasEndTime] say.
+ * are instants, with a time of day only where [hasStartTime] and [hasEndTime] say. [onlyDays] says the parser knew
+ * only its days this time, not its times, e.g. as its own page didn't answer: MetaOS keeps the times it has for those
+ * days rather than make it all day (OG-75).
  */
 data class ScrapedEvent(
     val source: Source,
@@ -43,6 +45,7 @@ data class ScrapedEvent(
     val eventUrl: String? = null,
     val locationName: String? = null,
     val locationAddress: String? = null,
+    val onlyDays: Boolean = false,
 )
 
 /** What scraping a URL found: by which parser ([source], none when no parser takes the URL), and its events */

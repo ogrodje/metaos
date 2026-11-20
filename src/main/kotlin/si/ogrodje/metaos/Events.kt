@@ -192,6 +192,8 @@ data class FoundEvent(
     val eventUrl: String? = null,
     val locationName: String? = null,
     val locationAddress: String? = null,
+    // The scraper knew only its days this time, not its times (e.g. its page didn't answer): times it has stay (OG-75)
+    val onlyDays: Boolean = false,
 )
 
 /** How many of what a scraper found were new, and how many changed */
@@ -311,8 +313,9 @@ class Events(
         val known = events.findByOrganisationAndExternalIdIn(organisation, wanted.map { it.externalId }).associateBy { it.externalId }
         var added = 0
         var changed = 0
-        wanted.forEach { f ->
-            val event = known[f.externalId]
+        wanted.forEach { scraped ->
+            val event = known[scraped.externalId]
+            val f = event?.let { withKnownTimes(it, scraped) } ?: scraped
             if (event == null) {
                 events.save(Event(organisation, f.source, f.externalId, f.title.trim(), f.start.atOffset(java.time.ZoneOffset.UTC)).also { found(it, f) })
                 added++
@@ -337,6 +340,20 @@ class Events(
         organisation.venueAddress = address
         if (!organisation.regionManual) organisation.region = regions.of(name, address)
         return true
+    }
+
+    /**
+     * [f] with [event]'s times, when its scraper knew only its days this time ([FoundEvent.onlyDays]) and [event] has
+     * a time on one of them: so a page that didn't answer doesn't make it all day, nor change it, until it answers
+     * again. Days that moved are the scraper's.
+     */
+    private fun withKnownTimes(event: Event, f: FoundEvent): FoundEvent {
+        if (!f.onlyDays || !(event.hasStartTime || event.hasEndTime)) return f
+        fun day(instant: Instant) = instant.atZone(LJUBLJANA).toLocalDate()
+        val known = day(event.startsAt.toInstant())
+        if (known < day(f.start) || known > day(f.end ?: f.start)) return f
+        return f.copy(start = event.startsAt.toInstant(), end = event.endsAt?.toInstant(),
+            hasStartTime = event.hasStartTime, hasEndTime = event.hasEndTime)
     }
 
     private fun differs(event: Event, f: FoundEvent) =

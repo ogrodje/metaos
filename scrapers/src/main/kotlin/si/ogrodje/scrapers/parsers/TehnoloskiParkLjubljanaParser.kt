@@ -12,7 +12,7 @@ import java.time.LocalDate
  * Tehnološki park Ljubljana (https://www.tp-lj.si/sl/koledar-dogodkov): its calendar is drawn from the JSON in a script,
  * `dogodkiJSON`, with each event's days. Those from a month ago on are read from their own pages too, for their times
  * (`p.eventDate`, [TehnoloskiParkLjubljanaDurationParser]) and its place, where its text says ("Kje:"); one whose
- * page can't be read keeps its days. Its ID is the calendar's, tp-<id>.
+ * page can't be read keeps its days, as [ScrapedEvent.onlyDays], so MetaOS keeps the times it had (OG-75). Its ID is the calendar's, tp-<id>.
  */
 object TehnoloskiParkLjubljanaParser : Parser {
     override val source = Source.TEHNOLOSKI_PARK_LJUBLJANA
@@ -49,6 +49,7 @@ object TehnoloskiParkLjubljanaParser : Parser {
             end = day(field("end").asString()),
             hasStartTime = false,
             hasEndTime = false,
+            onlyDays = true,
             eventUrl = url.resolve(field("link").asString()).toString(),
         )
     }
@@ -71,6 +72,7 @@ object TehnoloskiParkLjubljanaParser : Parser {
                 hasStartTime = duration.hasStartTime,
                 end = duration.end,
                 hasEndTime = duration.hasEndTime,
+                onlyDays = false,
             )
         } catch (e: Exception) {
             log.warn("Failed getting duration details from {}: {}", event.eventUrl, e.message)

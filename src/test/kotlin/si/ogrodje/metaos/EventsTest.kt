@@ -71,6 +71,47 @@ class EventsTest @Autowired constructor(
     }
 
     @Test
+    fun `a scraper that knew only the days this time leaves the times it found before, until it finds them again`() {
+        val by = organisation("Only Days Test")
+        val day = java.time.LocalDate.now(LJUBLJANA).plusDays(5)
+        fun at(hour: Int, minute: Int = 0) = day.atTime(hour, minute).atZone(LJUBLJANA).toInstant()
+        val midnight = day.atStartOfDay(LJUBLJANA).toInstant()
+        // As Tehnološki park Ljubljana's calendar has tp-9008, a day, and its page its time (two hours, no end's time)
+        fun calendar(id: String) = FoundEvent("TEHNOLOSKI_PARK_LJUBLJANA", id, "https://www.tp-lj.si/sl/koledar-dogodkov",
+            "Finančna klinika $id", midnight, midnight, hasStartTime = false, hasEndTime = false,
+            eventUrl = "https://www.tp-lj.si/sl/dogodki/$id", onlyDays = true)
+        fun page(id: String, hour: Int, minute: Int = 0) = calendar(id).copy(start = at(hour, minute),
+            end = at(hour + 2, minute), hasStartTime = true, onlyDays = false)
+        fun saved(id: String) = eventsMCP.list(organisationId = by).single { it.title == "Finančna klinika $id" }
+
+        assertEquals(FoundCounts(1, 0), keep(by, listOf(page("tp-9008", 11))))
+        // Its page didn't answer: its times stay, and it's no change, however often
+        assertEquals(FoundCounts(0, 0), keep(by, listOf(calendar("tp-9008"))))
+        assertEquals(FoundCounts(0, 0), keep(by, listOf(calendar("tp-9008"))))
+        saved("tp-9008").let {
+            assertEquals(at(11), it.start)
+            assertEquals(at(13), it.end)
+            assertTrue(it.hasStartTime)
+            assertFalse(it.hasEndTime)
+        }
+        // Its page answers again, with another time, which it takes
+        assertEquals(FoundCounts(0, 1), keep(by, listOf(page("tp-9008", 14, 30))))
+        assertEquals(at(14, 30), saved("tp-9008").start)
+        // Days that moved are the calendar's, all day
+        val moved = calendar("tp-9008").let { it.copy(start = it.start.plus(1, ChronoUnit.DAYS), end = it.end!!.plus(1, ChronoUnit.DAYS)) }
+        assertEquals(FoundCounts(0, 1), keep(by, listOf(moved)))
+        assertEquals(moved.start, saved("tp-9008").start)
+        assertFalse(saved("tp-9008").hasStartTime)
+
+        // Found first without its page, it's the calendar's days
+        assertEquals(FoundCounts(1, 0), keep(by, listOf(calendar("tp-9009"))))
+        saved("tp-9009").let {
+            assertEquals(midnight, it.start)
+            assertFalse(it.hasStartTime)
+        }
+    }
+
+    @Test
     fun `the team hides and picks a scraper's event, which keeps them when it's found again, and changes only its own wholly`() {
         val by = organisation("Hidden Test")
         keep(by, listOf(found("meetup-2", "Hide me")))
