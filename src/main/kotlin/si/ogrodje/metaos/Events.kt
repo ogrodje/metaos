@@ -192,7 +192,8 @@ data class FoundEvent(
     val eventUrl: String? = null,
     val locationName: String? = null,
     val locationAddress: String? = null,
-    // The scraper knew only its days this time, not its times (e.g. its page didn't answer): times it has stay (OG-75)
+    // The scraper knew only its days this time, not its times (e.g. its page didn't answer), its end the day after the
+    // last, as calendars give them: times it has on those days stay (OG-75)
     val onlyDays: Boolean = false,
 )
 
@@ -344,14 +345,17 @@ class Events(
 
     /**
      * [f] with [event]'s times, when its scraper knew only its days this time ([FoundEvent.onlyDays]) and [event] has
-     * a time on one of them: so a page that didn't answer doesn't make it all day, nor change it, until it answers
+     * a time on one of them (its end's day not one, as calendars give it): so a page that didn't answer doesn't make it all day, nor change it, until it answers
      * again. Days that moved are the scraper's.
      */
     private fun withKnownTimes(event: Event, f: FoundEvent): FoundEvent {
         if (!f.onlyDays || !(event.hasStartTime || event.hasEndTime)) return f
         fun day(instant: Instant) = instant.atZone(LJUBLJANA).toLocalDate()
+        // Its days are as calendars give them, the end's excluded: 17 to 18 April is the 17th alone
+        val first = day(f.start)
+        val last = f.end?.let(::day)?.takeIf { it > first }?.minusDays(1) ?: first
         val known = day(event.startsAt.toInstant())
-        if (known < day(f.start) || known > day(f.end ?: f.start)) return f
+        if (known < first || known > last) return f
         return f.copy(start = event.startsAt.toInstant(), end = event.endsAt?.toInstant(),
             hasStartTime = event.hasStartTime, hasEndTime = event.hasEndTime)
     }
