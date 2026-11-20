@@ -7,6 +7,22 @@ import kotlin.test.assertFailsWith
 
 class WordPressPagesTest {
     @Test
+    fun `short and empty pages each stop immediately`() {
+        for (items in listOf(listOf(1), emptyList())) {
+            val result = wordPressPages(3, 2) { page ->
+                assertEquals(1, page)
+                items
+            }
+            assertEquals(items, result)
+        }
+    }
+
+    @Test
+    fun `full pages stop at the configured limit`() {
+        assertEquals(listOf(1, 1, 2, 2), wordPressPages(2, 2) { page -> listOf(page, page) })
+    }
+
+    @Test
     fun `a 400 after a full page returns the collected items in order`() {
         val requests = mutableListOf<Int>()
         val items = wordPressPages(4, 2) { page ->

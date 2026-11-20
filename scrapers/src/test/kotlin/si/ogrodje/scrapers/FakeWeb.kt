@@ -26,5 +26,13 @@ class FakeWeb(private val pages: Map<String, String>) : Web {
     }
 }
 
+/** Replace one GET response while keeping the other fixture responses. */
+fun Web.replaceGet(matches: (URI) -> Boolean, response: () -> String): Web = object : Web by this {
+    override fun get(url: URI, headers: Map<String, String>): String =
+        if (matches(url)) response() else this@replaceGet.get(url, headers)
+
+    override fun json(url: URI, headers: Map<String, String>) = super<Web>.json(url, headers)
+}
+
 /** A context with [web] and no browser, for [organisation] */
 fun context(web: Web, organisation: String = "Test") = ScrapeContext(organisation, web, null)

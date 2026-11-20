@@ -22,6 +22,7 @@ object InkubatorSavinjskeRegijeParser : Parser {
     private val log = LoggerFactory.getLogger(javaClass)
 
     private const val PER_PAGE = 20
+    // Older posts describe events that have already passed.
     private const val MAX_PAGES = 2
     private const val LOCATION_LABEL = "Lokacija dogodka"
 

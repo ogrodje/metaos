@@ -11,6 +11,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZonedDateTime
 import kotlin.test.Test
+import kotlin.test.assertFailsWith
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -100,6 +101,24 @@ class WordPressEventsParserTest {
     )
 
     private fun luiEvents() = WordPressEventsParser.LUI.parse(context(luiWeb), URI("https://lui.si/"))
+
+    private fun listingResponse(page: Int, response: () -> String): List<ScrapedEvent> {
+        val source = luiWeb.replaceGet({ it.path.endsWith("/posts") && "page=$page&" in it.query }, response)
+        return WordPressEventsParser.LUI.parse(context(source), URI("https://lui.si"))
+    }
+
+    @Test
+    fun `HTTP 400 fails the first listing page and ends a later page`() {
+        val badRequest = { throw WebException(400, "Bad request") }
+        assertEquals(400, assertFailsWith<WebException> { listingResponse(1, badRequest) }.status)
+        assertEquals(listOf("lui-5101", "lui-5102"), listingResponse(2, badRequest).map { it.externalId })
+    }
+
+    @Test
+    fun `a malformed second listing page fails the scrape`() {
+        assertFailsWith<IllegalStateException> { listingResponse(2) { "{}" } }
+        assertFailsWith<tools.jackson.core.exc.StreamReadException> { listingResponse(2) { "invalid json" } }
+    }
 
     @Test
     fun `LUI lists the dogodki category's two newest pages and skips posts without an event date`() {
@@ -268,7 +287,7 @@ class WordPressEventsParserTest {
     @Test
     fun `fails when the site has no events category`() {
         val web = FakeWeb(mapOf("https://lui.si/wp-json/wp/v2/categories?slug=dogodki" to "[]"))
-        kotlin.test.assertFailsWith<IllegalStateException> { WordPressEventsParser.LUI.parse(context(web), URI("https://lui.si/")) }
+        assertFailsWith<IllegalStateException> { WordPressEventsParser.LUI.parse(context(web), URI("https://lui.si/")) }
     }
 
     @Test

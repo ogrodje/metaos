@@ -5,6 +5,7 @@ import java.net.URI
 import java.time.LocalDate
 import java.time.LocalTime
 import kotlin.test.Test
+import kotlin.test.assertFailsWith
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -69,6 +70,24 @@ class InkubatorSavinjskeRegijeParserTest {
 
     // The organisation's website has no www, its posts' links do
     private val events = InkubatorSavinjskeRegijeParser.parse(context(web), URI("https://inkubatorsr.si"))
+
+    private fun listingResponse(page: Int, response: () -> String): List<ScrapedEvent> {
+        val source = web.replaceGet({ it.toString() == api(page) }, response)
+        return InkubatorSavinjskeRegijeParser.parse(context(source), URI("https://inkubatorsr.si"))
+    }
+
+    @Test
+    fun `HTTP 400 fails the first listing page and ends a later page`() {
+        val badRequest = { throw WebException(400, "Bad request") }
+        assertEquals(400, assertFailsWith<WebException> { listingResponse(1, badRequest) }.status)
+        assertEquals(listOf("inkubatorsr-5112", "inkubatorsr-5104"), listingResponse(2, badRequest).map { it.externalId })
+    }
+
+    @Test
+    fun `a malformed second listing page fails the scrape`() {
+        assertFailsWith<IllegalArgumentException> { listingResponse(2) { "{}" } }
+        assertFailsWith<tools.jackson.core.exc.StreamReadException> { listingResponse(2) { "invalid json" } }
+    }
 
     @Test
     fun `reads the two newest pages of posts, without pages that don't read`() {
