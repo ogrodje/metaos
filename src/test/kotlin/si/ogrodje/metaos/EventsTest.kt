@@ -64,6 +64,10 @@ class EventsTest @Autowired constructor(
         val fallback = listing.copy(description = "Instructor", descriptionIsFallback = true)
         assertEquals(FoundCounts(1, 0), refresh(fallback))
         assertEquals("Instructor", saved())
+        val updated = fallback.copy(description = "New instructor")
+        assertEquals(FoundCounts(0, 1), refresh(updated))
+        assertEquals("New instructor", saved())
+        assertEquals(FoundCounts(0, 0), refresh(updated))
         val full = listing.copy(description = "Full workshop details")
         assertEquals(FoundCounts(0, 1), refresh(full))
         assertEquals(FoundCounts(0, 0), refresh(fallback))
@@ -72,6 +76,12 @@ class EventsTest @Autowired constructor(
         assertEquals("Full workshop details", saved())
         assertEquals(FoundCounts(0, 1), refresh(full.copy(description = "Revised details")))
         assertEquals("Revised details", saved())
+        val removed = updated.copy(descriptionConfirmedEmpty = true)
+        assertEquals(FoundCounts(0, 1), refresh(removed))
+        assertEquals("New instructor", saved())
+        assertEquals(FoundCounts(0, 0), refresh(removed))
+        assertEquals(FoundCounts(0, 1), refresh(removed.copy(description = null)))
+        assertNull(saved())
     }
 
     @Test

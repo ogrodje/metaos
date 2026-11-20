@@ -26,6 +26,24 @@ class SLAIFParserTest {
     private fun local(instant: java.time.Instant) = instant.atZone(LJUBLJANA)
 
     @Test
+    fun `only an explicit empty Indico field confirms removal`() {
+        for ((fields, confirmed) in listOf(
+            "{}" to false, """{"description":null}""" to true,
+            """{"description":"<p>&nbsp;</p>"}""" to true,
+        )) {
+            val web = FakeWeb(mapOf(
+                "https://www.slaif.si/api/events" to eventsJson,
+                "https://indico.ijs.si/export/event/3989.json" to """{"results":[$fields]}""",
+            ))
+            val event = SLAIFParser.parse(context(web), URI("https://www.slaif.si"), LocalDate.of(2027, 1, 1))
+                .single { it.externalId == "slaif-52" }
+            assertTrue(event.descriptionIsFallback)
+            assertEquals(confirmed, event.descriptionConfirmedEmpty)
+            assertEquals("Izvajalci: Marko Drobnjak", event.description)
+        }
+    }
+
+    @Test
     fun `reads published events, and skips drafts and items that don't fit`() {
         val events = events()
         assertEquals(setOf("slaif-52", "slaif-14", "slaif-44"), events.map { it.externalId }.toSet())
@@ -45,6 +63,7 @@ class SLAIFParserTest {
         // "VK", tagged Online
         assertEquals("Online", event.locationName)
         assertTrue(event.descriptionIsFallback)
+        assertFalse(event.descriptionConfirmedEmpty)
         assertEquals("Izvajalci: Marko Drobnjak", event.description)
         assertEquals("https://indico.ijs.si/event/3989/", event.eventUrl)
         assertEquals("https://www.slaif.si/events", event.sourceUrl)

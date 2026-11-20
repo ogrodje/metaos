@@ -43,8 +43,10 @@ data class ScrapedEvent(
     val eventUrl: String? = null,
     val locationName: String? = null,
     val locationAddress: String? = null,
-    // A partial refresh may supply a description for new events only.
+    // True when the text comes from the listing rather than the detail page.
     val descriptionIsFallback: Boolean = false,
+    // The detail source explicitly returned an empty description.
+    val descriptionConfirmedEmpty: Boolean = false,
 )
 
 /** What scraping a URL found: by which parser ([source], none when no parser takes the URL), and its events */

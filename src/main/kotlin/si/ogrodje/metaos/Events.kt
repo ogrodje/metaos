@@ -52,6 +52,7 @@ class Event(
 
     @Column(columnDefinition = "text") var sourceUrl: String? = null
     @Column(columnDefinition = "text") var description: String? = null
+    @Column(nullable = false) var descriptionIsFallback: Boolean = false
     @Column(columnDefinition = "text") var url: String? = null
     var endsAt: OffsetDateTime? = null
     @Column(nullable = false) var hasStartTime: Boolean = true
@@ -192,8 +193,10 @@ data class FoundEvent(
     val eventUrl: String? = null,
     val locationName: String? = null,
     val locationAddress: String? = null,
-    // A partial refresh may supply a description for new events only.
+    // True when the text comes from the listing rather than the detail page.
     val descriptionIsFallback: Boolean = false,
+    // The detail source explicitly returned an empty description.
+    val descriptionConfirmedEmpty: Boolean = false,
 )
 
 /** How many of what a scraper found were new, and how many changed */
@@ -313,10 +316,12 @@ class Events(
         val known = events.findByOrganisationAndExternalIdIn(organisation, wanted.map { it.externalId }).associateBy { it.externalId }
         var added = 0
         var changed = 0
-        wanted.forEach { f ->
-            val event = known[f.externalId]
-            val description = if (f.descriptionIsFallback && event?.description != null) event.description
-                else f.description?.trim()?.ifEmpty { null }
+        wanted.forEach { incoming ->
+            val event = known[incoming.externalId]
+            val keepDescription = incoming.descriptionIsFallback && !incoming.descriptionConfirmedEmpty &&
+                event?.description != null && !event.descriptionIsFallback
+            val f = if (keepDescription) incoming.copy(description = event.description, descriptionIsFallback = false) else incoming
+            val description = f.description?.trim()?.ifEmpty { null }
             if (event == null) {
                 events.save(Event(organisation, f.source, f.externalId, f.title.trim(), f.start.atOffset(java.time.ZoneOffset.UTC)).also { found(it, f, description) })
                 added++
@@ -346,6 +351,7 @@ class Events(
     private fun differs(event: Event, f: FoundEvent, description: String?) =
         event.title != f.title.trim() || event.startsAt.toInstant() != f.start || event.endsAt?.toInstant() != f.end ||
             event.hasStartTime != f.hasStartTime || event.hasEndTime != f.hasEndTime || event.description != description ||
+            event.descriptionIsFallback != f.descriptionIsFallback ||
             event.url != f.eventUrl || event.locationName != f.locationName?.trim()?.ifEmpty { null } ||
             event.locationAddress != f.locationAddress?.trim()?.ifEmpty { null } || event.sourceUrl != f.sourceUrl
 
@@ -357,6 +363,7 @@ class Events(
         event.hasStartTime = f.hasStartTime
         event.hasEndTime = f.hasEndTime
         event.description = description
+        event.descriptionIsFallback = f.descriptionIsFallback
         event.url = f.eventUrl?.takeIf { it.matches(Regex("^https?://.+")) }
         event.locationName = f.locationName?.trim()?.ifEmpty { null }
         event.locationAddress = f.locationAddress?.trim()?.ifEmpty { null }

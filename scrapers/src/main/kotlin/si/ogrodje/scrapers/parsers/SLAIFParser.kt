@@ -44,10 +44,12 @@ object SLAIFParser : Parser {
         return items.map { item ->
             val details = if (item in withIndico) indicoDetails(context.web, item) else null
             val place = if (item.online) item.place else details?.let(::indicoPlace) ?: item.place
-            val description = details?.get("description")?.takeIf { it.isString }?.stringValue()?.let {
+            val field = details?.get("description")
+            val description = field?.takeIf { it.isString }?.stringValue()?.let {
                 EventText.description(Jsoup.parseBodyFragment(it).body())
             }
-            event(eventsPage, item, place, description)
+            val confirmedEmpty = field != null && (field.isNull || field.isString && description == null)
+            event(eventsPage, item, place, description, confirmedEmpty)
         }
     }
 
@@ -78,7 +80,7 @@ object SLAIFParser : Parser {
         return location.takeUnless { it.isEmpty }
     }
 
-    private fun event(eventsPage: String, item: Item, place: Location, description: String?): ScrapedEvent {
+    private fun event(eventsPage: String, item: Item, place: Location, description: String?, confirmedEmpty: Boolean): ScrapedEvent {
         val times = timesOf(item.timeRange)
         val start = at(item.date, times?.first ?: LocalTime.MIDNIGHT)
         val end = times?.second?.let { at(item.date, it) }?.takeIf { it.isAfter(start) }
@@ -92,6 +94,7 @@ object SLAIFParser : Parser {
             hasStartTime = times != null,
             hasEndTime = end != null,
             descriptionIsFallback = description == null,
+            descriptionConfirmedEmpty = confirmedEmpty,
             description = description ?: item.lecturer?.let { "Izvajalci: $it" },
             eventUrl = item.indicoUrl ?: eventsPage,
             locationName = place.name,
