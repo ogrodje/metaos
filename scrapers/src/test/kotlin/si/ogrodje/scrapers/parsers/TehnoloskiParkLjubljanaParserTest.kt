@@ -44,6 +44,7 @@ class TehnoloskiParkLjubljanaParserTest {
         assertEquals(Instant.parse("2025-04-17T11:00:00Z"), clinic.end)
         assertTrue(clinic.hasStartTime)
         assertFalse(clinic.hasEndTime)
+        assertFalse(clinic.onlyDays)
         assertEquals(
             "$site/sl/dogodki/nacionalna-financna-klinika-spodbuda-za-digitalno-transformacijo-p4d-2025-04-15",
             clinic.eventUrl,
@@ -56,6 +57,7 @@ class TehnoloskiParkLjubljanaParserTest {
         assertEquals(Instant.parse("2025-05-06T22:00:00Z"), academy.start)
         assertEquals(Instant.parse("2025-05-16T21:59:00Z"), academy.end)
         assertFalse(academy.hasStartTime)
+        assertFalse(academy.onlyDays)
 
         val arena = event("tp-8990")
         assertEquals(Instant.parse("2025-09-24T22:00:00Z"), arena.start)
@@ -69,6 +71,8 @@ class TehnoloskiParkLjubljanaParserTest {
         others.forEach {
             assertTrue(it.descriptionIsFallback)
             assertFalse(it.hasStartTime)
+            // So MetaOS keeps the times it had for them (OG-75)
+            assertTrue(it.onlyDays)
             assertEquals(it.start.atZone(LJUBLJANA).toLocalTime(), java.time.LocalTime.MIDNIGHT)
         }
     }

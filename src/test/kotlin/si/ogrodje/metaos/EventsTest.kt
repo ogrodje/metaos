@@ -91,6 +91,70 @@ class EventsTest @Autowired constructor(
     }
 
     @Test
+    fun `a scraper that knew only the days this time leaves the times it found before, until it finds them again`() {
+        val by = organisation("Only Days Test")
+        val day = java.time.LocalDate.now(LJUBLJANA).plusDays(5)
+        fun at(hour: Int, minute: Int = 0, on: java.time.LocalDate = day) = on.atTime(hour, minute).atZone(LJUBLJANA).toInstant()
+        fun midnight(on: java.time.LocalDate) = on.atStartOfDay(LJUBLJANA).toInstant()
+        // As Tehnološki park Ljubljana's calendar has tp-9008: a day, and the next as its end ("2025-04-17" to
+        // "2025-04-18"); its page its time (two hours, no end's time)
+        fun calendar(id: String, on: java.time.LocalDate = day) = FoundEvent("TEHNOLOSKI_PARK_LJUBLJANA", id,
+            "https://www.tp-lj.si/sl/koledar-dogodkov", "Finančna klinika $id", midnight(on), midnight(on.plusDays(1)),
+            hasStartTime = false, hasEndTime = false, eventUrl = "https://www.tp-lj.si/sl/dogodki/$id", onlyDays = true)
+        fun page(id: String, hour: Int, minute: Int = 0) = calendar(id).copy(start = at(hour, minute),
+            end = at(hour + 2, minute), hasStartTime = true, onlyDays = false)
+        fun saved(id: String) = eventsMCP.list(organisationId = by).single { it.title == "Finančna klinika $id" }
+
+        assertEquals(FoundCounts(1, 0), keep(by, listOf(page("tp-9008", 11))))
+        // Its page didn't answer: its times stay, and it's no change, however often
+        assertEquals(FoundCounts(0, 0), keep(by, listOf(calendar("tp-9008"))))
+        assertEquals(FoundCounts(0, 0), keep(by, listOf(calendar("tp-9008"))))
+        saved("tp-9008").let {
+            assertEquals(at(11), it.start)
+            assertEquals(at(13), it.end)
+            assertTrue(it.hasStartTime)
+            assertFalse(it.hasEndTime)
+        }
+        // Its page answers again, with another time, which it takes
+        assertEquals(FoundCounts(0, 1), keep(by, listOf(page("tp-9008", 14, 30))))
+        assertEquals(at(14, 30), saved("tp-9008").start)
+
+        // Moved a day earlier, its end the day it was on: the calendar's day, all day, and the same again is no change
+        val earlier = calendar("tp-9008", day.minusDays(1))
+        assertEquals(midnight(day), earlier.end)
+        assertEquals(FoundCounts(0, 1), keep(by, listOf(earlier)))
+        saved("tp-9008").let {
+            assertEquals(midnight(day.minusDays(1)), it.start)
+            assertEquals(midnight(day), it.end)
+            assertFalse(it.hasStartTime)
+        }
+        assertEquals(FoundCounts(0, 0), keep(by, listOf(earlier)))
+
+        // Moved a day later, from a time: the calendar's day, all day
+        keep(by, listOf(page("tp-9010", 10)))
+        val later = calendar("tp-9010", day.plusDays(1))
+        assertEquals(FoundCounts(0, 1), keep(by, listOf(later)))
+        assertEquals(midnight(day.plusDays(1)), saved("tp-9010").start)
+        assertFalse(saved("tp-9010").hasStartTime)
+
+        // On several days, a time on any of them but the end's stays
+        keep(by, listOf(page("tp-9011", 9)))
+        val days = calendar("tp-9011", day.minusDays(1)).copy(end = midnight(day.plusDays(1)))
+        assertEquals(FoundCounts(0, 0), keep(by, listOf(days)))
+        assertEquals(at(9), saved("tp-9011").start)
+        assertEquals(FoundCounts(0, 1), keep(by, listOf(days.copy(end = midnight(day)))))
+        assertFalse(saved("tp-9011").hasStartTime)
+
+        // Found first without its page, it's the calendar's days
+        assertEquals(FoundCounts(1, 0), keep(by, listOf(calendar("tp-9009"))))
+        saved("tp-9009").let {
+            assertEquals(midnight(day), it.start)
+            assertEquals(midnight(day.plusDays(1)), it.end)
+            assertFalse(it.hasStartTime)
+        }
+    }
+
+    @Test
     fun `the team hides and picks a scraper's event, which keeps them when it's found again, and changes only its own wholly`() {
         val by = organisation("Hidden Test")
         keep(by, listOf(found("meetup-2", "Hide me")))
