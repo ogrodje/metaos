@@ -33,6 +33,42 @@ class EventbriteParserTest {
 
     private fun nextData(items: String) = """{"props":{"pageProps":{"upcomingEventsTotal":2,"upcomingEvents":[$items]}}}"""
 
+    private fun detail(modules: String) = org.jsoup.Jsoup.parse("""
+        <script id="__NEXT_DATA__" type="application/json">{"props":{"pageProps":{"context":{
+        "structuredContent":{"modules":[$modules]},"basicInfo":{"summary":"Short summary"}
+        }}}}</script>
+    """)
+
+    @Test
+    fun `only blank listings fetch detail text blocks in order then fall back to the detail summary`() {
+        val events = EventbriteParser.events(url, nextData("$withVenue,$online"))
+        val requests = mutableListOf<URI>()
+        val enriched = EventbriteParser.withDescriptions(events) {
+            requests += it
+            detail("""{"type":"text","text":"<p>First paragraph.</p>"},{"type":"image"},{"type":"text","text":"<ul><li>A</li><li>B</li></ul>"}""")
+        }
+        assertEquals(listOf(URI(events.last().eventUrl!!)), requests)
+        assertEquals(events.first(), enriched.first())
+        assertEquals("First paragraph.\n\nA\n\nB", enriched.last().description)
+        assertFalse(enriched.last().descriptionIsFallback)
+        assertEquals("Short summary", EventbriteParser.withDescriptions(events) { detail("") }.last().description)
+    }
+
+    @Test
+    fun `a rate limited second import keeps every listing and stops further detail requests`() {
+        val events = EventbriteParser.events(url, nextData("$online,${withVenue.replace("An evening celebration.", "")}"))
+        val first = EventbriteParser.withDescriptions(events) { detail("""{"type":"text","text":"Full details"}""") }
+        assertTrue(first.all { it.description == "Full details" })
+        var requests = 0
+        val second = EventbriteParser.withDescriptions(events) {
+            requests++
+            throw WebException(429, "Too many requests")
+        }
+        assertEquals(1, requests)
+        assertEquals(first.map { it.externalId }, second.map { it.externalId })
+        assertTrue(second.all { it.description == null && it.descriptionIsFallback })
+    }
+
     @Test
     fun `reads the upcoming events of the next data`() {
         val events = EventbriteParser.events(url, nextData("$withVenue,$online"))
