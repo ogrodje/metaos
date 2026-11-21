@@ -3,6 +3,7 @@ package si.ogrodje.scrapers.parsers
 import org.jsoup.Jsoup
 import si.ogrodje.scrapers.*
 import tools.jackson.databind.JsonNode
+import java.io.IOException
 import java.net.URI
 import java.text.Normalizer
 import java.time.LocalDate
@@ -29,7 +30,24 @@ object DataScienceParser : Parser {
     override fun parse(context: ScrapeContext, url: URI) = parse(context, url, LocalDate.now(LJUBLJANA))
 
     internal fun parse(context: ScrapeContext, url: URI, today: LocalDate): List<ScrapedEvent> =
-        listed(context.web, url, today).map { event(url, it) }
+        listed(context.web, url, today).map { item ->
+            val listed = event(url, item)
+            val detail = URI(listed.eventUrl!!)
+            if (listed.description?.endsWith("…") != true || detail.host != url.host || detail.scheme != url.scheme) {
+                return@map listed
+            }
+            val body = try {
+                context.web.document(detail).selectFirst("main .prose")
+            } catch (_: IOException) {
+                null
+            } ?: return@map listed
+            val marker = body.children().firstOrNull { it.text() == "What?" }
+            if (marker != null) {
+                marker.previousElementSiblings().remove()
+                marker.remove()
+            }
+            listed.copy(description = EventText.description(body) ?: listed.description)
+        }
 
     private fun event(base: URI, item: Item): ScrapedEvent {
         val whenTimes = timesOf(item.whenLine)

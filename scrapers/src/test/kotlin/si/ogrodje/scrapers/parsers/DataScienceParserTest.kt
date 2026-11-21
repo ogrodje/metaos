@@ -85,6 +85,19 @@ class DataScienceParserTest {
     private fun event(id: String) = dataScience().single { it.externalId == id }
 
     @Test
+    fun `expands truncated excerpts from the article body`() {
+        val page = """<main><div class="prose"><p>When? Tuesday</p><p><strong>What?</strong></p>
+            <p>Full abstract.</p><ul><li>First topic</li><li>Second topic</li></ul></div><nav>Related posts</nav></main>"""
+        val web = FakeWeb(mapOf(
+            "https://datascience.fri.uni-lj.si/events/" to eventsHtml,
+            "https://datascience.fri.uni-lj.si/news/workshop_2026-11-26/" to page,
+        ))
+        val workshop = DataScienceParser.parse(context(web), DataScienceParser.homepage)
+            .single { it.externalId == "datascience-workshop_2026-11-26" }
+        assertEquals("Full abstract.\n\nFirst topic\n\nSecond topic", workshop.description)
+    }
+
+    @Test
     fun `reads meetups, workshops and the career day, not news, counselling, old posts or broken items`() {
         val events = dataScience()
         assertEquals(
