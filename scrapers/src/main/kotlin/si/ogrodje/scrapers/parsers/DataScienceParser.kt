@@ -14,7 +14,7 @@ import java.time.LocalTime
  * its calendar from the JSON in `script#events-data`, an item a post, from a year ago on. News, competitions and
  * counselling slots aren't events. The end time and the place come from the excerpt's "When?" and "Where?" lines, else
  * a meetup's `meta` is its place. Its ID is the post's slug, datascience-<slug>. FRI's calendar repeats some of these,
- * which [FRIParser] leaves out ([sameEvent]).
+ * which [FRIParser] leaves out ([sameEvent]). Today’s and upcoming truncated abstracts are read from their articles.
  */
 object DataScienceParser : Parser {
     override val source = Source.DATA_SCIENCE
@@ -33,7 +33,7 @@ object DataScienceParser : Parser {
         listed(context.web, url, today).map { item ->
             val listed = event(url, item)
             val detail = URI(listed.eventUrl!!)
-            if (listed.description?.endsWith("…") != true || detail.host != url.host || detail.scheme != url.scheme) {
+            if (!listed.descriptionIsFallback || item.date < today || detail.host != url.host || detail.scheme != url.scheme) {
                 return@map listed
             }
             val body = try {
@@ -45,8 +45,11 @@ object DataScienceParser : Parser {
             if (marker != null) {
                 marker.previousElementSiblings().remove()
                 marker.remove()
+            } else {
+                body.select("p").filter { it.text().startsWith("When?") || it.text().startsWith("Where?") }
+                    .forEach { it.remove() }
             }
-            listed.copy(description = EventText.description(body) ?: listed.description)
+            EventText.description(body)?.let { listed.copy(description = it, descriptionIsFallback = false) } ?: listed
         }
 
     private fun event(base: URI, item: Item): ScrapedEvent {
@@ -65,6 +68,7 @@ object DataScienceParser : Parser {
             hasStartTime = start != null,
             hasEndTime = endAt != null,
             description = item.description,
+            descriptionIsFallback = item.description?.endsWith("…") == true,
             eventUrl = base.resolve(item.path).toString(),
             locationName = item.location.name,
             locationAddress = item.location.address,
