@@ -42,6 +42,8 @@ object StartupSiParser : Parser {
             title = title,
             start = time(start),
             end = text("div.addeventatc span.end")?.let(::time),
+            description = page.selectFirst(".event-article .content.size-18")?.let(EventText::description)
+                ?: text("div.addeventatc span.description")?.ifBlank { null },
             eventUrl = url.toString(),
             locationName = location.name,
             locationAddress = location.address,

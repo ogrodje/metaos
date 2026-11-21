@@ -38,6 +38,25 @@ class StartupSiParserTest {
         assertEquals(Source.STARTUP_SI, only.source)
     }
 
+    @Test
+    fun `uses article paragraphs and list items then falls back to the calendar summary`() {
+        fun description(body: String, summary: String): String? {
+            val page = event.replace("</span></div>", "</span><span class='description'>$summary</span></div>")
+                .replace("</body>", "<div class='event-article'>$body</div><aside>Related events</aside></body>")
+            val web = FakeWeb(mapOf(
+                "https://www.startup.si/sl-si/dogodki" to list,
+                "https://www.startup.si/sl-si/dogodki/podjetniski-zajtrk" to page,
+            ))
+            return StartupSiParser.parse(context(web), URI("https://www.startup.si")).single().description
+        }
+
+        val article = "<div class='content size-18'><p>About <b>startups</b>.</p><p>Agenda</p><ul><li>Pitch</li><li>Q&amp;A</li></ul></div>"
+        assertEquals("About startups.\n\nAgenda\n\nPitch\n\nQ&A", description(article, "Summary"))
+        assertEquals("Summary", description("", " Summary "))
+        assertEquals("Summary", description("<div class='content size-18'><p>&nbsp;</p></div>", "Summary"))
+        assertEquals(null, description("", " "))
+    }
+
     private fun place(name: String) = StartupSiParser.locationIn(org.jsoup.Jsoup.parse(FakeWeb.fixture("startup-si-$name.html")))
 
     @Test
