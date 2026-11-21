@@ -69,11 +69,24 @@ class TehnoloskiParkLjubljanaParserTest {
         val others = events.filterNot { it.externalId in setOf("tp-9008", "tp-9002", "tp-8990") }
         assertTrue(others.isNotEmpty())
         others.forEach {
+            assertTrue(it.descriptionIsFallback)
             assertFalse(it.hasStartTime)
             // So MetaOS keeps the times it had for them (OG-75)
             assertTrue(it.onlyDays)
             assertEquals(it.start.atZone(LJUBLJANA).toLocalTime(), java.time.LocalTime.MIDNIGHT)
         }
+    }
+
+    @Test
+    fun `reads event paragraphs and list items without page controls or sidebar events`() {
+        val clinic = event("tp-9008")
+        assertFalse(clinic.descriptionIsFallback)
+        val description = requireNotNull(clinic.description)
+        assertTrue(description.startsWith("Pridružite se nacionalni finančni kliniki"))
+        assertTrue(description.contains("\nProgram:\n"))
+        assertTrue(description.contains("\nPrimer dobre prakse"))
+        assertFalse(description.contains("Prijava na dogodek"))
+        assertFalse(description.contains("Zadnji dogodki"))
     }
 
     private fun place(page: String) = TehnoloskiParkLjubljanaParser.locationIn(org.jsoup.Jsoup.parse(fixture(page)))
