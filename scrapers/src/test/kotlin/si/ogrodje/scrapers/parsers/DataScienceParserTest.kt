@@ -85,6 +85,38 @@ class DataScienceParserTest {
     private fun event(id: String) = dataScience().single { it.externalId == id }
 
     @Test
+    fun `only upcoming truncated abstracts are fetched and missing details remain fallbacks`() {
+        val base = DataScienceParser.homepage
+        val workshop = "$base/news/workshop_2026-11-26/"
+        val meetup = "$base/news/datasciencetalks001/"
+        val web = FakeWeb(mapOf(
+            "$base/events/" to eventsHtml,
+            workshop to "<main>No article</main>",
+            meetup to "<main><div class=prose><p>When? Tuesday</p><p>Where? FRI</p><p>Full talk.</p></div></main>",
+        ))
+        val results = DataScienceParser.parse(context(web), base, today).associateBy { it.eventUrl }
+        assertEquals(listOf("$base/events/", workshop, meetup), web.asked)
+        assertTrue(results.getValue(workshop).descriptionIsFallback)
+        assertEquals("Full talk.", results.getValue(meetup).description)
+        assertFalse(results.getValue(meetup).descriptionIsFallback)
+        assertTrue(results.getValue("$base/news/spark005/").descriptionIsFallback)
+        assertTrue(event("datascience-workshop_2026-11-26").descriptionIsFallback)
+    }
+
+    @Test
+    fun `expands truncated excerpts from the article body`() {
+        val page = """<main><div class="prose"><p>When? Tuesday</p><p><strong>What?</strong></p>
+            <p>Full abstract.</p><ul><li>First topic</li><li>Second topic</li></ul></div><nav>Related posts</nav></main>"""
+        val web = FakeWeb(mapOf(
+            "https://datascience.fri.uni-lj.si/events/" to eventsHtml,
+            "https://datascience.fri.uni-lj.si/news/workshop_2026-11-26/" to page,
+        ))
+        val workshop = DataScienceParser.parse(context(web), DataScienceParser.homepage)
+            .single { it.externalId == "datascience-workshop_2026-11-26" }
+        assertEquals("Full abstract.\n\nFirst topic\n\nSecond topic", workshop.description)
+    }
+
+    @Test
     fun `reads meetups, workshops and the career day, not news, counselling, old posts or broken items`() {
         val events = dataScience()
         assertEquals(
