@@ -35,16 +35,23 @@ object PrimorskiTehnoloskiParkParser : Parser {
             .filter { it.isArray }
             .flatMap { lds -> lds.values().map(::event) }
             .filter { it.start.isAfter(since.toInstant()) }
-        val places = try {
-            places(context.web, url, since.toLocalDate())
+        val details = try {
+            details(context.web, url, since.toLocalDate())
         } catch (e: Exception) {
-            log.warn("No places of Primorski tehnološki park's events: {}", e.message)
+            log.warn("No details for Primorski tehnološki park's events: {}", e.message)
             emptyMap()
         }
         return events.map { event ->
-            val place = places[key(event.eventUrl!!)] ?: return@map event
-            if (event.locationName != null || event.locationAddress != null) event
-            else event.copy(locationName = place.name, locationAddress = place.address)
+            val detail = details[key(event.eventUrl!!)] ?: return@map event
+            val fullText = detail.get("description")?.takeIf { it.isString }?.stringValue()?.let(::description)
+            val place = if (event.locationName == null && event.locationAddress == null) placeOf(detail)
+                else Location(event.locationName, event.locationAddress)
+            event.copy(
+                description = fullText ?: event.description,
+                descriptionIsFallback = fullText == null,
+                locationName = place.name,
+                locationAddress = place.address,
+            )
         }
     }
 
@@ -57,13 +64,13 @@ object PrimorskiTehnoloskiParkParser : Parser {
      * Where the events are, by their URLs, from The Events Calendar's REST API that the site has too: an event's
      * venue (its name, street, postcode and city), else where its text says ("Kje: soba N19, prvo nadstropje …")
      */
-    private fun places(web: Web, url: URI, since: LocalDate): Map<String, Location> {
-        val all = mutableMapOf<String, Location>()
+    private fun details(web: Web, url: URI, since: LocalDate): Map<String, JsonNode> {
+        val all = mutableMapOf<String, JsonNode>()
         for (page in 1..MAX_PAGES) {
             val json = web.json(URI("${url.at("/wp-json/tribe/events/v1/events")}?start_date=$since&per_page=$PER_PAGE&page=$page"))
             json.path("events").values().forEach { event ->
                 val link = event.get("url")?.takeIf { it.isString }?.stringValue() ?: return@forEach
-                placeOf(event).takeUnless { it.isEmpty }?.let { all[key(link)] = it }
+                all[key(link)] = event
             }
             if (page >= json.path("total_pages").asInt(1)) break
         }
@@ -94,14 +101,22 @@ object PrimorskiTehnoloskiParkParser : Parser {
             title = requireNotNull(text("name")) { "No name in $node" },
             start = requireNotNull(time("startDate")) { "No startDate in $node" },
             end = time("endDate"),
-            description = text("description")?.let { raw ->
-                val html = if (raw.trimStart().startsWith("&lt;")) unescapeEntities(raw, false) else raw
-                EventText.description(Jsoup.parseBodyFragment(html).body())
-            },
+            description = text("description")?.let(::description),
+            descriptionIsFallback = true,
             eventUrl = url,
             locationName = location.name,
             locationAddress = location.address,
         )
+    }
+
+    private fun description(raw: String): String? {
+        val text = raw.trim()
+        val html = when {
+            text.startsWith("&lt;") -> unescapeEntities(text.removeSuffix("\\n"), false)
+            text.startsWith("<") -> text
+            else -> return text.ifEmpty { null }
+        }
+        return EventText.description(Jsoup.parseBodyFragment(html).body())
     }
 
     private fun sha1(text: String) =

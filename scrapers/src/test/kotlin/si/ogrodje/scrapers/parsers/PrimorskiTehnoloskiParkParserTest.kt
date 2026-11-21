@@ -12,7 +12,7 @@ import kotlin.test.assertTrue
 class PrimorskiTehnoloskiParkParserTest {
 
     private fun ld(name: String, slug: String, start: String, end: String?) =
-        """{"@context":"http://schema.org","@type":"Event","name":"$name","description":"&lt;p&gt;Opis &amp;amp; program&lt;/p&gt;&lt;p&gt;Prijava&lt;/p&gt;",
+        """{"@context":"http://schema.org","@type":"Event","name":"$name","description":"&lt;p&gt;Opis &amp;amp; program&lt;/p&gt;&lt;p&gt;Prijava&lt;/p&gt;\\n",
         "url":"https://www.primorski-tp.si/dogodek/$slug/","startDate":"$start"${end?.let { ",\"endDate\":\"$it\"" } ?: ""}}"""
 
     private val page = """<html><head>
@@ -36,6 +36,7 @@ class PrimorskiTehnoloskiParkParserTest {
         assertEquals(Instant.parse("2026-11-11T14:00:00Z"), event.start)
         assertEquals(Instant.parse("2026-11-11T16:00:00Z"), event.end)
         assertTrue(event.hasStartTime && event.hasEndTime)
+        assertTrue(event.descriptionIsFallback)
         assertEquals("Opis & program\n\nPrijava", event.description)
         assertEquals("https://www.primorski-tp.si/dogodek/optimizacija/", event.eventUrl)
         assertEquals(event.eventUrl, event.sourceUrl)
@@ -57,6 +58,8 @@ class PrimorskiTehnoloskiParkParserTest {
             )
         )
         val event = PrimorskiTehnoloskiParkParser.parse(context(web), URI("https://www.primorski-tp.si"), Instant.parse("2026-11-18T10:00:00Z")).first()
+        assertFalse(event.descriptionIsFallback)
+        assertTrue(requireNotNull(event.description).contains("Na praktični delavnici bomo pregledali"))
         assertEquals("soba N19, prvo nadstropje Primorskega tehnološkega parka", event.locationName)
         assertNull(event.locationAddress)
 
