@@ -50,10 +50,11 @@ class StartupSiParserTest {
             return StartupSiParser.parse(context(web), URI("https://www.startup.si")).single().description
         }
 
-        val article = "<div class='content size-18'><p>About <b>startups</b>.</p><p>Agenda</p><ul><li>Pitch</li><li>Q&amp;A</li></ul></div>"
+        val share = "<div class='a2a_kit share-buttons'>Deli med prijatelji</div>"
+        val article = "<div class='content size-18'><p>About <b>startups</b>.</p><p>Agenda</p><ul><li>Pitch</li><li>Q&amp;A</li></ul>$share</div>"
         assertEquals("About startups.\n\nAgenda\n\nPitch\n\nQ&A", description(article, "Summary"))
         assertEquals("Summary", description("", " Summary "))
-        assertEquals("Summary", description("<div class='content size-18'><p>&nbsp;</p></div>", "Summary"))
+        assertEquals("Summary", description("<div class='content size-18'><p>&nbsp;</p>$share</div>", "Summary"))
         assertEquals(null, description("", " "))
     }
 
