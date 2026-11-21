@@ -47,8 +47,10 @@ data class ScrapedEvent(
     val locationName: String? = null,
     val locationAddress: String? = null,
     val onlyDays: Boolean = false,
-    // A listing excerpt can fill a new record when a full description is unavailable.
+    // True when the text comes from the listing rather than the detail page.
     val descriptionIsFallback: Boolean = false,
+    // The detail source explicitly returned an empty description.
+    val descriptionConfirmedEmpty: Boolean = false,
 )
 
 /** What scraping a URL found: by which parser ([source], none when no parser takes the URL), and its events */

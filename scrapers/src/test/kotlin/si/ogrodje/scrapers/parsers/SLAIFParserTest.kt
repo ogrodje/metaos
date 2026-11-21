@@ -26,6 +26,24 @@ class SLAIFParserTest {
     private fun local(instant: java.time.Instant) = instant.atZone(LJUBLJANA)
 
     @Test
+    fun `only an explicit empty Indico field confirms removal`() {
+        for ((fields, confirmed) in listOf(
+            "{}" to false, """{"description":null}""" to true,
+            """{"description":"<p>&nbsp;</p>"}""" to true,
+        )) {
+            val web = FakeWeb(mapOf(
+                "https://www.slaif.si/api/events" to eventsJson,
+                "https://indico.ijs.si/export/event/3989.json" to """{"results":[$fields]}""",
+            ))
+            val event = SLAIFParser.parse(context(web), URI("https://www.slaif.si"), LocalDate.of(2027, 1, 1))
+                .single { it.externalId == "slaif-52" }
+            assertTrue(event.descriptionIsFallback)
+            assertEquals(confirmed, event.descriptionConfirmedEmpty)
+            assertEquals("Izvajalci: Marko Drobnjak", event.description)
+        }
+    }
+
+    @Test
     fun `reads published events, and skips drafts and items that don't fit`() {
         val events = events()
         assertEquals(setOf("slaif-52", "slaif-14", "slaif-44"), events.map { it.externalId }.toSet())
@@ -44,6 +62,8 @@ class SLAIFParserTest {
         assertTrue(event.hasEndTime)
         // "VK", tagged Online
         assertEquals("Online", event.locationName)
+        assertTrue(event.descriptionIsFallback)
+        assertFalse(event.descriptionConfirmedEmpty)
         assertEquals("Izvajalci: Marko Drobnjak", event.description)
         assertEquals("https://indico.ijs.si/event/3989/", event.eventUrl)
         assertEquals("https://www.slaif.si/events", event.sourceUrl)
@@ -92,9 +112,11 @@ class SLAIFParserTest {
         fun place(id: Int) = Location(events.getValue("slaif-$id").locationName, events.getValue("slaif-$id").locationAddress)
         fun atIndico(id: Int) = events.values.single { it.eventUrl == "https://indico.ijs.si/event/$id/" }.let { Location(it.locationName, it.locationAddress) }
 
-        // "VK", tagged Online, and Indico isn't asked
+        // An online course uses the Indico description but keeps its online venue.
         assertEquals(Location.ONLINE, place(52))
-        assertTrue(web.asked.none { it.endsWith("/3989.json") })
+        assertFalse(events.getValue("slaif-52").descriptionIsFallback)
+        assertEquals(1, web.asked.count { it.endsWith("/3989.json") })
+        assertEquals("Learning objectives:\n\nPlanning the data life cycle.", events.getValue("slaif-52").description)
         // Indico's place, room and address
         assertEquals(Location("Teslova, Soba 38-39 \"e-predavalnica\", 1. nadstropje", "Teslova 30"), atIndico(4023))
         assertEquals(Location("IZUM, Mala dvorana", "Prešernova ulica 17, 2000 Maribor"), atIndico(3969))
