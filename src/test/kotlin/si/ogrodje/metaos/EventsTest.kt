@@ -55,6 +55,19 @@ class EventsTest @Autowired constructor(
     private fun keep(organisation: UUID, found: List<FoundEvent>) = actingFor(Actor(null, null)) { events.keep(organisation, found) }
 
     @Test
+    fun `a listing excerpt fills a new event and preserves a previously imported abstract`() {
+        val by = organisation("Event abstract refresh test")
+        val excerpt = found("excerpt-1", "Workshop").copy(description = "Short …", descriptionIsFallback = true)
+        val full = excerpt.copy(description = "Full abstract", descriptionIsFallback = false)
+        assertEquals(FoundCounts(1, 0), keep(by, listOf(excerpt)))
+        assertEquals("Short …", eventsMCP.list(organisationId = by).single().description)
+        assertEquals(FoundCounts(0, 1), keep(by, listOf(full)))
+        assertEquals(FoundCounts(0, 0), keep(by, listOf(excerpt)))
+        assertEquals(FoundCounts(0, 1), keep(by, listOf(excerpt.copy(title = "Updated workshop"))))
+        assertEquals("Full abstract", eventsMCP.list(organisationId = by).single().description)
+    }
+
+    @Test
     fun `keeps what a scraper found, writes only what changed, and nothing older than a year`() {
         val by = organisation("Scraped Test")
         val first = keep(by, listOf(found("meetup-1", "Kotlin night"), found("meetup-old", "Long ago", Instant.now().minus(400, ChronoUnit.DAYS))))

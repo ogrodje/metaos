@@ -195,6 +195,8 @@ data class FoundEvent(
     // The scraper knew only its days this time, not its times (e.g. its page didn't answer), its end the day after the
     // last, as calendars give them: times it has on those days stay (OG-75)
     val onlyDays: Boolean = false,
+    // A listing excerpt can fill a new record when a full description is unavailable.
+    val descriptionIsFallback: Boolean = false,
 )
 
 /** How many of what a scraper found were new, and how many changed */
@@ -316,7 +318,10 @@ class Events(
         var changed = 0
         wanted.forEach { scraped ->
             val event = known[scraped.externalId]
-            val f = event?.let { withKnownTimes(it, scraped) } ?: scraped
+            val timed = event?.let { withKnownTimes(it, scraped) } ?: scraped
+            val f = if (timed.descriptionIsFallback && event?.description != null) {
+                timed.copy(description = event.description)
+            } else timed
             if (event == null) {
                 events.save(Event(organisation, f.source, f.externalId, f.title.trim(), f.start.atOffset(java.time.ZoneOffset.UTC)).also { found(it, f) })
                 added++
