@@ -228,10 +228,11 @@ class WordPressEventsParserTest {
 
     @Test
     fun `Rogaska Slatina's line with a calendar, and a sentence with a full hour after a registration deadline`() {
+        val agenda = "<p>Program:</p><ul><li>Prvi del</li><li>Vprašanja &amp; odgovori</li></ul>"
         val web = site(
             "https://www.inkubator-rs.si",
             listOf(
-                post(1500, "2026-11-09", "https://www.inkubator-rs.si/bolniske/", "Zakonodajni in praktični vidiki obvladovanja ter nadzora bolniških odsotnosti", rogaskaSentence),
+                post(1500, "2026-11-09", "https://www.inkubator-rs.si/bolniske/", "Zakonodajni in praktični vidiki obvladovanja ter nadzora bolniških odsotnosti", rogaskaSentence + agenda, "Kratek povzetek"),
                 post(1490, "2026-11-05", "https://www.inkubator-rs.si/sp-ali-doo/", "S.p. ali d.o.o.? Koliko podjetniku dejansko ostane?", rogaskaEmoji),
             ),
         )
@@ -242,6 +243,8 @@ class WordPressEventsParserTest {
         assertEquals("Online", emoji.locationName)
         assertNull(emoji.locationAddress)
         val hour = events.single { it.externalId == "inkubatorrs-1500" }
+        assertTrue(requireNotNull(hour.description).endsWith("Program:\n\nPrvi del\n\nVprašanja & odgovori"))
+        assertTrue(requireNotNull(emoji.description).contains("Preko spleta"))
         assertEquals(d(2026, 11, 26), local(hour.start).toLocalDate())
         assertEquals(t(12, 0), local(hour.start).toLocalTime())
         assertTrue(hour.hasStartTime)

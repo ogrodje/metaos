@@ -101,7 +101,9 @@ class WordPressEventsParser(
             end = end,
             hasStartTime = details.startTime != null,
             hasEndTime = details.endDate == null && end != null,
-            description = post.description,
+            description = if (source == Source.INKUBATOR_ROGASKA_SLATINA) {
+                EventText.description(Jsoup.parseBodyFragment(post.contentHtml).body()) ?: post.description
+            } else post.description,
             eventUrl = post.link,
             locationName = location.name,
             locationAddress = location.address,
