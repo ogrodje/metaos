@@ -3,6 +3,7 @@ package si.ogrodje.scrapers.parsers
 import org.jsoup.Jsoup
 import si.ogrodje.scrapers.*
 import tools.jackson.databind.JsonNode
+import java.io.IOException
 import java.net.URI
 import java.text.Normalizer
 import java.time.LocalDate
@@ -13,7 +14,7 @@ import java.time.LocalTime
  * its calendar from the JSON in `script#events-data`, an item a post, from a year ago on. News, competitions and
  * counselling slots aren't events. The end time and the place come from the excerpt's "When?" and "Where?" lines, else
  * a meetup's `meta` is its place. Its ID is the post's slug, datascience-<slug>. FRI's calendar repeats some of these,
- * which [FRIParser] leaves out ([sameEvent]).
+ * which [FRIParser] leaves out ([sameEvent]). Today’s and upcoming truncated abstracts are read from their articles.
  */
 object DataScienceParser : Parser {
     override val source = Source.DATA_SCIENCE
@@ -29,7 +30,27 @@ object DataScienceParser : Parser {
     override fun parse(context: ScrapeContext, url: URI) = parse(context, url, LocalDate.now(LJUBLJANA))
 
     internal fun parse(context: ScrapeContext, url: URI, today: LocalDate): List<ScrapedEvent> =
-        listed(context.web, url, today).map { event(url, it) }
+        listed(context.web, url, today).map { item ->
+            val listed = event(url, item)
+            val detail = URI(listed.eventUrl!!)
+            if (!listed.descriptionIsFallback || item.date < today || detail.host != url.host || detail.scheme != url.scheme) {
+                return@map listed
+            }
+            val body = try {
+                context.web.document(detail).selectFirst("main .prose")
+            } catch (_: IOException) {
+                null
+            } ?: return@map listed
+            val marker = body.children().firstOrNull { it.text() == "What?" }
+            if (marker != null) {
+                marker.previousElementSiblings().remove()
+                marker.remove()
+            } else {
+                body.select("p").filter { it.text().startsWith("When?") || it.text().startsWith("Where?") }
+                    .forEach { it.remove() }
+            }
+            EventText.description(body)?.let { listed.copy(description = it, descriptionIsFallback = false) } ?: listed
+        }
 
     private fun event(base: URI, item: Item): ScrapedEvent {
         val whenTimes = timesOf(item.whenLine)
@@ -47,6 +68,7 @@ object DataScienceParser : Parser {
             hasStartTime = start != null,
             hasEndTime = endAt != null,
             description = item.description,
+            descriptionIsFallback = item.description?.endsWith("…") == true,
             eventUrl = base.resolve(item.path).toString(),
             locationName = item.location.name,
             locationAddress = item.location.address,
