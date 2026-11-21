@@ -3,6 +3,8 @@ package si.ogrodje.scrapers.parsers
 import com.microsoft.playwright.Page
 import com.microsoft.playwright.TimeoutError
 import com.microsoft.playwright.options.WaitForSelectorState
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
 import si.ogrodje.scrapers.*
 import tools.jackson.core.JacksonException
 import tools.jackson.databind.JsonNode
@@ -40,7 +42,36 @@ object EventbriteParser : Parser {
         } catch (_: TimeoutError) {
             throw Blocked(url)
         }
-        return events(url, raw)
+        return withDescriptions(events(url, raw)) { context.web.document(it) }
+    }
+
+    /** A rate-limited organizer keeps all its listings and waits until the next scrape for more detail. */
+    internal fun withDescriptions(events: List<ScrapedEvent>, fetch: (URI) -> Document): List<ScrapedEvent> {
+        var rateLimited = false
+        return events.map { event ->
+            if (!event.description.isNullOrBlank()) return@map event
+            val url = URI(event.eventUrl!!)
+            val description = if (rateLimited || url.scheme != "https" || !on(url, "eventbrite.com")) null else try {
+                detailDescription(fetch(url))
+            } catch (e: WebException) {
+                rateLimited = e.status == 429
+                null
+            } catch (_: IOException) {
+                null
+            } catch (_: JacksonException) {
+                null
+            }
+            event.copy(description = description, descriptionIsFallback = description == null)
+        }
+    }
+
+    private fun detailDescription(page: Document): String? {
+        val data = page.selectFirst("script#__NEXT_DATA__")?.data() ?: return null
+        val context = Web.MAPPER.readTree(data).path("props").path("pageProps").path("context")
+        val blocks = context.path("structuredContent").path("modules").values()
+            .filter { it.text("type") == "text" }
+            .mapNotNull { it.text("text")?.let { html -> EventText.description(Jsoup.parseBodyFragment(html).body()) } }
+        return blocks.joinToString("\n\n").ifBlank { context.path("basicInfo").text("summary")?.trim()?.ifBlank { null } }
     }
 
     /** The events in the organizer page's `__NEXT_DATA__`, [raw]; fails on invalid JSON and on the bot check */
@@ -75,7 +106,7 @@ object EventbriteParser : Parser {
             end = end,
             hasStartTime = !item.path("hide_start_date").booleanValue(false),
             hasEndTime = !item.path("hide_end_date").booleanValue(false),
-            description = item.text("summary")?.takeIf(String::isNotEmpty),
+            description = item.text("summary")?.takeIf(String::isNotBlank),
             eventUrl = eventUrl.toString(),
             locationName = location(online, venue).name,
             locationAddress = location(online, venue).address,
