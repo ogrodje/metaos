@@ -195,7 +195,7 @@ data class FoundEvent(
     // The scraper knew only its days this time, not its times (e.g. its page didn't answer), its end the day after the
     // last, as calendars give them: times it has on those days stay (OG-75)
     val onlyDays: Boolean = false,
-    // A partial refresh may supply a description for new events only.
+    // A listing excerpt can fill a new record when a full description is unavailable.
     val descriptionIsFallback: Boolean = false,
 )
 
@@ -318,14 +318,15 @@ class Events(
         var changed = 0
         wanted.forEach { scraped ->
             val event = known[scraped.externalId]
-            val f = event?.let { withKnownTimes(it, scraped) } ?: scraped
-            val description = if (f.descriptionIsFallback && event?.description != null) event.description
-                else f.description?.trim()?.ifEmpty { null }
+            val timed = event?.let { withKnownTimes(it, scraped) } ?: scraped
+            val f = if (timed.descriptionIsFallback && event?.description != null) {
+                timed.copy(description = event.description)
+            } else timed
             if (event == null) {
-                events.save(Event(organisation, f.source, f.externalId, f.title.trim(), f.start.atOffset(java.time.ZoneOffset.UTC)).also { found(it, f, description) })
+                events.save(Event(organisation, f.source, f.externalId, f.title.trim(), f.start.atOffset(java.time.ZoneOffset.UTC)).also { found(it, f) })
                 added++
-            } else if (differs(event, f, description)) {
-                found(event, f, description)
+            } else if (differs(event, f)) {
+                found(event, f)
                 changed++
             }
         }
@@ -364,20 +365,20 @@ class Events(
             hasStartTime = event.hasStartTime, hasEndTime = event.hasEndTime)
     }
 
-    private fun differs(event: Event, f: FoundEvent, description: String?) =
+    private fun differs(event: Event, f: FoundEvent) =
         event.title != f.title.trim() || event.startsAt.toInstant() != f.start || event.endsAt?.toInstant() != f.end ||
-            event.hasStartTime != f.hasStartTime || event.hasEndTime != f.hasEndTime || event.description != description ||
+            event.hasStartTime != f.hasStartTime || event.hasEndTime != f.hasEndTime || event.description != f.description?.trim()?.ifEmpty { null } ||
             event.url != f.eventUrl || event.locationName != f.locationName?.trim()?.ifEmpty { null } ||
             event.locationAddress != f.locationAddress?.trim()?.ifEmpty { null } || event.sourceUrl != f.sourceUrl
 
-    private fun found(event: Event, f: FoundEvent, description: String?) {
+    private fun found(event: Event, f: FoundEvent) {
         event.title = f.title.trim()
         event.startsAt = f.start.atOffset(java.time.ZoneOffset.UTC)
         // A scraper's end before its start is no end
         event.endsAt = f.end?.takeIf { it >= f.start }?.atOffset(java.time.ZoneOffset.UTC)
         event.hasStartTime = f.hasStartTime
         event.hasEndTime = f.hasEndTime
-        event.description = description
+        event.description = f.description?.trim()?.ifEmpty { null }
         event.url = f.eventUrl?.takeIf { it.matches(Regex("^https?://.+")) }
         event.locationName = f.locationName?.trim()?.ifEmpty { null }
         event.locationAddress = f.locationAddress?.trim()?.ifEmpty { null }

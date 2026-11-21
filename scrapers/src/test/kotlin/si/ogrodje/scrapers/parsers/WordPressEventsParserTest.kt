@@ -11,6 +11,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZonedDateTime
 import kotlin.test.Test
+import kotlin.test.assertFailsWith
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -100,6 +101,24 @@ class WordPressEventsParserTest {
     )
 
     private fun luiEvents() = WordPressEventsParser.LUI.parse(context(luiWeb), URI("https://lui.si/"))
+
+    private fun listingResponse(page: Int, response: () -> String): List<ScrapedEvent> {
+        val source = luiWeb.replaceGet({ it.path.endsWith("/posts") && "page=$page&" in it.query }, response)
+        return WordPressEventsParser.LUI.parse(context(source), URI("https://lui.si"))
+    }
+
+    @Test
+    fun `HTTP 400 fails the first listing page and ends a later page`() {
+        val badRequest = { throw WebException(400, "Bad request") }
+        assertEquals(400, assertFailsWith<WebException> { listingResponse(1, badRequest) }.status)
+        assertEquals(listOf("lui-5101", "lui-5102"), listingResponse(2, badRequest).map { it.externalId })
+    }
+
+    @Test
+    fun `a malformed second listing page fails the scrape`() {
+        assertFailsWith<IllegalStateException> { listingResponse(2) { "{}" } }
+        assertFailsWith<tools.jackson.core.exc.StreamReadException> { listingResponse(2) { "invalid json" } }
+    }
 
     @Test
     fun `LUI lists the dogodki category's two newest pages and skips posts without an event date`() {
@@ -228,10 +247,11 @@ class WordPressEventsParserTest {
 
     @Test
     fun `Rogaska Slatina's line with a calendar, and a sentence with a full hour after a registration deadline`() {
+        val agenda = "<p>Program:</p><ul><li>Prvi del</li><li>Vprašanja &amp; odgovori</li></ul>"
         val web = site(
             "https://www.inkubator-rs.si",
             listOf(
-                post(1500, "2026-11-09", "https://www.inkubator-rs.si/bolniske/", "Zakonodajni in praktični vidiki obvladovanja ter nadzora bolniških odsotnosti", rogaskaSentence),
+                post(1500, "2026-11-09", "https://www.inkubator-rs.si/bolniske/", "Zakonodajni in praktični vidiki obvladovanja ter nadzora bolniških odsotnosti", rogaskaSentence + agenda, "Kratek povzetek"),
                 post(1490, "2026-11-05", "https://www.inkubator-rs.si/sp-ali-doo/", "S.p. ali d.o.o.? Koliko podjetniku dejansko ostane?", rogaskaEmoji),
             ),
         )
@@ -242,6 +262,8 @@ class WordPressEventsParserTest {
         assertEquals("Online", emoji.locationName)
         assertNull(emoji.locationAddress)
         val hour = events.single { it.externalId == "inkubatorrs-1500" }
+        assertTrue(requireNotNull(hour.description).endsWith("Program:\n\nPrvi del\n\nVprašanja & odgovori"))
+        assertTrue(requireNotNull(emoji.description).contains("Preko spleta"))
         assertEquals(d(2026, 11, 26), local(hour.start).toLocalDate())
         assertEquals(t(12, 0), local(hour.start).toLocalTime())
         assertTrue(hour.hasStartTime)
@@ -268,7 +290,7 @@ class WordPressEventsParserTest {
     @Test
     fun `fails when the site has no events category`() {
         val web = FakeWeb(mapOf("https://lui.si/wp-json/wp/v2/categories?slug=dogodki" to "[]"))
-        kotlin.test.assertFailsWith<IllegalStateException> { WordPressEventsParser.LUI.parse(context(web), URI("https://lui.si/")) }
+        assertFailsWith<IllegalStateException> { WordPressEventsParser.LUI.parse(context(web), URI("https://lui.si/")) }
     }
 
     @Test

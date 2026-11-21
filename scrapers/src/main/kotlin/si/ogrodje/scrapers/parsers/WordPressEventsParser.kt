@@ -60,25 +60,14 @@ class WordPressEventsParser(
         web.json(api(url, "/wp-json/wp/v2/categories", "slug" to category)).items().firstOrNull()?.get("id")?.longValue()
             ?: throw IllegalStateException("No '$category' category on $url")
 
-    private fun posts(web: Web, url: URI, category: Long): List<Post> {
-        val all = mutableListOf<Post>()
-        for (page in 1..maxPages) {
-            val answer = try {
-                web.json(
-                    api(
-                        url, "/wp-json/wp/v2/posts", "categories" to "$category", "per_page" to "$PER_PAGE",
-                        "page" to "$page", "_fields" to "id,date,link,title,content,yoast_head_json.description",
-                    )
-                )
-            } catch (e: WebException) {
-                if (page > 1 && e.status == 400) break else throw e
-            }
-            val posts = answer.items().map(::post)
-            all += posts
-            if (posts.size < PER_PAGE) break
+    private fun posts(web: Web, url: URI, category: Long): List<Post> =
+        wordPressPages(maxPages, PER_PAGE) { page ->
+            val listing = api(
+                url, "/wp-json/wp/v2/posts", "categories" to "$category", "per_page" to "$PER_PAGE",
+                "page" to "$page", "_fields" to "id,date,link,title,content,yoast_head_json.description",
+            )
+            web.json(listing).items().map(::post)
         }
-        return all
-    }
 
     private fun event(sourceUrl: String, post: Post): ScrapedEvent? {
         val details = EventText.details(EventText.linesOf(post.contentHtml), post.published, sentences) ?: return null
@@ -101,7 +90,9 @@ class WordPressEventsParser(
             end = end,
             hasStartTime = details.startTime != null,
             hasEndTime = details.endDate == null && end != null,
-            description = post.description,
+            description = if (source == Source.INKUBATOR_ROGASKA_SLATINA) {
+                EventText.description(Jsoup.parseBodyFragment(post.contentHtml).body()) ?: post.description
+            } else post.description,
             eventUrl = post.link,
             locationName = location.name,
             locationAddress = location.address,

@@ -47,7 +47,7 @@ data class ScrapedEvent(
     val locationName: String? = null,
     val locationAddress: String? = null,
     val onlyDays: Boolean = false,
-    // A partial refresh may supply a description for new events only.
+    // A listing excerpt can fill a new record when a full description is unavailable.
     val descriptionIsFallback: Boolean = false,
 )
 
