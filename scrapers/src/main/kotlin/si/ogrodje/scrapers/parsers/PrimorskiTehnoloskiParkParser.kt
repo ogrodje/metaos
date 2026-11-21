@@ -1,5 +1,7 @@
 package si.ogrodje.scrapers.parsers
 
+import org.jsoup.Jsoup
+import org.jsoup.parser.Parser.unescapeEntities
 import org.slf4j.LoggerFactory
 import si.ogrodje.scrapers.*
 import tools.jackson.databind.JsonNode
@@ -92,7 +94,10 @@ object PrimorskiTehnoloskiParkParser : Parser {
             title = requireNotNull(text("name")) { "No name in $node" },
             start = requireNotNull(time("startDate")) { "No startDate in $node" },
             end = time("endDate"),
-            description = text("description"),
+            description = text("description")?.let { raw ->
+                val html = if (raw.trimStart().startsWith("&lt;")) unescapeEntities(raw, false) else raw
+                EventText.description(Jsoup.parseBodyFragment(html).body())
+            },
             eventUrl = url,
             locationName = location.name,
             locationAddress = location.address,

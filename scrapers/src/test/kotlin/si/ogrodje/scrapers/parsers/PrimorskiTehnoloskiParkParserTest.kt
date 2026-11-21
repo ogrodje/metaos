@@ -12,7 +12,7 @@ import kotlin.test.assertTrue
 class PrimorskiTehnoloskiParkParserTest {
 
     private fun ld(name: String, slug: String, start: String, end: String?) =
-        """{"@context":"http://schema.org","@type":"Event","name":"$name","description":"&lt;p&gt;Opis&lt;/p&gt;",
+        """{"@context":"http://schema.org","@type":"Event","name":"$name","description":"&lt;p&gt;Opis &amp;amp; program&lt;/p&gt;&lt;p&gt;Prijava&lt;/p&gt;",
         "url":"https://www.primorski-tp.si/dogodek/$slug/","startDate":"$start"${end?.let { ",\"endDate\":\"$it\"" } ?: ""}}"""
 
     private val page = """<html><head>
@@ -36,7 +36,7 @@ class PrimorskiTehnoloskiParkParserTest {
         assertEquals(Instant.parse("2026-11-11T14:00:00Z"), event.start)
         assertEquals(Instant.parse("2026-11-11T16:00:00Z"), event.end)
         assertTrue(event.hasStartTime && event.hasEndTime)
-        assertEquals("&lt;p&gt;Opis&lt;/p&gt;", event.description)
+        assertEquals("Opis & program\n\nPrijava", event.description)
         assertEquals("https://www.primorski-tp.si/dogodek/optimizacija/", event.eventUrl)
         assertEquals(event.eventUrl, event.sourceUrl)
         assertNull(events[1].end)
