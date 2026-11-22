@@ -59,12 +59,19 @@ internal fun digestMessages(monday: LocalDate, upcoming: List<Event>): List<Dige
     }.partition { it.startsAt.toInstant() >= from }
     val ordered = new.sortedWith(compareBy({ it.startsAt.toInstant() }, { it.id })) +
         ongoing.sortedWith(compareBy({ it.endsAt!!.toInstant() }, { it.id }))
-    val period = "od **$monday** do **${monday.plusDays(6)}**"
-    if (ordered.isEmpty()) return listOf(DigestMessage("Za obdobje $period nismo našli nobenega dogodka.", emptyList()))
+    val period = "**$monday** do **${monday.plusDays(6)}**"
+    if (ordered.isEmpty()) return listOf(DigestMessage("Za obdobje od $period nismo našli nobenega dogodka.", emptyList()))
     return ordered.chunked(5).mapIndexed { index, batch ->
         val embeds = batch.map { event ->
             val start = event.startsAt.digestTime(event.hasStartTime)
-            val finish = event.endsAt?.digestTime(event.hasEndTime)
+            val finish = event.endsAt?.let { endTime ->
+                val local = endTime.atZoneSameInstant(LJUBLJANA)
+                if (local.toLocalDate() != event.startsAt.atZoneSameInstant(LJUBLJANA).toLocalDate()) {
+                    endTime.digestTime(event.hasEndTime)
+                } else if (event.hasEndTime && !endTime.isEqual(event.startsAt)) {
+                    local.format(DateTimeFormatter.ofPattern("HH:mm"))
+                } else null
+            }
             val fields = buildList {
                 add(DigestField("Pričetek / Konec", if (finish == null || finish == start) start else "$start – $finish"))
                 event.place()?.let { place ->
@@ -91,12 +98,10 @@ interface DigestActivities {
 @ConditionalOnTemporal
 @ActivityImpl(taskQueues = [WORKFLOWS_QUEUE])
 class DigestActivitiesImpl(
-    private val events: Events, private val json: JsonMapper,
+    private val events: Events, private val discord: DigestWebhook,
     @Value("\${DISCORD_EVENTS_WEBHOOK:}") private val liveUrl: String,
     @Value("\${DISCORD_EVENTS_TEST_WEBHOOK:}") private val testUrl: String,
 ) : DigestActivities {
-    private val http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build()
-
     override fun prepareDigest(monday: String): List<DigestMessage> {
         val week = LocalDate.parse(monday)
         return digestMessages(week, events.upcoming(week.atStartOfDay(LJUBLJANA).toInstant()))
@@ -105,12 +110,24 @@ class DigestActivitiesImpl(
     override fun postDigest(message: DigestMessage, sample: Boolean): Long {
         val url = if (sample) testUrl else liveUrl
         require(url.isNotBlank()) { "Discord webhook is missing for the selected destination" }
+        return discord.send(url, message)
+    }
+}
+
+@Component
+class DigestWebhook(private val json: JsonMapper) {
+    private val http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build()
+
+    fun send(url: String, message: DigestMessage): Long {
         val request = HttpRequest.newBuilder(URI.create(url + (if ('?' in url) "&" else "?") + "wait=true"))
             .timeout(Duration.ofSeconds(20)).header("Content-Type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(message))).build()
         // Exceptions from the HTTP client may include the secret URL. Never put them in workflow history.
         val response = try {
             http.send(request, HttpResponse.BodyHandlers.ofString())
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+            throw ApplicationFailure.newNonRetryableFailure("Discord delivery was interrupted", "Unconfirmed")
         } catch (_: java.net.ConnectException) {
             return 3000
         } catch (_: java.io.IOException) {
@@ -118,8 +135,19 @@ class DigestActivitiesImpl(
         }
         return when (val status = response.statusCode()) {
             in 200..299 -> 0
-            429 -> (json.readTree(response.body()).path("retry_after").asDouble(3.0) * 1000).toLong().coerceAtLeast(1000)
-            in 400..499 -> throw ApplicationFailure.newNonRetryableFailure("Discord rejected the post (HTTP $status)", "Rejected")
+            429 -> {
+                val bodyDelay = try {
+                    json.readTree(response.body()).path("retry_after").asDouble(-1.0)
+                } catch (_: tools.jackson.core.JacksonException) {
+                    -1.0
+                }
+                val seconds = bodyDelay.takeIf { it.isFinite() && it >= 0 }
+                    ?: response.headers().firstValue("Retry-After").orElse("").toDoubleOrNull()?.takeIf { it.isFinite() && it >= 0 }
+                    ?: 3.0
+                (seconds * 1000).toLong().coerceAtLeast(1000)
+            }
+            400, 413, 422 -> throw ApplicationFailure.newNonRetryableFailure("Discord rejected the batch (HTTP $status)", "InvalidBatch")
+            in 400..499 -> throw ApplicationFailure.newNonRetryableFailure("Discord rejected the webhook (HTTP $status)", "Rejected")
             else -> throw ApplicationFailure.newNonRetryableFailure("Discord response was HTTP $status", "Unconfirmed")
         }
     }
@@ -134,9 +162,10 @@ interface EventsDigestWorkflow {
 
 @WorkflowImpl(taskQueues = [WORKFLOWS_QUEUE])
 class EventsDigestWorkflowImpl : EventsDigestWorkflow {
-    private fun activities(attempts: Int) = Workflow.newActivityStub(DigestActivities::class.java,
-        ActivityOptions.newBuilder().setStartToCloseTimeout(Duration.ofSeconds(45))
-            .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(attempts).build()).build())
+    private val log = Workflow.getLogger(EventsDigestWorkflowImpl::class.java)
+    private fun activities(attempts: Int, window: Duration) = Workflow.newActivityStub(DigestActivities::class.java,
+        ActivityOptions.newBuilder().setStartToCloseTimeout(Duration.ofSeconds(45)).setScheduleToCloseTimeout(window)
+            .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(attempts).setMaximumInterval(Duration.ofMinutes(5)).build()).build())
     private var awaitingBatch: Int? = null
     private var posted: Boolean? = null
 
@@ -150,24 +179,34 @@ class EventsDigestWorkflowImpl : EventsDigestWorkflow {
         val week = LocalDate.parse(monday)
         require(week.dayOfWeek == DayOfWeek.MONDAY)
         val cutoff = week.atTime(12, 0).atZone(LJUBLJANA).toInstant().toEpochMilli()
-        val messages = activities(5).prepareDigest(monday)
-        val sender = activities(1)
+        fun remaining() = Duration.ofMillis((cutoff - Workflow.currentTimeMillis()).coerceAtLeast(0))
+        if (!sample && remaining().isZero) return
+        val messages = activities(if (sample) 5 else 0, if (sample) Duration.ofMinutes(10) else remaining()).prepareDigest(monday)
         for ((index, message) in messages.withIndex()) {
             while (sample || Workflow.currentTimeMillis() < cutoff) {
                 val delay = try {
-                    sender.postDigest(message, sample)
+                    activities(1, if (sample) Duration.ofMinutes(5) else remaining()).postDigest(message, sample)
                 } catch (e: ActivityFailure) {
                     val cause = e.cause
-                    if (cause is ApplicationFailure && cause.type != "Unconfirmed") throw e
+                    if (cause is ApplicationFailure && cause.type == "InvalidBatch") {
+                        log.warn("Discord rejected digest {} batch {}. Skipping this batch.", monday, index + 1)
+                        break
+                    }
+                    if (cause is ApplicationFailure && cause.type != "Unconfirmed") {
+                        log.warn("Discord digest {} stopped at batch {} ({})", monday, index + 1, cause.type)
+                        throw e
+                    }
+                    log.warn("Check Discord for digest {} batch {} and signal confirmBatch", monday, index + 1)
                     awaitingBatch = index + 1
                     posted = null
-                    Workflow.await { posted != null }
+                    if (sample) Workflow.await { posted != null } else Workflow.await(remaining()) { posted != null }
                     awaitingBatch = null
                     if (posted == true) break
                     continue
                 }
                 if (delay == 0L) break
-                Workflow.sleep(Duration.ofMillis(delay))
+                val wait = Duration.ofMillis(delay)
+                Workflow.sleep(if (sample) wait else minOf(wait, remaining()))
             }
             if (!sample && Workflow.currentTimeMillis() >= cutoff) return
             if (index < messages.lastIndex) Workflow.sleep(Duration.ofSeconds(3))

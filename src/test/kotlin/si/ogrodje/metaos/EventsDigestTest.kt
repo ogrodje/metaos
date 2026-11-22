@@ -31,9 +31,15 @@ class EventsDigestTest {
         assertEquals(start.url, batch.embeds.first().url)
     }
 
+    @Test fun `same day range prints the date once`() {
+        val event = event("2026-03-31T16:00:00Z").apply { endsAt = startsAt.plusHours(2) }
+        assertEquals("2026-03-31 18:00 – 20:00", digestMessages(monday, listOf(event)).single().embeds.single().fields.first().value)
+    }
+
     @Test fun `five per post and an explicit notice for an empty week`() {
         val messages = digestMessages(monday, List(6) { event("2026-03-31T12:00:00Z") })
         assertEquals(listOf(5, 1), messages.map { it.embeds.size })
+        assertEquals("Dogodki za obdobje **2026-03-30** do **2026-04-05**.", messages.first().content)
         assertEquals("Paket 2.", messages.last().content)
         assertEquals("Za obdobje od **2026-03-30** do **2026-04-05** nismo našli nobenega dogodka.",
             digestMessages(monday, emptyList()).single().content)

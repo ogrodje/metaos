@@ -88,8 +88,8 @@ kubectl create secret generic metaos-secret -n "$NS" \
   --from-literal=dropbox_app_secret="${DROPBOX_APP_SECRET:-}" \
   --from-literal=dropbox_refresh_token="${DROPBOX_REFRESH_TOKEN:-}" \
   --from-literal=new_relic_license_key="${PROD_NEW_RELIC_LICENSE_KEY:-}" \
-  --from-literal=discord_events_test_webhook="${DISCORD_EVENTS_TEST_WEBHOOK:-}" \
-  --from-literal=discord_events_webhook="${DISCORD_EVENTS_WEBHOOK:-}" \
+  --from-literal=discord_events_test_webhook="${PROD_DISCORD_EVENTS_TEST_WEBHOOK:-}" \
+  --from-literal=discord_events_webhook="${PROD_DISCORD_EVENTS_WEBHOOK:-}" \
   --from-literal=soniox_api_key="${PROD_SONIOX_API_KEY:-${SONIOX_API_KEY:-}}" \
   --dry-run=client -o yaml | kubectl apply -f -
 

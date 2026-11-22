@@ -15,6 +15,36 @@ import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 
 class EventsDigestWorkflowTest {
+    @org.junit.jupiter.api.Test
+    fun `live lookup survives a transient outage and a bad batch does not discard later batches`() {
+        val options = TestEnvironmentOptions.newBuilder()
+            .setInitialTime(java.time.Instant.parse("2026-03-29T17:00:00Z"))
+            .setWorkflowClientOptions(WorkflowClientOptions.newBuilder()
+                .setDataConverter(WorkflowsConfig().temporalDataConverter()).build()).build()
+        TestWorkflowEnvironment.newInstance(options).use { env ->
+            val calls = CopyOnWriteArrayList<String>()
+            val attempts = java.util.concurrent.atomic.AtomicInteger()
+            val worker = env.newWorker(WORKFLOWS_QUEUE)
+            worker.registerWorkflowImplementationTypes(EventsDigestWorkflowImpl::class.java)
+            worker.registerActivitiesImplementations(object : DigestActivities {
+                override fun prepareDigest(monday: String): List<DigestMessage> {
+                    if (attempts.incrementAndGet() <= 5) error("Database temporarily unavailable")
+                    return listOf("one", "two", "three").map { DigestMessage(it, emptyList()) }
+                }
+                override fun postDigest(message: DigestMessage, sample: Boolean): Long {
+                    calls.add(message.content)
+                    if (message.content == "two") throw ApplicationFailure.newNonRetryableFailure("bad embed", "InvalidBatch")
+                    return 0
+                }
+            })
+            env.start()
+            env.workflowClient.newWorkflowStub(EventsDigestWorkflow::class.java,
+                WorkflowOptions.newBuilder().setTaskQueue(WORKFLOWS_QUEUE).build()).publish("2026-03-30", false)
+            assertEquals(6, attempts.get())
+            assertEquals(listOf("one", "two", "three"), calls.toList())
+        }
+    }
+
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
     fun `only confirmed rejections retry without a channel check`(alreadyPosted: Boolean) {
