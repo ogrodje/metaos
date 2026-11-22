@@ -77,6 +77,10 @@ spec:
             - configMapRef: { name: metaos-config }
             - configMapRef: { name: public-urls }
           env:
+            - name: DISCORD_EVENTS_TEST_WEBHOOK
+              valueFrom: { secretKeyRef: { name: metaos-secret, key: discord_events_test_webhook, optional: true } }
+            - name: DISCORD_EVENTS_WEBHOOK
+              valueFrom: { secretKeyRef: { name: metaos-secret, key: discord_events_webhook, optional: true } }
             - name: POSTGRES_PASSWORD
               valueFrom: { secretKeyRef: { name: metaos-secret, key: postgres_password } }
             # The bot account's Google OAuth client and refresh tokens; Drive and Gmail are off without theirs
