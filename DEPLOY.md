@@ -310,11 +310,14 @@ domain.
 
 ## Weekly Discord event digest (OG-65)
 
-Set only `PROD_DISCORD_EVENTS_TEST_WEBHOOK` in Ogrodje-Prod for the sample, apply the secrets with
-`k8s/set_secrets.sh`, and restart the MetaOS deployment to load the environment. In the project's Temporal namespace,
-start `EventsDigestWorkflow` on queue `metaos` with two JSON arguments: the target Monday as an ISO date string and
-`true` for the test channel. Use a unique workflow ID for each sample. After the channel owner approves the sample,
-configure `PROD_DISCORD_EVENTS_WEBHOOK` for the live channel and reload the deployment. Its absence disables weekly starts.
+Ogrodje-Prod has both webhooks: `PROD_DISCORD_EVENTS_TEST_WEBHOOK`, a test channel's, and `PROD_DISCORD_EVENTS_WEBHOOK`,
+the live channel's, Goo's own (Ogrodje-Dev has only the test channel's, as `DISCORD_EVENTS_TEST_WEBHOOK`: with the live
+one, every machine running MetaOS with Temporal would post the week). So `k8s/set_secrets.sh`, with a restart of the
+MetaOS deployment, turns on the weekly post as well as the sample: do it on a weekday, outside the Sunday 19:00 to Monday
+noon window. Then, in the project's Temporal namespace, start `EventsDigestWorkflow` on queue `metaos` with two JSON
+arguments: the target Monday as an ISO date string and `true` for the test channel, with a unique workflow ID for each
+sample. If the sample isn't right before Sunday, set `PROD_DISCORD_EVENTS_WEBHOOK` to nothing, run `k8s/set_secrets.sh`
+again and restart: without it, there are no weekly starts.
 
 The scheduler checks every five minutes from Sunday 19:00 to Monday noon, Ljubljana time. Both pods use the same
 workflow ID for the week. If a send times out or its result is lost, the workflow waits. Query `pendingBatch` for its number. Check that batch in the
