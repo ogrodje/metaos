@@ -307,3 +307,16 @@ domain.
       `tag:k8s-operator`, next to `bongbong-deployers`.
 6. [ ] **Check it.** Run the commands in [`k8s/README.md`](k8s/README.md#checking-it), then
    `claude mcp add --transport http metaos https://ogrodje.si/mcp`.
+
+## Weekly Discord event digest (OG-65)
+
+Set only `DISCORD_EVENTS_TEST_WEBHOOK` in Ogrodje-Prod for the sample, apply the secrets with
+`k8s/set_secrets.sh`, and restart the MetaOS deployment to load the environment. In the project's Temporal namespace,
+start `EventsDigestWorkflow` on queue `metaos` with two JSON arguments: the target Monday as an ISO date string and
+`true` for the test channel. Use a unique workflow ID for each sample. After the channel owner approves the sample,
+configure `DISCORD_EVENTS_WEBHOOK` for the live channel and reload the deployment. Its absence disables weekly starts.
+
+The scheduler checks every five minutes from Sunday 19:00 to Monday noon, Ljubljana time. Both pods use the same
+workflow ID for the week. If a send times out or its result is lost, the workflow waits. Query `pendingBatch` for its number. Check that batch in the
+channel and signal `confirmBatch` with its one-based batch number and `true` if it arrived or `false` to resend.
+The live workflow stops sending at the Monday cutoff.

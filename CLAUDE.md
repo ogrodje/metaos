@@ -428,8 +428,7 @@ Slovenia's tech, developer and startup events, which MetaOS gathers from the org
   organisation (`refreshEvents`, `refresh_events`, the Refresh buttons; once at a time). Without Temporal, nothing's
   gathered, and Refresh says so (previews).
 - Goo's meetups and upcoming events were imported once (OG-64), and the import is gone since (OG-66): the
-  organisations and events are MetaOS's own, and nothing reads Hygraph or Goo for them. Goo's weekly Discord post
-  stays Goo's until it's ported (OG-65).
+  organisations and events are MetaOS's own, and nothing reads Hygraph or Goo for them. The weekly Discord post runs in MetaOS (OG-65, see DEPLOY.md).
 - MCP: `list_events` (also by `region`), `create_event`, `update_event`, `refresh_events` (`EventsMCP`), and the
   organisations' tools take the new fields, `region` too. GraphQL: `events(hidden)`, `event` (a past one too, for its page), `Event.moreFromOrganiser`,
   `eventsRefresh`, `Organisation.events` and `eventScrapes`, and `createEvent`, `updateEvent`, `refreshEvents`
