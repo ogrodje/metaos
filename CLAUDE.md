@@ -964,6 +964,11 @@ GraphQL (`TranscriptsGraphQL`) and the Transcriptions page alike, as Sessions an
   text is in. A file has one transcript of what's said in it (the two the same, `findSpoken`) by each provider, to
   compare them, which transcribing it again by that provider replaces, only when asked (`replace`), and one in each
   other language, for translations later. `History.kt` tells it: "Transcribed S05E08.mp3".
+- Its speakers are named (OG-42, `Transcriptions.nameSpeaker`): one by its label (`1`, or `Speaker 1`), as a person on
+  the episode (not a candidate), by their ID, or by a name for someone who isn't in MetaOS; with neither, its name is
+  cleared. A label the transcript hasn't got is refused, as is someone who isn't on the episode. A person goes by their
+  name as it is now. `History.kt` tells it: "Named Speaker 2 in S05E10.mp3: Mladen Prajdić", "Took the name off
+  Speaker 1 in ...".
 - The workflow ends with the transcript saved; what's done with one (e.g. an episode's `machine_summary`) is for agents,
   the Editor to come, through these tools.
 - MCP: `transcribe_episode` (its full audio, else its full video, or a file by ID; `provider`, `language`, `batch`,
@@ -971,17 +976,20 @@ GraphQL (`TranscriptsGraphQL`) and the Transcriptions page alike, as Sessions an
   watch it), `list_transcriptions` (the latest first; by status, `on` for those on, provider and episode),
   `cancel_transcription`, `get_episode_transcript` (`[h:mm:ss] text`, or `[h:mm:ss] Speaker 1: text`, a line a stretch,
   from the database; `media` and `provider` narrow it; and its files' transcriptions that are on, or that failed or were
-  cancelled last) and `remove_transcript` (the bucket keeps its files).
+  cancelled last), `name_transcript_speaker` and `remove_transcript` (the bucket keeps its files).
 - GraphQL: `transcriptions` (by statuses and provider), `transcription` (one by its ID), `transcript` (with `lines`,
   what was said), `speechProviders` and `Episode.transcripts`, for the team (empty or refused for anyone else);
-  `transcribeEpisode`, `cancelTranscription` and `removeTranscript`, with `metaos:write`.
+  `transcribeEpisode`, `cancelTranscription`, `nameTranscriptSpeaker` and `removeTranscript`, with `metaos:write`;
+  `TranscriptSpeaker` has its `person`.
 - The Transcriptions page (`/transcriptions`, the team's, a tab; `TranscriptionsView.vue`,
   [`fe/src/transcriptions.ts`](fe/src/transcriptions.ts)) transcribes a file, from Transcribe an episode at the end of
   its heading (`TranscribeForm.vue`, opened under it and closed once one's started: an episode by its code, then its
   file, the provider and the language, Slovenian or English (its show's to begin with: Borderless's is English,
   `Episode.language`); Replace only for a file the provider has transcribed, Batch only with Google) and lists what's
   on, with its place in line or how far it is and Cancel, then what ended, the latest first, with how long it took and
-  why it failed, each transcript's lines to Read (`TranscriptLines.vue`) and Remove, asked on its row
+  why it failed, each transcript's lines to Read (`TranscriptLines.vue`, its speakers above them, each named with
+  `PersonPicker.vue`: the episode's people, its host and then its guest offered first, or a name as typed, or
+  cleared) and Remove, asked on its row
   (`TranscriptionRow.vue`). It filters by status and provider, and finds by episode or file; live updates keep it as it
   is, as rows change.
 - An episode's page shows the team its transcript, in Behind the episode (`EpisodeTranscript.vue`), as a conversation

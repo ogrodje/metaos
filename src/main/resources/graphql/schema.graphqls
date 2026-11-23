@@ -320,6 +320,11 @@ type Mutation {
     "Remove a transcript, and what it says; the bucket keeps its files, and the history that it was there. Its ID."
     removeTranscript(id: ID!): ID!
     """
+    Name one of a transcript's speakers, by its label (1, or Speaker 1), as name_transcript_speaker does over MCP: as a
+    person on its episode, or by a name for someone who isn't in MetaOS; with neither, its name is cleared.
+    """
+    nameTranscriptSpeaker(id: ID!, label: String!, person: ID, name: String): Transcript!
+    """
     Set or clear one of an episode's links, by its code or ID: an https URL of the episode on that platform, or null
     to clear it. Each of the four Patreon links is set or cleared on its own.
     """
@@ -740,9 +745,15 @@ type Transcript {
     lines: [TranscriptLine!]!
 }
 
+"One of a transcript's speakers: the provider's label (1, 2, ...), and who it is, once they're named"
 type TranscriptSpeaker {
     label: String!
+    "Their name: the person's, as it is now, or one written for someone who isn't in MetaOS"
     name: String
+    "The person it is, by ID, where they're named as one"
+    personId: ID
+    "The person it is, where they're named as one; null for a written name, or one deleted since"
+    person: Person
 }
 
 "A stretch of what was said, from start to end, in seconds from the start of the file"

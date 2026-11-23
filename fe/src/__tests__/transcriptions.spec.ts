@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  defaultFile, formatWhen, hasTranscript, languageOf, isOn, ordinal, providerName, speakerName, split, statusText, timestamp, took, type Transcription,
+  defaultFile, formatWhen, hasTranscript, languageOf, isOn, ordinal, providerName, speakerChoices, speakerName, split, suggestedSpeaker, statusText, timestamp, took, type Transcription,
   transcriptSummary, firstTranscript, transcriptsLine, turns, youtubeAt, type EpisodeTranscript,
 } from '@/transcriptions'
 import { t, tSl } from './i18n'
@@ -69,6 +69,24 @@ describe('transcriptions', () => {
     expect(timestamp(3725.9)).toBe('1:02:05')
     expect(providerName('soniox')).toBe('Soniox')
     expect(providerName('google')).toBe('Google Speech-to-Text')
+  })
+
+  it("offer an episode's people as its speakers, hosts first, each unnamed speaker the next of them", () => {
+    const people = [
+      { personId: 'mladen', name: 'Mladen Prajdić', roles: ['GUEST'] },
+      { personId: 'kandidat', name: 'Kandidat', roles: ['CANDIDATE'] },
+      { personId: 'oto', name: 'Oto Brglez', roles: ['PRODUCER', 'HOST'] },
+    ]
+    const choices = speakerChoices(people)
+    expect(choices.map((c) => c.personId)).toEqual(['oto', 'mladen'])
+    const unnamed = [{ label: '2', name: null }, { label: '1', name: null }]
+    expect(suggestedSpeaker('1', unnamed, choices)?.personId).toBe('oto')
+    expect(suggestedSpeaker('2', unnamed, choices)?.personId).toBe('mladen')
+    // Once the host is named as Speaker 2, Speaker 1 is the one left
+    const one = [{ label: '1', name: null }, { label: '2', name: 'Oto Brglez', personId: 'oto' }]
+    expect(suggestedSpeaker('1', one, choices)?.personId).toBe('mladen')
+    expect(suggestedSpeaker('2', one, choices)).toBe(null)
+    expect(suggestedSpeaker('3', [{ label: '3', name: null }], [])).toBe(null)
   })
 
   it("choose an episode's full audio, else its full video, and know what's transcribed already", () => {

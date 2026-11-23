@@ -2240,6 +2240,42 @@
     },
     "title" : "My episodes"
   },
+  "name_transcript_speaker" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Name transcript speaker"
+    },
+    "description" : "Name one of a transcript's speakers, which the provider tells apart only by label (Soniox's Speaker 1, Speaker 2): as a person on its episode (person, from list_episode_people), or by a name for someone who isn't in MetaOS; with neither, its name is cleared. get_episode_transcript then says who said what by their names. Renaming is naming it again. Answers with its speakers",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "id" : {
+          "description" : "The transcript's ID, from get_episode_transcript",
+          "format" : "uuid",
+          "type" : "string"
+        },
+        "label" : {
+          "description" : "The speaker's label, as the transcript has it: 1, or Speaker 1",
+          "type" : "string"
+        },
+        "name" : {
+          "description" : "Or their name, for someone who isn't in MetaOS",
+          "type" : "string"
+        },
+        "person" : {
+          "description" : "The person it is, by ID, one on the episode",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "id", "label" ],
+      "type" : "object"
+    },
+    "title" : "Name transcript speaker"
+  },
   "prepare_patreon_post" : {
     "annotations" : {
       "destructiveHint" : false,
