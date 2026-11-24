@@ -11,6 +11,10 @@ export interface PersonEpisode {
   roles: Role[]
 }
 
+/** Whether someone is on Ogrodje's team, in the order the People page lists it: its founder, those on it now, those
+ * who were and aren't at the moment, or not on it, whatever their roles */
+export type Team = 'FOUNDER' | 'ACTIVE' | 'PAST' | 'NONE'
+
 export interface Person {
   id: string
   name: string
@@ -22,6 +26,8 @@ export interface Person {
   instagramUrl: string | null
   facebookUrl: string | null
   avatar: Image | null
+  // Whether they're on Ogrodje's team, as the team says; null when their roles tell (kindOf in lists.ts)
+  team: Team | null
   // The latest first; for anyone not signed in only the released ones
   episodes: PersonEpisode[]
   // The accounts they sign in with, when a query asks for them (not PERSON_FIELDS); none without a signed-in user
@@ -35,7 +41,7 @@ export function personPath(person: Pick<Person, 'id'>) {
 
 /** The fields of a Person, for a query */
 export const PERSON_FIELDS = `
-  id name bio homepageUrl linkedinUrl twitterUrl instagramUrl facebookUrl avatar { ${IMAGE_FIELDS} }
+  id name bio homepageUrl linkedinUrl twitterUrl instagramUrl facebookUrl avatar { ${IMAGE_FIELDS} } team
   episodes { episode { id code title } roles }
 `
 

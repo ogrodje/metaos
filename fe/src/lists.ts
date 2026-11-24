@@ -3,7 +3,7 @@
 
 import { candidates, type Episode, type EpisodeStatus, guests, type Role, roleName } from '@/episodes'
 import type { DateLocale, Translate } from '@/i18n'
-import type { Person } from '@/people'
+import type { Person, Team } from '@/people'
 import { searchWords } from '@/search'
 
 /** Whether [text] has every word of [query] in it, at a word's start or inside one, whatever the case or diacritics */
@@ -71,11 +71,29 @@ const TEAM_ROLES: Role[] = ['HOST', 'CO_HOST', 'PRODUCER', 'CONSULTANT', 'DESIGN
 /** Who someone is on the People page: on the team, a guest, or only a candidate so far (whom only the team sees) */
 export type Kind = 'team' | 'guest' | 'candidate'
 
-export function kindOf(person: Pick<Person, 'episodes'>): Kind {
+/** Who someone is: on the team as the team says (FOUNDER, ACTIVE or PAST), not on it (NONE), else by their roles */
+export function kindOf(person: Pick<Person, 'episodes'> & { team?: Team | null }): Kind {
   const roles = new Set(person.episodes.flatMap((episode) => episode.roles))
-  if (TEAM_ROLES.some((role) => roles.has(role))) return 'team'
+  if (person.team === 'FOUNDER' || person.team === 'ACTIVE' || person.team === 'PAST') return 'team'
+  if (person.team !== 'NONE' && TEAM_ROLES.some((role) => roles.has(role))) return 'team'
   if (roles.size && [...roles].every((role) => role === 'CANDIDATE')) return 'candidate'
   return 'guest'
+}
+
+// The team's order on the People page: its founder, those on it now (as the team says, or by their roles), then those
+// who aren't at the moment
+const TEAM_ORDER: Record<Team, number> = { FOUNDER: 0, ACTIVE: 1, NONE: 1, PAST: 2 }
+
+/** Whether someone on the team isn't on it at the moment, as the team says, whom the People page lists last and smaller */
+export const isPast = (person: { team?: Team | null }) => person.team === 'PAST'
+
+/**
+ * The team as the People page lists it: its founder first, then those on it now, then those who aren't at the moment,
+ * each by how many episodes they've been on, the most first
+ */
+export function teamOrder<P extends Pick<Person, 'episodes'> & { team?: Team | null }>(team: P[]): P[] {
+  return [...team].sort((a, b) =>
+    TEAM_ORDER[a.team ?? 'ACTIVE'] - TEAM_ORDER[b.team ?? 'ACTIVE'] || b.episodes.length - a.episodes.length)
 }
 
 /** The letter a person is listed under, past a "dr.", e.g. B for dr. Borka Jerman Blažič */
