@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Episode, EpisodePerson } from '@/episodes'
-import { byStage, episodeText, kindOf, letterOf, matches, readiness, readinessTitle, roleCounts, seasonOf, seasonTitle, teamSummary } from '@/lists'
+import { byStage, episodeText, isPast, kindOf, letterOf, matches, readiness, readinessTitle, roleCounts, seasonOf, seasonTitle, teamOrder, teamSummary } from '@/lists'
 import { t, tSl } from './i18n'
 
 function episode(fields: Partial<Episode> = {}): Episode {
@@ -67,6 +67,22 @@ describe('people', () => {
     expect(kindOf(on(['GUEST'], ['CANDIDATE']))).toBe('guest')
     expect(kindOf(on(['CANDIDATE']))).toBe('candidate')
     expect(kindOf(on())).toBe('guest')
+  })
+
+  it('takes the team\'s word for who is on it, whatever their roles', () => {
+    expect(kindOf({ ...on(['GUEST']), team: 'PAST' })).toBe('team')
+    expect(kindOf({ ...on(), team: 'FOUNDER' })).toBe('team')
+    expect(kindOf({ ...on(['HOST']), team: 'NONE' })).toBe('guest')
+    expect(kindOf({ ...on(['CANDIDATE']), team: 'NONE' })).toBe('candidate')
+    expect(kindOf({ ...on(['HOST']), team: null })).toBe('team')
+  })
+
+  it('lists the founder first, then those on the team now, then those who aren\'t at the moment, by episodes', () => {
+    const member = (name: string, team: 'FOUNDER' | 'ACTIVE' | 'PAST' | null, episodes: number) =>
+      ({ name, team, ...on(...Array.from({ length: episodes }, () => ['HOST' as const])) })
+    const team = [member('Past', 'PAST', 40), member('Some', null, 5), member('Founder', 'FOUNDER', 3), member('Most', 'ACTIVE', 70)]
+    expect(teamOrder(team).map((p) => p.name)).toEqual(['Founder', 'Most', 'Some', 'Past'])
+    expect(team.filter(isPast).map((p) => p.name)).toEqual(['Past'])
   })
 
   it('counts roles, the most first', () => {

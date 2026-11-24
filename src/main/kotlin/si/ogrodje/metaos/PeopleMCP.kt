@@ -19,6 +19,8 @@ data class PersonDto(
     val twitterUrl: String? = null,
     val instagramUrl: String? = null,
     val facebookUrl: String? = null,
+    // Whether they're on Ogrodje's team, as the team says; none when their roles tell
+    val team: Team? = null,
 )
 data class PersonEpisodeDto(val episodeId: UUID?, val code: String?, val title: String, val roles: List<Role>)
 data class CurrentUserDto(
@@ -38,7 +40,7 @@ data class CurrentUserDto(
 )
 
 fun Person.toDto() =
-    PersonDto(id, name, email, bio, homepageUrl, linkedinUrl, twitterUrl, instagramUrl, facebookUrl)
+    PersonDto(id, name, email, bio, homepageUrl, linkedinUrl, twitterUrl, instagramUrl, facebookUrl, team)
 
 /** The user a token belongs to, with their account and the person they are (Accounts.signedInPerson) */
 fun Jwt.toCurrentUserDto(accounts: Accounts) = CurrentUserDto(
@@ -155,6 +157,26 @@ class PeopleMCP(
     ): PersonDto {
         val person = requireNotNull(people.findByIdOrNull(personId)) { "Person $personId not found" }
         person.setSocialLink(network, url?.trim()?.ifEmpty { null })
+        return person.toDto()
+    }
+
+    @Transactional
+    @McpTool(
+        name = "set_person_team",
+        annotations = McpTool.McpAnnotations(
+            title = "Set person team",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
+        ),
+        description = "Say whether a person is on Ogrodje's team, which orders the People page: FOUNDER first, ACTIVE, " +
+            "then PAST (on it before, not at the moment, with a smaller picture), or NONE (not on it, whatever their " +
+            "roles, e.g. a guest who once hosted). Omit to let their roles on episodes tell, as without it"
+    )
+    fun setTeam(
+        @McpToolParam(description = "Person ID") personId: UUID,
+        @McpToolParam(description = "Whether they're on the team; omit to let their roles tell", required = false) team: Team?,
+    ): PersonDto {
+        val person = requireNotNull(people.findByIdOrNull(personId)) { "Person $personId not found" }
+        person.team = team
         return person.toDto()
     }
 

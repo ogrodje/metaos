@@ -11,7 +11,7 @@ import PageHeader from '@/components/PageHeader.vue'
 import PersonCard from '@/components/PersonCard.vue'
 import UnlinkedAccounts from '@/components/UnlinkedAccounts.vue'
 import { errorMessage, graphql } from '@/graphql'
-import { ALPHABET, type Kind, kindOf, letterOf, matches } from '@/lists'
+import { ALPHABET, isPast, type Kind, kindOf, letterOf, matches, teamOrder } from '@/lists'
 import { type Person, PERSON_FIELDS } from '@/people'
 import { useClearQuery, useQueryState } from '@/query'
 import { usePageMeta } from '@/seo'
@@ -117,8 +117,11 @@ const ofKind = (kind: Kind) => found.value.filter((person) => kindOf(person) ===
 const filtering = computed(() => shown.value !== 'all' || find.value.trim() !== '')
 const listed = computed(() => (shown.value === 'all' ? found.value : ofKind(shown.value)))
 
-// The team by how many episodes they've been on, the most first; everyone else by name, as the API has them
-const team = computed(() => ofKind('team').sort((a, b) => b.episodes.length - a.episodes.length))
+// The team, its founder first, then those on it now, by how many episodes they've been on, the most first, and those
+// who aren't at the moment apart, after them; everyone else by name, as the API has them
+const team = computed(() => teamOrder(ofKind('team')))
+const activeTeam = computed(() => team.value.filter((person) => !isPast(person)))
+const pastTeam = computed(() => team.value.filter(isPast))
 const guests = computed(() => ofKind('guest'))
 const candidates = computed(() => ofKind('candidate'))
 
@@ -177,9 +180,15 @@ const candidatesOpen = ref(false)
           <h2 id="the-team">{{ t('people.kinds.team') }}</h2>
           <span class="count">{{ team.length }}</span>
         </div>
-        <ul class="team">
-          <PersonCard v-for="person in team" :key="person.id" :person="person" team/>
+        <ul v-if="activeTeam.length" class="team">
+          <PersonCard v-for="person in activeTeam" :key="person.id" :person="person" team/>
         </ul>
+        <template v-if="pastTeam.length">
+          <h3 id="past-team" class="past-heading">{{ t('people.pastTeam') }}</h3>
+          <ul class="team past" aria-labelledby="past-team">
+            <PersonCard v-for="person in pastTeam" :key="person.id" :person="person" team past/>
+          </ul>
+        </template>
       </section>
 
       <section v-if="guests.length && (shown === 'all' || shown === 'guest')" aria-labelledby="guests">
@@ -235,6 +244,14 @@ const candidatesOpen = ref(false)
   column-gap: 32px;
   padding: 0;
   list-style: none;
+}
+
+// Those on the team before, not at the moment: after the rest, under a line that says so, with smaller pictures
+.past-heading {
+  margin: 24px 0 0;
+  font-size: var(--text-small);
+  font-weight: 600;
+  color: var(--muted);
 }
 
 // The guests under their letters, a line each, in three columns

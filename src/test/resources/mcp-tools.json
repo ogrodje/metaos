@@ -3315,6 +3315,34 @@
     },
     "title" : "Set person link"
   },
+  "set_person_team" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Set person team"
+    },
+    "description" : "Say whether a person is on Ogrodje's team, which orders the People page: FOUNDER first, ACTIVE, then PAST (on it before, not at the moment, with a smaller picture), or NONE (not on it, whatever their roles, e.g. a guest who once hosted). Omit to let their roles on episodes tell, as without it",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "personId" : {
+          "description" : "Person ID",
+          "format" : "uuid",
+          "type" : "string"
+        },
+        "team" : {
+          "description" : "Whether they're on the team; omit to let their roles tell",
+          "enum" : [ "FOUNDER", "ACTIVE", "PAST", "NONE" ],
+          "type" : "string"
+        }
+      },
+      "required" : [ "personId" ],
+      "type" : "object"
+    },
+    "title" : "Set person team"
+  },
   "start_image_upload" : {
     "annotations" : {
       "destructiveHint" : false,

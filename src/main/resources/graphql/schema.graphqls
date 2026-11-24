@@ -1224,6 +1224,20 @@ type Person {
     accounts: [Account!]!
     "Where they work or worked, where they still do first. None without a signed-in user."
     organisations: [OrganisationPerson!]!
+    "Whether they're on Ogrodje's team, as the team says; null when their roles on episodes tell"
+    team: Team
+}
+
+"Whether someone is on Ogrodje's team, in the order the People page lists it"
+enum Team {
+    "Its founder, listed first"
+    FOUNDER
+    "On it now"
+    ACTIVE
+    "On it before, not at the moment"
+    PAST
+    "Not on it, whatever their roles on episodes, e.g. a guest who once hosted"
+    NONE
 }
 
 "An episode a person is on, with their roles in it"

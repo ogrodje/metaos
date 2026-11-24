@@ -21,6 +21,10 @@ INSERT INTO people (id, name, email, bio, homepage_url, linkedin_url) VALUES
   ('9e000000-0000-4000-8000-000000000007', 'Jan Oblak', NULL, NULL, NULL, NULL),
   ('9e000000-0000-4000-8000-000000000008', 'Sara Mlakar', NULL, 'Platform engineer.', NULL, NULL);
 
+-- The team, as it says (V41): Maja founded it, Eva isn't on it at the moment; the rest go by their roles
+UPDATE people SET team = 'FOUNDER' WHERE id = '9e000000-0000-4000-8000-000000000002';
+UPDATE people SET team = 'PAST' WHERE id = '9e000000-0000-4000-8000-000000000006';
+
 INSERT INTO sessions (id, date, name, location, address) VALUES
   ('5c000000-0000-4000-8000-000000000001', CURRENT_DATE - 40, 'Studio, autumn', 'Studio', 'Trubarjeva 1, Ljubljana'),
   ('5c000000-0000-4000-8000-000000000002', CURRENT_DATE + 9, 'Preview Conf 2026', 'Cankarjev dom', 'Prešernova 10, Ljubljana');
