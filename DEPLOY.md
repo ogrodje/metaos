@@ -327,3 +327,21 @@ The live workflow stops sending at the Monday cutoff.
 A warning identifies the week and batch if Discord refuses its content. Later batches continue.
 A refused webhook stops the run. A temporary event lookup failure retries until the live cutoff.
 Only Kubernetes maps the production vault names to the application's webhook variables.
+
+### Daily compact preview
+
+With Temporal enabled and `DISCORD_EVENTS_TEST_WEBHOOK` set, MetaOS sends the current
+Monday–Sunday list to the test channel on the first five-minute check at or after
+09:00 Ljubljana time. Restarts and replicas share one workflow ID per local day
+within the same Temporal namespace.
+
+To try a branch locally:
+
+1. In the project root, put the test channel webhook URL in the Git-ignored `.env`
+   file as `DISCORD_EVENTS_TEST_WEBHOOK=your-webhook-url` (without quotes).
+   Local `bootRun` reads this file at startup.
+2. Run the branch against a local database containing events and the local Temporal
+   server (`docker compose up -d temporal`, `TEMPORAL_ADDRESS=localhost:7233 ./gradlew bootRun`).
+3. For an immediate preview, open [local Temporal](http://localhost:8233) and start
+   `EventsDigestWorkflow` on queue `metaos` with a fresh workflow ID. Supply the
+   desired Monday as a quoted ISO date and `true` as the second argument.

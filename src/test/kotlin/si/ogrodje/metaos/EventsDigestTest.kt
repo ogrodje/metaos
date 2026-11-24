@@ -36,6 +36,21 @@ class EventsDigestTest {
         assertEquals("2026-03-31 18:00 – 20:00", digestMessages(monday, listOf(event)).single().embeds.single().fields.first().value)
     }
 
+    @Test fun `compact previews keep all events and repeat the day across message breaks`() {
+        val events = (1..30).map { number ->
+            event("2026-03-31T16:00:00Z").apply { title = "Dogodek $number " + "x".repeat(100) }
+        }
+        val posts = previewMessages(monday, events)
+        kotlin.test.assertTrue(posts.size > 1)
+        for (post in posts) {
+            kotlin.test.assertTrue(post.content.length <= 2000)
+            kotlin.test.assertTrue("**torek, 31. 3.**" in post.content)
+            kotlin.test.assertTrue(post.embeds.isEmpty())
+        }
+        assertEquals(events.map { "18:00 [${it.title}](<${it.url}>)" },
+            posts.flatMap { it.content.lines() }.filter { it.startsWith("18:00") })
+    }
+
     @Test fun `five per post and an explicit notice for an empty week`() {
         val messages = digestMessages(monday, List(6) { event("2026-03-31T12:00:00Z") })
         assertEquals(listOf(5, 1), messages.map { it.embeds.size })

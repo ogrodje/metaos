@@ -27,6 +27,7 @@ class EventsDigestWorkflowTest {
             val worker = env.newWorker(WORKFLOWS_QUEUE)
             worker.registerWorkflowImplementationTypes(EventsDigestWorkflowImpl::class.java)
             worker.registerActivitiesImplementations(object : DigestActivities {
+                override fun preparePreview(monday: String) = error("Unexpected preview")
                 override fun prepareDigest(monday: String): List<DigestMessage> {
                     if (attempts.incrementAndGet() <= 5) error("Database temporarily unavailable")
                     return listOf("one", "two", "three").map { DigestMessage(it, emptyList()) }
@@ -56,7 +57,8 @@ class EventsDigestWorkflowTest {
             val worker = env.newWorker(WORKFLOWS_QUEUE)
             worker.registerWorkflowImplementationTypes(EventsDigestWorkflowImpl::class.java)
             worker.registerActivitiesImplementations(object : DigestActivities {
-                override fun prepareDigest(monday: String) = listOf("one", "two").map { DigestMessage(it, emptyList()) }
+                override fun prepareDigest(monday: String) = error("Unexpected live digest")
+                override fun preparePreview(monday: String) = listOf("one", "two").map { DigestMessage(it, emptyList()) }
                 override fun postDigest(message: DigestMessage, sample: Boolean): Long {
                     check(sample)
                     calls.add(message.content)

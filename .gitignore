@@ -1,6 +1,7 @@
 .kotlin/
 ogrodje-*
 .envrc
+/.env
 
 # Devenv
 .devenv*
