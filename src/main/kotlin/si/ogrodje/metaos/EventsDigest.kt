@@ -218,19 +218,34 @@ class EventsDigestWorkflowImpl : EventsDigestWorkflow {
 class EventsDigests(
     private val client: ObjectProvider<WorkflowClient>,
     @Value("\${DISCORD_EVENTS_WEBHOOK:}") private val liveUrl: String,
+    @Value("\${DISCORD_EVENTS_TEST_WEBHOOK:}") private val testUrl: String,
 ) {
     @Scheduled(fixedDelay = 5, timeUnit = TimeUnit.MINUTES)
     fun weekly() {
         if (liveUrl.isBlank()) return
         val monday = digestWeek(Instant.now()) ?: return
+        start(monday, "events-digest-$monday", false)
+    }
+
+    @Scheduled(fixedDelay = 5, timeUnit = TimeUnit.MINUTES)
+    fun dailyPreview() {
+        if (testUrl.isBlank()) return
+        val now = Instant.now().atZone(LJUBLJANA)
+        if (now.hour < 9) return
+        val today = now.toLocalDate()
+        val monday = today.with(java.time.temporal.TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+        start(monday, "events-digest-preview-$today", true)
+    }
+
+    private fun start(monday: LocalDate, id: String, sample: Boolean) {
         val workflows = client.ifAvailable ?: return
         val workflow = workflows.newWorkflowStub(EventsDigestWorkflow::class.java, WorkflowOptions.newBuilder()
-            .setTaskQueue(WORKFLOWS_QUEUE).setWorkflowId("events-digest-$monday")
+            .setTaskQueue(WORKFLOWS_QUEUE).setWorkflowId(id)
             .setWorkflowIdReusePolicy(WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE).build())
         try {
-            WorkflowClient.start(workflow::publish, monday.toString(), false)
+            WorkflowClient.start(workflow::publish, monday.toString(), sample)
         } catch (_: WorkflowExecutionAlreadyStarted) {
-            // Both pods, and every later tick in the catch-up window, share this week's ID.
+            // Both pods, and every later tick in the catch-up window, share the same ID.
         }
     }
 }
