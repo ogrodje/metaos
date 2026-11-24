@@ -91,6 +91,22 @@ internal fun digestMessages(monday: LocalDate, upcoming: List<Event>): List<Dige
     }
 }
 
+private fun previewLocation(event: Event): String {
+    val place = event.place()
+    val region = event.region()
+    if (region == Region.ONLINE || (place?.address == null && place?.name?.let(::isOnline) == true)) return "Na spletu"
+    val address = place?.address.orEmpty()
+    val postalTown = Regex("""(?:^|,\s*)\d{4}\s+([^,–]+)""")
+        .find(address.ifBlank { place?.name.orEmpty() })?.groupValues?.get(1)?.trim()
+    val town = postalTown ?: address.substringAfterLast(',', "").trim().takeIf { it.isNotBlank() }
+    val label = when {
+        region == Region.ABROAD -> listOfNotNull(region.label, town ?: place?.name).joinToString(" · ")
+        town != null -> town
+        else -> region?.label ?: "Kraj ni naveden"
+    }
+    return label.replace(Regex("""\s+"""), " ").take(80)
+}
+
 internal fun previewMessages(monday: LocalDate, upcoming: List<Event>): List<DigestMessage> {
     val events = weekEvents(monday, upcoming)
     if (events.isEmpty()) return digestMessages(monday, emptyList())
@@ -111,7 +127,7 @@ internal fun previewMessages(monday: LocalDate, upcoming: List<Event>): List<Dig
                 url.none { it.isWhitespace() || it in "<>" }
         }
             ?: "https://ogrodje.si/dogodki/${checkNotNull(event.id)}"
-        val line = "$time[$title](<$link>)"
+        val line = "${previewLocation(event)} · $time[$title](<$link>)"
         val section = "\n\n**$day**"
         val prefix = if (previousDay == day) "" else section
         if (content.length + prefix.length + line.length + 1 > 2000) {

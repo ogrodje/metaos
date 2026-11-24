@@ -38,7 +38,7 @@ class EventsDigestTest {
 
     @Test fun `compact previews keep all events and repeat the day across message breaks`() {
         val events = (1..30).map { number ->
-            event("2026-03-31T16:00:00Z").apply { title = "Dogodek $number " + "x".repeat(100) }
+            event("2026-03-31T16:00:00Z").apply { locationAddress = "Večna pot 113, 1000 Ljubljana"; title = "Dogodek $number " + "x".repeat(100) }
         }
         val posts = previewMessages(monday, events)
         kotlin.test.assertTrue(posts.size > 1)
@@ -47,8 +47,8 @@ class EventsDigestTest {
             kotlin.test.assertTrue("**torek, 31. 3.**" in post.content)
             kotlin.test.assertTrue(post.embeds.isEmpty())
         }
-        assertEquals(events.map { "18:00 [${it.title}](<${it.url}>)" },
-            posts.flatMap { it.content.lines() }.filter { it.startsWith("18:00") })
+        assertEquals(events.map { "Ljubljana · 18:00 [${it.title}](<${it.url}>)" },
+            posts.flatMap { it.content.lines() }.filter { it.startsWith("Ljubljana · ") })
     }
 
     @Test fun `five per post and an explicit notice for an empty week`() {
