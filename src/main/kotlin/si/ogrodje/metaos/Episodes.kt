@@ -207,6 +207,9 @@ interface EpisodesRepository : JpaRepository<Episode, UUID> {
 
     fun findByRecommendedBy(person: Person): List<Episode>
 
+    // Those with a YouTube link, whose videos on the channel are theirs (YouTubeVideos.kt)
+    fun findByYoutubeUrlIsNotNull(): List<Episode>
+
     @Query("select e from Episode e where e.recommendedBy = :person order by $LATEST_FIRST")
     fun findLatestFirstByRecommendedBy(person: Person): List<Episode>
 

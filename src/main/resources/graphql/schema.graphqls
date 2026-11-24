@@ -86,6 +86,22 @@ type Query {
     "The speech-to-text providers MetaOS has, to transcribe with. Needs a signed-in user."
     speechProviders: [SpeechProvider!]!
 
+    "Which YouTube channel MetaOS is connected to, as its bot, and whether a look at it is on. Needs a signed-in user."
+    youtube: YouTube!
+
+    """
+    The videos on Ogrodje's YouTube channel, as MetaOS knows them, the latest first, private and unlisted ones too:
+    those with privacy, with every word of query in their title, description or tags, and, with unlinked, those that
+    are no episode's; at most limit, up to 500. Needs a signed-in user.
+    """
+    youtubeVideos(privacy: YouTubePrivacy, query: String, unlinked: Boolean! = false, limit: Int! = 100): [YouTubeVideo!]!
+
+    "Uploads of episodes' videos to YouTube, the latest first: those in statuses (all, without them). Needs a signed-in user."
+    youtubeUploads(statuses: [YouTubeUploadStatus!], limit: Int! = 100): [YouTubeUpload!]!
+
+    "An upload to YouTube by its ID, as it is now, e.g. to watch it; null if there's none. Needs a signed-in user."
+    youtubeUpload(id: ID!): YouTubeUpload
+
     """
     Where episodes went out, of every episode, the latest first by when they went out: those on channel, where it's
     given, since a day or a time (e.g. 2026-11-01), at most limit, up to 500. Needs a signed-in user.
@@ -317,6 +333,29 @@ type Mutation {
     transcribeEpisode(ref: String!, media: ID, provider: String, language: String, batch: Boolean! = false, replace: Boolean! = false): Transcription!
     "Cancel a transcription that's on: it stops, and asks the provider to stop too"
     cancelTranscription(id: ID!): Transcription!
+    "Look at the YouTube channel now, in a workflow, rather than at the next hour"
+    refreshYouTubeVideos: YouTube!
+    """
+    Send one of an episode's video files to Ogrodje's YouTube channel, in a workflow, always as a private video, which
+    a person publishes in YouTube Studio: its full video, unless media says which; with a title (by default the
+    episode's), a description (by default its summary), tags, and one of the episode's thumbnails (the full video gets
+    its thumbnail by default; noThumbnail sends it without). A file MetaOS sent already goes again only with again.
+    """
+    uploadToYouTube(
+        ref: String!, media: ID, title: String, description: String, tags: [String!], thumbnail: EpisodeImage,
+        noThumbnail: Boolean! = false, again: Boolean! = false
+    ): YouTubeUpload!
+    "Cancel an upload to YouTube that's on. A video that's on YouTube by then stays there, private."
+    cancelYouTubeUpload(id: ID!): YouTubeUpload!
+    """
+    Change what one of the channel's videos (by its ID, YouTube's, or its address) says about itself on YouTube: its
+    title, description or tags, those left out staying as they are. Never who may see it.
+    """
+    updateYouTubeVideo(id: String!, title: String, description: String, tags: [String!]): YouTubeVideo!
+    "Say which episode (by its code or ID) one of the channel's videos is, or, without one, that it's no episode's"
+    setYouTubeVideoEpisode(id: String!, episode: String): YouTubeVideo!
+    "Give one of the channel's videos one of an episode's thumbnails: its own episode's, unless episode says another's"
+    setYouTubeVideoThumbnail(id: String!, picture: EpisodeImage! = THUMBNAIL, episode: String): YouTubeVideo!
     "Remove a transcript, and what it says; the bucket keeps its files, and the history that it was there. Its ID."
     removeTranscript(id: ID!): ID!
     """
@@ -675,6 +714,101 @@ type MediaUpload {
     expires: String!
 }
 
+"Who may see a YouTube video. MetaOS uploads only private ones, which a person publishes."
+enum YouTubePrivacy {
+    PUBLIC
+    UNLISTED
+    PRIVATE
+}
+
+"How far an upload to YouTube is: waiting for its turn, being sent, YouTube processing it; then done, failed or cancelled"
+enum YouTubeUploadStatus {
+    QUEUED
+    UPLOADING
+    PROCESSING
+    DONE
+    FAILED
+    CANCELLED
+}
+
+"The YouTube channel MetaOS is connected to, as Ogrodje's bot account"
+type YouTube {
+    "Whether MetaOS has the bot's token for the channel, and YouTube takes it"
+    connected: Boolean!
+    channelId: String
+    "The channel's name, and its handle, e.g. @ogrodje"
+    channel: String
+    handle: String
+    "Whether a look at the channel that someone asked for is on, and since when"
+    refreshing: Boolean!
+    refreshStartedAt: String
+    "Why the channel couldn't be asked, when it couldn't"
+    error: String
+}
+
+"One of the videos on Ogrodje's YouTube channel, as YouTube said it was when MetaOS last looked"
+type YouTubeVideo {
+    id: ID!
+    "YouTube's ID of it, where it's watched (by those who may), and its page in YouTube Studio, where it's published"
+    videoId: String!
+    url: String!
+    studioUrl: String!
+    title: String!
+    description: String!
+    tags: [String!]!
+    privacy: YouTubePrivacy!
+    "YouTube's: uploaded (and being processed), processed, failed, rejected or deleted"
+    uploadStatus: String
+    "When a private one is scheduled to go public"
+    publishAt: String
+    "When it was uploaded, or went public"
+    publishedAt: String
+    "Seconds; none until YouTube has processed it"
+    duration: Int
+    "A stream, or the recording of one"
+    live: Boolean!
+    thumbnailUrl: String
+    "Whose it is in MetaOS, if anyone's"
+    episode: Episode
+    "The episode's file MetaOS uploaded it from, if it did"
+    mediaId: ID
+    "When it was found to be off the channel"
+    goneAt: String
+}
+
+"One of an episode's video files being sent to YouTube, as a private video"
+type YouTubeUpload {
+    id: ID!
+    "Its episode; null once that's deleted"
+    episode: Episode
+    mediaId: ID!
+    "The file's name, e.g. S05E08.mp4"
+    mediaName: String!
+    title: String!
+    description: String!
+    tags: [String!]!
+    "Which of the episode's pictures it gets as its thumbnail, if any"
+    thumbnail: EpisodeImage
+    status: YouTubeUploadStatus!
+    "While it's QUEUED, its place in line, 1 next"
+    queued: Int
+    "While it's UPLOADING, how much of the file is sent, by tens"
+    percent: Int
+    "Why it failed"
+    error: String
+    "What didn't go with it, e.g. its thumbnail, while the video did"
+    note: String
+    "YouTube's ID of the video, once the file is there, and the video as MetaOS knows it"
+    videoId: String
+    video: YouTubeVideo
+    "Who asked for it: their person's name, or else their username"
+    requestedBy: String
+    createdAt: String!
+    "When it started being sent"
+    startedAt: String
+    finishedAt: String
+}
+
 """
 How far a transcription is: waiting for its turn at its provider, starting it, the provider hearing it; then done,
 failed or cancelled
@@ -912,6 +1046,13 @@ type Episode {
     media: [MediaFile!]!
     "Its files' transcripts, the latest first, without what they say (Transcript.lines). None without a signed-in user."
     transcripts: [Transcript!]!
+    """
+    Its videos on Ogrodje's YouTube channel, the latest first, private ones too: the one its YouTube link is, its posts
+    there, and those MetaOS uploaded from its files. None without a signed-in user.
+    """
+    youtubeVideos: [YouTubeVideo!]!
+    "The uploads of its files to YouTube, the latest first. None without a signed-in user."
+    youtubeUploads: [YouTubeUpload!]!
     """
     Where it went out: its links, in Platform's order, then the posts that promote it, the latest first. None without a
     signed-in user.

@@ -1115,6 +1115,7 @@
       "add_episode_distribution": "Log a post that promotes an episode, by its URL, e.g. on Discord, LinkedIn or Reddit; MetaOS fetches its preview",
       "assign_person_to_episode": "Give a person a role on an episode: host, co-host, guest, producer, consultant, designer, or candidate for someone who could be its guest",
       "cancel_transcription": "Stop a transcription that's on, and the provider's with it",
+      "cancel_youtube_upload": "Stop an upload to YouTube that's still on; a video that's on YouTube by then stays there, private",
       "comment_on_episode": "Comment on an episode or idea as you, in Markdown",
       "comment_on_session": "Comment on a recording session as you, in Markdown",
       "confirm_guest": "Make a candidate an episode's guest, once they've said yes",
@@ -1146,6 +1147,9 @@
       "get_person_avatar": "A person's avatar, with its URLs",
       "get_show": "A show by its name",
       "get_transcription": "One transcription by its ID, as it is now, to watch it till it's done",
+      "get_youtube_channel": "Which YouTube channel MetaOS is connected to, and whether the connection works",
+      "get_youtube_upload": "One upload to YouTube, as it is now: queued, uploading, processing, done, failed or cancelled",
+      "get_youtube_video": "One of the channel's videos, as MetaOS knows it, with its address and its page in YouTube Studio",
       "link_account": "Link an account to the person it is, so its comments and changes go by their name, past ones too; only Oto may",
       "link_episode_document": "Link a Google Doc to an episode, e.g. its preparation doc",
       "link_episode_dropbox_folder": "Link a Dropbox folder to an episode, e.g. the one with its artwork",
@@ -1193,6 +1197,8 @@
       "list_show_episodes": "The episodes of a show",
       "list_shows": "List all shows",
       "list_transcriptions": "Transcriptions, the latest first: queued, on, done, failed or cancelled, by provider or episode",
+      "list_youtube_uploads": "Uploads of episodes' videos to YouTube, the latest first, each with how far it is and the video it made",
+      "list_youtube_videos": "The videos on Ogrodje's YouTube channel, private and unlisted ones too, each with its episode; by episode, visibility or words",
       "match_episode_documents": "Link the docs in a folder to episodes by the code in their titles; only reports, unless told to link",
       "merge_organisations": "Merge a duplicate organisation into another, which gets its fields, people, episodes and events, and delete it",
       "move_dropbox_file": "Move or rename a file or folder",
@@ -1205,6 +1211,7 @@
       "read_koofr_file": "Read a text file: txt, md, csv, json, srt and the like",
       "refresh_distribution_preview": "Fetch a post's preview again, e.g. after it changed",
       "refresh_events": "Read every organisation's events again now, or one's, rather than in the hour",
+      "refresh_youtube_videos": "Look at the YouTube channel now, rather than at the next hour",
       "remove_episode_distribution": "Take a post off an episode; one of its links is cleared on the episode too",
       "remove_episode_image": "Take one of its pictures off an episode",
       "remove_episode_media": "Take a video or audio file off its episode, and delete it",
@@ -1235,6 +1242,7 @@
       "set_person_bio": "Set or clear the line about who a person is, e.g. their role and company",
       "set_person_email": "Set or clear a person's email; accounts that sign in with it are linked to them",
       "set_person_link": "Set or clear their homepage, LinkedIn, Twitter/X, Instagram or Facebook",
+      "set_youtube_video_thumbnail": "Give a video on the channel one of its episode's thumbnails (A, B or C)",
       "start_image_upload": "Get a signed address to upload a picture straight to MetaOS's bucket, up to 50 MB, for setting it as an episode's picture, an avatar or a logo",
       "transcribe_episode": "Transcribe an episode's full audio or video, or another of its files, with Google's Speech-to-Text or Soniox; it waits its turn when the provider is busy",
       "unlink_account": "Unlink an account from its person, e.g. one linked to the wrong person; only Oto may",
@@ -1255,8 +1263,10 @@
       "update_person_organisation": "Change a person's title at an organisation, or when they started or left",
       "update_session": "Change a session's date, name, location or address",
       "update_show": "Rename a show, or change its color or the language its episodes are spoken in",
+      "update_youtube_video": "Change a YouTube video's title, description or tags, or which episode it is in MetaOS; never who may see it",
       "upload_dropbox_file": "Upload a file; one of the same name is only replaced when asked",
       "upload_koofr_file": "Upload a file; one of the same name is only replaced when asked",
+      "upload_youtube_video": "Send an episode's full video, a bonus or a clip to YouTube, always as a private video, which a person publishes in YouTube Studio",
       "view_dropbox_image": "Look at a picture, e.g. artwork for an episode",
       "whoami": "Who you're signed in as: your account and the person it's linked to; and the version of MetaOS's tools"
     },
@@ -1328,6 +1338,10 @@
       "transcripts": {
         "about": "what's said in an episode's video and audio, by Google's Speech-to-Text or Soniox, in a durable workflow",
         "title": "Transcripts"
+      },
+      "youtube": {
+        "about": "Ogrodje's YouTube channel: what's on it, and sending episodes' videos there as private ones, which a person publishes",
+        "title": "YouTube"
       }
     }
   },
@@ -1527,6 +1541,39 @@
       "graphql": "For scripts and apps",
       "mcp": "For AI assistants: Claude Code, Claude, Codex, ChatGPT",
       "tools": "{n} tool | {n} tools"
+    }
+  },
+  "youtube": {
+    "cancel": "Cancel upload",
+    "cancelFailed": "It didn't stop: {error}",
+    "description": "Description",
+    "descriptionHint": "Left empty, it's the episode's summary. Plain text, without < and >.",
+    "form": "Send {name} to YouTube",
+    "on": "On YouTube",
+    "privacy": {
+      "PRIVATE": "Private",
+      "PUBLIC": "Public",
+      "UNLISTED": "Unlisted"
+    },
+    "privateNote": "It goes there as a private video. Someone publishes it in YouTube Studio.",
+    "send": "Send to YouTube",
+    "sendAgain": "Send again",
+    "sendFailed": "It wasn't sent: {error}",
+    "sending": "Starting…",
+    "start": "Send",
+    "studio": "Open in YouTube Studio",
+    "title": "Title",
+    "titleHint": "Left empty, it's the episode's title. Up to 100 characters.",
+    "upload": {
+      "cancelled": "The upload was cancelled",
+      "done": "Sent to YouTube",
+      "failed": "It didn't get to YouTube: {error}",
+      "note": "Sent, but: {note}",
+      "processing": "On YouTube, which is processing it",
+      "queued": "Waiting its turn",
+      "queuedAt": "Waiting its turn, {n} in line",
+      "uploading": "Sending to YouTube",
+      "uploadingPercent": "Sending to YouTube, {percent} %"
     }
   }
 }

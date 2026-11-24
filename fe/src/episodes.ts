@@ -5,6 +5,7 @@ import type { Comment } from '@/comments'
 import type { Distribution } from '@/distribution'
 import { type Image, IMAGE_FIELDS } from '@/images'
 import type { MediaFile } from '@/media'
+import type { YouTubeUpload, YouTubeVideo } from '@/youtube'
 import type { EpisodeTranscript } from '@/transcriptions'
 
 // A candidate could be the episode's guest, until they're confirmed as one; only signed-in users get them
@@ -201,6 +202,9 @@ export interface EpisodeDetails extends Episode {
   comments: Comment[]
   // Its video and audio, and their transcripts, the latest first; none for anyone not on the team
   media: MediaFile[]
+  // Its videos on Ogrodje's YouTube channel, and its files' uploads there; none for anyone not on the team
+  youtubeVideos: YouTubeVideo[]
+  youtubeUploads: YouTubeUpload[]
   transcripts: EpisodeTranscript[]
   // Where it went out: its links, then the posts that promote it; none for anyone not on the team
   distributions: Distribution[]

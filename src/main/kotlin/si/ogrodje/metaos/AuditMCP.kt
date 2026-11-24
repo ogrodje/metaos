@@ -60,6 +60,21 @@ private val TOLD_DISTRIBUTIONS = """
     and (operation <> 'UPDATE' or (old_row - $DISTRIBUTION_PREVIEW_COLUMNS) is distinct from (new_row - $DISTRIBUTION_PREVIEW_COLUMNS))
 """.trimIndent()
 
+/**
+ * The channel's videos, as the histories tell them: what someone did (a video MetaOS sent there for them, a change to
+ * what it says about itself, or to whose it is), not what a look at the channel found, nor what YouTube made of it
+ * since (its status, its thumbnail's address)
+ */
+private val TOLD_YOUTUBE = """
+    table_name = 'youtube_videos'
+    and actor_id is not null
+    and (operation <> 'UPDATE'
+         or old_row ->> 'title' is distinct from new_row ->> 'title'
+         or old_row ->> 'description' is distinct from new_row ->> 'description'
+         or old_row -> 'tags' is distinct from new_row -> 'tags'
+         or old_row ->> 'episode_id' is distinct from new_row ->> 'episode_id')
+""".trimIndent()
+
 private const val DISTRIBUTION_PREVIEW_COLUMNS =
     "array['preview_status', 'preview_title', 'preview_description', 'preview_site', 'preview_published_at', " +
         "'preview_image_id', 'preview_error', 'previewed_at', 'updated_at']"
@@ -113,6 +128,7 @@ class AuditLog(
                    and ? in (old_row ->> 'person_id', new_row ->> 'person_id'))
                or (table_name = 'events' and coalesce(client, '') <> '$WORKFLOWS_CLIENT'
                    and ? in (old_row ->> 'organisation_id', new_row ->> 'organisation_id'))
+               or ($TOLD_YOUTUBE and ? in (old_row ->> 'episode_id', new_row ->> 'episode_id'))
                or (table_name in ('person_organisations', 'episode_organisations')
                    and ? in (old_row ->> 'person_id', new_row ->> 'person_id', old_row ->> 'episode_id', new_row ->> 'episode_id',
                              old_row ->> 'organisation_id', new_row ->> 'organisation_id'))
@@ -126,7 +142,7 @@ class AuditLog(
             order by id
             """.trimIndent(),
             toRow, id, id.toString(), id.toString(), id.toString(), id.toString(), id.toString(), id.toString(), id.toString(),
-            id.toString(), id.toString(), id.toString(),
+            id.toString(), id.toString(), id.toString(), id.toString(),
         )
 
     fun recent(limit: Int): List<AuditRow> =
@@ -147,6 +163,7 @@ class AuditLog(
                or (table_name = 'accounts' and old_row ->> 'person_id' is distinct from new_row ->> 'person_id')
                or ($TOLD_DISTRIBUTIONS)
                or (table_name = 'events' and coalesce(client, '') <> '$WORKFLOWS_CLIENT')
+               or ($TOLD_YOUTUBE)
             order by id desc
             limit ?
             """.trimIndent(),

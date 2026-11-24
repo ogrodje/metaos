@@ -9,8 +9,9 @@ import java.io.IOException
 
 /*
  * MetaOS uses Google as Ogrodje's bot account, through the "Desktop app" OAuth client "MetaOS" of Google Cloud project
- * ogrodje-metaos. Drive and Gmail have a refresh token each (google/refresh_token.sh): Google revokes tokens with Gmail
- * access when the account's password changes, which shouldn't take Drive down with it.
+ * ogrodje-metaos. Drive, Gmail and YouTube have a refresh token each (google/refresh_token.sh): Google revokes tokens
+ * with Gmail access when the account's password changes, which shouldn't take the others down with it; and YouTube's is
+ * for the bot as the channel, which it picks as it signs in.
  */
 
 val googleTransport = NetHttpTransport()
@@ -31,6 +32,12 @@ class GoogleAccount(clientId: String, clientSecret: String, refreshToken: String
         HttpCredentialsAdapter(credentials).initialize(request)
         request.connectTimeout = 10_000
         request.readTimeout = 30_000
+    }
+
+    /** An access token of the bot's, for an API MetaOS calls itself (YouTube.kt); a new one once the last is about to expire */
+    fun accessToken(): String = call {
+        credentials.refreshIfExpired()
+        checkNotNull(credentials.accessToken) { "Google gave no access token" }.tokenValue
     }
 
     fun <T> call(block: () -> T): T = try {

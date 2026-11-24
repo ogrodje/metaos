@@ -3,9 +3,14 @@
 #
 #   google/refresh_token.sh [drive]  Drive, where the bot has edit access to the "Ogrodje" folder
 #   google/refresh_token.sh gmail    the bot's Gmail
+#   google/refresh_token.sh youtube  Ogrodje's YouTube channel, which the bot is an owner or manager of
 #
-# Two tokens, because Google revokes tokens with Gmail access when the account's password changes, and that shouldn't
-# take Drive down too. MetaOS turns them into access tokens itself, so this is one-time - re-run it only when Google
+# A token each, because Google revokes tokens with Gmail access when the account's password changes, and that shouldn't
+# take the others down too; and because YouTube's is for a channel: Google asks which one as the bot signs in ("Choose
+# your account or a brand account"), where Ogrodje's is the one to pick, not the bot's own. For that the channel has to
+# be a Brand Account with the bot among its owners or managers (YouTube Studio's own "Permissions" don't reach the
+# API). Then it prints the channel the token is for: its ID goes into METAOS_YOUTUBE_CHANNEL_ID, so MetaOS refuses a
+# token for any other. The project needs the YouTube Data API v3 on (infra/gcp). MetaOS turns them into access tokens itself, so this is one-time - re-run it only when Google
 # revokes a token (access removed at https://myaccount.google.com/connections; MetaOS uses both hourly, so they don't go
 # unused for the six months after which Google drops them). Each run gets a new token and leaves the older ones working,
 # but Google keeps only 100 per account and client and then drops the oldest.
@@ -25,7 +30,9 @@ case ${1:-drive} in
   drive) SCOPE=https://www.googleapis.com/auth/drive VARIABLE=GOOGLE_DRIVE_REFRESH_TOKEN ;;
   # Reading, drafts, sending and labels; not deleting for good
   gmail) SCOPE=https://www.googleapis.com/auth/gmail.modify VARIABLE=GOOGLE_GMAIL_REFRESH_TOKEN ;;
-  *) echo "Usage: $0 [drive|gmail]" >&2; exit 2 ;;
+  # The channel's videos: listing them, private ones too, uploading, and changing their details and thumbnails
+  youtube) SCOPE=https://www.googleapis.com/auth/youtube VARIABLE=GOOGLE_YOUTUBE_REFRESH_TOKEN ;;
+  *) echo "Usage: $0 [drive|gmail|youtube]" >&2; exit 2 ;;
 esac
 REDIRECT=http://127.0.0.1:8765
 
@@ -69,6 +76,25 @@ GRANTED=$(jq -r .scope <<<"$TOKENS")
 [[ $GRANTED == "$SCOPE" ]] || { echo "Google granted \"$GRANTED\" instead of $SCOPE" >&2; exit 1; }
 
 api() { curl -sS --fail-with-body -G -H "Authorization: Bearer $ACCESS_TOKEN" "$@"; }
+
+# A YouTube token is for a channel, and says nothing of the account: the channel is what to check
+if [[ $SCOPE == *youtube* ]]; then
+  CHANNELS=$(api https://www.googleapis.com/youtube/v3/channels --data-urlencode part=snippet,statistics --data-urlencode mine=true)
+  echo
+  if [[ $(jq '.items | length' <<<"$CHANNELS") == 0 ]]; then
+    echo "This token is for an account with no channel - re-run and pick Ogrodje's channel as you sign in" >&2
+    exit 1
+  fi
+  echo "The token is for the channel:"
+  jq -r '.items[] | "  \(.snippet.title)  \(.snippet.customUrl // "")  id=\(.id)  videos=\(.statistics.videoCount)"' <<<"$CHANNELS"
+  echo
+  echo "If that isn't Ogrodje's, remove the app at https://myaccount.google.com/connections and re-run."
+  echo "In secretspec's vault (Ogrodje-Prod; then k8s/set_secrets.sh), or in .envrc to try it locally:"
+  echo "  export $VARIABLE='$REFRESH_TOKEN'"
+  echo "And the channel's ID, so MetaOS refuses a token for any other (k8s/base/deployment-metaos.yaml, or .envrc):"
+  echo "  export METAOS_YOUTUBE_CHANNEL_ID='$(jq -r '.items[0].id' <<<"$CHANNELS")'"
+  exit 0
+fi
 
 # Catches signing in with the wrong account
 if [[ $SCOPE == *gmail* ]]; then

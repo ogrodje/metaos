@@ -72,6 +72,9 @@ class FakeStorage(override val bucket: String = "fake") : Storage {
 
     override fun read(path: String, maxBytes: Int) = requireNotNull(files[storagePath(path)]).bytes.let { it.copyOf(minOf(it.size, maxBytes)) }
 
+    override fun read(path: String, offset: Long, length: Int) = requireNotNull(files[storagePath(path)]).bytes
+        .let { it.copyOfRange(minOf(offset, it.size.toLong()).toInt(), minOf(offset + length, it.size.toLong()).toInt()) }
+
     override fun copy(from: String, to: String, contentDisposition: String?): StoredFile {
         val source = requireNotNull(files[storagePath(from)]) { "There's no file at ${storagePath(from)}" }
         require(storagePath(to) !in files) { "${storagePath(to)} is already there" }

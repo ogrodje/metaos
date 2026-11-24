@@ -12,7 +12,9 @@ People use MetaOS through its web front-end or from an AI assistant over MCP. Th
 own, which renders the pages anyone may see from MetaOS's API, so search engines and link previews get them whole, and
 Cloudflare caches them; the browser then carries on as a single-page app. Both sign in with [Keycloak], and MetaOS
 checks their tokens with Keycloak's keys. MetaOS keeps its data in Postgres, where every change is logged, and works
-with Google Drive, Koofr and Dropbox as Ogrodje's bot account. It also lists Slovenia's tech, developer and startup events,
+with Google Drive, Koofr and Dropbox as Ogrodje's bot account. As the bot it also knows Ogrodje's YouTube channel: it
+keeps what's on it, looking every hour, and sends an episode's video there from its bucket, in a workflow, always as a
+private video, which a person publishes. It also lists Slovenia's tech, developer and startup events,
 as the old ogrodje.si's Dogodki page did, which it gathers every hour from the pages of the organisations that hold
 them (Meetup, Eventbrite, iCal, Luma, their websites) in a workflow, through the scrapers, a pod of its own that works
 on it as Temporal's worker; they were [Goo](https://github.com/ogrodje/goo)'s. A weekly Temporal workflow sends the coming week's public events to Ogrodje's Discord through a channel webhook. Postgres also
