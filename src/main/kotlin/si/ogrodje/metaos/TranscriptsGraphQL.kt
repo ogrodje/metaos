@@ -18,6 +18,7 @@ class TranscriptsGraphQL(
     private val transcriptions: Transcriptions,
     private val transcripts: TranscriptsRepository,
     private val episodes: EpisodesRepository,
+    private val people: PeopleRepository,
 ) {
 
     @QueryMapping
@@ -93,6 +94,13 @@ class TranscriptsGraphQL(
     @SchemaMapping(typeName = "Transcript")
     fun speakers(transcript: Transcript): List<TranscriptSpeaker> = transcriptions.speakers(transcript)
 
+    // Its speakers' people, for all of a list's transcripts at once
+    @BatchMapping(typeName = "TranscriptSpeaker", field = "person")
+    fun speakerPeople(of: List<TranscriptSpeaker>): Map<TranscriptSpeaker, Person> {
+        val byId = people.findAllById(of.mapNotNull { it.personId }.toSet()).associateBy { it.id }
+        return of.mapNotNull { speaker -> speaker.personId?.let { byId[it] }?.let { speaker to it } }.toMap()
+    }
+
     // From the database, one transcript at a time: a page asks for what one says when it shows it
     @SchemaMapping(typeName = "Transcript")
     fun lines(transcript: Transcript): List<TranscriptSegment> = transcriptions.content(transcript).segments
@@ -111,6 +119,15 @@ class TranscriptsGraphQL(
     @MutationMapping
     @PreAuthorize(WRITES)
     fun cancelTranscription(@Argument id: UUID): Transcription = transcriptions.cancel(id)
+
+    @MutationMapping
+    @PreAuthorize(WRITES)
+    fun nameTranscriptSpeaker(
+        @Argument id: UUID,
+        @Argument label: String,
+        @Argument person: UUID?,
+        @Argument name: String?,
+    ): Transcript = transcriptions.nameSpeaker(id, label, person, name)
 
     @MutationMapping
     @PreAuthorize(WRITES)

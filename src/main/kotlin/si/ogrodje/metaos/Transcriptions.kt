@@ -137,6 +137,15 @@ data class TranscriptionDto(
     val note: String? = null,
 )
 
+// How long a speaker's name may be, where it's written rather than a person's
+private const val MAX_SPEAKER_NAME = 200
+
+/** A speaker's label as asked for, 1 or Speaker 1, as the provider has it: 1 */
+fun speakerLabel(asked: String): String = asked.trim().replace(Regex("^speaker\\s*", RegexOption.IGNORE_CASE), "")
+
+/** A speaker by its label, until it's named: Speaker 1 */
+fun speakerTitle(label: String) = "Speaker $label"
+
 /** A provider MetaOS has: its name, model, and how many it hears at once (metaos.slots.<name>) */
 data class SpeechProviderDto(val name: String, val model: String, val slots: Int)
 
@@ -152,6 +161,7 @@ class Transcriptions(
     private val speech: ObjectProvider<SpeechProviders>,
     private val episodes: EpisodesRepository,
     private val episodePeople: EpisodePeopleRepository,
+    private val people: PeopleRepository,
     private val media: MediaFilesRepository,
     private val transcripts: TranscriptsRepository,
     private val texts: TranscriptTextsRepository,
@@ -347,13 +357,58 @@ class Transcriptions(
         return jsonMapper.readValue<TranscriptContent>(stored.content)
     }
 
-    fun speakers(transcript: Transcript): List<TranscriptSpeaker> = jsonMapper.readValue(transcript.speakers)
+    /** Its speakers as they were named: a person by the name they had then (see [speakers]) */
+    private fun storedSpeakers(transcript: Transcript): List<TranscriptSpeaker> = jsonMapper.readValue(transcript.speakers)
+
+    /** Its speakers, by their labels, and who they are once named: a person by their name now, as it may have changed */
+    fun speakers(transcript: Transcript): List<TranscriptSpeaker> {
+        val stored = storedSpeakers(transcript)
+        val ids = stored.mapNotNull { it.personId }
+        if (ids.isEmpty()) return stored
+        val names = people.findAllById(ids.toSet()).associate { it.id to it.name }
+        return stored.map { speaker -> speaker.personId?.let { speaker.copy(name = names[it] ?: speaker.name) } ?: speaker }
+    }
+
+    /**
+     * Names one of a transcript's speakers, by its [label] (1, or Speaker 1, as get_episode_transcript prints it): as a
+     * [person] on its episode, by their ID, or else a [name] for someone who isn't in MetaOS; with neither, clears it.
+     * A label it hasn't got is refused, as is a person who isn't on the episode (a candidate isn't), or both at once.
+     */
+    @Transactional
+    fun nameSpeaker(id: UUID, label: String, person: UUID?, name: String?): Transcript {
+        val transcript = requireNotNull(transcripts.findByIdOrNull(id)) { "No transcript $id" }
+        val stored = storedSpeakers(transcript)
+        val asked = speakerLabel(label)
+        val speaker = requireNotNull(stored.find { it.label == asked }) {
+            if (stored.isEmpty()) "The transcript of ${transcript.mediaName} doesn't tell its speakers apart (${transcript.provider} doesn't)"
+            else "The transcript of ${transcript.mediaName} has no speaker $label; its speakers are " +
+                stored.joinToString(", ") { speakerTitle(it.label) }
+        }
+        val named = name?.trim()?.ifEmpty { null }
+        require(person == null || named == null) { "Name a speaker as a person or by a name, not both" }
+        require(named == null || named.length <= MAX_SPEAKER_NAME) { "A speaker's name is at most $MAX_SPEAKER_NAME characters" }
+        val renamed = when {
+            person != null -> {
+                val episode = requireNotNull(episodes.findByIdOrNull(transcript.episodeId)) { "The transcript's episode was deleted" }
+                val on = episodePeople.findByEpisodeWithPerson(episode).filter { it.role != Role.CANDIDATE }
+                val who = requireNotNull(on.find { it.person.id == person }?.person) {
+                    "Person $person isn't on ${episode.code ?: episode.title}; add them to the episode first, or name the " +
+                        "speaker by a name. On it: " + on.map { "${it.person.name} (${it.person.id})" }.distinct().joinToString(", ")
+                }
+                speaker.copy(name = who.name, personId = who.id)
+            }
+            else -> speaker.copy(name = named, personId = null)
+        }
+        if (renamed == speaker) return transcript
+        transcript.speakers = jsonMapper.writeValueAsString(stored.map { if (it.label == speaker.label) renamed else it })
+        return transcripts.saveAndFlush(transcript)
+    }
 
     /** What was said, a line a stretch, each from where it starts: [h:mm:ss] Speaker 1: text, by their names once named */
     fun text(transcript: Transcript): String {
         val names = speakers(transcript).associate { it.label to it.name }
         return content(transcript).segments.joinToString("\n") { segment ->
-            val who = segment.speaker?.let { "${names[it] ?: "Speaker $it"}: " }.orEmpty()
+            val who = segment.speaker?.let { "${names[it] ?: speakerTitle(it)}: " }.orEmpty()
             "[${timestamp(segment.start)}] $who${segment.text}"
         }
     }

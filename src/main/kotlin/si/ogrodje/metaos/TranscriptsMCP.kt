@@ -32,6 +32,9 @@ data class TranscriptDto(
 /** An episode's transcripts, and its files' transcriptions that are on, or that failed or were cancelled last */
 data class EpisodeTranscriptsDto(val transcripts: List<TranscriptDto>, val transcriptions: List<TranscriptionDto>)
 
+/** A transcript's speakers, once one is named: by their labels, and who they are */
+data class TranscriptSpeakersDto(val id: UUID, val media: String, val provider: String, val speakers: List<TranscriptSpeaker>)
+
 /** A transcript that was removed: what it was of, and by whom */
 data class RemovedTranscriptDto(val id: UUID, val media: String, val provider: String, val language: String)
 
@@ -177,6 +180,27 @@ class TranscriptsMCP(
             found.map { toDto(it, it.requesterId?.let { id -> names[id] } ?: it.requester) },
             transcriptions.dtos(jobs),
         )
+    }
+
+    @McpTool(
+        name = "name_transcript_speaker",
+        annotations = McpTool.McpAnnotations(
+            title = "Name transcript speaker",
+            readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
+        ),
+        description = "Name one of a transcript's speakers, which the provider tells apart only by label (Soniox's " +
+            "Speaker 1, Speaker 2): as a person on its episode (person, from list_episode_people), or by a name for " +
+            "someone who isn't in MetaOS; with neither, its name is cleared. get_episode_transcript then says who said " +
+            "what by their names. Renaming is naming it again. Answers with its speakers"
+    )
+    fun nameTranscriptSpeaker(
+        @McpToolParam(description = "The transcript's ID, from get_episode_transcript") id: UUID,
+        @McpToolParam(description = "The speaker's label, as the transcript has it: 1, or Speaker 1") label: String,
+        @McpToolParam(description = "The person it is, by ID, one on the episode", required = false) person: UUID?,
+        @McpToolParam(description = "Or their name, for someone who isn't in MetaOS", required = false) name: String?,
+    ): TranscriptSpeakersDto {
+        val transcript = transcriptions.nameSpeaker(id, label, person, name)
+        return TranscriptSpeakersDto(checkNotNull(transcript.id), transcript.mediaName, transcript.provider, transcriptions.speakers(transcript))
     }
 
     @McpTool(

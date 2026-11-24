@@ -12,18 +12,22 @@ export interface Pickable {
 
 // A person picked by name as it's typed, from [people], e.g. those the page lists: a combobox, whose ↑ and ↓ go
 // through who it found, ↵ picks one and Esc gives up. Before anything's typed it offers those with [suggest]'s name,
-// e.g. an account's.
+// e.g. an account's. With [free], what's typed may also be taken as a name, for someone who isn't in MetaOS.
 const props = defineProps<{
   people: Pickable[]
   // What it picks for, e.g. Link maja.k to
   label: string
   suggest?: string | null
-  // While the page does what the pick is for
+  // While the page does what the pick is for, and what it says then (Linking… by default)
   busy?: boolean
+  busyText?: string
+  // Whether what's typed may be taken as a name, for someone who isn't among [people]
+  free?: boolean
 }>()
 
 const emit = defineEmits<{
   pick: [person: Pickable]
+  write: [name: string]
   cancel: []
 }>()
 
@@ -56,11 +60,21 @@ function pick(person: Pickable | undefined) {
   if (person && !props.busy) emit('pick', person)
 }
 
+// What's typed, as a name, where it may be one
+const written = computed(() => (props.free && typed.value ? text.value.trim() : null))
+
+function write() {
+  if (written.value && !props.busy) emit('write', written.value)
+}
+
 function onKeydown(event: KeyboardEvent) {
   if (event.isComposing) return
   if (event.key === 'ArrowDown') move(1)
   else if (event.key === 'ArrowUp') move(-1)
-  else if (event.key === 'Enter') pick(options.value[active.value])
+  else if (event.key === 'Enter') {
+    if (options.value.length) pick(options.value[active.value])
+    else write()
+  }
   else if (event.key === 'Escape') {
     // Its own, not the page's
     event.stopPropagation()
@@ -84,7 +98,8 @@ onMounted(() => input.value?.focus())
     </div>
 
     <p :id="`${id}-hint`" class="hint" aria-live="polite">
-      <template v-if="busy">{{ t('accounts.linking') }}</template>
+      <template v-if="busy">{{ busyText ?? t('accounts.linking') }}</template>
+      <template v-else-if="typed && !options.length && free">{{ t('accounts.picker.noOneWrite') }}</template>
       <template v-else-if="typed && !options.length">{{ t('accounts.picker.noOne') }}</template>
       <template v-else-if="!typed && options.length">{{ t('accounts.picker.matching', { name: suggest }) }}</template>
       <template v-else-if="!typed">{{ t('accounts.picker.typeName') }}</template>
@@ -98,6 +113,10 @@ onMounted(() => input.value?.focus())
         <span v-if="person.bio" class="bio">{{ person.bio }}</span>
       </li>
     </ul>
+
+    <button v-if="written" type="button" class="text-button write" :aria-disabled="busy || undefined" @click="write">
+      {{ t('accounts.picker.write', { name: written }) }}
+    </button>
   </div>
 </template>
 
@@ -127,6 +146,11 @@ onMounted(() => input.value?.focus())
     outline: 2px solid var(--accent-text);
     outline-offset: 2px;
   }
+}
+
+.write {
+  justify-self: start;
+  font-size: var(--text-small);
 }
 
 .hint {

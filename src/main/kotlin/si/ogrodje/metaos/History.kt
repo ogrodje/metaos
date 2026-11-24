@@ -373,7 +373,27 @@ private class Names(
         return when (row.operation) {
             "INSERT" -> Described("Transcribed $name")
             "DELETE" -> Described("Removed the transcript of $name")
-            else -> Described(if (row.diff()["speakers"] != null) "Named the speakers in the transcript of $name" else "Changed the transcript of $name")
+            else -> row.diff()["speakers"]?.let { speakersNamed(name, it) } ?: Described("Changed the transcript of $name")
+        }
+    }
+
+    // Its speakers as the audit log has them: by label, their names
+    private fun speakerNames(value: Any?): Map<String, String?> = (value as? List<*>).orEmpty()
+        .mapNotNull { it as? Map<*, *> }
+        .mapNotNull { speaker -> speaker["label"]?.toString()?.let { it to speaker["name"]?.toString() } }
+        .toMap()
+
+    // One speaker named, renamed or cleared, as name_transcript_speaker does it: Named Speaker 2 in S04E11.mp3: Miha
+    private fun speakersNamed(name: String?, change: ColumnChange): Described {
+        val before = speakerNames(change.from)
+        val after = speakerNames(change.to)
+        val changed = (before.keys + after.keys).filter { before[it] != after[it] }
+        val fields = changed.map { FieldChangeDto(speakerTitle(it), before[it], after[it]) }
+        val label = changed.singleOrNull() ?: return Described("Named the speakers in the transcript of $name", fields)
+        val speaker = speakerTitle(label)
+        return when (val to = after[label]) {
+            null -> Described("Took the name off $speaker in $name", fields)
+            else -> Described("Named $speaker in $name: $to", fields)
         }
     }
 

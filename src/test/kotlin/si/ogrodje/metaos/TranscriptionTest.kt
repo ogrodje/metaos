@@ -129,6 +129,8 @@ class TranscriptionTest @Autowired constructor(
     private val providers: SpeechProviders,
     private val client: WorkflowClient,
     private val history: History,
+    private val people: PeopleRepository,
+    private val episodePeople: EpisodePeopleRepository,
 ) {
 
     companion object {
@@ -497,6 +499,100 @@ class TranscriptionTest @Autowired constructor(
         graphql("""mutation { removeTranscript(id: "$made") }""", reader).andExpect(jsonPath("$.errors[0].extensions.classification").value("FORBIDDEN"))
         graphql("""mutation { removeTranscript(id: "$made") }""", writer).andExpect(jsonPath("$.data.removeTranscript").value(made.toString()))
         graphql("""{ transcript(id: "$made") { id } }""", reader).andExpect(jsonPath("$.data.transcript").value(null as Any?))
+    }
+
+    // A transcript that tells two speakers apart, as Soniox's do, of an episode with a host, a guest and a candidate
+    private fun twoSpeakers(code: String): Triple<Transcript, Person, Person> {
+        val episode = episodes.saveAndFlush(Episode(title = "Govorci", code = code))
+        val host = people.saveAndFlush(Person(name = "Oto Brglez $code", email = null))
+        val guest = people.saveAndFlush(Person(name = "Mladen Prajdić $code", email = null))
+        val candidate = people.saveAndFlush(Person(name = "Kandidat $code", email = null))
+        episodePeople.saveAndFlush(EpisodePerson(episode = episode, person = host, role = Role.HOST))
+        episodePeople.saveAndFlush(EpisodePerson(episode = episode, person = guest, role = Role.GUEST))
+        episodePeople.saveAndFlush(EpisodePerson(episode = episode, person = candidate, role = Role.CANDIDATE))
+        val audio = file(episode, MediaKind.FULL_AUDIO, "$code.mp3")
+        val content = TranscriptContent(
+            "soniox", "stt-async-v5", "sl-SI",
+            listOf(TranscriptSegment("1", 0.0, 2.0, "Pozdravljeni."), TranscriptSegment("2", 2.5, 4.0, "Hvala za povabilo.")),
+        )
+        val transcript = transcripts.saveAndFlush(
+            Transcript(
+                checkNotNull(episode.id), checkNotNull(audio.id), audio.name, "sl-SI", "sl-SI", "soniox", "stt-async-v5",
+                "transcripts/$code/transcript.json", null, 4.0, 2, 5,
+                jsonMapper.writeValueAsString(listOf(TranscriptSpeaker("1"), TranscriptSpeaker("2"))), "transcribe-$code", null, null,
+            )
+        )
+        texts.saveAndFlush(TranscriptText(checkNotNull(transcript.id), jsonMapper.writeValueAsString(content)))
+        return Triple(transcript, host, guest)
+    }
+
+    @Test
+    fun `names, renames and clears a transcript's speakers, as the episode's people or by a name`() {
+        val (transcript, host, guest) = twoSpeakers("S09E93")
+        val id = checkNotNull(transcript.id)
+        signedInAs("ana")
+
+        // As a person on the episode, by its label, or as get_episode_transcript prints it
+        val named = mcp.nameTranscriptSpeaker(id, "1", host.id, null)
+        assertEquals(listOf(TranscriptSpeaker("1", host.name, host.id), TranscriptSpeaker("2")), named.speakers)
+        mcp.nameTranscriptSpeaker(id, "Speaker 2", null, "  Neznanec  ")
+        assertEquals(
+            "[0:00:00] ${host.name}: Pozdravljeni.\n[0:00:02] Neznanec: Hvala za povabilo.",
+            mcp.getEpisodeTranscript("S09E93", null, null).transcripts.single().text,
+        )
+        // Renamed, as the person; and by their name as it is now
+        mcp.nameTranscriptSpeaker(id, "speaker 2", guest.id, null)
+        guest.name = "Mladen Prajdić (S09E93)"
+        people.saveAndFlush(guest)
+        assertEquals(listOf("1" to host.name, "2" to "Mladen Prajdić (S09E93)"), mcp.getEpisodeTranscript("S09E93", null, null)
+            .transcripts.single().speakers.map { it.label to it.name })
+        // Cleared
+        assertEquals(TranscriptSpeaker("1"), mcp.nameTranscriptSpeaker(id, "1", null, null).speakers.first())
+
+        val history = history.of(transcript.episodeId).map { it.summary }
+        assertTrue("Named Speaker 1 in S09E93.mp3: ${host.name}" in history, history.toString())
+        assertTrue("Named Speaker 2 in S09E93.mp3: Neznanec" in history, history.toString())
+        assertTrue("Named Speaker 2 in S09E93.mp3: Mladen Prajdić S09E93" in history, history.toString())
+        assertTrue("Took the name off Speaker 1 in S09E93.mp3" in history, history.toString())
+    }
+
+    @Test
+    fun `refuses an unknown speaker, someone who isn't on the episode, and a person and a name at once`() {
+        val (transcript, host, _) = twoSpeakers("S09E94")
+        val id = checkNotNull(transcript.id)
+        val unknown = assertFailsWith<IllegalArgumentException> { mcp.nameTranscriptSpeaker(id, "3", host.id, null) }
+        assertTrue("has no speaker 3; its speakers are Speaker 1, Speaker 2" in unknown.message.orEmpty(), unknown.message)
+
+        val stranger = people.saveAndFlush(Person(name = "Tujec", email = null))
+        val notOn = assertFailsWith<IllegalArgumentException> { mcp.nameTranscriptSpeaker(id, "1", stranger.id, null) }
+        assertTrue("isn't on S09E94" in notOn.message.orEmpty(), notOn.message)
+        // Nor is a candidate
+        val candidate = people.findAll().single { it.name == "Kandidat S09E94" }
+        assertFailsWith<IllegalArgumentException> { mcp.nameTranscriptSpeaker(id, "1", candidate.id, null) }
+
+        val both = assertFailsWith<IllegalArgumentException> { mcp.nameTranscriptSpeaker(id, "1", host.id, "Oto") }
+        assertTrue("not both" in both.message.orEmpty(), both.message)
+        assertFailsWith<IllegalArgumentException> { mcp.nameTranscriptSpeaker(UUID.randomUUID(), "1", null, "Oto") }
+        assertTrue(mcp.getEpisodeTranscript("S09E94", null, null).transcripts.single().speakers.all { it.name == null })
+    }
+
+    @Test
+    fun `names a speaker over GraphQL, with metaos write`() {
+        val (transcript, host, _) = twoSpeakers("S09E95")
+        val name = """mutation { nameTranscriptSpeaker(id: "${transcript.id}", label: "1", person: "${host.id}") { speakers { label name personId person { name } } } }"""
+
+        graphql(name, reader).andExpect(jsonPath("$.errors[0].extensions.classification").value("FORBIDDEN"))
+        graphql(name).andExpect(jsonPath("$.errors[0].extensions.classification", anyOf(equalTo("UNAUTHORIZED"), equalTo("FORBIDDEN"))))
+        graphql(name, writer)
+            .andExpect(jsonPath("$.errors").doesNotExist())
+            .andExpect(jsonPath("$.data.nameTranscriptSpeaker.speakers[0].name").value(host.name))
+            .andExpect(jsonPath("$.data.nameTranscriptSpeaker.speakers[0].personId").value(host.id.toString()))
+            .andExpect(jsonPath("$.data.nameTranscriptSpeaker.speakers[0].person.name").value(host.name))
+            .andExpect(jsonPath("$.data.nameTranscriptSpeaker.speakers[1].person").value(null as Any?))
+        graphql("""mutation { nameTranscriptSpeaker(id: "${transcript.id}", label: "2", name: "Gost") { speakers { name } } }""", writer)
+            .andExpect(jsonPath("$.data.nameTranscriptSpeaker.speakers[1].name").value("Gost"))
+        graphql("""mutation { nameTranscriptSpeaker(id: "${transcript.id}", label: "7", name: "Gost") { id } }""", writer)
+            .andExpect(jsonPath("$.errors[0].message", org.hamcrest.Matchers.containsString("has no speaker 7")))
     }
 
     @Test

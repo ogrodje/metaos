@@ -12,6 +12,15 @@ export type TranscriptionStatus = 'QUEUED' | 'STARTING' | 'RECOGNIZING' | 'DONE'
 export interface TranscriptSpeaker {
   label: string
   name: string | null
+  // The person it is, where it's named as one rather than by a name
+  personId?: string | null
+}
+
+/** One of an episode's people, as a transcript's speakers are named after them */
+export interface SpeakerChoice {
+  personId: string
+  name: string
+  roles: string[]
 }
 
 /** A transcript, without what it says: how much there is, and who speaks */
@@ -80,7 +89,12 @@ export const TRANSCRIPTION_FIELDS = 'id mediaId mediaName provider model languag
 export const TRANSCRIPTIONS = `{ transcriptions(limit: 200) { ${TRANSCRIPTION_FIELDS} } speechProviders { name model slots } }`
 
 /** What a transcript says */
-export const TRANSCRIPT_LINES = 'query ($id: ID!) { transcript(id: $id) { id lines { speaker start end text } speakers { label name } } }'
+export const TRANSCRIPT_LINES = 'query ($id: ID!) { transcript(id: $id) { id lines { speaker start end text } '
+  + 'speakers { label name personId } episode { people { personId name roles } } } }'
+
+/** Names one of a transcript's speakers: as a person on its episode, by a name, or with neither, clears it */
+export const NAME_SPEAKER = 'mutation ($id: ID!, $label: String!, $person: ID, $name: String) '
+  + '{ transcript: nameTranscriptSpeaker(id: $id, label: $label, person: $person, name: $name) { id speakers { label name personId } } }'
 
 /** An episode's files, by its code or ID */
 export const EPISODE_FILES = 'query ($ref: String!) { episode(ref: $ref) { id code title language media { id name kind } transcripts { mediaId provider } } }'
@@ -180,6 +194,31 @@ export function timestamp(seconds: number) {
 export function speakerName(label: string | null, speakers: TranscriptSpeaker[], t: Translate) {
   if (label == null) return null
   return speakers.find((s) => s.label === label)?.name ?? t('transcriptions.speaker', { label })
+}
+
+// Who speaks on an episode, the likeliest first: its hosts, then its guests, then the rest of the team on it
+const SPEAKING = ['HOST', 'CO_HOST', 'GUEST', 'PRODUCER', 'CONSULTANT', 'DESIGNER']
+
+/** The episode's people a speaker may be named as: anyone on it but candidates, hosts first, then guests */
+export function speakerChoices(people: SpeakerChoice[]) {
+  const rank = (person: SpeakerChoice) => Math.min(...person.roles.map((role) => {
+    const at = SPEAKING.indexOf(role)
+    return at < 0 ? Infinity : at
+  }))
+  return people.filter((person) => rank(person) < Infinity).sort((a, b) => rank(a) - rank(b))
+}
+
+/**
+ * Who a speaker most likely is, to offer first: speakers yet to be named, in their labels' order, get the episode's
+ * people not named yet, in theirs (its host, then its guest), as a host mostly speaks first
+ */
+export function suggestedSpeaker(label: string, speakers: TranscriptSpeaker[], choices: SpeakerChoice[]) {
+  const named = new Set(speakers.map((s) => s.personId).filter(Boolean))
+  const free = choices.filter((choice) => !named.has(choice.personId))
+  const unnamed = speakers.filter((s) => !s.name)
+    .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }))
+  const at = unnamed.findIndex((s) => s.label === label)
+  return at < 0 ? null : (free[at] ?? null)
 }
 
 /** The file an episode is transcribed from unless another is chosen: its full audio, else its full video */
