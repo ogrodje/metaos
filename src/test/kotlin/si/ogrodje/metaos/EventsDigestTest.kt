@@ -51,6 +51,16 @@ class EventsDigestTest {
             posts.flatMap { it.content.lines() }.filter { it.startsWith("Ljubljana · ") })
     }
 
+    @Test fun `a day that fits on its own moves together to the next post`() {
+        val events = listOf("2026-03-31", "2026-04-01").flatMap { date ->
+            List(6) { event("${date}T10:00:00Z").apply { title = "x".repeat(180) } }
+        }
+        val posts = previewMessages(monday, events)
+        assertEquals(2, posts.size)
+        assertEquals(listOf(6, 6), posts.map { post -> post.content.lines().count { "](<" in it } })
+        kotlin.test.assertTrue(posts.last().content.startsWith("**sreda, 1. 4.**"))
+    }
+
     @Test fun `five per post and an explicit notice for an empty week`() {
         val messages = digestMessages(monday, List(6) { event("2026-03-31T12:00:00Z") })
         assertEquals(listOf(5, 1), messages.map { it.embeds.size })

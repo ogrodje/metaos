@@ -113,7 +113,7 @@ internal fun previewMessages(monday: LocalDate, upcoming: List<Event>): List<Dig
     val heading = "Dogodki za obdobje **$monday** do **${monday.plusDays(6)}**."
     val posts = mutableListOf<DigestMessage>()
     var content = heading
-    var previousDay = ""
+    val days = linkedMapOf<String, MutableList<String>>()
     val dayFormat = DateTimeFormatter.ofPattern("EEEE, d. M.", java.util.Locale.forLanguageTag("sl"))
     for (event in events) {
         val start = event.startsAt.atZoneSameInstant(LJUBLJANA)
@@ -128,14 +128,27 @@ internal fun previewMessages(monday: LocalDate, upcoming: List<Event>): List<Dig
         }
             ?: "https://ogrodje.si/dogodki/${checkNotNull(event.id)}"
         val line = "${previewLocation(event)} · $time[$title](<$link>)"
-        val section = "\n\n**$day**"
-        val prefix = if (previousDay == day) "" else section
-        if (content.length + prefix.length + line.length + 1 > 2000) {
+        days.getOrPut(day) { mutableListOf() }.add(line)
+    }
+    for ((day, lines) in days) {
+        val label = "**$day**"
+        val sectionLength = label.length + lines.sumOf { it.length + 1 }
+        if (sectionLength <= 2000 && content.length + 2 + sectionLength > 2000) {
             posts.add(DigestMessage(content, emptyList()))
-            content = "**$day**"
-        } else content += prefix
-        content += "\n$line"
-        previousDay = day
+            content = ""
+        }
+        for ((index, line) in lines.withIndex()) {
+            val prefix = when {
+                content.isEmpty() -> label
+                index == 0 -> "\n\n$label"
+                else -> ""
+            }
+            if (content.length + prefix.length + 1 + line.length > 2000) {
+                posts.add(DigestMessage(content, emptyList()))
+                content = label
+            } else content += prefix
+            content += "\n$line"
+        }
     }
     return posts + DigestMessage(content, emptyList())
 }
