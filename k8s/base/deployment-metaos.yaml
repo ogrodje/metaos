@@ -17,6 +17,9 @@ data:
   MANAGEMENT_SERVER_PORT: "9090"
   # Ogrodje's Google Drive folder, shared with the bot account (Drive.kt)
   METAOS_DRIVE_ROOT_FOLDER_ID: "1euKNkdlCpB2F5n77jvpJ4cRFtdvtS-Ff"
+  # Ogrodje's YouTube channel, @ogrodje (YouTube.kt), as google/refresh_token.sh youtube printed it: MetaOS refuses a
+  # token of the bot's for any other channel
+  METAOS_YOUTUBE_CHANNEL_ID: "UCyWKvHqZ4UcW7vXUEYZJFUw"
   # The bot's Koofr account; its app password is in metaos-secret (Koofr.kt)
   KOOFR_EMAIL: "iva.ogrodje@gmail.com"
   # MetaOS's files (Storage.kt); the key of the service account that may use it is in metaos-secret (just storage-key)
@@ -83,7 +86,7 @@ spec:
               valueFrom: { secretKeyRef: { name: metaos-secret, key: discord_events_webhook, optional: true } }
             - name: POSTGRES_PASSWORD
               valueFrom: { secretKeyRef: { name: metaos-secret, key: postgres_password } }
-            # The bot account's Google OAuth client and refresh tokens; Drive and Gmail are off without theirs
+            # The bot account's Google OAuth client and refresh tokens; Drive, Gmail and YouTube are off without theirs
             - name: GOOGLE_CLIENT_ID
               valueFrom: { secretKeyRef: { name: metaos-secret, key: google_client_id, optional: true } }
             - name: GOOGLE_CLIENT_SECRET
@@ -92,6 +95,8 @@ spec:
               valueFrom: { secretKeyRef: { name: metaos-secret, key: google_drive_refresh_token, optional: true } }
             - name: GOOGLE_GMAIL_REFRESH_TOKEN
               valueFrom: { secretKeyRef: { name: metaos-secret, key: google_gmail_refresh_token, optional: true } }
+            - name: GOOGLE_YOUTUBE_REFRESH_TOKEN
+              valueFrom: { secretKeyRef: { name: metaos-secret, key: google_youtube_refresh_token, optional: true } }
             # Koofr is off without it
             - name: KOOFR_APP_PASSWORD
               valueFrom: { secretKeyRef: { name: metaos-secret, key: koofr_app_password, optional: true } }

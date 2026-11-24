@@ -148,7 +148,8 @@ function upload(kind?: MediaKind) {
         <FontAwesomeIcon class="chevron" :icon="faChevronRight"/>
       </summary>
       <div class="inside">
-        <MediaList :media="episode.media" @upload="upload" @changed="emit('changed')"/>
+        <MediaList :media="episode.media" :episode="episode.id" :videos="episode.youtubeVideos" :uploads="episode.youtubeUploads"
+                   @upload="upload" @changed="emit('changed')"/>
         <button type="button" class="button" aria-haspopup="dialog" @click="upload()">
           <FontAwesomeIcon :icon="faArrowUpFromBracket"/>{{ t('media.upload.open') }}
         </button>

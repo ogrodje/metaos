@@ -102,6 +102,29 @@
     },
     "title" : "Cancel transcription"
   },
+  "cancel_youtube_upload" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Cancel YouTube upload"
+    },
+    "description" : "Stop an upload to YouTube that's still on. One that's waiting or being sent leaves nothing on YouTube; one that YouTube is already processing leaves its video there, private, which only a person removes, in YouTube Studio",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "id" : {
+          "description" : "The upload's ID, from upload_youtube_video or list_youtube_uploads",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "id" ],
+      "type" : "object"
+    },
+    "title" : "Cancel YouTube upload"
+  },
   "comment_on_episode" : {
     "annotations" : {
       "destructiveHint" : false,
@@ -952,6 +975,68 @@
       "type" : "object"
     },
     "title" : "Get transcription"
+  },
+  "get_youtube_channel" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "Get YouTube channel"
+    },
+    "description" : "Which YouTube channel MetaOS is connected to, as Ogrodje's bot account: its ID, name and handle, whether the connection works (and why not, when it doesn't), and whether a look at the channel that someone asked for (refresh_youtube_videos) is on",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : { },
+      "required" : [ ],
+      "type" : "object"
+    },
+    "title" : "Get YouTube channel"
+  },
+  "get_youtube_upload" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "Get YouTube upload"
+    },
+    "description" : "One upload to YouTube by its ID, from upload_youtube_video or list_youtube_uploads, as it is now, to watch it. An episode's video takes a while to send, so asking every few minutes is enough",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "id" : {
+          "description" : "The upload's ID, from upload_youtube_video or list_youtube_uploads",
+          "format" : "uuid",
+          "type" : "string"
+        }
+      },
+      "required" : [ "id" ],
+      "type" : "object"
+    },
+    "title" : "Get YouTube upload"
+  },
+  "get_youtube_video" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "Get YouTube video"
+    },
+    "description" : "One of the channel's videos, as MetaOS knows it: what list_youtube_videos says of each",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "video" : {
+          "description" : "The video: its ID in MetaOS or on YouTube, or its YouTube address",
+          "type" : "string"
+        }
+      },
+      "required" : [ "video" ],
+      "type" : "object"
+    },
+    "title" : "Get YouTube video"
   },
   "link_account" : {
     "annotations" : {
@@ -2097,6 +2182,80 @@
     },
     "title" : "List transcriptions"
   },
+  "list_youtube_uploads" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List YouTube uploads"
+    },
+    "description" : "Uploads of episodes' videos to YouTube, the latest first: each with its episode and file, what it was sent as, and how far it is: QUEUED (waiting for its turn, with its place in line), UPLOADING (with how much of the file is sent), PROCESSING (on YouTube, which is processing it), DONE, FAILED (with why) or CANCELLED; and the video it made, with its page in YouTube Studio, where a person publishes it",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Only those of this episode: Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        },
+        "limit" : {
+          "description" : "At most this many, up to 500; 20 by default",
+          "format" : "int32",
+          "type" : "integer"
+        },
+        "status" : {
+          "description" : "Which: on (queued, uploading or processing), done, failed, cancelled or all; all by default",
+          "type" : "string"
+        }
+      },
+      "required" : [ ],
+      "type" : "object"
+    },
+    "title" : "List YouTube uploads"
+  },
+  "list_youtube_videos" : {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List YouTube videos"
+    },
+    "description" : "The videos on Ogrodje's YouTube channel, as MetaOS knows them, the latest first: full episodes, clips, Shorts and streams, private and unlisted ones too. Each with its title, description, tags, who may see it (PUBLIC, UNLISTED or PRIVATE), how YouTube has it (uploadStatus), its length, its address and its page in YouTube Studio, and whose it is in MetaOS: the episode whose YouTube link or post it is, or that it was uploaded from. MetaOS looks at the channel every hour; refresh_youtube_videos looks now",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "Only this episode's: Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        },
+        "gone" : {
+          "description" : "Also those that are no longer on the channel; false by default",
+          "type" : "boolean"
+        },
+        "limit" : {
+          "description" : "At most this many, up to 500; 50 by default",
+          "format" : "int32",
+          "type" : "integer"
+        },
+        "privacy" : {
+          "description" : "Only those that are: public, unlisted or private",
+          "type" : "string"
+        },
+        "query" : {
+          "description" : "Only those with every one of these words in their title, description or tags",
+          "type" : "string"
+        },
+        "unlinked" : {
+          "description" : "Only those that are no episode's in MetaOS; false by default",
+          "type" : "boolean"
+        }
+      },
+      "required" : [ ],
+      "type" : "object"
+    },
+    "title" : "List YouTube videos"
+  },
   "match_episode_documents" : {
     "annotations" : {
       "destructiveHint" : false,
@@ -2417,6 +2576,23 @@
       "type" : "object"
     },
     "title" : "Refresh events"
+  },
+  "refresh_youtube_videos" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Refresh YouTube videos"
+    },
+    "description" : "Look at the YouTube channel now, in a workflow, rather than at the next hour: every video on it is kept as it is there, new ones are added, and those no longer there are marked gone. It takes seconds; get_youtube_channel says whether it's still on, and list_youtube_videos has what it found",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : { },
+      "required" : [ ],
+      "type" : "object"
+    },
+    "title" : "Refresh YouTube videos"
   },
   "remove_episode_distribution" : {
     "annotations" : {
@@ -3343,6 +3519,36 @@
     },
     "title" : "Set person team"
   },
+  "set_youtube_video_thumbnail" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Set YouTube video thumbnail"
+    },
+    "description" : "Give one of the channel's videos one of its episode's pictures in MetaOS as its thumbnail on YouTube: its thumbnail, or thumbnail B or C, the ones its titles are A/B tested with (list_episode_images). On a public video, everyone sees it at once. YouTube takes custom thumbnails only on a verified channel",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "The episode whose picture it is, when the video is no episode's in MetaOS, or another's: Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        },
+        "picture" : {
+          "description" : "Which of the episode's pictures: THUMBNAIL (the default), THUMBNAIL_B or THUMBNAIL_C",
+          "type" : "string"
+        },
+        "video" : {
+          "description" : "The video: its ID in MetaOS or on YouTube, or its YouTube address",
+          "type" : "string"
+        }
+      },
+      "required" : [ "video" ],
+      "type" : "object"
+    },
+    "title" : "Set YouTube video thumbnail"
+  },
   "start_image_upload" : {
     "annotations" : {
       "destructiveHint" : false,
@@ -4153,6 +4359,47 @@
     },
     "title" : "Update show"
   },
+  "update_youtube_video" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Update YouTube video"
+    },
+    "description" : "Change what one of the channel's videos says about itself on YouTube: its title, description (e.g. to add chapters, as lines of 0:00 Title) or tags, each replaced whole, those left out staying as they are; on a public video, everyone sees the change at once. And whose it is in MetaOS (code), which the hourly look at the channel then leaves. It never changes who may see the video, and never deletes it",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "code" : {
+          "description" : "The episode it is in MetaOS: Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet); empty for no episode's",
+          "type" : "string"
+        },
+        "description" : {
+          "description" : "Its new description, plain text, up to 5,000 bytes, without < and >",
+          "type" : "string"
+        },
+        "tags" : {
+          "description" : "Its new tags, in place of those it has; an empty list clears them",
+          "items" : {
+            "type" : "string"
+          },
+          "type" : "array"
+        },
+        "title" : {
+          "description" : "Its new title, up to 100 characters",
+          "type" : "string"
+        },
+        "video" : {
+          "description" : "The video: its ID in MetaOS or on YouTube, or its YouTube address",
+          "type" : "string"
+        }
+      },
+      "required" : [ "video" ],
+      "type" : "object"
+    },
+    "title" : "Update YouTube video"
+  },
   "upload_dropbox_file" : {
     "annotations" : {
       "destructiveHint" : true,
@@ -4236,6 +4483,56 @@
       "type" : "object"
     },
     "title" : "Upload Koofr file"
+  },
+  "upload_youtube_video" : {
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Upload YouTube video"
+    },
+    "description" : "Send one of an episode's video files in MetaOS (list_episode_media) to Ogrodje's YouTube channel, in a durable workflow on Temporal: by default its full video; a bonus or a clip by its file's ID. Always as a PRIVATE video: a person publishes or schedules it in YouTube Studio, MetaOS never does. With a title (by default the episode's; up to 100 characters), a description (by default the episode's summary; up to 5,000 bytes; chapters go here, as lines of 0:00 Title), tags, and one of the episode's thumbnails (the full video gets its thumbnail by default). An episode's video takes a while, one upload at a time; it answers at once with the upload, which get_youtube_upload follows: QUEUED, UPLOADING (with how much is sent), PROCESSING (it's on YouTube, with its videoId and its page in Studio), DONE, FAILED or CANCELLED. A file that MetaOS sent already isn't sent again, unless again is set",
+    "inputSchema" : {
+      "$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "properties" : {
+        "again" : {
+          "description" : "Send a file that MetaOS has sent to YouTube before; false by default",
+          "type" : "boolean"
+        },
+        "code" : {
+          "description" : "Episode code, e.g. S01E03, or the episode's ID (ideas may not have a code yet)",
+          "type" : "string"
+        },
+        "description" : {
+          "description" : "Its description on YouTube, plain text, up to 5,000 bytes, without < and >; by default the episode's summary",
+          "type" : "string"
+        },
+        "media" : {
+          "description" : "The file's ID, from list_episode_media; by default the episode's full video",
+          "format" : "uuid",
+          "type" : "string"
+        },
+        "tags" : {
+          "description" : "Its tags, up to 500 characters in all",
+          "items" : {
+            "type" : "string"
+          },
+          "type" : "array"
+        },
+        "thumbnail" : {
+          "description" : "Which of the episode's pictures is its thumbnail: THUMBNAIL, THUMBNAIL_B, THUMBNAIL_C, or NONE; by default THUMBNAIL for the full video, NONE for any other file",
+          "type" : "string"
+        },
+        "title" : {
+          "description" : "The video's title on YouTube, up to 100 characters; by default the episode's",
+          "type" : "string"
+        }
+      },
+      "required" : [ "code" ],
+      "type" : "object"
+    },
+    "title" : "Upload YouTube video"
   },
   "view_dropbox_image" : {
     "annotations" : {

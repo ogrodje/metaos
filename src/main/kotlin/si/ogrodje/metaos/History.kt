@@ -44,7 +44,7 @@ private fun kindOf(table: String) = when (table) {
     "episode_dropbox_folders", "session_dropbox_folders" -> ChangeKind.DROPBOX_FOLDER
     "comments" -> ChangeKind.COMMENT
     "accounts" -> ChangeKind.ACCOUNT
-    "episode_media", "transcripts" -> ChangeKind.MEDIA
+    "episode_media", "transcripts", "youtube_videos" -> ChangeKind.MEDIA
     "distributions" -> ChangeKind.DISTRIBUTION
     "people" -> ChangeKind.PERSON
     "organisations", "person_organisations", "episode_organisations" -> ChangeKind.ORGANISATION
@@ -60,7 +60,7 @@ private fun AuditRow.subject(): Pair<ChangeKind, String>? {
         "sessions" -> ChangeKind.SESSION to rowId.toString()
         "people" -> ChangeKind.PERSON to rowId.toString()
         "episode_people", "episode_documents", "episode_koofr_folders", "episode_dropbox_folders", "episode_media",
-        "transcripts", "distributions" -> id("episode_id")?.let { ChangeKind.EPISODE to it }
+        "transcripts", "distributions", "youtube_videos" -> id("episode_id")?.let { ChangeKind.EPISODE to it }
         "session_documents", "session_koofr_folders", "session_dropbox_folders" -> id("session_id")?.let { ChangeKind.SESSION to it }
         "comments" -> id("episode_id")?.let { ChangeKind.EPISODE to it } ?: id("session_id")?.let { ChangeKind.SESSION to it }
         "accounts" -> id("person_id")?.let { ChangeKind.PERSON to it }
@@ -247,6 +247,7 @@ private class Names(
         "accounts" -> account(row)
         "episode_media" -> media(row)
         "transcripts" -> transcript(row)
+        "youtube_videos" -> youtubeVideo(row, subject)
         "distributions" -> distribution(row)
         "people" -> change(row, "person", PERSON_COLUMNS)
         "organisations" -> change(row, "organisation", ORGANISATION_COLUMNS)
@@ -368,6 +369,28 @@ private class Names(
     }
 
     // A transcript of one of the episode's files (Transcription.kt), by the file's name: made, made again, or named
+    // One of the channel's videos, by its title: sent there by MetaOS, changed, or said to be this episode's or not
+    private fun youtubeVideo(row: AuditRow, subject: String): Described {
+        val title = "\"${row.new["title"] ?: row.old["title"]}\""
+        val diff = row.diff()
+        return when {
+            row.operation == "INSERT" && row.new["media_id"] != null ->
+                Described("Sent $title to YouTube, as a private video", listOf(FieldChangeDto("Video", null, row.new["video_id"]?.toString()?.let(::youtubeUrl))))
+            row.operation == "INSERT" -> Described("Added the YouTube video $title")
+            row.operation == "DELETE" -> Described("Removed the YouTube video $title from MetaOS")
+            "episode_id" in diff ->
+                Described(if (row.new["episode_id"]?.toString() == subject) "Said the YouTube video $title is this episode's" else "Said the YouTube video $title isn't this episode's")
+            else -> Described(
+                "Changed the YouTube video $title",
+                listOfNotNull(
+                    diff["title"]?.let { FieldChangeDto("Title", it.from?.toString(), it.to?.toString()) },
+                    diff["description"]?.let { FieldChangeDto("Description", excerpt(it.from), excerpt(it.to)) },
+                    diff["tags"]?.let { FieldChangeDto("Tags", (it.from as? List<*>)?.joinToString(), (it.to as? List<*>)?.joinToString()) },
+                ),
+            )
+        }
+    }
+
     private fun transcript(row: AuditRow): Described {
         val name = (row.new["media_name"] ?: row.old["media_name"])?.toString()
         return when (row.operation) {

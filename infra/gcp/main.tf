@@ -41,6 +41,9 @@ resource "google_project_service" "used" {
     "iamcredentials.googleapis.com",
     # Speech-to-Text, which transcribes episodes' audio from the private buckets (Transcription.kt)
     "speech.googleapis.com",
+    # YouTube Data API v3, for Ogrodje's channel as the bot (YouTube.kt): 10,000 units a day, which an upload takes
+    # the most of
+    "youtube.googleapis.com",
   ])
 
   service            = each.value

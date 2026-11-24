@@ -72,6 +72,9 @@ interface Storage {
     /** The start of a file, at most [maxBytes] */
     fun read(path: String, maxBytes: Int): ByteArray
 
+    /** A part of a file: [length] bytes from [offset], or fewer at its end; how a big one is passed on in chunks */
+    fun read(path: String, offset: Long, length: Int): ByteArray
+
     /**
      * Copies a file to a path that has none, inside the bucket, without downloading it, e.g. an upload to where it's kept.
      * [contentDisposition] is what it's downloaded with, e.g. attachment, so a browser saves it rather than plays it.
@@ -176,6 +179,20 @@ class GoogleCloudStorage(
             storage.reader(id(path)).limit(maxBytes.toLong()).use { Channels.newInputStream(it).readAllBytes() }
         } catch (e: IOException) {
             // How the reader hands on what Google answered
+            val answer = e.cause as? StorageException ?: throw e
+            if (answer.code == 404) throw IllegalArgumentException("There's no file at ${storagePath(path)}")
+            throw answer
+        }
+    }
+
+    override fun read(path: String, offset: Long, length: Int): ByteArray = call {
+        try {
+            storage.reader(id(path)).use { reader ->
+                reader.seek(offset)
+                reader.limit(offset + length)
+                Channels.newInputStream(reader).readAllBytes()
+            }
+        } catch (e: IOException) {
             val answer = e.cause as? StorageException ?: throw e
             if (answer.code == 404) throw IllegalArgumentException("There's no file at ${storagePath(path)}")
             throw answer

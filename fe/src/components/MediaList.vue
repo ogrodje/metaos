@@ -1,20 +1,29 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, useId } from 'vue'
 import { faFileAudio, faFileVideo } from '@fortawesome/free-regular-svg-icons'
-import { faArrowDown } from '@fortawesome/free-solid-svg-icons'
+import { faArrowDown, faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons'
+import { faYoutube } from '@fortawesome/free-brands-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { formatDate } from '@/episodes'
 import { errorMessage } from '@/graphql'
 import { infoLine, KINDS, kindName, type MediaFile, type MediaKind } from '@/media'
 import { downloadUrl, removeMedia } from '@/mediaUploads'
 import { useLocale } from '@/useLocale'
+import { fileOnYouTube, isOn, privacyName, uploadLine, type YouTubeUpload, type YouTubeVideo } from '@/youtube'
+import { cancelYouTubeUpload, uploadToYouTube } from '@/youtubeUploads'
 
 // An episode's video and audio, for the team: a row for its full video and full audio, which, missing, opens the
 // upload for it, then its bonuses, each with what's in it, who uploaded it, and Download and Remove. Removing asks
-// first, on its row, as it deletes the file.
-const props = defineProps<{
+// first, on its row, as it deletes the file. A video also says what YouTube has of it (the videos MetaOS sent there
+// from it, and an upload that's on or failed), and has Send to YouTube, which asks for a title and a description on
+// its row and sends it as a private video.
+const props = withDefaults(defineProps<{
   media: MediaFile[]
-}>()
+  // The episode's ID, and its videos on YouTube and its files' uploads there
+  episode?: string
+  videos?: YouTubeVideo[]
+  uploads?: YouTubeUpload[]
+}>(), { videos: () => [], uploads: () => [] })
 
 const emit = defineEmits<{
   // To upload one of them, e.g. the missing full audio
@@ -44,6 +53,55 @@ const groups = computed<Group[]>(() => KINDS
 const confirming = ref<string>()
 const busy = ref<string>()
 const error = ref<{ id: string, message: string }>()
+
+const youtube = (file: MediaFile) => fileOnYouTube(file.id, props.videos, props.uploads)
+
+// The file being sent to YouTube, with what it's sent as
+const sending = ref<string>()
+const title = ref('')
+const description = ref('')
+
+function askToSend(file: MediaFile) {
+  error.value = undefined
+  title.value = ''
+  description.value = ''
+  sending.value = file.id
+  void nextTick(() => document.getElementById(`${id}-title-${file.id}`)?.focus())
+}
+
+function dontSend(file: MediaFile) {
+  sending.value = undefined
+  void nextTick(() => document.getElementById(`${id}-send-${file.id}`)?.focus())
+}
+
+async function send(file: MediaFile) {
+  if (busy.value || !props.episode) return
+  error.value = undefined
+  busy.value = file.id
+  try {
+    await uploadToYouTube(props.episode, file.id, { title: title.value.trim(), description: description.value.trim() || undefined })
+    sending.value = undefined
+    emit('changed')
+  } catch (e) {
+    error.value = { id: file.id, message: t('youtube.sendFailed', { error: errorMessage(e, t) }) }
+  } finally {
+    busy.value = undefined
+  }
+}
+
+async function cancelUpload(file: MediaFile, upload: YouTubeUpload) {
+  if (busy.value) return
+  error.value = undefined
+  busy.value = file.id
+  try {
+    await cancelYouTubeUpload(upload.id)
+    emit('changed')
+  } catch (e) {
+    error.value = { id: file.id, message: t('youtube.cancelFailed', { error: errorMessage(e, t) }) }
+  } finally {
+    busy.value = undefined
+  }
+}
 
 async function download(file: MediaFile) {
   error.value = undefined
@@ -100,6 +158,17 @@ async function remove(file: MediaFile) {
             <span class="name">{{ file.name }}</span>
             <span class="info">{{ infoLine(file.info, file.size, dateLocale) }}</span>
             <span class="by">{{ file.uploadedBy }}, <time :datetime="file.uploadedAt">{{ formatDate(file.uploadedAt, dateLocale) }}</time></span>
+            <template v-if="group.video">
+              <span v-for="video in youtube(file).videos" :key="video.id" class="youtube">
+                <FontAwesomeIcon :icon="faYoutube"/>{{ t('youtube.on') }} · {{ privacyName(video.privacy, t) }} ·
+                <a :href="video.studioUrl" target="_blank" rel="noopener">{{ t('youtube.studio') }}<FontAwesomeIcon class="external" :icon="faArrowUpRightFromSquare"/></a>
+              </span>
+              <span v-if="youtube(file).upload" class="youtube" :class="{ failed: youtube(file).upload!.status === 'FAILED' }" role="status">
+                <FontAwesomeIcon :icon="faYoutube"/>{{ uploadLine(youtube(file).upload!, t) }}
+                <button v-if="isOn(youtube(file).upload!)" type="button" class="text-button" :disabled="busy === file.id"
+                        @click="cancelUpload(file, youtube(file).upload!)">{{ t('youtube.cancel') }}</button>
+              </span>
+            </template>
             <span v-if="error?.id === file.id" class="error" role="alert">{{ error.message }}</span>
           </span>
           <span v-if="confirming === file.id" class="confirm" role="group" :aria-labelledby="`${id}-ask-${file.id}`" @keydown.esc="keep(file)">
@@ -113,8 +182,25 @@ async function remove(file: MediaFile) {
             <button type="button" class="button small" :aria-disabled="busy === file.id || undefined" @click="download(file)">
               <FontAwesomeIcon :icon="faArrowDown"/>{{ t('media.list.download') }}
             </button>
+            <button v-if="group.video && episode && !(youtube(file).upload && isOn(youtube(file).upload!))" :id="`${id}-send-${file.id}`"
+                    type="button" class="button small" :aria-expanded="sending === file.id" @click="sending === file.id ? dontSend(file) : askToSend(file)">
+              <FontAwesomeIcon :icon="faYoutube"/>{{ youtube(file).videos.length ? t('youtube.sendAgain') : t('youtube.send') }}
+            </button>
             <button :id="`${id}-remove-${file.id}`" type="button" class="button small quiet" @click="askToRemove(file)">{{ t('common.remove') }}</button>
           </span>
+          <form v-if="sending === file.id" class="send" :aria-label="t('youtube.form', { name: file.name })" @submit.prevent="send(file)" @keydown.esc="dontSend(file)">
+            <label :for="`${id}-title-${file.id}`">{{ t('youtube.title') }}</label>
+            <input :id="`${id}-title-${file.id}`" v-model="title" class="input" type="text" maxlength="100" lang="sl" :aria-describedby="`${id}-title-hint-${file.id}`">
+            <p :id="`${id}-title-hint-${file.id}`" class="hint">{{ t('youtube.titleHint') }}</p>
+            <label :for="`${id}-description-${file.id}`">{{ t('youtube.description') }}</label>
+            <textarea :id="`${id}-description-${file.id}`" v-model="description" class="input" rows="5" lang="sl" :aria-describedby="`${id}-description-hint-${file.id}`"/>
+            <p :id="`${id}-description-hint-${file.id}`" class="hint">{{ t('youtube.descriptionHint') }}</p>
+            <p class="hint">{{ t('youtube.privateNote') }}</p>
+            <span class="buttons">
+              <button type="submit" class="button primary small" :aria-disabled="busy === file.id || undefined">{{ busy === file.id ? t('youtube.sending') : t('youtube.start') }}</button>
+              <button type="button" class="button small" :disabled="busy === file.id" @click="dontSend(file)">{{ t('common.cancel') }}</button>
+            </span>
+          </form>
         </li>
       </ul>
     </section>
@@ -208,6 +294,63 @@ h3 {
 
 .error {
   color: var(--accent-text);
+}
+
+// What YouTube has of the file: a line each, under who uploaded it
+.youtube {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  color: var(--secondary);
+
+  &.failed {
+    color: var(--accent-text);
+  }
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .external {
+    width: 10px;
+    height: 10px;
+  }
+}
+
+// What it's sent to YouTube as, asked on its row, under it
+.send {
+  grid-column: 2 / -1;
+  display: grid;
+  gap: 4px;
+  max-width: 560px;
+  padding-top: 4px;
+  font-size: var(--text-caption);
+  line-height: 18px;
+
+  label {
+    margin-top: 6px;
+    font-weight: 600;
+  }
+
+  textarea {
+    height: auto;
+    padding-block: 6px;
+    line-height: 20px;
+    resize: vertical;
+  }
+
+  .hint {
+    color: var(--muted);
+  }
+
+  .buttons {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+  }
 }
 
 .actions,

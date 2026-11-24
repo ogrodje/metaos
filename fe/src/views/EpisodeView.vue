@@ -41,6 +41,7 @@ import { useFirstLoad } from '@/ssr'
 import { useAuthStore } from '@/stores/auth'
 import { usePageTitle } from '@/title'
 import { EPISODE_TRANSCRIPT_FIELDS } from '@/transcriptions'
+import { YOUTUBE_FIELDS } from '@/youtube'
 import { useLocale } from '@/useLocale'
 
 const auth = useAuthStore()
@@ -66,7 +67,7 @@ async function fetchEpisode(ref: string) {
   return (await graphql<{ episode: EpisodeDetails | null }>(`query ($ref: String!) {
     episode(ref: $ref) {
       ${EPISODE_FIELDS} ${PATREON_FIELDS} titleB titleC summary machineSummary addedDate language recommendedBy { id name } ${KOOFR_FIELDS}
-      ${DROPBOX_FIELDS} ${ARTWORK_FIELDS} ${PICTURE_FIELDS} ${HISTORY_FIELDS} ${COMMENT_FIELDS} ${MEDIA_FIELDS}
+      ${DROPBOX_FIELDS} ${ARTWORK_FIELDS} ${PICTURE_FIELDS} ${HISTORY_FIELDS} ${COMMENT_FIELDS} ${MEDIA_FIELDS} ${YOUTUBE_FIELDS}
       ${EPISODE_TRANSCRIPT_FIELDS} ${DISTRIBUTION_FIELDS} people { avatar { ${IMAGE_FIELDS} } } supportedBy { id name websiteUrl }
     }
   }`, { ref })).episode

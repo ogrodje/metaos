@@ -136,6 +136,9 @@ interface DistributionsRepository : JpaRepository<Distribution, UUID> {
 
     fun findByEpisodeIdAndPlatform(episodeId: UUID, platform: Platform): Distribution?
 
+    // Every post on a channel, e.g. YouTube's, whose videos are their episodes' (YouTubeVideos.kt)
+    fun findByChannel(channel: Channel): List<Distribution>
+
     // The latest first, by when they went out, else when they were added; of episodes that are there, on the channels
     @Query(
         """

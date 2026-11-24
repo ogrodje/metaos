@@ -624,6 +624,8 @@ by whoever was signed in, on MetaOS's pages or over MCP. They're the team's: wri
 
 ### Google (Drive and Gmail)
 
+(YouTube is the bot's too, with a token of its own: see YouTube.)
+
 MetaOS uses Google as a bot account, `iva.ogrodje@gmail.com`, through the "Desktop app" OAuth client "MetaOS" of
 Google Cloud project `ogrodje-metaos` and Google's Java client libraries ([`Google.kt`](src/main/kotlin/si/ogrodje/metaos/Google.kt)).
 Drive and Gmail have a refresh token each, from [`google/refresh_token.sh`](google/refresh_token.sh) `[drive|gmail]`:
@@ -1099,6 +1101,76 @@ found). MetaOS never publishes: a person does, in Patreon's editor.
 - `PatreonTest` runs the client against a stand-in gateway, and `PatreonChangesTest` the workflows in Temporal's test
   server against a stand-in worker; the gateway's own tests need no browser (`ActivitiesTest`, `WorkerTest`).
 
+### YouTube
+
+MetaOS knows Ogrodje's YouTube channel, as the bot account, an owner or manager of it, and sends episodes' videos
+there ([`YouTube.kt`](src/main/kotlin/si/ogrodje/metaos/YouTube.kt),
+[`V42__youtube.sql`](src/main/resources/db/migration/V42__youtube.sql), OG-82). **MetaOS uploads only private videos,
+and never deletes one or changes who may see it:** a person publishes or schedules, in YouTube Studio, as with
+Patreon. Also what Google allows: an API project that hasn't passed its audit has its uploads locked private. Stats
+(views, watch time) aren't here yet. A tool that cuts clips out of an episode's video, as transcription works on its
+audio, is to build on this: a clip is one more of the episode's video files, which goes to YouTube as any does.
+
+- It's YouTube's Data API v3, called over HTTP (`GoogleYouTube`: JDK's client and Jackson, not Google's library, so a
+  stand-in API tests it whole), with an access token of the bot's YouTube refresh token, a third beside Drive's and
+  Gmail's (`google/refresh_token.sh youtube`, scope `youtube`). A token is for a channel: Google asks which as the bot
+  signs in, where Ogrodje's is the one to pick, for which the channel has to be a Brand Account with the bot among its
+  owners or managers (YouTube Studio's own Permissions don't reach the API). `GOOGLE_YOUTUBE_REFRESH_TOKEN`
+  (secretspec.toml, then `k8s/set_secrets.sh`) turns it on; it's off without. With `METAOS_YOUTUBE_CHANNEL_ID` set,
+  the channel's, a token for any other is refused before anything is uploaded or changed. The project needs the
+  YouTube Data API v3 on (`infra/gcp`, applied by hand).
+- Quota: 10,000 units a day for the project, which YouTube starts over at midnight Pacific time. A look at the
+  channel is a unit a page of 50 videos, twice; an upload is the dearest call, and a thumbnail and a change to a
+  video's details 50 each. Out of it (`YouTubeQuota`), a workflow waits and tries again; what YouTube refuses
+  (`YouTubeRefused`) fails at once.
+- The channel's videos (`youtube_videos`, [`YouTubeVideos.kt`](src/main/kotlin/si/ogrodje/metaos/YouTubeVideos.kt)):
+  every video in the channel's uploads, Shorts, streams, private and unlisted ones too, as YouTube says it is (title,
+  description, tags, who may see it, its upload status, when it's scheduled, length, thumbnail). `YouTubeSyncWorkflow`
+  gathers them every hour (`YouTubeSyncs`, `youtube-sync-<hour>`, so two pods start it once) and when the team asks
+  (`refresh_youtube_videos`, `refreshYouTubeVideos`); it writes only what changed, so a look that finds nothing new
+  leaves nothing in the audit log, and one no longer on the channel stays, as gone (`gone_at`). YouTube's API hands out
+  no video files: the originals are those in MetaOS's bucket.
+- A video is an episode's when the episode's YouTube link or one of its posts on YouTube (Distribution) is its
+  address, however it's written (`youtubeVideoId`), when MetaOS uploaded it from one of the episode's files
+  (`media_id`), or when the team said so (`episode_manual`, which the sync leaves). MetaOS never sets an episode's
+  YouTube link itself: the video is private until someone publishes it.
+- Uploads ([`YouTubeUploads.kt`](src/main/kotlin/si/ogrodje/metaos/YouTubeUploads.kt), `youtube_uploads`, as
+  transcriptions are kept): `YouTubeUploadWorkflow` (`youtube-upload-<media ID>`, so a file is sent once at a time)
+  sends one of an episode's video files, by default its full video, from the private bucket to YouTube as a resumable
+  upload, 8 MB a chunk through MetaOS's memory, never its disk. Each chunk is the activity's heartbeat, with the
+  upload's session, so a try that broke off (a deploy, a connection) goes on from the chunk YouTube has, and starts
+  over only when YouTube let go of the session. Then MetaOS keeps the video as the episode's, gives it its thumbnail,
+  and asks YouTube how processing goes, on Temporal's timer: `QUEUED`, `UPLOADING` (with how much is sent, by tens),
+  `PROCESSING`, then `DONE`, `FAILED` (with why, e.g. rejected as a duplicate, with where the video is) or `CANCELLED`.
+  Uploads take turns, one at a time (`metaos.slots.youtube`). Cancelled, it stops sending; a video that's on YouTube
+  by then stays there, private.
+- What a video is sent as: a title (by default the episode's, a bonus's its own; 100 characters), a description (by
+  default the episode's summary, where YouTube takes it; 5,000 bytes, no `<` or `>`), tags (500 characters in all),
+  YouTube's category 28, Science & Technology (`METAOS_YOUTUBE_CATEGORY`), the episode's language, and one of the
+  episode's thumbnails (the full video gets its thumbnail by default): its largest copy of 2 MB or less from the public
+  bucket, which YouTube takes only on a verified channel; refused, the video still goes, and the upload notes it.
+  A file MetaOS sent already goes again only when asked (`again`).
+- Changing a video (`update_youtube_video`, `set_youtube_video_thumbnail`): its title, description, tags and
+  thumbnail, on public videos too, where everyone sees it at once; and whose it is in MetaOS.
+- MCP (`YouTubeMCP`): `get_youtube_channel`, `list_youtube_videos`, `get_youtube_video`, `refresh_youtube_videos`,
+  `upload_youtube_video`, `list_youtube_uploads`, `get_youtube_upload`, `cancel_youtube_upload`,
+  `update_youtube_video` and `set_youtube_video_thumbnail`; none is open world, as nothing MetaOS sends is public.
+  GraphQL (`YouTubeGraphQL`): `youtube`, `youtubeVideos`, `youtubeUploads`, `youtubeUpload`, `Episode.youtubeVideos`
+  and `Episode.youtubeUploads`, for the team (empty or refused for anyone else, as private videos are among them);
+  `uploadToYouTube`, `cancelYouTubeUpload`, `refreshYouTubeVideos`, `updateYouTubeVideo`, `setYouTubeVideoEpisode`
+  and `setYouTubeVideoThumbnail`, with `metaos:write`.
+- Both tables have their audit triggers, so pages see an upload go. The histories tell what someone did ("Sent
+  "..." to YouTube, as a private video", a change to a video's details or to whose it is), as whoever asked, not what
+  a look at the channel found (`TOLD_YOUTUBE` in `AuditMCP.kt`).
+- On the front-end ([`fe/src/youtube.ts`](fe/src/youtube.ts)), Video and audio on an episode's page (`MediaList.vue`)
+  says of each video file what YouTube has of it (the videos sent from it, with who may see them and a link to YouTube
+  Studio; an upload that's on, with Cancel, or failed, with why), and has Send to YouTube, which asks for a title and
+  a description on its row, each the episode's own when left empty. There's no page of the channel's videos yet.
+- The `youtube` health check asks for the channel every hour, and reports a token that no longer works, or is for
+  another channel, there, in `metaos_youtube_connected` and in the log.
+- `YouTubeClientTest` runs the client against a stand-in API; `YouTubeTest` the rules and both workflows in Temporal's
+  test server against a channel and a bucket in memory (`FakeYouTube`). Nothing runs against YouTube itself.
+
 ### Feature flags (Unleash)
 
 A change to MetaOS can ship turned off, behind a feature flag, and be turned on once it's ready, for everyone, the team,
@@ -1229,7 +1301,7 @@ just preview down          # done: stop it, take its address down, drop its data
   `metaos_preview_N` in compose's Postgres, which Flyway migrates and `preview/seed.sql` fills when it's new: made-up
   shows, people, a session and episodes at each stage, nobody's real data. Whatever the agent adds on top stays until
   `--fresh` or `down`. A preview gets none of the shell's secrets: no Drive, Dropbox, Koofr, Patreon,
-  agents (OpenRouter), Temporal (its task queue would be every slot's) or Unleash (the flags' defaults), so it changes
+  YouTube, agents (OpenRouter), Temporal (its task queue would be every slot's) or Unleash (the flags' defaults), so it changes
   nothing real. Cloud Storage is the one it gets, development's buckets only (`ogrodje-metaos-dev` and
   `-public-dev`, whose CORS has the slots' addresses, `infra/gcp`), when the shell has their key: so a preview
   publishes pictures and takes the team's uploads, as development does, into the buckets that are for that. About 0.6 GB for MetaOS and 0.15 GB for the front-end.

@@ -19,6 +19,7 @@
 #   DOCKER_REGISTRY_USERNAME, DOCKER_REGISTRY_PASSWORD
 #   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_DRIVE_REFRESH_TOKEN  the Google bot account's, as locally
 #   GOOGLE_GMAIL_REFRESH_TOKEN    optional, Gmail stays off without it (google/refresh_token.sh)
+#   GOOGLE_YOUTUBE_REFRESH_TOKEN  optional, YouTube stays off without it (google/refresh_token.sh youtube)
 #   KOOFR_APP_PASSWORD            optional, the bot's Koofr app password; Koofr stays off without it
 #   PROD_GOOGLE_STORAGE_KEY       optional, the key of production's storage service account (just storage-key
 #                                 prod); Cloud Storage stays off without it
@@ -82,6 +83,7 @@ kubectl create secret generic metaos-secret -n "$NS" \
   --from-literal=google_client_secret="$GOOGLE_CLIENT_SECRET" \
   --from-literal=google_drive_refresh_token="$GOOGLE_DRIVE_REFRESH_TOKEN" \
   --from-literal=google_gmail_refresh_token="${GOOGLE_GMAIL_REFRESH_TOKEN:-}" \
+  --from-literal=google_youtube_refresh_token="${GOOGLE_YOUTUBE_REFRESH_TOKEN:-}" \
   --from-literal=koofr_app_password="${KOOFR_APP_PASSWORD:-}" \
   --from-literal=google_storage_key="${PROD_GOOGLE_STORAGE_KEY:-}" \
   --from-literal=dropbox_app_key="${DROPBOX_APP_KEY:-}" \

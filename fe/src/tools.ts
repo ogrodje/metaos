@@ -6,7 +6,7 @@ import type { Translate } from '@/i18n'
 // names, but not the descriptions. The names are the tools' own, in every language.
 
 /** The tools' version, as MetaOS gives it to assistants, which `just mcp-tools` writes (McpToolsTest) */
-export const TOOLS_VERSION = '1.7.0'
+export const TOOLS_VERSION = '1.8.0'
 
 export interface Tool {
   name: string
@@ -244,6 +244,21 @@ export const TOOL_GROUPS: { id: string, tools: { name: string }[] }[] = [
       { name: 'get_episode_transcript' },
       { name: 'name_transcript_speaker' },
       { name: 'remove_transcript' },
+    ],
+  },
+  {
+    id: 'youtube',
+    tools: [
+      { name: 'get_youtube_channel' },
+      { name: 'list_youtube_videos' },
+      { name: 'get_youtube_video' },
+      { name: 'refresh_youtube_videos' },
+      { name: 'upload_youtube_video' },
+      { name: 'list_youtube_uploads' },
+      { name: 'get_youtube_upload' },
+      { name: 'cancel_youtube_upload' },
+      { name: 'update_youtube_video' },
+      { name: 'set_youtube_video_thumbnail' },
     ],
   },
   {

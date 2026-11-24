@@ -1116,6 +1116,7 @@
       "add_episode_distribution": "Zabeleži objavo, ki promovira epizodo, po njenem URL-ju, na primer na Discordu, LinkedInu ali Redditu; MetaOS pridobi njen predogled",
       "assign_person_to_episode": "Dodeli osebi vlogo na epizodi: voditelj, sovoditelj, gost, producent, svetovalec, oblikovalec ali kandidat za nekoga, ki bi lahko bil gost",
       "cancel_transcription": "Ustavi prepisovanje, ki teče, in z njim tudi ponudnikovo",
+      "cancel_youtube_upload": "Ustavi nalaganje na YouTube, ki še teče; video, ki je takrat že na YouTubu, tam ostane, zaseben",
       "comment_on_episode": "Komentira epizodo ali idejo v vašem imenu, v Markdownu",
       "comment_on_session": "Komentira snemanje v vašem imenu, v Markdownu",
       "confirm_guest": "Kandidata naredi za gosta epizode, ko privoli",
@@ -1147,6 +1148,9 @@
       "get_person_avatar": "Avatar osebe, z njegovimi URL-ji",
       "get_show": "Oddaja po imenu",
       "get_transcription": "Eno prepisovanje po ID-ju, kakršno je zdaj, da ga spremljate do konca",
+      "get_youtube_channel": "Kateri kanal na YouTubu ima MetaOS povezan in ali povezava deluje",
+      "get_youtube_upload": "Eno nalaganje na YouTube, kakršno je zdaj: v čakalni vrsti, se nalaga, v obdelavi, končano, neuspelo ali preklicano",
+      "get_youtube_video": "Eden od videov na kanalu, kot ga pozna MetaOS, z naslovom in stranjo v YouTube Studiu",
       "link_account": "Poveže račun z osebo, ki ji pripada, da so njegovi komentarji in spremembe pod njenim imenom, tudi pretekli; to sme le Oto",
       "link_episode_document": "Poveže dokument Google z epizodo, na primer dokument za njeno pripravo",
       "link_episode_dropbox_folder": "Poveže mapo v Dropboxu z epizodo, na primer tisto z njeno grafiko",
@@ -1194,6 +1198,8 @@
       "list_show_episodes": "Epizode oddaje",
       "list_shows": "Seznam vseh oddaj",
       "list_transcriptions": "Prepisovanja, najnovejša najprej: v čakalni vrsti, v teku, končana, neuspela ali preklicana, po ponudniku ali epizodi",
+      "list_youtube_uploads": "Nalaganja videov epizod na YouTube, najnovejša najprej, vsako s tem, kako daleč je, in z videom, ki je nastal",
+      "list_youtube_videos": "Videi na Ogrodjevem kanalu na YouTubu, tudi zasebni in nenavedeni, vsak s svojo epizodo; po epizodi, vidnosti ali besedah",
       "match_episode_documents": "Poveže dokumente v mapi z epizodami po kodi v naslovu; le poroča, razen če mu naročite, naj jih poveže",
       "merge_organisations": "Združi podvojeno organizacijo v drugo: ta dobi njena polja, ljudi, epizode in dogodke, prvo izbriše",
       "move_dropbox_file": "Premakne ali preimenuje datoteko ali mapo",
@@ -1206,6 +1212,7 @@
       "read_koofr_file": "Prebere besedilno datoteko: txt, md, csv, json, srt in podobne",
       "refresh_distribution_preview": "Znova pridobi predogled objave, na primer ko se je spremenila",
       "refresh_events": "Takoj znova prebere dogodke vseh organizacij ali ene, ne šele čez uro",
+      "refresh_youtube_videos": "Pogleda kanal na YouTubu zdaj, ne šele ob naslednji uri",
       "remove_episode_distribution": "Odstrani objavo z epizode; če je to ena od njenih povezav, se počisti tudi na epizodi",
       "remove_episode_image": "Odstrani eno od slik epizode",
       "remove_episode_media": "Odstrani video ali zvočno datoteko z epizode in jo izbriše",
@@ -1237,6 +1244,7 @@
       "set_person_email": "Nastavi ali počisti e-poštni naslov osebe; računi, ki se prijavljajo z njim, se povežejo z njo",
       "set_person_link": "Nastavi ali počisti njeno domačo stran, LinkedIn, Twitter/X, Instagram ali Facebook",
       "set_person_team": "Pove, ali je oseba v ekipi Ogrodja (njen ustanovitelj, sodeluje, ta čas ne sodeluje ali ni v njej), kar določa vrstni red na strani Ljudje",
+      "set_youtube_video_thumbnail": "Videu na kanalu nastavi eno od sličic njegove epizode (A, B ali C)",
       "start_image_upload": "Pridobi podpisan naslov za nalaganje slike neposredno v vedro MetaOS, do 50 MB, za sliko epizode, avatar ali logotip",
       "transcribe_episode": "Prepiše celoten zvok ali video epizode ali drugo njeno datoteko, z Googlovim Speech-to-Text ali s Sonioxom; ko je ponudnik zaseden, počaka na vrsto",
       "unlink_account": "Odveže račun od osebe, na primer če je povezan z napačno; to sme le Oto",
@@ -1257,8 +1265,10 @@
       "update_person_organisation": "Spremeni naziv osebe v organizaciji ali kdaj je začela ali odšla",
       "update_session": "Spremeni datum, ime, lokacijo ali naslov snemanja",
       "update_show": "Preimenuje oddajo ali spremeni njeno barvo ali jezik, v katerem so njene epizode",
+      "update_youtube_video": "Spremeni naslov, opis ali oznake videa na YouTubu ali to, katere epizode je v MetaOS; nikoli tega, kdo ga sme videti",
       "upload_dropbox_file": "Naloži datoteko; tisto z enakim imenom zamenja le na zahtevo",
       "upload_koofr_file": "Naloži datoteko; tisto z enakim imenom zamenja le na zahtevo",
+      "upload_youtube_video": "Pošlje celoten video epizode, bonus ali izsek na YouTube, vedno kot zaseben video, ki ga v YouTube Studiu objavi človek",
       "view_dropbox_image": "Pogleda sliko, na primer grafiko za epizodo",
       "whoami": "Kot kdo ste prijavljeni: vaš račun in oseba, s katero je povezan; ter različica orodij MetaOS"
     },
@@ -1330,6 +1340,10 @@
       "transcripts": {
         "about": "kaj je izrečeno v videu in zvoku epizode, kot sta slišala Googlov Speech-to-Text ali Soniox, v trajnem poteku dela",
         "title": "Prepisi"
+      },
+      "youtube": {
+        "about": "Ogrodjev kanal na YouTubu: kaj je na njem in pošiljanje videov epizod tja kot zasebnih, ki jih objavi človek",
+        "title": "YouTube"
       }
     }
   },
@@ -1529,6 +1543,39 @@
       "graphql": "Za skripte in aplikacije",
       "mcp": "Za asistente AI: Claude Code, Claude, Codex, ChatGPT",
       "tools": "{n} orodje | {n} orodji | {n} orodja | {n} orodij"
+    }
+  },
+  "youtube": {
+    "cancel": "Prekliči pošiljanje",
+    "cancelFailed": "Ni se ustavilo: {error}",
+    "description": "Opis",
+    "descriptionHint": "Če ostane prazen, je to povzetek epizode. Golo besedilo, brez < in >.",
+    "form": "Pošlji {name} na YouTube",
+    "on": "Na YouTubu",
+    "privacy": {
+      "PRIVATE": "Zasebno",
+      "PUBLIC": "Javno",
+      "UNLISTED": "Nenavedeno"
+    },
+    "privateNote": "Tja gre kot zaseben video. Objavi ga nekdo v YouTube Studiu.",
+    "send": "Pošlji na YouTube",
+    "sendAgain": "Pošlji znova",
+    "sendFailed": "Ni bilo poslano: {error}",
+    "sending": "Začenjanje …",
+    "start": "Pošlji",
+    "studio": "Odpri v YouTube Studiu",
+    "title": "Naslov",
+    "titleHint": "Če ostane prazen, je to naslov epizode. Do 100 znakov.",
+    "upload": {
+      "cancelled": "Pošiljanje je bilo preklicano",
+      "done": "Poslano na YouTube",
+      "failed": "Ni prišlo na YouTube: {error}",
+      "note": "Poslano, vendar: {note}",
+      "processing": "Na YouTubu, ki ga obdeluje",
+      "queued": "Čaka na vrsto",
+      "queuedAt": "Čaka na vrsto, {n}. v vrsti",
+      "uploading": "Pošiljanje na YouTube",
+      "uploadingPercent": "Pošiljanje na YouTube, {percent} %"
     }
   }
 }

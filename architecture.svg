@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1190" viewBox="0 0 1240 1190" role="img" aria-label="MetaOS's architecture: the browser and MCP clients reach MetaOS and Keycloak through Cloudflare and ingress-nginx. The browser gets its pages from the front-end, metaos-web, which renders those anyone may see from MetaOS's GraphQL API, and Cloudflare caches them; then it asks MetaOS itself. MetaOS checks tokens with Keycloak's keys, keeps its data in the shared Postgres, which tells it what changed for the browser's pages to show right away, and calls Cloud Storage, Google Drive, Gmail, Koofr and Dropbox, fetches pictures from Hygraph and anywhere on the web, the previews of the posts that promote episodes from the pages they're on, and gathers the events it lists from their organisers' pages, Meetup, Eventbrite, iCal and Luma, through the scrapers, a pod of its own in the cluster that works on its workflows as Temporal's worker. A weekly workflow posts public events to Discord through a webhook. Its workflows run on Temporal, a server of its own in the cluster, whose databases are in the shared Postgres and whose UI is on the tailnet only; MetaOS's pods are its workers, and transcribe episodes with Google's Speech-to-Text or Soniox. Its feature flags are Unleash's, a server of its own in the cluster, whose database is in the shared Postgres and whose UI is on the tailnet only; MetaOS reads them with Unleash's SDK, as does the front-end's server for the browser. It reaches Ogrodje's Patreon through patreon-gateway, a pod of its own in the cluster with three containers: the gateway, which reads the campaign, its tiers, posts and members through Patreon's API with the creator token it keeps and refreshes, and uploads episodes' audio and video, from links to MetaOS's bucket that MetaOS signs, straight to Patreon; a headless Chromium, in Playwright's own image, in which the gateway makes and changes drafts in Patreon's web app, signed in as the bot, Iva, as the activities of MetaOS's workflows, which it works on as Temporal's worker, one at a time, trying again while Patreon turns it away (a person publishes them, in Patreon); and Tailscale, through which only the browser goes out, by low, a VM that is the tailnet's exit node, as Patreon's bot check turns away the cluster's address. Prometheus scrapes MetaOS, patreon-gateway, Keycloak, Temporal and Unleash, and passes a few of their metrics on to New Relic: the outside connections, the sign-ins, the pods' memory and restarts, and the node's memory. New Relic gets their requests, errors and logs from its Java agent in each, the browser's errors and page loads from its agent there, and checks from outside that the pages, MetaOS and Keycloak answer. It copies pictures to its public bucket in Cloud Storage, from which the browser loads them at media.ogrodje.si, cached by Cloudflare. The team's pictures (an episode's artwork, avatars and logos), from the browser or an agent, and an episode's video and audio go straight to MetaOS's private bucket, with a URL MetaOS signs, and MetaOS takes them from there.">
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1190" viewBox="0 0 1240 1190" role="img" aria-label="MetaOS's architecture: the browser and MCP clients reach MetaOS and Keycloak through Cloudflare and ingress-nginx. The browser gets its pages from the front-end, metaos-web, which renders those anyone may see from MetaOS's GraphQL API, and Cloudflare caches them; then it asks MetaOS itself. MetaOS checks tokens with Keycloak's keys, keeps its data in the shared Postgres, which tells it what changed for the browser's pages to show right away, and calls Cloud Storage, Google Drive, Gmail, Koofr and Dropbox, knows Ogrodje's YouTube channel and uploads private videos there, fetches pictures from Hygraph and anywhere on the web, the previews of the posts that promote episodes from the pages they're on, and gathers the events it lists from their organisers' pages, Meetup, Eventbrite, iCal and Luma, through the scrapers, a pod of its own in the cluster that works on its workflows as Temporal's worker. A weekly workflow posts public events to Discord through a webhook. Its workflows run on Temporal, a server of its own in the cluster, whose databases are in the shared Postgres and whose UI is on the tailnet only; MetaOS's pods are its workers, and transcribe episodes with Google's Speech-to-Text or Soniox. Its feature flags are Unleash's, a server of its own in the cluster, whose database is in the shared Postgres and whose UI is on the tailnet only; MetaOS reads them with Unleash's SDK, as does the front-end's server for the browser. It reaches Ogrodje's Patreon through patreon-gateway, a pod of its own in the cluster with three containers: the gateway, which reads the campaign, its tiers, posts and members through Patreon's API with the creator token it keeps and refreshes, and uploads episodes' audio and video, from links to MetaOS's bucket that MetaOS signs, straight to Patreon; a headless Chromium, in Playwright's own image, in which the gateway makes and changes drafts in Patreon's web app, signed in as the bot, Iva, as the activities of MetaOS's workflows, which it works on as Temporal's worker, one at a time, trying again while Patreon turns it away (a person publishes them, in Patreon); and Tailscale, through which only the browser goes out, by low, a VM that is the tailnet's exit node, as Patreon's bot check turns away the cluster's address. Prometheus scrapes MetaOS, patreon-gateway, Keycloak, Temporal and Unleash, and passes a few of their metrics on to New Relic: the outside connections, the sign-ins, the pods' memory and restarts, and the node's memory. New Relic gets their requests, errors and logs from its Java agent in each, the browser's errors and page loads from its agent there, and checks from outside that the pages, MetaOS and Keycloak answer. It copies pictures to its public bucket in Cloud Storage, from which the browser loads them at media.ogrodje.si, cached by Cloudflare. The team's pictures (an episode's artwork, avatars and logos), from the browser or an agent, and an episode's video and audio go straight to MetaOS's private bucket, with a URL MetaOS signs, and MetaOS takes them from there.">
   <!--
     MetaOS's architecture, the source of architecture.png (`just architecture` renders it). Keep it in step with the
     system: CLAUDE.md says when.
@@ -220,36 +220,39 @@
   <text class="m" x="426" y="1016">New Relic</text>
 
   <!-- Outside services; dashed: connected and checked, but no feature uses it yet -->
-  <rect class="box" x="1060" y="132" width="160" height="38" rx="8"/>
-  <text class="t" x="1076" y="148">Cloud Storage</text>
-  <text class="m" x="1076" y="163">pictures, video, audio · key</text>
-  <rect class="box" x="1060" y="175" width="160" height="38" rx="8"/>
-  <text class="t" x="1076" y="191">Google Drive</text>
-  <text class="m" x="1076" y="206">docs · refresh token</text>
-  <rect class="box unused" x="1060" y="218" width="160" height="38" rx="8"/>
-  <text class="t" x="1076" y="234">Gmail</text>
-  <text class="m" x="1076" y="249">not used yet</text>
-  <rect class="box" x="1060" y="261" width="160" height="38" rx="8"/>
-  <text class="t" x="1076" y="277">Koofr</text>
-  <text class="m" x="1076" y="292">recordings, photos</text>
-  <rect class="box" x="1060" y="304" width="160" height="38" rx="8"/>
-  <text class="t" x="1076" y="320">Dropbox</text>
-  <text class="m" x="1076" y="335">artwork, episode files</text>
-  <rect class="box" x="1060" y="347" width="160" height="38" rx="8"/>
-  <text class="t" x="1076" y="363">Hygraph</text>
-  <text class="m" x="1076" y="378">CMS · pictures by URL</text>
-  <rect class="box" x="1060" y="390" width="160" height="38" rx="8"/>
-  <text class="t" x="1076" y="406">Event sources</text>
-  <text class="m" x="1076" y="421">Meetup, iCal · scrapers</text>
-  <rect class="box" x="1060" y="433" width="160" height="38" rx="8"/>
-  <text class="t" x="1076" y="449">Speech-to-Text</text>
-  <text class="m" x="1076" y="464">Google · transcripts · EU</text>
-  <rect class="box" x="1060" y="476" width="160" height="38" rx="8"/>
-  <text class="t" x="1076" y="492">Soniox</text>
-  <text class="m" x="1076" y="507">transcripts, speakers · US</text>
-  <rect class="box" x="1060" y="519" width="160" height="38" rx="8"/>
-  <text class="t" x="1076" y="535">The web</text>
-  <text class="m" x="1076" y="550">posts' previews, pictures</text>
+  <rect class="box" x="1060" y="132" width="160" height="36" rx="8"/>
+  <text class="t" x="1076" y="147">Cloud Storage</text>
+  <text class="m" x="1076" y="161">pictures, video, audio · key</text>
+  <rect class="box" x="1060" y="172" width="160" height="36" rx="8"/>
+  <text class="t" x="1076" y="187">Google Drive</text>
+  <text class="m" x="1076" y="201">docs · refresh token</text>
+  <rect class="box unused" x="1060" y="212" width="160" height="36" rx="8"/>
+  <text class="t" x="1076" y="227">Gmail</text>
+  <text class="m" x="1076" y="241">not used yet</text>
+  <rect class="box" x="1060" y="252" width="160" height="36" rx="8"/>
+  <text class="t" x="1076" y="267">YouTube</text>
+  <text class="m" x="1076" y="281">channel · private uploads</text>
+  <rect class="box" x="1060" y="292" width="160" height="36" rx="8"/>
+  <text class="t" x="1076" y="307">Koofr</text>
+  <text class="m" x="1076" y="321">recordings, photos</text>
+  <rect class="box" x="1060" y="332" width="160" height="36" rx="8"/>
+  <text class="t" x="1076" y="347">Dropbox</text>
+  <text class="m" x="1076" y="361">artwork, episode files</text>
+  <rect class="box" x="1060" y="372" width="160" height="36" rx="8"/>
+  <text class="t" x="1076" y="387">Hygraph</text>
+  <text class="m" x="1076" y="401">CMS · pictures by URL</text>
+  <rect class="box" x="1060" y="412" width="160" height="36" rx="8"/>
+  <text class="t" x="1076" y="427">Event sources</text>
+  <text class="m" x="1076" y="441">Meetup, iCal · scrapers</text>
+  <rect class="box" x="1060" y="452" width="160" height="36" rx="8"/>
+  <text class="t" x="1076" y="467">Speech-to-Text</text>
+  <text class="m" x="1076" y="481">Google · transcripts · EU</text>
+  <rect class="box" x="1060" y="492" width="160" height="36" rx="8"/>
+  <text class="t" x="1076" y="507">Soniox</text>
+  <text class="m" x="1076" y="521">transcripts, speakers · US</text>
+  <rect class="box" x="1060" y="532" width="160" height="36" rx="8"/>
+  <text class="t" x="1076" y="547">The web</text>
+  <text class="m" x="1076" y="561">posts' previews, pictures</text>
   <rect class="box" x="1060" y="636" width="160" height="100" rx="8"/>
   <text class="t" x="1076" y="660">Patreon</text>
   <text class="m" x="1076" y="680">API: tiers, posts,</text>
@@ -257,10 +260,10 @@
   <text class="m" x="1076" y="714">web app, as Iva: drafts,</text>
   <text class="m" x="1076" y="730">audio, video (not published)</text>
   <!-- New Relic, EU: Java agents in MetaOS and patreon-gateway, the browser's agent, uptime checks from outside -->
-  <rect class="box" x="1060" y="564" width="160" height="64" rx="8"/>
-  <text class="t" x="1076" y="584">New Relic</text>
-  <text class="m" x="1076" y="601">EU · requests, errors, logs;</text>
-  <text class="m" x="1076" y="617">browser, uptime, metrics</text>
+  <rect class="box" x="1060" y="574" width="160" height="56" rx="8"/>
+  <text class="t" x="1076" y="591">New Relic</text>
+  <text class="m" x="1076" y="607">EU · requests, errors, logs;</text>
+  <text class="m" x="1076" y="622">browser, uptime, metrics</text>
   <text class="m" x="1060" y="924">all but Hygraph, event sources,</text>
   <text class="m" x="1060" y="940">the web, New Relic and</text>
   <text class="m" x="1060" y="956">speech-to-text providers</text>
@@ -306,16 +309,17 @@
   <text class="m" x="1040" y="106">weekly events · webhook</text>
   <path class="edge" d="M988 139 H1010 V94 H1028" marker-end="url(#arrow)"/>
   <!-- MetaOS to the outside services -->
-  <path class="edge" d="M988 151 H1058" marker-end="url(#arrow)"/>
-  <path class="edge" d="M988 194 H1058" marker-end="url(#arrow)"/>
-  <path class="edge" d="M988 237 H1058" marker-end="url(#arrow)"/>
-  <path class="edge" d="M988 280 H1058" marker-end="url(#arrow)"/>
-  <path class="edge" d="M988 323 H1058" marker-end="url(#arrow)"/>
-  <path class="edge" d="M988 366 H1058" marker-end="url(#arrow)"/>
-  <path class="edge" d="M988 409 H1058" marker-end="url(#arrow)"/>
-  <path class="edge" d="M988 452 H1058" marker-end="url(#arrow)"/>
-  <path class="edge" d="M988 495 H1058" marker-end="url(#arrow)"/>
-  <path class="edge" d="M988 538 H1058" marker-end="url(#arrow)"/>
+  <path class="edge" d="M988 150 H1058" marker-end="url(#arrow)"/>
+  <path class="edge" d="M988 190 H1058" marker-end="url(#arrow)"/>
+  <path class="edge" d="M988 230 H1058" marker-end="url(#arrow)"/>
+  <path class="edge" d="M988 270 H1058" marker-end="url(#arrow)"/>
+  <path class="edge" d="M988 310 H1058" marker-end="url(#arrow)"/>
+  <path class="edge" d="M988 350 H1058" marker-end="url(#arrow)"/>
+  <path class="edge" d="M988 390 H1058" marker-end="url(#arrow)"/>
+  <path class="edge" d="M988 430 H1058" marker-end="url(#arrow)"/>
+  <path class="edge" d="M988 470 H1058" marker-end="url(#arrow)"/>
+  <path class="edge" d="M988 510 H1058" marker-end="url(#arrow)"/>
+  <path class="edge" d="M988 550 H1058" marker-end="url(#arrow)"/>
   <text class="m" x="1023" y="147" text-anchor="middle">copies</text>
 
   <!-- Their Java agents report to New Relic -->
