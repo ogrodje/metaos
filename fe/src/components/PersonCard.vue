@@ -9,10 +9,11 @@ import { useLocale } from '@/useLocale'
 
 // Someone on the People page. On the team, a card: their picture, large, and beside it their name, who they are, and
 // what they do on how many episodes. Anyone else, a line: picture, name, who they are, their latest episode and how
-// many there are, and where they're online.
+// many there are, and where they're online. Someone on the team before, not at the moment (past), a smaller card.
 const props = defineProps<{
   person: Person
   team?: boolean
+  past?: boolean
 }>()
 
 const { t, dateLocale, path } = useLocale()
@@ -24,8 +25,8 @@ const latest = computed(() => props.person.episodes[0]?.episode)
 </script>
 
 <template>
-  <li v-if="team" class="team-card">
-    <PersonAvatar :image="person.avatar" :name="person.name" :size="72"/>
+  <li v-if="team" class="team-card" :class="{ past }">
+    <PersonAvatar :image="person.avatar" :name="person.name" :size="past ? 56 : 72"/>
     <div class="text">
       <RouterLink class="name" :to="path(personPath(person))">{{ person.name }}</RouterLink>
       <p v-if="person.bio" class="about">{{ person.bio }}</p>
@@ -76,6 +77,17 @@ const latest = computed(() => props.person.episodes[0]?.episode)
   .name {
     font-size: var(--text-lead);
     line-height: 22px;
+  }
+
+  // Not on the team at the moment: its picture a size smaller, its name as a guest's
+  &.past {
+    grid-template-columns: 56px minmax(0, 1fr);
+    padding: 12px 0;
+
+    .name {
+      font-size: var(--text-body);
+      line-height: 20px;
+    }
   }
 }
 

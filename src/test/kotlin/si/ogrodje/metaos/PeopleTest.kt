@@ -78,6 +78,17 @@ class PeopleTest @Autowired constructor(
     }
 
     @Test
+    fun `says and unsays whether a person is on the team`() {
+        val person = peopleMCP.create(name = "Tina Ekipa", email = null).id!!
+        assertEquals(null, peopleMCP.list().single { it.id == person }.team)
+
+        assertEquals(Team.PAST, peopleMCP.setTeam(person, Team.PAST).team)
+        assertEquals(Team.PAST, peopleMCP.list().single { it.id == person }.team)
+        assertEquals(null, peopleMCP.setTeam(person, null).team)
+        assertFailsWith<IllegalArgumentException> { peopleMCP.setTeam(UUID.randomUUID(), Team.ACTIVE) }
+    }
+
+    @Test
     fun `gives a person several roles on an episode, each once`() {
         episodesRepository.saveAndFlush(Episode(title = "Roles", code = "ep-401"))
         val person = peopleMCP.create(name = "Host Person", email = null)

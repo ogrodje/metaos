@@ -1105,7 +1105,7 @@ found). MetaOS never publishes: a person does, in Patreon's editor.
 
 MetaOS knows Ogrodje's YouTube channel, as the bot account, an owner or manager of it, and sends episodes' videos
 there ([`YouTube.kt`](src/main/kotlin/si/ogrodje/metaos/YouTube.kt),
-[`V41__youtube.sql`](src/main/resources/db/migration/V41__youtube.sql), OG-82). **MetaOS uploads only private videos,
+[`V42__youtube.sql`](src/main/resources/db/migration/V42__youtube.sql), OG-82). **MetaOS uploads only private videos,
 and never deletes one or changes who may see it:** a person publishes or schedules, in YouTube Studio, as with
 Patreon. Also what Google allows: an API project that hasn't passed its audit has its uploads locked private. Stats
 (views, watch time) aren't here yet. A tool that cuts clips out of an episode's video, as transcription works on its

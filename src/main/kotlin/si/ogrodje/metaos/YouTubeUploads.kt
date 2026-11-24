@@ -57,7 +57,7 @@ enum class YouTubeUploadStatus {
 }
 
 /**
- * One of an episode's video files being sent to YouTube (V41__youtube.sql), from when it's asked for till it's there,
+ * One of an episode's video files being sent to YouTube (V42__youtube.sql), from when it's asked for till it's there,
  * failed or cancelled, as its workflow goes ([YouTubeUploadWorkflow]), which keeps this up to date: how far it is, for
  * MetaOS's pages and tools, and what was sent when, by whom, as what. The episode and the file are linked by ID, as
  * transcriptions' are.

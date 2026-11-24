@@ -34,6 +34,9 @@ class Person(
     // Their picture in the public bucket (Images.kt)
     @Column(name = "avatar_image_id") var avatarImageId: UUID? = null
 
+    // Whether they're on Ogrodje's team, as the team says; without it, their roles tell (the People page's kindOf)
+    @Enumerated(EnumType.STRING) @Column(columnDefinition = "text") var team: Team? = null
+
     fun setSocialLink(network: SocialNetwork, url: String?) {
         require(url == null || network.accepts(url)) { "$url is not a $network URL" }
         when (network) {
@@ -68,6 +71,12 @@ enum class SocialNetwork(private vararg val domains: String) {
         else uri.scheme == "https" && domains.any { host == it || host.endsWith(".$it") }
     }
 }
+
+/**
+ * Whether someone is on Ogrodje's team, in the order the People page lists it: its founder, those on it now, those who
+ * were and aren't at the moment (with smaller pictures), or not on it, e.g. a guest who once hosted an episode.
+ */
+enum class Team { FOUNDER, ACTIVE, PAST, NONE }
 
 // In the order an episode's people are listed. A candidate could be the episode's guest, until confirm_guest makes
 // them one; only the team sees them.

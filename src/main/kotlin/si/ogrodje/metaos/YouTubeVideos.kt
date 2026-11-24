@@ -40,7 +40,7 @@ private fun now() = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS)
 private fun Instant.kept() = utc().truncatedTo(ChronoUnit.MICROS)
 
 /**
- * One of the videos on Ogrodje's YouTube channel (V41__youtube.sql), as YouTube's API said it was when MetaOS last
+ * One of the videos on Ogrodje's YouTube channel (V42__youtube.sql), as YouTube's API said it was when MetaOS last
  * looked: every hour, and right after MetaOS uploaded or changed it. Its episode, where it has one, by ID, as an
  * episode is soft-deleted.
  */
