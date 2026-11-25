@@ -1262,7 +1262,7 @@
       "list_episode_people": "The people on an episode and their roles",
       "list_episode_supporters": "The organisations that supported an episode",
       "list_episodes": "List episodes, latest first, optionally only those with a given status",
-      "list_events": "The upcoming events, an organisation's or all, hidden ones too if asked, or one region's",
+      "list_events": "The upcoming events, an organisation's or all, hidden ones too if asked, or one region's. The public ones are also a calendar to subscribe to (iCalendar), with no sign-in, at /dogodki.ics, with the parameters region (e.g. gorenjska) and show=promoted",
       "list_koofr_folder": "What is in a folder",
       "list_koofr_places": "The folders shared with Ogrodje's bot, and whether it may change them",
       "list_organisations": "All organisations by name, or only today's supporters and partners, or the archived ones",
