@@ -497,8 +497,8 @@
       "copyAddress": "Copy the address",
       "feed": "The events as a calendar (iCalendar)",
       "google": "Google Calendar",
-      "outlook365": "Outlook 365",
-      "outlookCom": "Outlook.com",
+      "outlook365": "Outlook 365 (work or school account)",
+      "outlookCom": "Outlook.com (personal account: Hotmail, Live)",
       "where": "In which calendar"
     },
     "description": "Slovenia's tech, developer and startup events and conferences that Ogrodje follows, by week.",

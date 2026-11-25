@@ -117,6 +117,9 @@ onBeforeUnmount(() => {
   top: calc(100% + 8px);
   right: 0;
   z-index: 20;
+  // As wide as its longest line, which breaks only where the screen is narrower, whatever a heading's actions do
+  width: max-content;
+  white-space: normal;
   min-width: 264px;
   max-width: calc(100vw - 32px);
   padding: 6px;
@@ -148,7 +151,6 @@ onBeforeUnmount(() => {
   line-height: 20px;
   color: var(--ink);
   text-align: left;
-  white-space: nowrap;
   cursor: pointer;
 
   &:hover {

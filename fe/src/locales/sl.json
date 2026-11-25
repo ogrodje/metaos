@@ -497,8 +497,8 @@
       "copyAddress": "Kopiraj naslov",
       "feed": "Dogodki kot koledar (iCalendar)",
       "google": "Google Koledar",
-      "outlook365": "Outlook 365",
-      "outlookCom": "Outlook.com",
+      "outlook365": "Outlook 365 (službeni ali šolski račun)",
+      "outlookCom": "Outlook.com (osebni račun: Hotmail, Live)",
       "where": "V kateri koledar"
     },
     "description": "Tehnološki, razvijalski in startup dogodki ter konference v Sloveniji, ki jih spremlja Ogrodje, po tednih.",
