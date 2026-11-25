@@ -9,6 +9,7 @@ import LoadError from '@/components/LoadError.vue'
 import LoadingRows from '@/components/LoadingRows.vue'
 import NoMatch from '@/components/NoMatch.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import SelectFilter from '@/components/SelectFilter.vue'
 import SignInPrompt from '@/components/SignInPrompt.vue'
 import YouTubeUploadRow from '@/components/YouTubeUploadRow.vue'
 import YouTubeVideoRow from '@/components/YouTubeVideoRow.vue'
@@ -143,11 +144,12 @@ const sent = computed(() => shownUploads(uploads.value))
           </ul>
         </section>
 
+        <!-- As the Events page's: the box, the chips, and the rest as selects at the end, in one row -->
         <FilterBar v-model:find="find" :placeholder="t('channel.filter.find')">
           <ChipGroup v-if="kinds.length > 2" v-model="kind" :label="t('channel.filter.kindLabel')" :options="kinds"/>
-          <ChipGroup v-if="privacies.length > 2" v-model="privacy" :label="t('channel.filter.privacyLabel')" :options="privacies"/>
           <template #end>
-            <ChipGroup v-model="episode" :label="t('channel.filter.episodeLabel')" :options="episodes"/>
+            <SelectFilter v-if="privacies.length > 2" v-model="privacy" :label="t('channel.filter.privacyLabel')" :options="privacies"/>
+            <SelectFilter v-model="episode" :label="t('channel.filter.episodeLabel')" :options="episodes"/>
           </template>
         </FilterBar>
 

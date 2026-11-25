@@ -1170,8 +1170,8 @@ audio, is to build on this: a clip is one more of the episode's video files, whi
   OG-87) is the channel: every video MetaOS knows there, the latest first, a row each (`YouTubeVideoRow.vue`: YouTube's
   thumbnail, its title, which opens it on YouTube, whether it's a Short or a stream, its length and date, who may see
   it, in the accent while it isn't public, with when it's scheduled, its episode, and a link to YouTube Studio), found
-  by title, episode or tag and filtered by kind (a video or a Short: YouTube's API doesn't say, so one of three minutes
-  or less that isn't a stream, `kindOf`), by who may see it and by having an episode or not, all in the address.
+  by title, episode or tag and filtered, in a row as the Events page's, by kind as chips (a video or a Short: YouTube's API doesn't say, so one of three minutes
+  or less that isn't a stream, `kindOf`), and in selects by who may see it and by having an episode or not, all in the address.
   Refresh looks at the channel now. On a row, Episode says whose it is, by its code, or no one's, and Edit changes its
   title, description and tags on YouTube, checked as MetaOS checks them (`detailsRefusal`), with a warning where the
   video isn't private; never who may see it. Above the videos, the uploads that are on, with Cancel, and the latest
