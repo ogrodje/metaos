@@ -45,6 +45,7 @@ const number = (n: number) => n.toLocaleString(dateLocale.value)
 // At the line's end, or under the name where they don't fit beside it, e.g. on phones
 .actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-self: center;
   margin-left: auto;

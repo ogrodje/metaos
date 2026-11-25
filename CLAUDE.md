@@ -279,6 +279,19 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   also gets the hidden ones, dimmed, and on each its region (`RegionSelect.vue`: Automatic, what its place or its
   organisation tells, or one chosen), Hide, Pick and Edit (Edit only for its own), Add event and Refresh; an
   organisation's form has its region too.
+- The events are a calendar to subscribe to too, `/dogodki.ics` (iCalendar, [`fe/src/calendar.ts`](fe/src/calendar.ts),
+  written by hand; `fe/server/routes/dogodki.ics.ts`, as the sitemap is): the upcoming events that aren't hidden, as
+  the API gives them to someone who isn't signed in, filtered as the page is (`?region=gorenjska&show=promoted`; a
+  region there isn't is a 400), in Slovenian only. Cloudflare keeps it a quarter of an hour (its own `Cache-Control`,
+  not in development); apps are asked to read it every hour, and Google Calendar does when it likes. An event is its
+  ID (`UID`, `<id>@ogrodje.si`), its times as instants in UTC, its place, its organiser, description and where it's
+  announced, and its page. One without a start time is its days in Ljubljana, whole, to its end's day, as the page
+  says them (`eventTimes`): ends are written several ways (the team's own at 23:59 of the last day, Katapult's at
+  midnight as it starts, the iCal scraper's 00:01 to 23:59), and all are that day; only a scraper's `onlyDays` end, the
+  day after the last, is a day too long, on the page too. An end without a time isn't made up: left out on the same
+  day, and days later the event is its days. Add to calendar in the page's heading opens it in the visitor's calendar
+  app (`webcal://`), the icon beside it copies its address, both with the page's region and picks, and the page names
+  it (`<link rel="alternate" type="text/calendar">`).
 - An event's page, `/dogodki/<ID>` (`EventView.vue`, OG-68), is anyone's, a past one's too, but a hidden one's,
   which is the team's and not found for anyone else, as one that isn't there: a workspace, its title with its
   organisation's badge, Featured and Past in its lead; in its panel when it is (its weekday and date in Ljubljana, and
