@@ -103,23 +103,33 @@ const instant = (at: Date) => `${at.toISOString().slice(0, 19).replace(/[-:]/g, 
 // A day (YYYY-MM-DD), e.g. 20261110
 const date = (day: string) => day.replace(/-/g, '')
 
+type Timed = Pick<CalendarEvent, 'start' | 'end' | 'hasStartTime' | 'hasEndTime'>
+
+/** When an event is: its days in Ljubljana, whole, to the day after its last, or its instants, with no end nobody gave */
+export type EventSpan = { allDay: true, firstDay: string, dayAfter: string } | { allDay: false, start: Date, end: Date | null }
+
 /**
- * When an event is, as DTSTART and DTEND. One with a time starts at that instant, and ends at its end's where that has
- * a time and is later: an end nobody gave isn't made up. One without a time is its days in Ljubljana, whole, to its
- * end's day, as the Events page says them (eventTime), which DTEND, the day after the last, has one later: the team's
- * own end at 23:59 of their last day and most scrapers' at some time of it. So is one that starts at a time and ends
- * days later without one, as calendars have no start at a time with an end on a day.
+ * When an event is, for the calendar and for the links that add it to one. One with a time starts at that instant, and
+ * ends at its end's where that has a time and is later: an end nobody gave isn't made up. One without a time is its
+ * days in Ljubljana, whole, to its end's day, as the Events page says them (eventTime): the team's own end at 23:59 of
+ * their last day and most scrapers' at some time of it. So is one that starts at a time and ends days later without
+ * one, as calendars have no start at a time with an end on a day.
  */
-export function eventTimes(event: Pick<CalendarEvent, 'start' | 'end' | 'hasStartTime' | 'hasEndTime'>): string[] {
+export function eventSpan(event: Timed): EventSpan {
   const firstDay = dayOf(event.start)
   const endDay = event.end ? dayOf(event.end) : firstDay
   const lastDay = endDay > firstDay ? endDay : firstDay
-  if (!event.hasStartTime || (!event.hasEndTime && lastDay > firstDay)) {
-    return [`DTSTART;VALUE=DATE:${date(firstDay)}`, `DTEND;VALUE=DATE:${date(nextDay(lastDay))}`]
-  }
+  if (!event.hasStartTime || (!event.hasEndTime && lastDay > firstDay)) return { allDay: true, firstDay, dayAfter: nextDay(lastDay) }
   const start = new Date(event.start)
   const end = event.end && event.hasEndTime ? new Date(event.end) : null
-  return [`DTSTART:${instant(start)}`, ...(end && end > start ? [`DTEND:${instant(end)}`] : [])]
+  return { allDay: false, start, end: end && end > start ? end : null }
+}
+
+/** When an event is, as DTSTART and DTEND (eventSpan); whole days end the day after their last, as DTEND has them */
+export function eventTimes(event: Timed): string[] {
+  const span = eventSpan(event)
+  if (span.allDay) return [`DTSTART;VALUE=DATE:${date(span.firstDay)}`, `DTEND;VALUE=DATE:${date(span.dayAfter)}`]
+  return [`DTSTART:${instant(span.start)}`, ...(span.end ? [`DTEND:${instant(span.end)}`] : [])]
 }
 
 /** What an event's description says: who it's by, what its organiser wrote of it, and where it's announced */
@@ -170,3 +180,89 @@ export function calendar(events: CalendarEvent[], options: CalendarOptions) {
     '',
   ].map(fold).join('\r\n')
 }
+
+// An event alone, added to a calendar rather than subscribed to: Google's, Outlook's and Yahoo's own pages that make
+// an event of what their address says, and a file of it (/dogodki.ics?event=), which the device's app opens.
+
+// How much of a description an address carries: the rest is on the event's page
+const LINK_DESCRIPTION = 1000
+
+function linkDescription(event: Pick<CalendarEvent, 'description' | 'url' | 'meetup'>) {
+  const text = eventDescription(event)
+  return text.length > LINK_DESCRIPTION ? `${text.slice(0, LINK_DESCRIPTION - 1).trimEnd()}…` : text
+}
+
+// An address with what it asks: nothing for what there's none of
+function withQuery(address: string, query: Record<string, string | null | undefined>) {
+  const params = Object.entries(query).filter((each): each is [string, string] => !!each[1])
+  return `${address}?${params.map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&')}`
+}
+
+/** Where Google Calendar makes an event of [event]; one with no end ends as it starts, as Google wants an end */
+export function googleEventUrl(event: CalendarEvent) {
+  const span = eventSpan(event)
+  return withQuery('https://calendar.google.com/calendar/render', {
+    action: 'TEMPLATE',
+    text: event.title,
+    dates: span.allDay ? `${date(span.firstDay)}/${date(span.dayAfter)}` : `${instant(span.start)}/${instant(span.end ?? span.start)}`,
+    details: linkDescription(event),
+    location: placeLine(event.place),
+  })
+}
+
+/** Where Outlook on the web makes an event of [event]: Microsoft 365's (office) or Outlook.com's (live) */
+export function outlookEventUrl(event: CalendarEvent, host: 'office' | 'live') {
+  const span = eventSpan(event)
+  const at = (instant: Date) => `${instant.toISOString().slice(0, 19)}Z`
+  return withQuery(`https://outlook.${host}.com/calendar/0/deeplink/compose`, {
+    path: '/calendar/action/compose',
+    rru: 'addevent',
+    subject: event.title,
+    startdt: span.allDay ? span.firstDay : at(span.start),
+    enddt: span.allDay ? span.dayAfter : at(span.end ?? span.start),
+    allday: span.allDay ? 'true' : null,
+    body: linkDescription(event),
+    location: placeLine(event.place),
+  })
+}
+
+/** Where Yahoo Calendar makes an event of [event] */
+export function yahooEventUrl(event: CalendarEvent) {
+  const span = eventSpan(event)
+  return withQuery('https://calendar.yahoo.com/', {
+    v: '60',
+    title: event.title,
+    st: span.allDay ? date(span.firstDay) : instant(span.start),
+    et: span.allDay ? date(span.dayAfter) : instant(span.end ?? span.start),
+    dur: span.allDay ? 'allday' : null,
+    desc: linkDescription(event),
+    in_loc: placeLine(event.place),
+  })
+}
+
+/** An event alone as a calendar file, which calendar apps add rather than subscribe to: /dogodki.ics?event=<ID> */
+export const eventFilePath = (event: Pick<CalendarEvent, 'id'>) => `/dogodki.ics?event=${encodeURIComponent(event.id)}`
+
+/** A way into a calendar, as Add to calendar lists them (CalendarMenu.vue): which, its address, and whether that's another site */
+export interface CalendarLink {
+  kind: 'google' | 'outlook365' | 'outlookCom' | 'yahoo' | 'app' | 'file'
+  href: string
+  external: boolean
+}
+
+/** The ways to subscribe to the calendar at [url], by [name]: Google's, Outlook on the web's two, and the device's app */
+export const subscribeLinks = (url: string, name: string): CalendarLink[] => [
+  { kind: 'google', href: googleCalendarUrl(url), external: true },
+  { kind: 'outlook365', href: outlookCalendarUrl(url, name, 'office'), external: true },
+  { kind: 'outlookCom', href: outlookCalendarUrl(url, name, 'live'), external: true },
+  { kind: 'app', href: webcalUrl(url), external: false },
+]
+
+/** The ways to add [event] alone to a calendar: Google's, Outlook on the web's two, Yahoo's, and its file */
+export const eventLinks = (event: CalendarEvent, siteUrl: string): CalendarLink[] => [
+  { kind: 'google', href: googleEventUrl(event), external: true },
+  { kind: 'outlook365', href: outlookEventUrl(event, 'office'), external: true },
+  { kind: 'outlookCom', href: outlookEventUrl(event, 'live'), external: true },
+  { kind: 'yahoo', href: yahooEventUrl(event), external: true },
+  { kind: 'file', href: siteUrl + eventFilePath(event), external: false },
+]

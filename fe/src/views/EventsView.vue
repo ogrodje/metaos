@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { I18nT } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
 import { useHead, useRuntimeConfig } from '#imports'
-import { calendarName, calendarPath, regionOf } from '@/calendar'
+import { calendarName, calendarPath, regionOf, subscribeLinks } from '@/calendar'
 import { keepUnchanged, useLiveRefresh } from '@/changes'
 import CalendarMenu from '@/components/CalendarMenu.vue'
 import ChipGroup from '@/components/ChipGroup.vue'
@@ -154,7 +154,7 @@ const picks = computed(() => (show.value === 'all' && !find.value.trim() ? picke
         <template #channel><strong>#🗓-dogodki</strong></template>
       </I18nT>
       <template #actions>
-        <CalendarMenu :url="calendarUrl" :name="calendarTitle"/>
+        <CalendarMenu :links="subscribeLinks(calendarUrl, calendarTitle)" :copy="calendarUrl"/>
         <template v-if="auth.team">
           <button type="button" class="button" :aria-disabled="refreshing || refreshStarting || undefined"
                   @click="startRefresh()">

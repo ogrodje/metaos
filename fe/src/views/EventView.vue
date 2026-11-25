@@ -3,7 +3,10 @@ import { faArrowUpRightFromSquare, faLocationDot } from '@fortawesome/free-solid
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
+import { useRuntimeConfig } from '#imports'
+import { eventLinks } from '@/calendar'
 import { keepUnchanged, useLiveRefresh } from '@/changes'
+import CalendarMenu from '@/components/CalendarMenu.vue'
 import Fact from '@/components/Fact.vue'
 import FactGroup from '@/components/FactGroup.vue'
 import FactPanel from '@/components/FactPanel.vue'
@@ -103,6 +106,13 @@ const map = computed(() => mapUrl(place.value))
 const over = computed(() => !!event.value && isPast(event.value, now.value))
 const text = computed(() => paragraphs(event.value?.description))
 
+// Add to calendar: this event alone, in whichever calendar (CalendarMenu.vue). Not one that's over, nor a hidden one,
+// whose file the calendar's address, which asks as someone not signed in, hasn't got
+const { siteUrl } = useRuntimeConfig().public
+const calendarLinks = computed(() => (event.value && !over.value && !event.value.hidden
+  ? eventLinks({ ...event.value, place: place.value }, siteUrl)
+  : null))
+
 // Who it's by: their logo, what they are, and where they're online, as SocialLinks shows a person's
 const organiser = computed(() => event.value?.organisation)
 const organiserLinks = computed(() => organiser.value && {
@@ -158,6 +168,7 @@ const organiserOnline = computed(() => !!organiserLinks.value && Object.entries(
           <a v-if="event.url" class="button primary announced" :href="event.url" target="_blank" rel="noopener">
             {{ t('event.announced') }}<FontAwesomeIcon class="external" :icon="faArrowUpRightFromSquare"/><span class="visually-hidden"> {{ t('events.newTab') }}</span>
           </a>
+          <CalendarMenu v-if="calendarLinks" class="to-calendar" :links="calendarLinks" align="left"/>
         </FactGroup>
 
         <FactGroup v-if="organiser" :title="t('event.organiser')">
@@ -260,6 +271,15 @@ dd a, .more a, a.name {
     width: 10px;
     height: 10px;
     margin-left: 8px;
+  }
+}
+
+// Add to calendar, under where it's announced: its links no wider than the panel, their lines broken where they are
+.to-calendar {
+  display: flex;
+
+  :deep(.links) {
+    max-width: 100%;
   }
 }
 

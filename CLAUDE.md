@@ -294,7 +294,9 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   Google Calendar's and Outlook on the web's own addresses that ask there to add it (`googleCalendarUrl`, and
   `outlookCalendarUrl`, Microsoft 365's and Outlook.com's apart, as each signs in only its own accounts), the app on
   the device (`webcal://`, Apple's or Outlook), or its address, copied; all with the page's region and picks, and the
-  page names it (`<link rel="alternate" type="text/calendar">`).
+  page names it (`<link rel="alternate" type="text/calendar">`). With `?event=<ID>` it's that event alone, a past one
+  too but not a hidden one, as a file an app adds rather than subscribes to (`attachment`; no filters with it, and one
+  that isn't there is a 404).
 - An event's page, `/dogodki/<ID>` (`EventView.vue`, OG-68), is anyone's, a past one's too, but a hidden one's,
   which is the team's and not found for anyone else, as one that isn't there: a workspace, its title with its
   organisation's badge, Featured and Past in its lead; in its panel when it is (its weekday and date in Ljubljana, and
@@ -303,7 +305,10 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   and where it's online; its name leads to its website, for the team to its page), and More from this organiser (`moreFromOrganiser`:
   up to three of its organisation's other events that aren't hidden, those still to come the soonest first, then the
   past ones, the latest first, each with its date and whether it's past); its description in the main column, its
-  paragraphs as written (`paragraphs`). The sitemap has the upcoming ones'. The Events page itself stays the upcoming
+  paragraphs as written (`paragraphs`). Under where it's announced, Add to calendar adds it alone, unless it's over or
+  hidden (`CalendarMenu.vue` with `eventLinks`): Google Calendar's, Outlook on the web's two and Yahoo's own pages that
+  make an event of what their address says (`googleEventUrl`, `outlookEventUrl`, `yahooEventUrl`: when it is as the
+  calendar has it, `eventSpan`, and the start of its description), or its file (`/dogodki.ics?event=<ID>`). The sitemap has the upcoming ones'. The Events page itself stays the upcoming
   ones.
 - The People page, `/people`, lists everyone by name (Slovenian order, past a "dr."), from the `people` query: who they
   are, and links to their website and social profiles (`PersonCard.vue`). The team first, under rules as the rest, with

@@ -496,10 +496,12 @@
       "copy": "Kopiraj povezavo do koledarja",
       "copyAddress": "Kopiraj naslov",
       "feed": "Dogodki kot koledar (iCalendar)",
+      "file": "Apple Koledar ali druga aplikacija (.ics)",
       "google": "Google Koledar",
       "outlook365": "Outlook 365 (službeni ali šolski račun)",
       "outlookCom": "Outlook.com (osebni račun: Hotmail, Live)",
-      "where": "V kateri koledar"
+      "where": "V kateri koledar",
+      "yahoo": "Yahoo Koledar"
     },
     "description": "Tehnološki, razvijalski in startup dogodki ter konference v Sloveniji, ki jih spremlja Ogrodje, po tednih.",
     "disclaimer": "Dogodke in konference Ogrodje MetaOS zbira z javnih strani in koledarjev organizatorjev, zato preverite podatke na njihovih straneh. Ogrodje ni organizator dogodkov in ne jamči za točnost zbranih podatkov.",
@@ -1262,7 +1264,7 @@
       "list_episode_people": "Ljudje na epizodi in njihove vloge",
       "list_episode_supporters": "Organizacije, ki so podprle epizodo",
       "list_episodes": "Seznam epizod, najnovejše najprej, po želji le tistih z določenim stanjem",
-      "list_events": "Prihajajoči dogodki, ene organizacije ali vseh, na željo tudi skriti ali le ene regije. Javni so brez prijave tudi kot koledar za naročnino (iCalendar) na /dogodki.ics, s parametroma region (npr. gorenjska) in show=promoted",
+      "list_events": "Prihajajoči dogodki, ene organizacije ali vseh, na željo tudi skriti ali le ene regije. Javni so brez prijave tudi kot koledar za naročnino (iCalendar) na /dogodki.ics, s parametri region (npr. gorenjska), show=promoted ali event=ID za en sam dogodek",
       "list_koofr_folder": "Kaj je v mapi",
       "list_koofr_places": "Mape, ki jih z botom Ogrodja delijo drugi, in ali jih sme spreminjati",
       "list_organisations": "Seznam vseh organizacij po imenu, le današnjih podpornikov in partnerjev ali arhiviranih",

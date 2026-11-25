@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
-  calendar, type CalendarEvent, calendarName, calendarPath, escapeText, eventDescription, eventTimes, fold, googleCalendarUrl,
-  outlookCalendarUrl, regionOf, webcalUrl,
+  calendar, type CalendarEvent, calendarName, calendarPath, escapeText, eventDescription, eventFilePath, eventLinks, eventSpan,
+  eventTimes, fold, googleCalendarUrl, googleEventUrl, outlookCalendarUrl, outlookEventUrl, regionOf, subscribeLinks, webcalUrl,
+  yahooEventUrl,
 } from '@/calendar'
 import { inRegion, REGIONS } from '@/events'
 
@@ -214,5 +215,97 @@ describe('the address and its filters', () => {
     expect(calendarName(null, 'all', name)).toBe('Ogrodje – dogodki')
     expect(calendarName('GORENJSKA', 'all', name)).toBe('Ogrodje – dogodki (gorenjska)')
     expect(calendarName('ONLINE', 'promoted', name)).toBe('Ogrodje – dogodki (online, izpostavljeni)')
+  })
+})
+
+describe('an event alone', () => {
+  const params = (url: string) => Object.fromEntries(new URL(url).searchParams)
+  const timed = event({
+    title: 'Žur & pol; pri nas',
+    description: 'Prva vrstica\nDruga',
+    place: { name: 'Računalniški muzej', address: 'Celovška cesta 111, 1000 Ljubljana' },
+    meetup: { name: 'Ogrodje' },
+  })
+  const days = event({ start: '2026-11-25T23:00:00Z', end: '2026-11-27T23:00:00Z', hasStartTime: false, hasEndTime: false, url: null })
+  const noEnd = event({ end: null, hasEndTime: false })
+
+  it('is when the calendar says it is', () => {
+    expect(eventSpan(timed)).toEqual({ allDay: false, start: new Date('2026-11-10T17:00:00Z'), end: new Date('2026-11-10T19:00:00Z') })
+    expect(eventSpan(noEnd)).toEqual({ allDay: false, start: new Date('2026-11-10T17:00:00Z'), end: null })
+    expect(eventSpan(days)).toEqual({ allDay: true, firstDay: '2026-11-26', dayAfter: '2026-11-29' })
+  })
+
+  it('is made by Google Calendar from its address', () => {
+    const url = googleEventUrl(timed)
+    expect(url.startsWith('https://calendar.google.com/calendar/render?action=TEMPLATE&')).toBe(true)
+    expect(params(url)).toEqual({
+      action: 'TEMPLATE',
+      text: 'Žur & pol; pri nas',
+      dates: '20261110T170000Z/20261110T190000Z',
+      details: 'Organizator: Ogrodje\n\nPrva vrstica\nDruga\n\nVeč o dogodku: https://example.org/srecanje',
+      location: 'Računalniški muzej, Celovška cesta 111, 1000 Ljubljana',
+    })
+    // Whole days, to the day after the last; nothing for what there's none of
+    expect(params(googleEventUrl(days))).toEqual({ action: 'TEMPLATE', text: 'Srečanje', dates: '20261126/20261129' })
+    // Google wants an end: as it starts, not one made up
+    expect(params(googleEventUrl(noEnd)).dates).toBe('20261110T170000Z/20261110T170000Z')
+  })
+
+  it('is made by Outlook on the web, Microsoft 365\'s or Outlook.com\'s', () => {
+    const office = new URL(outlookEventUrl(timed, 'office'))
+    expect(office.origin + office.pathname).toBe('https://outlook.office.com/calendar/0/deeplink/compose')
+    expect(params(office.href)).toEqual({
+      path: '/calendar/action/compose',
+      rru: 'addevent',
+      subject: 'Žur & pol; pri nas',
+      startdt: '2026-11-10T17:00:00Z',
+      enddt: '2026-11-10T19:00:00Z',
+      body: 'Organizator: Ogrodje\n\nPrva vrstica\nDruga\n\nVeč o dogodku: https://example.org/srecanje',
+      location: 'Računalniški muzej, Celovška cesta 111, 1000 Ljubljana',
+    })
+    const live = new URL(outlookEventUrl(timed, 'live'))
+    expect(live.origin + live.pathname).toBe('https://outlook.live.com/calendar/0/deeplink/compose')
+    expect(live.search).toBe(office.search)
+    expect(params(outlookEventUrl(days, 'office'))).toMatchObject({ startdt: '2026-11-26', enddt: '2026-11-29', allday: 'true' })
+    expect(params(outlookEventUrl(noEnd, 'live'))).toMatchObject({ startdt: '2026-11-10T17:00:00Z', enddt: '2026-11-10T17:00:00Z' })
+  })
+
+  it('is made by Yahoo Calendar', () => {
+    expect(params(yahooEventUrl(timed))).toMatchObject({
+      v: '60', title: 'Žur & pol; pri nas', st: '20261110T170000Z', et: '20261110T190000Z',
+      in_loc: 'Računalniški muzej, Celovška cesta 111, 1000 Ljubljana',
+    })
+    expect(params(yahooEventUrl(timed)).dur).toBeUndefined()
+    expect(params(yahooEventUrl(days))).toEqual({ v: '60', title: 'Srečanje', st: '20261126', et: '20261129', dur: 'allday' })
+  })
+
+  it('carries only the start of a long description, as an address is only so long', () => {
+    const long = event({ description: 'šč '.repeat(2000), url: null })
+    const { details } = params(googleEventUrl(long))
+    expect(details!.length).toBeLessThanOrEqual(1000)
+    expect(details!.length).toBeGreaterThan(990)
+    expect(details!.endsWith('…')).toBe(true)
+    expect(params(outlookEventUrl(long, 'office')).body).toBe(details)
+    expect(params(yahooEventUrl(long)).desc).toBe(details)
+  })
+
+  it('is a file of its own, by its ID', () => {
+    expect(eventFilePath(timed)).toBe('/dogodki.ics?event=4f6c2a1e-0000-4000-8000-000000000001')
+  })
+})
+
+describe('the ways into a calendar', () => {
+  it('subscribes Google\'s, Outlook\'s two and the device\'s app', () => {
+    const links = subscribeLinks('https://ogrodje.si/dogodki.ics', 'Ogrodje – dogodki')
+    expect(links.map((each) => [each.kind, each.external])).toEqual([['google', true], ['outlook365', true], ['outlookCom', true], ['app', false]])
+    expect(links[0]!.href).toBe(googleCalendarUrl('https://ogrodje.si/dogodki.ics'))
+    expect(links[3]!.href).toBe('webcal://ogrodje.si/dogodki.ics')
+  })
+
+  it('adds an event alone to Google\'s, Outlook\'s two, Yahoo\'s, or as its file at the site', () => {
+    const links = eventLinks(event(), 'https://ogrodje.si')
+    expect(links.map((each) => [each.kind, each.external]))
+      .toEqual([['google', true], ['outlook365', true], ['outlookCom', true], ['yahoo', true], ['file', false]])
+    expect(links[4]!.href).toBe('https://ogrodje.si/dogodki.ics?event=4f6c2a1e-0000-4000-8000-000000000001')
   })
 })
