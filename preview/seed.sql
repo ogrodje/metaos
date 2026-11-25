@@ -142,4 +142,33 @@ INSERT INTO event_scrapes (organisation_id, field, url, source, scraped_at, even
   ('0a000000-0000-4000-8000-000000000002', 'ICAL', 'https://example.com/hekerji/cal.ics', NULL, now() - interval '20 minutes', 0,
    'https://example.com/hekerji/cal.ics answered 503');
 
+-- The YouTube channel as a look at it would have left it (a preview has no token, so it never looks): the released
+-- episodes' videos, two Shorts, a stream, and a private upload that's still to be published; and how uploads went
+INSERT INTO youtube_videos (id, video_id, channel_id, title, description, tags, privacy, upload_status, publish_at,
+                            published_at, duration, live, episode_id, episode_manual) VALUES
+  ('7b000000-0000-4000-8000-000000000001', 'example0001', 'UCpreview', 'Kako začeti z zagonskim podjetjem',
+   'Peter pove, kako je začel, kaj bi danes naredil drugače in zakaj je prvi produkt zavrgel.', '{ogrodje,startup}',
+   'PUBLIC', 'processed', NULL, now() - interval '180 days', 5412, false, 'e0000000-0000-4000-8000-000000000001', false),
+  ('7b000000-0000-4000-8000-000000000002', 'example0002', 'UCpreview', 'Porazdeljeni sistemi brez bolečin',
+   'Ana razloži, kaj je konsenz, zakaj so ure lažnive in kdaj potrebujete Raft.', '{ogrodje,"porazdeljeni sistemi"}',
+   'PUBLIC', 'processed', NULL, now() - interval '100 days', 6120, false, 'e0000000-0000-4000-8000-000000000002', false),
+  ('7b000000-0000-4000-8000-000000000003', 'example0003', 'UCpreview', 'Zakaj so ure lažnive #ogrodje', '', '{}',
+   'PUBLIC', 'processed', NULL, now() - interval '95 days', 38, false, NULL, false),
+  ('7b000000-0000-4000-8000-000000000004', 'example0004', 'UCpreview', 'Prvi produkt smo zavrgli #ogrodje', '', '{}',
+   'PUBLIC', 'processed', NULL, now() - interval '170 days', 24, false, NULL, false),
+  ('7b000000-0000-4000-8000-000000000005', 'example0005', 'UCpreview', 'Ogrodje v živo: vprašanja in odgovori', '', '{}',
+   'UNLISTED', 'processed', NULL, now() - interval '60 days', 7360, true, NULL, false),
+  ('7b000000-0000-4000-8000-000000000006', 'example0006', 'UCpreview', 'Platform teams that people like',
+   'Sara on building an internal platform that teams choose rather than put up with.', '{}',
+   'PRIVATE', 'processed', now() + interval '3 days', now() - interval '2 days', 4480, false, 'e0000000-0000-4000-8000-000000000003', false);
+
+INSERT INTO youtube_uploads (id, episode_id, media_id, media_name, title, status, percent, error, video_id, workflow_id,
+                             requester, created_at, started_at, finished_at) VALUES
+  ('7c000000-0000-4000-8000-000000000001', 'e0000000-0000-4000-8000-000000000003', '7d000000-0000-4000-8000-000000000001',
+   'S02E01.mp4', 'Platform teams that people like', 'DONE', NULL, NULL, 'example0006',
+   'youtube-upload-7d000000-0000-4000-8000-000000000001', 'dev', now() - interval '2 days', now() - interval '2 days', now() - interval '2 days' + interval '14 minutes'),
+  ('7c000000-0000-4000-8000-000000000002', 'e0000000-0000-4000-8000-000000000002', '7d000000-0000-4000-8000-000000000002',
+   'S01E02 BONUS.mp4', 'Konsenz za vsakogar (bonus)', 'FAILED', NULL, 'YouTube turned it down as a duplicate of a video on the channel', NULL,
+   'youtube-upload-7d000000-0000-4000-8000-000000000002', 'dev', now() - interval '5 days', now() - interval '5 days', now() - interval '5 days' + interval '3 minutes');
+
 COMMIT;

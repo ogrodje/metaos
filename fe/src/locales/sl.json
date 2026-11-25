@@ -145,6 +145,76 @@
     "refreshFailed": "prijave pri Keycloaku ni bilo mogoče osvežiti; poskusite znova čez trenutek",
     "signInWith": "Prijava z računom {provider}"
   },
+  "channel": {
+    "about": "Videi na Ogrodjevem kanalu na YouTubu, kot jih pozna MetaOS, ki kanal pogleda vsako uro.",
+    "aboutChannel": "Videi na kanalu {channel}, kot jih pozna MetaOS, ki kanal pogleda vsako uro. Objavljajo se v YouTube Studiu.",
+    "edit": {
+      "brackets": "Naslov in opis ne smeta vsebovati znakov < in >",
+      "descriptionHint": "Golo besedilo, do 5.000 bajtov. Poglavja so vrstice oblike 0:00 Naslov.",
+      "form": "Uredi video {title}",
+      "longDescription": "Opis ima lahko največ {max} bajtov",
+      "longTags": "Oznake imajo lahko skupaj največ {max} znakov",
+      "longTitle": "Naslov ima lahko največ {max} znakov",
+      "noTitle": "Video potrebuje naslov",
+      "saving": "Shranjujemo …",
+      "seen": "Video ni zaseben: spremembo takoj vidijo vsi, ki ga lahko gledajo.",
+      "tags": "Oznake",
+      "tagsHint": "Ločene z vejicami, skupaj do 500 znakov."
+    },
+    "episode": {
+      "button": "Epizoda",
+      "clear": "Ni od nobene epizode",
+      "code": "Koda epizode",
+      "form": "Epizoda videa {title}",
+      "hint": "MetaOS video sam poveže z epizodo, katere povezava na YouTube je. Kar določite tukaj, ostane."
+    },
+    "filter": {
+      "episode": {
+        "all": "Z epizodo ali brez",
+        "with": "Z epizodo",
+        "without": "Brez epizode"
+      },
+      "episodeLabel": "Epizoda",
+      "find": "Iščite po naslovu, epizodi ali oznaki",
+      "kind": {
+        "all": "Vse",
+        "short": "Shorts",
+        "video": "Videi"
+      },
+      "kindLabel": "Vrsta",
+      "privacy": {
+        "all": "Vsaka vidnost",
+        "private": "Zasebni",
+        "public": "Javni",
+        "unlisted": "Nenavedeni"
+      },
+      "privacyLabel": "Vidnost"
+    },
+    "kind": {
+      "live": "Prenos v živo",
+      "short": "Short"
+    },
+    "loading": "Nalagamo videe",
+    "noEpisode": "Brez epizode",
+    "noMatch": "Noben video ne ustreza iskanju",
+    "none": "MetaOS na kanalu še ni našel nobenega videa. Poskusite z gumbom Osveži.",
+    "noneNotConnected": "MetaOS ne pozna nobenega videa, ker ni povezan s kanalom.",
+    "notConnected": "MetaOS ni povezan s kanalom na YouTubu, zato so videi takšni, kot so bili ob zadnjem pogledu.",
+    "notConnectedWhy": "MetaOS ne pride do kanala na YouTubu: {error}",
+    "refresh": "Osveži",
+    "refreshFailed": "Kanala ni bilo mogoče pogledati: {error}",
+    "refreshing": "Gledamo kanal …",
+    "scheduled": "Objava {day}",
+    "signIn": {
+      "text": "Kanal na YouTubu je za ekipo Ogrodja. Prijavite se z Discordom ali Googlom ali pa MetaOS uporabljajte prek MCP v svojem asistentu AI: {usage} pokaže, kako ga povežete.",
+      "title": "Prijavite se za ogled kanala na YouTubu"
+    },
+    "teamOnly": "Kanal na YouTubu je za ekipo Ogrodja.",
+    "uploadStatus": "YouTube: {status}",
+    "uploads": "Pošiljanja",
+    "uploadsNote": "Videi se pošiljajo s strani epizode, vedno kot zasebni.",
+    "what": "Kanal na YouTubu"
+  },
   "comments": {
     "commented": "napisano {date}",
     "confirmDelete": "Želite izbrisati ta komentar?",
@@ -737,7 +807,8 @@
     "main": "Glavno",
     "organisations": "Organizacije",
     "people": "Ljudje",
-    "transcriptions": "Prepisi"
+    "transcriptions": "Prepisi",
+    "youtube": "YouTube"
   },
   "organisation": {
     "about": "O organizaciji {name}",
@@ -858,7 +929,8 @@
     "search": "Iskanje",
     "session": "Snemanje",
     "transcriptions": "Prepisi",
-    "usage": "Uporaba API-ja in MCP"
+    "usage": "Uporaba API-ja in MCP",
+    "youtube": "YouTube"
   },
   "people": {
     "andMore": "in še {n}",
