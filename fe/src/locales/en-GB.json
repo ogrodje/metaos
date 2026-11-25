@@ -145,6 +145,76 @@
     "refreshFailed": "couldn't refresh the sign-in with Keycloak; try again in a moment",
     "signInWith": "Sign in with {provider}"
   },
+  "channel": {
+    "about": "The videos on Ogrodje's YouTube channel, as MetaOS knows them; it looks at the channel every hour.",
+    "aboutChannel": "The videos on {channel}, as MetaOS knows them; it looks at the channel every hour. They're published in YouTube Studio.",
+    "edit": {
+      "brackets": "A title and a description can't have < or >",
+      "descriptionHint": "Plain text, up to 5,000 bytes. Chapters are lines of 0:00 Title.",
+      "form": "Edit the video {title}",
+      "longDescription": "A description is at most {max} bytes",
+      "longTags": "Tags are at most {max} characters in all",
+      "longTitle": "A title is at most {max} characters",
+      "noTitle": "A video needs a title",
+      "saving": "Saving…",
+      "seen": "This video isn't private: everyone who may watch it sees the change at once.",
+      "tags": "Tags",
+      "tagsHint": "With commas between them, up to 500 characters in all."
+    },
+    "episode": {
+      "button": "Episode",
+      "clear": "No episode's",
+      "code": "The episode's code",
+      "form": "The episode of the video {title}",
+      "hint": "MetaOS matches a video to the episode whose YouTube link it is. What you say here stays."
+    },
+    "filter": {
+      "episode": {
+        "all": "With or without",
+        "with": "With an episode",
+        "without": "Without an episode"
+      },
+      "episodeLabel": "Episode",
+      "find": "Find by title, episode or tag",
+      "kind": {
+        "all": "All",
+        "short": "Shorts",
+        "video": "Videos"
+      },
+      "kindLabel": "Kind",
+      "privacy": {
+        "all": "Any visibility",
+        "private": "Private",
+        "public": "Public",
+        "unlisted": "Unlisted"
+      },
+      "privacyLabel": "Visibility"
+    },
+    "kind": {
+      "live": "Live stream",
+      "short": "Short"
+    },
+    "loading": "Loading the videos",
+    "noEpisode": "No episode",
+    "noMatch": "No videos match",
+    "none": "MetaOS hasn't found a video on the channel yet. Try Refresh.",
+    "noneNotConnected": "MetaOS knows no videos, as it isn't connected to the channel.",
+    "notConnected": "MetaOS isn't connected to the YouTube channel, so the videos are as they were when it last looked.",
+    "notConnectedWhy": "MetaOS can't reach the YouTube channel: {error}",
+    "refresh": "Refresh",
+    "refreshFailed": "The channel couldn't be looked at: {error}",
+    "refreshing": "Looking at the channel…",
+    "scheduled": "Goes public {day}",
+    "signIn": {
+      "text": "The YouTube channel is for Ogrodje's team. Sign in with Discord or Google, or use MetaOS from your AI assistant over MCP: {usage} shows how to connect it.",
+      "title": "Sign in to see the YouTube channel"
+    },
+    "teamOnly": "The YouTube channel is for Ogrodje's team.",
+    "uploadStatus": "YouTube: {status}",
+    "uploads": "Sync",
+    "uploadsNote": "Videos are sent from an episode's page, always as private ones.",
+    "what": "The YouTube channel"
+  },
   "comments": {
     "commented": "commented {date}",
     "confirmDelete": "Delete this comment?",
@@ -737,7 +807,8 @@
     "main": "Main",
     "organisations": "Organisations",
     "people": "People",
-    "transcriptions": "Transcriptions"
+    "transcriptions": "Transcriptions",
+    "youtube": "YouTube"
   },
   "organisation": {
     "about": "About {name}",
@@ -858,7 +929,8 @@
     "search": "Search",
     "session": "Recording session",
     "transcriptions": "Transcriptions",
-    "usage": "API and MCP usage"
+    "usage": "API and MCP usage",
+    "youtube": "YouTube"
   },
   "people": {
     "andMore": "and {n} more",

@@ -120,7 +120,7 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   dates are in the page's language and in Ogrodje's time zone (`dateLocale`, `TIME_ZONE`), whatever the browser's; and
   `navigator`, `location`, `document` and storage are read in `onMounted` or handlers only. Nothing may write
   module-level state on the server, which every request shares (`pageName` in `title.ts` is the browser's only).
-- The team's pages, `/ideas`, `/sessions/**`, `/search`, `/transcriptions` and `/organizacije/**`, render in the browser only
+- The team's pages, `/ideas`, `/sessions/**`, `/search`, `/transcriptions`, `/youtube` and `/organizacije/**`, render in the browser only
   (`ssr: false`), with `no-store` and `noindex`. Members who aren't staff see what everyone does, with a note on those
   pages.
 - A page from a cache that's over 30 s old loads its data again once it's shown
@@ -161,7 +161,7 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   (`UserMenu.vue`: your initials, which open your name, your page, your sign-ins (see Accounts) and Sign out; or
   Sign in, which asks Discord or Google); on narrower screens the tabs go to a row of their own under them. The tabs
   are in the order they're used (`pages`), and scroll sideways when they don't fit: Home, Episodes, Ideas (the team's),
-  People, Organisations (the team's), Events and Transcriptions (the team's). A
+  People, Organisations (the team's), Events, Transcriptions and YouTube (the team's both). A
   new section, e.g. Partners or Analytics, is another tab there. A tab is
   underlined on its own pages too, Episodes on an episode's. "API and MCP usage" isn't a tab: the footer links to it,
   as do the sign-in prompts, and to the privacy policy. The user menu is a button that shows and hides its links, not an ARIA menu.
@@ -1165,7 +1165,18 @@ audio, is to build on this: a clip is one more of the episode's video files, whi
 - On the front-end ([`fe/src/youtube.ts`](fe/src/youtube.ts)), Video and audio on an episode's page (`MediaList.vue`)
   says of each video file what YouTube has of it (the videos sent from it, with who may see them and a link to YouTube
   Studio; an upload that's on, with Cancel, or failed, with why), and has Send to YouTube, which asks for a title and
-  a description on its row, each the episode's own when left empty. There's no page of the channel's videos yet.
+  a description on its row, each the episode's own when left empty.
+- The YouTube page (`/youtube`, the team's, a tab; `YouTubeView.vue`, [`fe/src/youtubeChannel.ts`](fe/src/youtubeChannel.ts),
+  OG-87) is the channel: every video MetaOS knows there, the latest first, a row each (`YouTubeVideoRow.vue`: YouTube's
+  thumbnail, its title, which opens it on YouTube, whether it's a Short or a stream, its length and date, who may see
+  it, in the accent while it isn't public, with when it's scheduled, its episode, and a link to YouTube Studio), found
+  by title, episode or tag and filtered by kind (a video or a Short: YouTube's API doesn't say, so one of three minutes
+  or less that isn't a stream, `kindOf`), by who may see it and by having an episode or not, all in the address.
+  Refresh looks at the channel now. On a row, Episode says whose it is, by its code, or no one's, and Edit changes its
+  title, description and tags on YouTube, checked as MetaOS checks them (`detailsRefusal`), with a warning where the
+  video isn't private; never who may see it. Above the videos, the uploads that are on, with Cancel, and the latest
+  five that ended (`YouTubeUploadRow.vue`); videos are still sent from an episode's page. The preview's seed has a
+  made-up channel, as a preview never looks at YouTube.
 - The `youtube` health check asks for the channel every hour, and reports a token that no longer works, or is for
   another channel, there, in `metaos_youtube_connected` and in the log.
 - `YouTubeClientTest` runs the client against a stand-in API; `YouTubeTest` the rules and both workflows in Temporal's

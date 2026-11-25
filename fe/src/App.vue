@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {computed, nextTick, ref, watch} from 'vue'
 import {RouterLink, useRoute, useRouter} from 'vue-router'
-import {faDiscord, faGithub} from '@fortawesome/free-brands-svg-icons'
+import {faDiscord, faGithub, faYoutube} from '@fortawesome/free-brands-svg-icons'
 import {
   faBuilding, faCalendarDays, faClosedCaptioning, faHouse, faLightbulb, faMicrophone, faUserGroup,
 } from '@fortawesome/free-solid-svg-icons'
@@ -105,6 +105,7 @@ const pages = computed(() => [
   {key: 'organisations', to: path(ORGANISATIONS_PATH), title: t('nav.organisations'), icon: faBuilding, team: true},
   {key: 'events', to: path('/dogodki'), title: t('nav.events'), icon: faCalendarDays},
   {key: 'transcriptions', to: path('/transcriptions'), title: t('nav.transcriptions'), icon: faClosedCaptioning, team: true},
+  {key: 'youtube', to: path('/youtube'), title: t('nav.youtube'), icon: faYoutube, team: true},
 ].filter((page) => !page.team || auth.likelyTeam))
 
 // The home page has the supporters large; the others in the footer

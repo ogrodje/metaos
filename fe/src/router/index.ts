@@ -96,6 +96,13 @@ const pages: RouteRecordRaw[] = [
     meta: { title: 'pages.transcriptions' },
     component: () => import('../views/TranscriptionsView.vue'),
   },
+  // Ogrodje's YouTube channel: its videos, whose they are, and the uploads of episodes' files, behind sign-in
+  {
+    path: '/youtube',
+    name: 'youtube',
+    meta: { title: 'pages.youtube' },
+    component: () => import('../views/YouTubeView.vue'),
+  },
   // An episode's page, by its code, or its ID while it has none: for anyone not signed in, a released one's, without
   // what's the team's; a session's page, behind sign-in
   {

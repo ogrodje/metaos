@@ -10,6 +10,7 @@ export default defineEventHandler((event) => {
     'User-agent: *',
     'Disallow: /ideas',
     'Disallow: /transcriptions',
+    'Disallow: /youtube',
     'Disallow: /search',
     'Disallow: /sessions/',
     'Disallow: /organizacije',
