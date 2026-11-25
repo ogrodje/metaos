@@ -23,6 +23,8 @@ const props = withDefaults(defineProps<{
   episode?: string
   videos?: YouTubeVideo[]
   uploads?: YouTubeUpload[]
+  // What's left to add in YouTube Studio for the episode's A/B test (abTestLine), said under its full video's videos
+  test?: string | null
 }>(), { videos: () => [], uploads: () => [] })
 
 const emit = defineEmits<{
@@ -162,6 +164,9 @@ async function remove(file: MediaFile) {
               <span v-for="video in youtube(file).videos" :key="video.id" class="youtube">
                 <FontAwesomeIcon :icon="faYoutube"/>{{ t('youtube.on') }} · {{ privacyName(video.privacy, t) }} ·
                 <a :href="video.studioUrl" target="_blank" rel="noopener">{{ t('youtube.studio') }}<FontAwesomeIcon class="external" :icon="faArrowUpRightFromSquare"/></a>
+              </span>
+              <span v-if="test && group.full && youtube(file).videos.length" class="youtube test">
+                {{ test }} <a href="#pictures">{{ t('youtube.test.pictures') }}</a>
               </span>
               <span v-if="youtube(file).upload" class="youtube" :class="{ failed: youtube(file).upload!.status === 'FAILED' }" role="status">
                 <FontAwesomeIcon :icon="faYoutube"/>{{ uploadLine(youtube(file).upload!, t) }}

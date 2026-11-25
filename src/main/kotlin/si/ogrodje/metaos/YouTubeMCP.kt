@@ -139,7 +139,9 @@ class YouTubeMCP(
             "full video gets its thumbnail by default). An episode's video takes a while, one upload at a time; it " +
             "answers at once with the upload, which get_youtube_upload follows: QUEUED, UPLOADING (with how much is " +
             "sent), PROCESSING (it's on YouTube, with its videoId and its page in Studio), DONE, FAILED or CANCELLED. A " +
-            "file that MetaOS sent already isn't sent again, unless again is set"
+            "file that MetaOS sent already isn't sent again, unless again is set. YouTube's A/B tests of titles and " +
+            "thumbnails are set up in YouTube Studio alone, not through its API: the video goes up with one title and " +
+            "one thumbnail (A, by default), and a person adds the episode's titles and thumbnails B and C to the test there"
     )
     fun uploadYouTubeVideo(
         @McpToolParam(description = EPISODE_REF) code: String,
@@ -217,7 +219,9 @@ class YouTubeMCP(
         description = "Change what one of the channel's videos says about itself on YouTube: its title, description " +
             "(e.g. to add chapters, as lines of 0:00 Title) or tags, each replaced whole, those left out staying as they " +
             "are; on a public video, everyone sees the change at once. And whose it is in MetaOS (code), which the " +
-            "hourly look at the channel then leaves. It never changes who may see the video, and never deletes it"
+            "hourly look at the channel then leaves. It never changes who may see the video, and never deletes it. " +
+            "Changing the title of a video that has an A/B test of titles on in YouTube Studio stops the test, which " +
+            "the API can't say is on: ask before changing a title that may be tested; its description and tags don't stop it"
     )
     fun updateYouTubeVideo(
         @McpToolParam(description = VIDEO_REF) video: String,
@@ -240,7 +244,9 @@ class YouTubeMCP(
         ),
         description = "Give one of the channel's videos one of its episode's pictures in MetaOS as its thumbnail on " +
             "YouTube: its thumbnail, or thumbnail B or C, the ones its titles are A/B tested with (list_episode_images). " +
-            "On a public video, everyone sees it at once. YouTube takes custom thumbnails only on a verified channel"
+            "On a public video, everyone sees it at once. YouTube takes custom thumbnails only on a verified channel. " +
+            "Changing the thumbnail of a video that has an A/B test of thumbnails on in YouTube Studio stops the test, " +
+            "which the API can't say is on, and can't start either: ask before changing one that may be tested"
     )
     fun setYouTubeVideoThumbnail(
         @McpToolParam(description = VIDEO_REF) video: String,

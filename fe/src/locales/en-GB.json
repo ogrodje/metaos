@@ -159,7 +159,8 @@
       "saving": "Saving…",
       "seen": "This video isn't private: everyone who may watch it sees the change at once.",
       "tags": "Tags",
-      "tagsHint": "With commas between them, up to 500 characters in all."
+      "tagsHint": "With commas between them, up to 500 characters in all.",
+      "titleHint": "If an A/B test of titles is on for the video, changing its title stops it. The description and tags don't."
     },
     "episode": {
       "button": "Episode",
@@ -1636,6 +1637,12 @@
     "sending": "Starting…",
     "start": "Send",
     "studio": "Open in YouTube Studio",
+    "test": {
+      "line": "Someone sets up the A/B test in YouTube Studio, adding: {what}.",
+      "pictures": "Titles and thumbnails",
+      "thumbnail": "thumbnail {letter}",
+      "title": "title {letter}"
+    },
     "title": "Title",
     "titleHint": "Left empty, it's the episode's title. Up to 100 characters.",
     "upload": {

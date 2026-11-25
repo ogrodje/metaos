@@ -159,7 +159,8 @@
       "saving": "Shranjujemo …",
       "seen": "Video ni zaseben: spremembo takoj vidijo vsi, ki ga lahko gledajo.",
       "tags": "Oznake",
-      "tagsHint": "Ločene z vejicami, skupaj do 500 znakov."
+      "tagsHint": "Ločene z vejicami, skupaj do 500 znakov.",
+      "titleHint": "Če na videu teče A/B test naslovov, ga sprememba naslova ustavi. Opis in oznake ga ne."
     },
     "episode": {
       "button": "Epizoda",
@@ -1636,6 +1637,12 @@
     "sending": "Začenjanje …",
     "start": "Pošlji",
     "studio": "Odpri v YouTube Studiu",
+    "test": {
+      "line": "A/B test nastavi nekdo v YouTube Studiu, kjer doda: {what}.",
+      "pictures": "Naslovi in sličice",
+      "thumbnail": "sličico {letter}",
+      "title": "naslov {letter}"
+    },
     "title": "Naslov",
     "titleHint": "Če ostane prazen, je to naslov epizode. Do 100 znakov.",
     "upload": {
