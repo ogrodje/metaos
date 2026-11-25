@@ -288,10 +288,13 @@ class YouTubeVideos(
         val video = find(ref)
         require(video.goneAt == null) { "\"${video.title}\" is no longer on the channel" }
         require(title != null || description != null || tags != null) { "Say what to change: its title, description or tags" }
+        // What's left out stays as YouTube has it now, not as it was at the last look at the channel: a snippet is
+        // replaced whole, and a title other than the video's stops an A/B test of titles that's on for it in Studio
+        val now = youtube().videos(listOf(video.videoId)).firstOrNull { it.id == video.videoId }
         val details = YouTubeDetails(
-            title = youtubeTitle(title ?: video.title),
-            description = youtubeDescription(description ?: video.description),
-            tags = youtubeTags(tags ?: video.tags.toList()),
+            title = youtubeTitle(title ?: now?.title ?: video.title),
+            description = youtubeDescription(description ?: now?.description ?: video.description),
+            tags = youtubeTags(tags ?: now?.tags ?: video.tags.toList()),
         )
         return keep(youtube().update(video.videoId, details)) {}
     }

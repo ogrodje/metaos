@@ -17,6 +17,7 @@ import { type DropboxPicture, type EpisodeDetails, isRecorded, type KoofrPhoto, 
 import { type MediaKind, mediaParts } from '@/media'
 import { transcriptsLine } from '@/transcriptions'
 import { useLocale } from '@/useLocale'
+import { abTestLine } from '@/youtube'
 
 // What the episode is made of, at the end of its page and the team's only: its transcript, its pictures, and its video
 // and audio, each folded to a line that says what there is and what's missing, until it's wanted. Each once there's
@@ -149,6 +150,7 @@ function upload(kind?: MediaKind) {
       </summary>
       <div class="inside">
         <MediaList :media="episode.media" :episode="episode.id" :videos="episode.youtubeVideos" :uploads="episode.youtubeUploads"
+                   :test="abTestLine(episode, t)"
                    @upload="upload" @changed="emit('changed')"/>
         <button type="button" class="button" aria-haspopup="dialog" @click="upload()">
           <FontAwesomeIcon :icon="faArrowUpFromBracket"/>{{ t('media.upload.open') }}

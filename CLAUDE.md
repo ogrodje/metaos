@@ -1152,6 +1152,14 @@ audio, is to build on this: a clip is one more of the episode's video files, whi
   A file MetaOS sent already goes again only when asked (`again`).
 - Changing a video (`update_youtube_video`, `set_youtube_video_thumbnail`): its title, description, tags and
   thumbnail, on public videos too, where everyone sees it at once; and whose it is in MetaOS.
+- A/B tests: Ogrodje tests an episode's titles and thumbnails A, B and C against each other on YouTube, which is
+  YouTube Studio's alone ("A/B testing", up to three titles and thumbnails, on a computer): its Data API neither sets
+  a test up, nor says one is on, nor has its results. So MetaOS sends a video with one title and one thumbnail, A by
+  default, and a person adds B and C to the test in Studio, which the episode's page says under its full video's
+  videos while the episode has any (`abTestLine`), with a link to its titles and thumbnails. A title or thumbnail
+  changed while a test is on stops it, also through the API, so the tools that change them say so, as does the YouTube
+  page's Edit; and a change that leaves the title out sends the one YouTube has at that moment (`YouTubeVideos.update`
+  asks first), not the one MetaOS last saw, so changing a description stops nothing.
 - MCP (`YouTubeMCP`): `get_youtube_channel`, `list_youtube_videos`, `get_youtube_video`, `refresh_youtube_videos`,
   `upload_youtube_video`, `list_youtube_uploads`, `get_youtube_upload`, `cancel_youtube_upload`,
   `update_youtube_video` and `set_youtube_video_thumbnail`; none is open world, as nothing MetaOS sends is public.

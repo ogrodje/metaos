@@ -141,7 +141,9 @@ function save() {
           @submit.prevent="save" @keydown.esc="close">
       <p v-if="video.privacy !== 'PRIVATE'" class="warning">{{ t('channel.edit.seen') }}</p>
       <label :for="`${id}-title`">{{ t('youtube.title') }}</label>
-      <input :id="`${id}-title`" ref="first" v-model="title" class="input" type="text" :maxlength="MAX_TITLE" autocomplete="off">
+      <input :id="`${id}-title`" ref="first" v-model="title" class="input" type="text" :maxlength="MAX_TITLE" autocomplete="off"
+             :aria-describedby="`${id}-title-hint`">
+      <p :id="`${id}-title-hint`" class="hint">{{ t('channel.edit.titleHint') }}</p>
       <label :for="`${id}-description`">{{ t('youtube.description') }}</label>
       <textarea :id="`${id}-description`" v-model="description" class="input" rows="8" :aria-describedby="`${id}-description-hint`"/>
       <p :id="`${id}-description-hint`" class="hint">{{ t('channel.edit.descriptionHint') }}</p>

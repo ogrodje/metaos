@@ -349,12 +349,16 @@ type Mutation {
     cancelYouTubeUpload(id: ID!): YouTubeUpload!
     """
     Change what one of the channel's videos (by its ID, YouTube's, or its address) says about itself on YouTube: its
-    title, description or tags, those left out staying as they are. Never who may see it.
+    title, description or tags, those left out staying as YouTube has them now. Never who may see it. A changed title
+    stops an A/B test of titles that's on for the video in YouTube Studio, which YouTube's API neither starts nor tells.
     """
     updateYouTubeVideo(id: String!, title: String, description: String, tags: [String!]): YouTubeVideo!
     "Say which episode (by its code or ID) one of the channel's videos is, or, without one, that it's no episode's"
     setYouTubeVideoEpisode(id: String!, episode: String): YouTubeVideo!
-    "Give one of the channel's videos one of an episode's thumbnails: its own episode's, unless episode says another's"
+    """
+    Give one of the channel's videos one of an episode's thumbnails: its own episode's, unless episode says another's.
+    It stops an A/B test of thumbnails that's on for the video in YouTube Studio.
+    """
     setYouTubeVideoThumbnail(id: String!, picture: EpisodeImage! = THUMBNAIL, episode: String): YouTubeVideo!
     "Remove a transcript, and what it says; the bucket keeps its files, and the history that it was there. Its ID."
     removeTranscript(id: ID!): ID!

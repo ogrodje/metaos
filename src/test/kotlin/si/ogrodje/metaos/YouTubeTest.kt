@@ -533,6 +533,13 @@ class YouTubeTest @Autowired constructor(
         assertEquals("Changed the YouTube video \"Nov naslov\"", told.summary)
         assertEquals(listOf("Title", "Tags"), told.fields.map { it.field })
 
+        // What's left out stays as YouTube has it now, e.g. a title changed in Studio since MetaOS last looked, so an
+        // A/B test of titles that's on there isn't stopped by a change to the description
+        fake.onChannel["changeVid01"] = fake.onChannel.getValue("changeVid01").copy(title = "Naslov iz Studia")
+        val described = mcp.updateYouTubeVideo("changeVid01", null, "Nov opis", null, null)
+        assertEquals("Naslov iz Studia", described.title)
+        assertEquals("Naslov iz Studia", fake.onChannel.getValue("changeVid01").title)
+        assertEquals(listOf("nova", "oznaka"), described.tags)
         assertFailsWith<IllegalArgumentException> { mcp.updateYouTubeVideo("changeVid01", null, null, null, null) }
         assertFailsWith<IllegalArgumentException> { mcp.updateYouTubeVideo("changeVid01", "<Naslov>", null, null, null) }
         assertFailsWith<IllegalArgumentException> { mcp.updateYouTubeVideo("nobodysVid1", "Naslov", null, null, null) }

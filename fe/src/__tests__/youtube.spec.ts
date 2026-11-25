@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fileOnYouTube, isOn, uploadLine, type YouTubeUpload, type YouTubeVideo } from '@/youtube'
+import { abTestLine, fileOnYouTube, isOn, uploadLine, type YouTubeUpload, type YouTubeVideo } from '@/youtube'
 import { t, tSl } from './i18n'
 
 const video = (videoId: string, mediaId: string | null): YouTubeVideo => ({
@@ -39,5 +39,16 @@ describe('what YouTube has of an episode\'s file', () => {
     expect(uploadLine(upload('1', { status: 'PROCESSING' }), t)).toBe('On YouTube, which is processing it')
     expect(uploadLine(upload('1', { status: 'FAILED', error: 'YouTube answered 400' }), t)).toBe('It didn\'t get to YouTube: YouTube answered 400')
     expect(uploadLine(upload('1', { note: 'Its thumbnail wasn\'t set' }), t)).toBe('Sent, but: Its thumbnail wasn\'t set')
+  })
+})
+
+describe('an episode\'s A/B test on YouTube', () => {
+  it('says what\'s left to add in YouTube Studio, of what the episode has', () => {
+    expect(abTestLine({ titleB: 'Konsenz za vsakogar', titleC: null, thumbnailB: { id: 'b' }, thumbnailC: { id: 'c' } }, t))
+      .toBe('Someone sets up the A/B test in YouTube Studio, adding: title B, thumbnail B, thumbnail C.')
+    expect(abTestLine({ titleB: 'Konsenz za vsakogar', titleC: 'Raft' }, tSl))
+      .toBe('A/B test nastavi nekdo v YouTube Studiu, kjer doda: naslov B, naslov C.')
+    // Nothing to test
+    expect(abTestLine({ titleB: null, titleC: '', thumbnailB: null, thumbnailC: null }, t)).toBeNull()
   })
 })

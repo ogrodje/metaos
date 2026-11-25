@@ -68,5 +68,22 @@ export function uploadLine(upload: YouTubeUpload, t: Translate): string {
   }
 }
 
+/**
+ * What's left to add in YouTube Studio for the episode's A/B test, in a line: its titles B and C and thumbnails B and C,
+ * those it has. YouTube's API can't set a test up (it's Studio's "A/B testing" alone), so MetaOS sends title and thumbnail
+ * A, and a person adds the rest there. Null for an episode with nothing to test.
+ */
+export function abTestLine(
+  episode: { titleB?: string | null, titleC?: string | null, thumbnailB?: unknown, thumbnailC?: unknown }, t: Translate,
+): string | null {
+  const what = [
+    episode.titleB ? t('youtube.test.title', { letter: 'B' }) : null,
+    episode.titleC ? t('youtube.test.title', { letter: 'C' }) : null,
+    episode.thumbnailB ? t('youtube.test.thumbnail', { letter: 'B' }) : null,
+    episode.thumbnailC ? t('youtube.test.thumbnail', { letter: 'C' }) : null,
+  ].filter(Boolean)
+  return what.length ? t('youtube.test.line', { what: what.join(', ') }) : null
+}
+
 /** Who may see a video, in the page's language */
 export const privacyName = (privacy: YouTubePrivacy, t: Translate) => t(`youtube.privacy.${privacy}`)
