@@ -211,7 +211,7 @@
     },
     "teamOnly": "The YouTube channel is for Ogrodje's team.",
     "uploadStatus": "YouTube: {status}",
-    "uploads": "Uploads",
+    "uploads": "Sync",
     "uploadsNote": "Videos are sent from an episode's page, always as private ones.",
     "what": "The YouTube channel"
   },
