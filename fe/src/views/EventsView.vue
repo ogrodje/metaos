@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { faCalendarPlus, faCopy } from '@fortawesome/free-regular-svg-icons'
-import { faCheck } from '@fortawesome/free-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { I18nT } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
 import { useHead, useRuntimeConfig } from '#imports'
-import { calendarPath, webcalUrl } from '@/calendar'
+import { calendarName, calendarPath, regionOf } from '@/calendar'
 import { keepUnchanged, useLiveRefresh } from '@/changes'
+import CalendarMenu from '@/components/CalendarMenu.vue'
 import ChipGroup from '@/components/ChipGroup.vue'
 import EventForm from '@/components/EventForm.vue'
 import EventPick from '@/components/EventPick.vue'
@@ -20,7 +18,7 @@ import PageHeader from '@/components/PageHeader.vue'
 import SelectFilter from '@/components/SelectFilter.vue'
 import {
   ALL_REGIONS, bucketTitle, byBucket, dayOf, EVENT_FIELDS, eventText, firstEvents, inRegion, type ListedEvent, regionOptions,
-  SHOWN, type Shown, shownOptions, TEAM_EVENTS, type TeamEvent,
+  REGIONS, SHOWN, type Shown, shownOptions, TEAM_EVENTS, type TeamEvent,
 } from '@/events'
 import { useEventsRefresh } from '@/eventsRefresh'
 import { graphql } from '@/graphql'
@@ -29,7 +27,6 @@ import { useClearQuery, useQueryState } from '@/query'
 import { usePageMeta } from '@/seo'
 import { useFirstLoad } from '@/ssr'
 import { useAuthStore } from '@/stores/auth'
-import { withTimeout } from '@/usage'
 import { useLocale } from '@/useLocale'
 
 // Slovenia's tech, developer and startup events that haven't ended yet, as MetaOS gathers them from organisations'
@@ -38,8 +35,8 @@ import { useLocale } from '@/useLocale'
 // are as their organisers write them). Everyone sees the same, so the server renders it. Once the page knows it's the
 // team's, it loads them again with the hidden ones and what's the team's, to hide, pick, add and refresh them.
 // Filtered by region and to Ogrodje's picks (OG-71), and found as you type, in the address, e.g.
-// /dogodki?region=gorenjska&show=promoted, on what's loaded. Add to calendar subscribes a calendar app to them, filtered
-// by region and to the picks as the page is (/dogodki.ics, calendar.ts).
+// /dogodki?region=gorenjska&show=promoted, on what's loaded. Add to calendar subscribes a calendar to them, filtered by
+// region and to the picks as the page is (/dogodki.ics, calendar.ts, CalendarMenu.vue).
 const auth = useAuthStore()
 const { t, dateLocale, path } = useLocale()
 const events = ref<(ListedEvent | TeamEvent)[]>()
@@ -112,36 +109,14 @@ const shown = computed(() => (events.value ?? []).filter((event) =>
   inRegion(event, region.value) && (show.value === 'all' || event.promoted) && matches(eventText(event), find.value)))
 
 // The events as a calendar to subscribe to, with the page's region and picks, not what's typed: by its whole address,
-// the site's, as the server renders it too. Add to calendar opens it in the visitor's calendar app (webcal), and the
-// icon beside it copies its https address, e.g. for Google Calendar's From URL
+// the site's, as the server renders it too, and by its name, as the calendar itself says it. Add to calendar asks in
+// which calendar (CalendarMenu.vue)
 const { siteUrl } = useRuntimeConfig().public
 const calendarUrl = computed(() => siteUrl + calendarPath(region.value, show.value))
+const calendarTitle = computed(() => calendarName(regionOf(region.value, REGIONS), show.value, (each) => t(`events.regions.${each}`)))
 useHead({
   link: () => [{ key: 'events-calendar', rel: 'alternate', type: 'text/calendar', title: t('events.calendar.feed'), href: calendarUrl.value }],
 })
-
-const copied = ref(false)
-// What the button did, for screen readers
-const copyStatus = ref('')
-let copyTimer: ReturnType<typeof setTimeout> | undefined
-
-async function copyCalendar() {
-  clearTimeout(copyTimer)
-  try {
-    await withTimeout(navigator.clipboard.writeText(calendarUrl.value))
-    copied.value = true
-    copyStatus.value = t('events.calendar.copiedStatus')
-  } catch (error) {
-    // Shown instead, to copy by hand
-    console.error("The calendar's link was not copied", error)
-    copied.value = false
-    window.prompt(t('events.calendar.copy'), calendarUrl.value)
-  }
-  copyTimer = setTimeout(() => {
-    copied.value = false
-    copyStatus.value = ''
-  }, 2000)
-}
 
 // Today in Ljubljana, as the page is rendered; the parts and the picks' Today and Tomorrow go by it
 const today = dayOf(new Date().toISOString())
@@ -179,17 +154,7 @@ const picks = computed(() => (show.value === 'all' && !find.value.trim() ? picke
         <template #channel><strong>#🗓-dogodki</strong></template>
       </I18nT>
       <template #actions>
-        <span class="subscribe">
-          <a class="button" :href="webcalUrl(calendarUrl)" :title="t('events.calendar.addTitle')">
-            <FontAwesomeIcon :icon="faCalendarPlus"/>{{ t('events.calendar.add') }}
-          </a>
-          <button type="button" class="icon-link copy" :class="{ copied }"
-                  :aria-label="copied ? t('events.calendar.copied') : t('events.calendar.copy')"
-                  :title="copied ? t('events.calendar.copied') : t('events.calendar.copy')" @click="copyCalendar">
-            <FontAwesomeIcon :icon="copied ? faCheck : faCopy"/>
-          </button>
-          <span class="visually-hidden" role="status">{{ copyStatus }}</span>
-        </span>
+        <CalendarMenu :url="calendarUrl" :name="calendarTitle"/>
         <template v-if="auth.team">
           <button type="button" class="button" :aria-disabled="refreshing || refreshStarting || undefined"
                   @click="startRefresh()">
@@ -276,32 +241,6 @@ const picks = computed(() => (show.value === 'all' && !find.value.trim() ? picke
 .events {
   padding: 0;
   list-style: none;
-}
-
-// Add to calendar, and the quiet icon that copies the calendar's address beside it, as an episode's links have theirs
-.subscribe {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-
-  .copy {
-    flex: none;
-    padding: 0;
-    font-size: var(--text-small);
-    color: var(--secondary);
-    background: none;
-    border: 0;
-    cursor: pointer;
-
-    &:hover,
-    &:focus-visible {
-      color: var(--ink);
-    }
-
-    &.copied {
-      color: var(--success);
-    }
-  }
 }
 
 // Where on the page each part is: links as chips are, each with how many; on phones a row that scrolls sideways

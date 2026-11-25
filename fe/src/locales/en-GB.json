@@ -490,11 +490,16 @@
     },
     "calendar": {
       "add": "Add to calendar",
-      "addTitle": "Subscribe to these events in your own calendar (Google, Apple, Outlook)",
+      "app": "The app on this device (Apple, Outlook)",
       "copied": "Copied",
       "copiedStatus": "The calendar's link is copied",
       "copy": "Copy the calendar's link",
-      "feed": "The events as a calendar (iCalendar)"
+      "copyAddress": "Copy the address",
+      "feed": "The events as a calendar (iCalendar)",
+      "google": "Google Calendar",
+      "outlook365": "Outlook 365",
+      "outlookCom": "Outlook.com",
+      "where": "In which calendar"
     },
     "description": "Slovenia's tech, developer and startup events and conferences that Ogrodje follows, by week.",
     "disclaimer": "Ogrodje MetaOS gathers the events and conferences from the organisers' public pages and calendars, so please check the details on their pages. Ogrodje doesn't organise the events and doesn't vouch for the accuracy of what's gathered.",

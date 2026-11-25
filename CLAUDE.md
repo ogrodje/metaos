@@ -289,9 +289,12 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   says them (`eventTimes`): ends are written several ways (the team's own at 23:59 of the last day, Katapult's at
   midnight as it starts, the iCal scraper's 00:01 to 23:59), and all are that day; only a scraper's `onlyDays` end, the
   day after the last, is a day too long, on the page too. An end without a time isn't made up: left out on the same
-  day, and days later the event is its days. Add to calendar in the page's heading opens it in the visitor's calendar
-  app (`webcal://`), the icon beside it copies its address, both with the page's region and picks, and the page names
-  it (`<link rel="alternate" type="text/calendar">`).
+  day, and days later the event is its days. Add to calendar in the page's heading asks in which calendar
+  (`CalendarMenu.vue`, a button that shows and hides its links, as the user menu), as no one link does it for all:
+  Google Calendar's and Outlook on the web's own addresses that ask there to add it (`googleCalendarUrl`, and
+  `outlookCalendarUrl`, Microsoft 365's and Outlook.com's apart, as each signs in only its own accounts), the app on
+  the device (`webcal://`, Apple's or Outlook), or its address, copied; all with the page's region and picks, and the
+  page names it (`<link rel="alternate" type="text/calendar">`).
 - An event's page, `/dogodki/<ID>` (`EventView.vue`, OG-68), is anyone's, a past one's too, but a hidden one's,
   which is the team's and not found for anyone else, as one that isn't there: a workspace, its title with its
   organisation's badge, Featured and Past in its lead; in its panel when it is (its weekday and date in Ljubljana, and

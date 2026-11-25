@@ -38,6 +38,17 @@ export function calendarPath(region: string = 'all', show: Shown = 'all') {
 /** [url], http or https, as calendar apps subscribe to it: webcal://ogrodje.si/dogodki.ics */
 export const webcalUrl = (url: string) => url.replace(/^https?:/, 'webcal:')
 
+/** Where Google Calendar asks to add [url] as a calendar of its own: on the web and on Android, webcal isn't its */
+export const googleCalendarUrl = (url: string) =>
+  `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcalUrl(url))}`
+
+/**
+ * Where Outlook on the web asks to subscribe to [url], as a calendar by [name]: Microsoft 365's, for work and school
+ * accounts (office), or Outlook.com's, for personal ones (live), as each signs in only its own
+ */
+export const outlookCalendarUrl = (url: string, name: string, host: 'office' | 'live') =>
+  `https://outlook.${host}.com/calendar/0/addfromweb?url=${encodeURIComponent(url)}&name=${encodeURIComponent(name)}`
+
 /** The calendar's name, with what it's filtered to: Ogrodje – dogodki (Gorenjska, izpostavljeni) */
 export function calendarName(region: Region | null, show: Shown, regionName: (region: Region) => string) {
   const filters = [region ? regionName(region) : null, show === 'promoted' ? 'izpostavljeni' : null].filter(Boolean)

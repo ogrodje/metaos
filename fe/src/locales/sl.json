@@ -490,11 +490,16 @@
     },
     "calendar": {
       "add": "Dodaj v koledar",
-      "addTitle": "Naročite se na te dogodke v svojem koledarju (Google, Apple, Outlook)",
+      "app": "Aplikacija na napravi (Apple, Outlook)",
       "copied": "Kopirano",
       "copiedStatus": "Povezava do koledarja je kopirana",
       "copy": "Kopiraj povezavo do koledarja",
-      "feed": "Dogodki kot koledar (iCalendar)"
+      "copyAddress": "Kopiraj naslov",
+      "feed": "Dogodki kot koledar (iCalendar)",
+      "google": "Google Koledar",
+      "outlook365": "Outlook 365",
+      "outlookCom": "Outlook.com",
+      "where": "V kateri koledar"
     },
     "description": "Tehnološki, razvijalski in startup dogodki ter konference v Sloveniji, ki jih spremlja Ogrodje, po tednih.",
     "disclaimer": "Dogodke in konference Ogrodje MetaOS zbira z javnih strani in koledarjev organizatorjev, zato preverite podatke na njihovih straneh. Ogrodje ni organizator dogodkov in ne jamči za točnost zbranih podatkov.",

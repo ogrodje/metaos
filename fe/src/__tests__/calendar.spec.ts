@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { calendar, type CalendarEvent, calendarName, calendarPath, escapeText, eventDescription, eventTimes, fold, regionOf, webcalUrl } from '@/calendar'
+import {
+  calendar, type CalendarEvent, calendarName, calendarPath, escapeText, eventDescription, eventTimes, fold, googleCalendarUrl,
+  outlookCalendarUrl, regionOf, webcalUrl,
+} from '@/calendar'
 import { inRegion, REGIONS } from '@/events'
 
 const at = (start: string, end: string | null, hasStartTime = true, hasEndTime = true) => ({ start, end, hasStartTime, hasEndTime })
@@ -174,6 +177,28 @@ describe('the address and its filters', () => {
   it('is webcal\'s for calendar apps', () => {
     expect(webcalUrl('https://ogrodje.si/dogodki.ics?region=gorenjska')).toBe('webcal://ogrodje.si/dogodki.ics?region=gorenjska')
     expect(webcalUrl('http://localhost:5173/dogodki.ics')).toBe('webcal://localhost:5173/dogodki.ics')
+  })
+
+  it('is asked for by Google Calendar at its own address, with the calendar\'s whole, filters too', () => {
+    expect(googleCalendarUrl('https://ogrodje.si/dogodki.ics'))
+      .toBe('https://calendar.google.com/calendar/render?cid=webcal%3A%2F%2Fogrodje.si%2Fdogodki.ics')
+    const filtered = googleCalendarUrl('https://ogrodje.si/dogodki.ics?region=gorenjska&show=promoted')
+    // Not Google's own parameters
+    expect([...new URL(filtered).searchParams.keys()]).toEqual(['cid'])
+    expect(new URL(filtered).searchParams.get('cid')).toBe('webcal://ogrodje.si/dogodki.ics?region=gorenjska&show=promoted')
+  })
+
+  it('is asked for by Outlook on the web, Microsoft 365\'s or Outlook.com\'s, with its name', () => {
+    const url = 'https://ogrodje.si/dogodki.ics?region=gorenjska&show=promoted'
+    const name = 'Ogrodje – dogodki (Obalno-kraška, izpostavljeni)'
+    const office = new URL(outlookCalendarUrl(url, name, 'office'))
+    expect(office.origin + office.pathname).toBe('https://outlook.office.com/calendar/0/addfromweb')
+    expect([...office.searchParams.keys()]).toEqual(['url', 'name'])
+    expect(office.searchParams.get('url')).toBe(url)
+    expect(office.searchParams.get('name')).toBe(name)
+    const live = new URL(outlookCalendarUrl(url, name, 'live'))
+    expect(live.origin + live.pathname).toBe('https://outlook.live.com/calendar/0/addfromweb')
+    expect(live.search).toBe(office.search)
   })
 
   it('finds the region of a slug, which the events are filtered by', () => {
