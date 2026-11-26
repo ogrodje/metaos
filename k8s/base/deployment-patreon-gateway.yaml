@@ -92,8 +92,8 @@ spec:
         # browsers never goes through ours. Playwright's server starts one for each connection the gateway makes, on the
         # pod's loopback only. Its version has to be the gateway's Playwright's (patreon-gateway/build.gradle.kts).
         - name: browser
-          image: mcr.microsoft.com/playwright:v1.64.0-noble
-          command: [ npx, -y, playwright@1.64.0, run-server, --port, "3000", --host, 127.0.0.1 ]
+          image: mcr.microsoft.com/playwright:v1.65.1-noble
+          command: [ npx, -y, playwright@1.65.1, run-server, --port, "3000", --host, 127.0.0.1 ]
           # Chromium runs without its own sandbox (Playwright's --no-sandbox), so it needs no capabilities
           securityContext:
             allowPrivilegeEscalation: false

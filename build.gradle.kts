@@ -1,16 +1,10 @@
 plugins {
     kotlin("jvm") version "2.4.21"
     kotlin("plugin.jpa") version "2.4.21"
-    id("org.springframework.boot") version "4.1.2"
+    id("org.springframework.boot") version "4.2.0"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.jetbrains.kotlin.plugin.spring") version "2.4.21"
 }
-
-// Jackson's latest patches rather than Spring Boot 4.1.2's 3.1.7 / 2.21.7: those already fix the parser's denial of
-// service (CVE-2026-89407, -89425 and others), and these harden it further, e.g. bound the length of numbers coerced
-// from strings. Drop these once a Boot release manages these versions or later.
-extra["jackson-bom.version"] = "3.1.8"
-extra["jackson-2-bom.version"] = "2.21.8"
 
 group = "si.ogrodje.metaos"
 version = "0.0.1"
@@ -24,11 +18,12 @@ repositories {
     }
 }
 
-// Spring AI 2.0.2 brings MCP's Java SDK 2.1, which answers a method it doesn't know with "method not found" rather than
-// an HTTP 500: ChatGPT starts with the newer revision's server/discover and falls back to initialize (SecurityTest)
+// Spring AI 2.1.0 brings MCP's Java SDK 2.2 (2.0.2 brought 2.1), which answers a method it doesn't know with "method not
+// found" rather than an HTTP 500: ChatGPT starts with the newer revision's server/discover and falls back to initialize
+// (SecurityTest)
 dependencyManagement {
     imports {
-        mavenBom("org.springframework.ai:spring-ai-bom:2.0.2")
+        mavenBom("org.springframework.ai:spring-ai-bom:2.1.0")
     }
 }
 
@@ -37,7 +32,7 @@ dependencyManagement {
 val newRelicVersion = "9.5.0"
 val newRelicAgent = configurations.create("newRelicAgent") { isTransitive = false }
 
-val temporalVersion = "1.40.0"
+val temporalVersion = "1.41.1"
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
@@ -90,17 +85,17 @@ dependencies {
     implementation("org.postgresql:postgresql")
 
     // Google Drive and Gmail, as Ogrodje's bot account (Google.kt)
-    implementation("com.google.auth:google-auth-library-oauth2-http:1.54.0")
-    implementation("com.google.apis:google-api-services-drive:v3-rev20261011-2.0.0")
-    implementation("com.google.apis:google-api-services-gmail:v1-rev20261005-2.0.0")
+    implementation("com.google.auth:google-auth-library-oauth2-http:1.58.0")
+    implementation("com.google.apis:google-api-services-drive:v3-rev20261106-2.9.2")
+    implementation("com.google.apis:google-api-services-gmail:v1-rev20261106-2.9.2")
     // Google Cloud Storage, as a service account per environment (Storage.kt)
-    implementation("com.google.cloud:google-cloud-storage:2.75.0")
+    implementation("com.google.cloud:google-cloud-storage:2.79.0")
     // Pictures made smaller for the public bucket (Images.kt); TwelveMonkeys reads what ImageIO can't: CMYK JPEGs, WebP
     implementation("net.coobird:thumbnailator:0.4.21")
     implementation("com.twelvemonkeys.imageio:imageio-jpeg:3.15.3")
     implementation("com.twelvemonkeys.imageio:imageio-webp:3.15.3")
     // Posts' OpenGraph tags, for their previews (DistributionPreview.kt)
-    implementation("org.jsoup:jsoup:1.21.2")
+    implementation("org.jsoup:jsoup:1.24.1")
 
     // Koofr, as Ogrodje's bot account (Koofr.kt)
     implementation("com.github.koofr:java-koofr:3.8.10")
@@ -122,7 +117,7 @@ dependencies {
     implementation("org.springframework.ai:spring-ai-starter-mcp-client")
     implementation("org.springframework.boot:spring-boot-starter-security-oauth2-client")
     // Speech-to-Text, which transcribes episodes' audio from the bucket (Transcription.kt)
-    implementation("com.google.cloud:google-cloud-speech:4.94.0")
+    implementation("com.google.cloud:google-cloud-speech:4.98.0")
     // Feature flags, from Unleash (Flags.kt): its SDK evaluates them in MetaOS, with Unleash's engine (Yggdrasil, native)
     implementation("io.getunleash:unleash-client-java:12.3.2")
 }

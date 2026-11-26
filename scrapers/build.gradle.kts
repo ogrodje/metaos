@@ -1,13 +1,9 @@
 plugins {
     kotlin("jvm") version "2.4.21"
-    id("org.springframework.boot") version "4.1.2"
+    id("org.springframework.boot") version "4.2.0"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.jetbrains.kotlin.plugin.spring") version "2.4.21"
 }
-
-// As MetaOS's build.gradle.kts: Jackson's latest patches rather than Spring Boot 4.1.2's
-extra["jackson-bom.version"] = "3.1.8"
-extra["jackson-2-bom.version"] = "2.21.8"
 
 group = "si.ogrodje.scrapers"
 version = "0.0.1"
@@ -18,10 +14,10 @@ repositories {
 
 // Playwright's version is also the browser container's in k8s (k8s/base/deployment-scrapers.yaml), as
 // patreon-gateway's: keep them alike
-val playwrightVersion = "1.64.0"
+val playwrightVersion = "1.65.1"
 
 // MetaOS's (../build.gradle.kts), whose workflow calls the scrapers' activities
-val temporalVersion = "1.40.0"
+val temporalVersion = "1.41.1"
 
 // Playwright's driver-bundle has Node.js for five platforms; the image runs on linux/amd64 only, so the boot jar gets
 // Linux's alone, as patreon-gateway's does
@@ -61,7 +57,7 @@ dependencies {
     implementation("tools.jackson.module:jackson-module-kotlin")
 
     // Pages (jsoup), calendars (ical4j), and the few sites that only show their events to a browser (Playwright)
-    implementation("org.jsoup:jsoup:1.21.2")
+    implementation("org.jsoup:jsoup:1.24.1")
     implementation("org.mnode.ical4j:ical4j:4.4.0")
     implementation("com.microsoft.playwright:playwright:$playwrightVersion")
 
