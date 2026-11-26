@@ -40,7 +40,7 @@ spec:
         # Its databases' schema, as this version has it: made the first time, updated after an upgrade, and left as it
         # is otherwise, so it runs before every start
         - name: schema
-          image: temporalio/admin-tools:1.32.1
+          image: temporalio/admin-tools:1.32.2
           securityContext:
             allowPrivilegeEscalation: false
             capabilities: { drop: [ ALL ] }
@@ -65,7 +65,7 @@ spec:
             limits: { memory: 256Mi }
       containers:
         - name: temporal
-          image: temporalio/server:1.32.1
+          image: temporalio/server:1.32.2
           securityContext:
             allowPrivilegeEscalation: false
             capabilities: { drop: [ ALL ] }
@@ -192,7 +192,7 @@ spec:
         seccompProfile: { type: RuntimeDefault }
       containers:
         - name: namespace
-          image: temporalio/admin-tools:1.32.1
+          image: temporalio/admin-tools:1.32.2
           securityContext:
             allowPrivilegeEscalation: false
             capabilities: { drop: [ ALL ] }
@@ -231,7 +231,7 @@ spec:
         seccompProfile: { type: RuntimeDefault }
       containers:
         - name: ui
-          image: temporalio/ui:2.57.0
+          image: temporalio/ui:2.58.1
           securityContext:
             allowPrivilegeEscalation: false
             capabilities: { drop: [ ALL ] }
