@@ -1,13 +1,9 @@
 plugins {
     kotlin("jvm") version "2.4.21"
-    id("org.springframework.boot") version "4.1.2"
+    id("org.springframework.boot") version "4.2.0"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.jetbrains.kotlin.plugin.spring") version "2.4.21"
 }
-
-// As MetaOS's build.gradle.kts: Jackson's latest patches rather than Spring Boot 4.1.2's
-extra["jackson-bom.version"] = "3.1.8"
-extra["jackson-2-bom.version"] = "2.21.8"
 
 group = "si.ogrodje.patreon"
 version = "0.0.1"
@@ -17,10 +13,10 @@ repositories {
 }
 
 // Playwright's version is also the browsers' in its image (k8s/base/deployment-patreon-gateway.yaml): keep them alike
-val playwrightVersion = "1.64.0"
+val playwrightVersion = "1.65.1"
 
 // MetaOS's (../build.gradle.kts), whose workflows call the gateway's activities
-val temporalVersion = "1.40.0"
+val temporalVersion = "1.41.1"
 
 // Playwright's driver-bundle is Node.js for five platforms, 200 MB of the boot jar's 240; the image runs on linux/amd64
 // only, so the boot jar gets a copy with Linux's alone (driver/linux, which DriverJar picks on x86_64). Runs from

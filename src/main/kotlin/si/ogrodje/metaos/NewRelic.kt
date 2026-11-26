@@ -61,14 +61,17 @@ class GraphQLErrorReports(
 
     override fun resolveException(exception: Throwable, environment: DataFetchingEnvironment): Mono<List<GraphQLError>> {
         val noted = Noted(exception, environment.executionStepInfo.path.toString())
-        environment.graphQlContext.compute<MutableList<Noted>>(NOTED) { _, list -> (list ?: mutableListOf()).apply { add(noted) } }
+        // GraphQL Java's context is null-marked: the list is null until the first is noted, so it's said to be nullable
+        environment.graphQlContext.compute<MutableList<Noted>>(NOTED) { _, list: MutableList<Noted>? ->
+            (list ?: mutableListOf()).apply { add(noted) }
+        }
         return Mono.empty()
     }
 
     override fun instrumentExecutionResult(
         result: ExecutionResult, parameters: InstrumentationExecutionParameters, state: InstrumentationState?,
     ): CompletableFuture<ExecutionResult> {
-        val noted = parameters.graphQLContext.get<List<Noted>?>(NOTED).orEmpty()
+        val noted = parameters.graphQLContext.get<List<Noted>>(NOTED).orEmpty()
         val worst = noted.firstOrNull { !callersMistake(it.exception) } ?: noted.firstOrNull()
         when {
             worst != null -> report(worst.exception, mapOf("graphql.path" to worst.path), callersMistake(worst.exception))
