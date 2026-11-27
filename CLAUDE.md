@@ -1286,44 +1286,44 @@ takes nothing until the next, and one full user ([`NewRelic.kt`](src/main/kotlin
 
 ### Previews
 
-An agent shows its change working as a preview: its worktree's MetaOS and front-end, built and run on the machine it's
-on (nuc8 or ziv), at an address on the tailnet, for the human to try out and the agent to check, until it's done with
-([`preview/preview.sh`](preview/preview.sh)). Only devices on the tailnet reach it: never Funnel, nor Cloudflare.
+An agent shows its change working as a preview: its worktree's MetaOS and front-end, built where it works and run in
+Elysium (`infra/elysium/factory/previews.tf`), at `https://preview-N.ogrodje.dev`, for the human to try out and the agent
+to check, until it's done with ([`preview/preview.sh`](preview/preview.sh)). Behind Cloudflare Access: only the team
+gets in.
 
 ```bash
 just preview up            # build this worktree and run it; prints its address. Again to update it, keeping its data
 just preview up --fresh    # ... with its data started over from preview/seed.sql
-just preview ls            # the machine's slots and whose they are
-just preview logs api|web  # its MetaOS's or front-end's log
-just preview down          # done: stop it, take its address down, drop its data
+just preview ls            # the slots and whose they are
+just preview logs api|web  # its MetaOS's or front-end's log (-f to follow; postgres and seed too)
+just preview down          # done: stop it, clear its build and its data
 ```
 
+Where there's no `just` (a Canvas), `preview/preview.sh up` and so on.
+
 - **When:** a change someone should see or click through (pages, sign-in, what the API answers) gets a preview
-  before it's handed over: run `just preview up`, check it yourself (e.g. `curl` its pages and `/graphql`, or a
-  browser), and give the human its address with what to look at. Take it down once they've seen it or the work is
-  merged; one nobody updated for 24 hours is taken down by the next `up` on that machine (`just preview reap`).
-- **Slots:** each machine has two, so their addresses never change: slot N is `https://<machine>.folk-decibel.ts.net:944N`
-  (tailscale serve), its front-end on `127.0.0.1:519N`, its MetaOS on `127.0.0.1:809N`. A worktree keeps its slot until
-  `down`; when both are taken, `up` says whose they are, and an agent waits or asks rather than taking another's down.
-  Ports 443, 8443 and 10000 are Funnel's, which is public, so previews never use them; and never `tailscale serve
-  reset`, which would take down nuc8's Funnel (Linear's webhook) too.
-- **What runs:** the boot jar and the built front-end (`fe/.output`), copied into the slot (`~/.local/state/
-  metaos-previews/slot-N`), so the worktree can change and build again meanwhile. MetaOS has its own database,
-  `metaos_preview_N` in compose's Postgres, which Flyway migrates and `preview/seed.sql` fills when it's new: made-up
-  shows, people, a session and episodes at each stage, nobody's real data. Whatever the agent adds on top stays until
-  `--fresh` or `down`. A preview gets none of the shell's secrets: no Drive, Dropbox, Koofr, Patreon,
-  YouTube, agents (OpenRouter), Temporal (its task queue would be every slot's) or Unleash (the flags' defaults), so it changes
-  nothing real. Cloud Storage is the one it gets, development's buckets only (`ogrodje-metaos-dev` and
-  `-public-dev`, whose CORS has the slots' addresses, `infra/gcp`), when the shell has their key: so a preview
-  publishes pictures and takes the team's uploads, as development does, into the buckets that are for that. About 0.6 GB for MetaOS and 0.15 GB for the front-end.
-- **Sign-in:** as `dev` / `dev` (staff), through the machine's previews' Keycloak, compose.yml's `keycloak-preview`
-  (`--profile preview`, `127.0.0.1:8189`, under `/auth`), with realm `metaos` from `infra/keycloak/preview`, which
-  names the slots' addresses as metaos-ui's redirect URIs. Each slot's tailscale serve passes `/auth/realms` and
-  `/auth/resources` on to it (never its admin console), so Keycloak is on the preview's own origin; it takes its
-  hostname from each request (tailscale serve's `X-Forwarded-*`), so each slot's tokens have the slot's issuer, which its
-  MetaOS checks, with Keycloak's keys from localhost (`SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI`). The
-  audiences are development's. Once on each machine: `just keycloak adopt preview && just keycloak apply preview`, and
-  `sudo tailscale set --operator=$USER`, so `tailscale serve` runs without sudo.
+  before it's handed over: run `preview up`, check it yourself, and give the human its address with what to look at.
+  From a Canvas, check it at the address `up` prints for the cluster (`http://preview-N.previews.svc.cluster.local:3000`,
+  no Access in the way): `curl` its pages and `/graphql`. Take it down once they've seen it or the work is merged.
+- **Done is cleared:** `preview down`, the branch's pull request merged or closed (the bridge tells the previews'
+  manager), or nobody updating it for 24 hours: its pod stops, and its build and database are deleted.
+- **Slots:** two, so their addresses never change: slot N is `https://preview-N.ogrodje.dev`. A worktree keeps its
+  slot until it's done; when both are taken, `up` says whose they are, and an agent waits or asks rather than taking
+  another's down.
+- **How:** `preview up` builds the boot jar and `fe/.output` where it runs, and uploads them with `preview/seed.sql`
+  to the previews' manager (`elysium/previews/manager.ts`), which runs them in the slot's pod: the boot jar and the
+  front-end on the images production runs them on, with a Postgres of its own, which Flyway migrates and
+  `preview/seed.sql` fills when it's new: made-up shows, people, a session and episodes at each stage, nobody's real
+  data. Whatever the agent adds on top stays until `--fresh` or `down`. In a Canvas, `PREVIEWS_URL` and
+  `PREVIEWS_TOKEN` (its secrets) say where the manager is; elsewhere, Elysium's kubeconfig (`just elysium-kubeconfig`)
+  reaches it through a port-forward. A preview gets no secrets: no Drive, Dropbox, Koofr, Patreon, YouTube, agents
+  (OpenRouter), Temporal or Unleash (the flags' defaults), so it changes nothing real. Cloud Storage is the one it
+  gets, development's buckets only (`ogrodje-metaos-dev` and `-public-dev`, whose CORS has the slots' addresses,
+  `infra/gcp`), so a preview publishes pictures and takes the team's uploads, as development does.
+- **Sign-in:** as `dev` / `dev` (staff), through the previews' Keycloak (realm `metaos` from `infra/keycloak/preview`,
+  which names the slots' addresses as metaos-ui's redirect URIs), on the preview's own origin under `/auth`: its
+  tokens have the slot's issuer, which its MetaOS checks. Its console is never public; `just keycloak apply preview`
+  reaches it through a port-forward.
 - `preview/seed.sql` follows the schema: a migration that changes what it inserts into changes it too.
 
 ### Deployment

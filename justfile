@@ -137,9 +137,19 @@ keycloak command env *ARGS:
       prod) export TF_VAR_keycloak_admin_username="${KEYCLOAK_ADMIN_USERNAME:?}" \
               TF_VAR_keycloak_admin_password="${KEYCLOAK_ADMIN_PASSWORD:?}" \
               GOOGLE_OAUTH_ACCESS_TOKEN="${GOOGLE_OAUTH_ACCESS_TOKEN:-$(gcloud auth print-access-token)}" ;;
-      # The previews' (compose.yml's keycloak-preview), at this machine's name on the tailnet
-      preview) export KEYCLOAK_ADMIN_USERNAME=admin KEYCLOAK_ADMIN_PASSWORD=admin \
-                 TF_VAR_host="$(tailscale status --json | jq -r '.Self.DNSName | rtrimstr(".")')" ;;
+      # The previews' Keycloak in Elysium (infra/elysium/factory/previews.tf), through a port-forward, as its console is
+      # never routed; its admin's password from the cluster, its state in Cloud Storage
+      preview)
+        kube=(kubectl --kubeconfig "${ELYSIUM_KUBECONFIG:-$HOME/.kube/elysium}")
+        [[ $("${kube[@]}" config current-context) == vke-* ]] || { echo "Not Elysium's kubeconfig: just elysium-kubeconfig" >&2; exit 1; }
+        password=$("${kube[@]}" -n previews get secret keycloak -o jsonpath='{.data.KC_BOOTSTRAP_ADMIN_PASSWORD}' | base64 -d)
+        export KEYCLOAK_ADMIN_USERNAME=admin KEYCLOAK_ADMIN_PASSWORD="$password" TF_VAR_keycloak_admin_password="$password" \
+          GOOGLE_OAUTH_ACCESS_TOKEN="${GOOGLE_OAUTH_ACCESS_TOKEN:-$(gcloud auth print-access-token)}"
+        "${kube[@]}" -n previews rollout status deployment/keycloak --timeout=5m >/dev/null
+        "${kube[@]}" -n previews port-forward svc/keycloak 8189:8080 >/dev/null &
+        forward=$!
+        trap 'kill "$forward" 2>/dev/null' EXIT
+        for i in $(seq 1 30); do curl -fsS -o /dev/null http://localhost:8189/auth/realms/master && break; sleep 1; done ;;
       *) echo "dev, prod or preview" >&2; exit 2 ;;
     esac
     # How Keycloak sends email, in development and production: secretspec.toml's KEYCLOAK_SMTP_* (OG-61). Previews send none
@@ -150,8 +160,9 @@ keycloak command env *ARGS:
     fi
     cd infra/keycloak/{{env}}
     terraform init -input=false >/dev/null
-    if [ "{{command}}" = adopt ]; then exec ../import.sh {{env}}; fi
-    if [ "{{command}}" = smtp-password ]; then exec ../smtp-password.sh {{env}}; fi
+    # Not exec: the previews' port-forward stops when they're done
+    if [ "{{command}}" = adopt ]; then ../import.sh {{env}}; exit; fi
+    if [ "{{command}}" = smtp-password ]; then ../smtp-password.sh {{env}}; exit; fi
     terraform "{{command}}" {{ARGS}}
 
 # A stack in infra/ with no environments of its own (infra/README.md): `just infra newrelic plan`, `just infra gcp
@@ -165,12 +176,95 @@ infra stack command *ARGS:
       newrelic) export NEW_RELIC_API_KEY="${NEW_RELIC_USER_KEY:?NEW_RELIC_USER_KEY, a User API key}" ;;
       cloudflare) : "${CLOUDFLARE_API_TOKEN:?}" ;;
       tailscale) : "${TAILSCALE_OAUTH_CLIENT_ID:?}" "${TAILSCALE_OAUTH_CLIENT_SECRET:?}" ;;
-      *) echo "gcp, newrelic, cloudflare or tailscale (Keycloak's is just keycloak)" >&2; exit 2 ;;
+      elysium/cluster) : "${VULTR_API_KEY:?VULTR_API_KEY: secretspec set VULTR_API_KEY}" ;;
+      elysium/factory)
+        : "${VULTR_API_KEY:?VULTR_API_KEY: secretspec set VULTR_API_KEY}"
+        # ogrodje.dev's Cloudflare account, not ogrodje.si's, whose token CLOUDFLARE_API_TOKEN otherwise is
+        export CLOUDFLARE_API_TOKEN="${ELYSIUM_CLOUDFLARE_API_TOKEN:?ELYSIUM_CLOUDFLARE_API_TOKEN: secretspec set ELYSIUM_CLOUDFLARE_API_TOKEN}"
+        export TF_VAR_factory_users="${FACTORY_USERS:?FACTORY_USERS: secretspec set FACTORY_USERS}"
+        # The ogrodje organization's webhook (github.tf), as you: gh's token, with admin:org_hook
+        export GITHUB_TOKEN="${GITHUB_TOKEN:-$(gh auth token)}" ;;
+      *) echo "gcp, newrelic, cloudflare, tailscale, elysium/cluster or elysium/factory (Keycloak's is just keycloak)" >&2; exit 2 ;;
     esac
     export GOOGLE_OAUTH_ACCESS_TOKEN="${GOOGLE_OAUTH_ACCESS_TOKEN:-$(gcloud auth print-access-token)}"
     cd infra/{{stack}}
     terraform init -input=false >/dev/null
     terraform "{{command}}" {{ARGS}}
+
+# Elysium's admin kubeconfig (infra/elysium), from Vultr, into ~/.kube/elysium (or ELYSIUM_KUBECONFIG): outside the
+# repository, and readable by you only. Then `KUBECONFIG=~/.kube/elysium kubectl ...`, or k9s with --kubeconfig
+elysium-kubeconfig:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    api=https://api.vultr.com/v2/kubernetes/clusters
+    auth="Authorization: Bearer ${VULTR_API_KEY:?VULTR_API_KEY: secretspec set VULTR_API_KEY}"
+    id=$(curl -sSf -H "$auth" "$api?per_page=100" | jq -r '.vke_clusters[] | select(.label == "elysium") | .id')
+    [ -n "$id" ] || { echo "No VKE cluster labelled elysium: just infra elysium/cluster apply" >&2; exit 1; }
+    file="${ELYSIUM_KUBECONFIG:-$HOME/.kube/elysium}"
+    mkdir -p "$(dirname "$file")"
+    umask 077
+    curl -sSf -H "$auth" "$api/$id/config" | jq -r .kube_config | base64 -d > "$file"
+    echo "$file: cluster $id"
+
+# The Vultr registry's push login (ams.vultrcr.com/ogrodje, infra/elysium/cluster/registry.tf), into Docker for an
+# hour: for pushing an image built here. Its pods pull with a read-only one (factory/set_secrets.sh: vultr-registry)
+registry-login:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    auth="Authorization: Bearer ${VULTR_API_KEY:?VULTR_API_KEY: secretspec set VULTR_API_KEY}"
+    id=$(curl -sSf -H "$auth" https://api.vultr.com/v2/registries | jq -r '.registries[] | select(.name == "ogrodje") | .id')
+    login=$(curl -sSf -X OPTIONS -H "$auth" \
+      "https://api.vultr.com/v2/registry/$id/docker-credentials?expiry_seconds=3600&read_write=true" |
+      jq -r '.auths["ams.vultrcr.com"].auth' | base64 -d)
+    printf '%s' "${login#*:}" | docker login ams.vultrcr.com --username "${login%%:*}" --password-stdin
+
+# Elysium's Canvas image, as CI names it (.github/workflows/elysium.yml): the tag for infra/elysium/factory's
+# canvas_image once the workflow has pushed this Dockerfile
+canvas-image:
+    @echo "ams.vultrcr.com/ogrodje/elysium-canvas:$(sed -n 's/^ARG CANVAS=.*://p' elysium/canvas/Dockerfile)-$(git hash-object elysium/canvas/Dockerfile | cut -c1-8)"
+
+# A Canvas (infra/elysium/README.md), the team's or a person's, on http://localhost:<port>/canvas/ for as long as this
+# runs: a port-forward, past Cloudflare Access, e.g. when it's down. Its page carries its session key
+canvas name="team" port="8800":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    service=canvas; [ "{{name}}" = team ] || service="canvas-{{name}}"
+    echo "http://localhost:{{port}}/canvas/"
+    KUBECONFIG="${ELYSIUM_KUBECONFIG:-$HOME/.kube/elysium}" kubectl port-forward -n factory "svc/$service" {{port}}:8000
+
+# Elysium in Linear: OAuth app "Elysium" in workspace ogrodje (Settings > API), private to it, with client credentials.
+# Its client ID isn't secret; its client secret is ELYSIUM_LINEAR_CLIENT_SECRET (secretspec.toml)
+elysium_linear_client_id := "1fad2d2ffaf2bf8a19da97b44790cdff"
+
+# Client credentials: actor app, 30 days, no refresh. Its scopes are Elysium's install in Linear: with app:assignable
+# and app:mentionable it's an Agent, which can be delegated issues and mentioned, taking no seat; the same in every
+# token, as Linear doesn't change an install's scopes. A new one each run; the old ones work until they expire.
+# Elysium's Linear token onto the clipboard (macOS), for Canvas' Linear MCP server (https://mcp.linear.app/mcp, Bearer)
+elysium-linear-token:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    response=$(curl -sS https://api.linear.app/oauth/token \
+      --data-urlencode grant_type=client_credentials \
+      --data-urlencode "scope=read,write,app:assignable,app:mentionable" \
+      --data-urlencode client_id={{elysium_linear_client_id}} \
+      --data-urlencode "client_secret=${ELYSIUM_LINEAR_CLIENT_SECRET:?ELYSIUM_LINEAR_CLIENT_SECRET: secretspec set ELYSIUM_LINEAR_CLIENT_SECRET}")
+    token=$(jq -r '.access_token // empty' <<<"$response")
+    [ -n "$token" ] || { jq '{error, error_description}' <<<"$response" >&2; exit 1; }
+    viewer=$(curl -sS https://api.linear.app/graphql -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
+      -d '{"query":"{ viewer { name } organization { name } }"}' | jq -r '"\(.data.viewer.name) in \(.data.organization.name)"')
+    printf '%s' "$token" | pbcopy
+    echo "Elysium's Linear token ($viewer, $(( $(jq -r .expires_in <<<"$response") / 86400 )) days) is on the clipboard"
+
+# Canvas' credentials from 1Password (infra/elysium/factory/canvas_settings.sh): Elysium's GitHub token and git
+# identity, and the GitHub and Linear MCP servers with a new Linear token. Again monthly, as Linear's lasts 30 days
+canvas-settings:
+    infra/elysium/factory/canvas_settings.sh
+
+# LiteLLM's key, for Canvas' LLM settings (infra/elysium/README.md), onto the clipboard (macOS)
+litellm-key:
+    KUBECONFIG="${ELYSIUM_KUBECONFIG:-$HOME/.kube/elysium}" kubectl get secret -n factory litellm \
+      -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d | pbcopy
+    @echo "LiteLLM's key is on the clipboard"
 
 # tflint over every stack in infra/ (infra/.tflint.hcl), as CI does; the first run installs its plugins
 tflint:

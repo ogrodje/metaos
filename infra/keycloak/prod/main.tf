@@ -60,3 +60,10 @@ module "realm" {
   }
   smtp_password = var.smtp_password
 }
+
+# Elysium's bridge's (infra/keycloak/realm/elysium.tf), into 1Password once:
+# `just keycloak output prod -raw elysium_client_secret | secretspec set ELYSIUM_METAOS_CLIENT_SECRET --from-file -`
+output "elysium_client_secret" {
+  value     = module.realm.elysium_client_secret
+  sensitive = true
+}

@@ -39,11 +39,20 @@ resource "google_service_account_iam_member" "terraform_ci_github" {
   member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/attribute.repository/ogrodje/metaos"
 }
 
-# Reading a state, and writing it and its lock
+# Reading a state, and writing it and its lock: every state but Elysium's (infra/elysium), whose stacks are applied by
+# hand and whose states hold what opens the cluster to an admin, e.g. LiteLLM's key and the Postgres' credentials. The
+# condition sees an object as projects/_/buckets/<bucket>/objects/<name>; listing the bucket is the bucket's, so it
+# still lists them
 resource "google_storage_bucket_iam_member" "terraform_ci_state" {
   bucket = google_storage_bucket.tfstate.name
   role   = "roles/storage.objectUser"
   member = google_service_account.terraform_ci.member
+
+  condition {
+    title       = "not-elysium"
+    description = "Not Elysium's states, which only owners apply (infra/elysium)"
+    expression  = "!resource.name.startsWith(\"projects/_/buckets/${google_storage_bucket.tfstate.name}/objects/elysium/\")"
+  }
 }
 
 output "ci_workload_identity_provider" {
