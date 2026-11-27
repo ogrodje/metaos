@@ -4,8 +4,7 @@
 //   LLM (Customize > LLM):          claude-sonnet-5-5, Claude Sonnet 5.5 through LiteLLM, with its key; the agent
 //                                   profile using it
 //   Secrets (Settings > Secrets),   GITHUB_TOKEN, elysium-og's, which git and gh push, open and merge PRs with;
-//   exported to every agent:        GIT_AUTHOR_*/GIT_COMMITTER_*: Elysium, with elysium-og's noreply address;
-//                                   PREVIEWS_URL/PREVIEWS_TOKEN: the previews' manager, for MetaOS' preview/preview.sh
+//   exported to every agent:        PREVIEWS_URL/PREVIEWS_TOKEN: the previews' manager, for MetaOS' preview/preview.sh
 //   MCP servers (Customize > MCP):  github, GitHub's hosted server as elysium-og; linear, Linear's as the app Elysium,
 //                                   with a new client-credentials token each run; metaos, MetaOS' (Ogrodje's) as
 //                                   Keycloak's service account elysium, through the bridge, which holds its token
@@ -28,7 +27,7 @@ export interface Target {
 export interface Config {
   canvases: Target[];
   litellm: { url: string; key: string; model: string; profile: string };
-  github: { token: string; login: string; id: string; mcpUrl: string };
+  github: { token: string; login: string; mcpUrl: string };
   linear: { clientId: string; clientSecret: string; tokenUrl: string; mcpUrl: string };
   previews?: { url: string; token: string };
   /** The bridge's route to MetaOS' MCP server, which signs in as Elysium */
@@ -56,7 +55,6 @@ export function configFromEnv(env: NodeJS.ProcessEnv): Config {
     github: {
       token: required("GITHUB_TOKEN"),
       login: env.GITHUB_LOGIN ?? "elysium-og",
-      id: env.GITHUB_ID ?? "361901225",
       mcpUrl: env.GITHUB_MCP_URL ?? "https://api.githubcopilot.com/mcp/",
     },
     linear: {
@@ -129,6 +127,9 @@ export class Canvas {
   }
 }
 
+/** Secrets that earlier runs set, and this one removes */
+export const RETIRED_SECRETS = ["GIT_AUTHOR_NAME", "GIT_COMMITTER_NAME", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_EMAIL"];
+
 /** Everything above into one Canvas; what it set, for the log */
 export async function settle(canvas: Canvas, config: Config, linear: string): Promise<string[]> {
   const done: string[] = [];
@@ -159,14 +160,11 @@ export async function settle(canvas: Canvas, config: Config, linear: string): Pr
     done.push("agent profile");
   }
 
-  // Exported to every agent
-  const noreply = `${github.id}+${github.login}@users.noreply.github.com`;
+  // Exported to every agent. Canvas hides a secret's value wherever it appears in what an agent says, so only what's
+  // secret: the git identity was one too, and every "Elysium" in a reply read <secret-hidden>. It's the pod's
+  // /etc/gitconfig now (infra/elysium/factory/canvas/main.tf), and the old secrets are removed
   const secrets: [string, string, string][] = [
     ["GITHUB_TOKEN", github.token, `GitHub token of ${github.login} (Elysium): push, pull requests, issues and workflows on all of ogrodje`],
-    ["GIT_AUTHOR_NAME", "Elysium", "Commits are Elysium's"],
-    ["GIT_COMMITTER_NAME", "Elysium", "Commits are Elysium's"],
-    ["GIT_AUTHOR_EMAIL", noreply, `${github.login}'s noreply address, so GitHub attributes commits to it`],
-    ["GIT_COMMITTER_EMAIL", noreply, `${github.login}'s noreply address, so GitHub attributes commits to it`],
   ];
   if (config.previews) {
     secrets.push(
@@ -178,6 +176,12 @@ export async function settle(canvas: Canvas, config: Config, linear: string): Pr
     await canvas.ok("PUT", "/settings/secrets", `secret ${name}`, { name, value, description });
   }
   done.push(`secrets ${secrets.map(([n]) => n).join(", ")}`);
+  for (const name of RETIRED_SECRETS) {
+    const removed = await canvas.call("DELETE", `/settings/secrets/${name}`);
+    if (removed.status !== 404 && (removed.status < 200 || removed.status >= 300)) {
+      throw new Error(`${canvas.target.name}: removing secret ${name}: HTTP ${removed.status} ${JSON.stringify(removed.body)}`);
+    }
+  }
 
   // MCP servers: updated if the Canvas has them, added if not
   const servers: [string, string, string | null][] = [
