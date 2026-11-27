@@ -34,7 +34,7 @@ variable "team_volume_size" {
 variable "canvas_image" {
   description = "The Canvases' image: Elysium's (elysium/canvas/Dockerfile), which CI pushes to the Vultr registry; `just canvas-image` says its tag"
   type        = string
-  default     = "ghcr.io/openhands/agent-canvas:1.46.0"
+  default     = "ams.vultrcr.com/ogrodje/elysium-canvas:1.46.0-56efcff6"
 }
 
 variable "preview_slots" {
