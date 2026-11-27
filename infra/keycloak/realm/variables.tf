@@ -22,7 +22,9 @@ variable "metaos_ui_other_urls" {
 variable "trusted_hosts" {
   description = "Hosts MCP clients may register themselves for (DCR), by their redirect URIs"
   type        = list(string)
-  default     = ["localhost", "127.0.0.1", "claude.ai", "claude.com", "chatgpt.com"]
+  # *.ogrodje.dev: Elysium's Canvases (infra/elysium), agent.ogrodje.dev and agent-<name>.ogrodje.dev, whose MCP
+  # sign-ins come back to themselves. Keycloak takes "*." as a domain and every name under it
+  default = ["localhost", "127.0.0.1", "claude.ai", "claude.com", "chatgpt.com", "*.ogrodje.dev"]
 }
 
 variable "sso_session_idle_timeout" {

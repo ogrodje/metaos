@@ -1,0 +1,135 @@
+name: Elysium's factory
+
+# infra/elysium/factory, and what it runs from ConfigMaps (elysium/linear-bridge, elysium/previews,
+# elysium/canvas-settings), as terraform.yml does infra/'s other stacks: a pull request that changes it plans it, its
+# merge into master applies it, and then the Canvases' settings are given again (the CronJob canvas-settings, once).
+# Actions → Elysium's factory → Run workflow plans it by hand, and applies it when asked to.
+#
+# Every job here is in GitHub's environment elysium, which waits until someone approves it (its required reviewers,
+# infra/elysium/README.md, CI): a plan runs the change's own Terraform with the factory's credentials, and elysium-og,
+# which opens pull requests and may merge them, mustn't have that run unseen. So look at the change, then approve. Only
+# such a job gets the state, as elysium-terraform-ci (infra/gcp/ci.tf, by the environment's subject), and 1Password's
+# secretspec.toml scope elysium: VULTR_API_KEY, ELYSIUM_CLOUDFLARE_API_TOKEN, ELYSIUM_TERRAFORM_GITHUB_TOKEN (the org
+# webhook's) and FACTORY_USERS. The run's summary lists what changes, not the plan itself: the repository is public.
+# Not elysium/cluster, which changes rarely and is applied by hand.
+on:
+  pull_request:
+    paths:
+      - infra/elysium/factory/**
+      - elysium/linear-bridge/bridge.ts
+      - elysium/previews/manager.ts
+      - elysium/canvas-settings/settings.ts
+      - .github/workflows/elysium-factory.yml
+  push:
+    branches: [ master ]
+    paths:
+      - infra/elysium/factory/**
+      - elysium/linear-bridge/bridge.ts
+      - elysium/previews/manager.ts
+      - elysium/canvas-settings/settings.ts
+      - .github/workflows/elysium-factory.yml
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: Apply the plan, rather than only show it
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+# One at a time, an apply never cut short; Terraform's lock in the state stops one started by hand
+concurrency:
+  group: elysium-factory
+  cancel-in-progress: false
+
+jobs:
+  factory:
+    # Forks' and Dependabot's pull requests get no secrets, so they aren't planned
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: elysium
+      deployment: ${{ github.event_name == 'push' || inputs.apply == true }}
+    defaults:
+      run:
+        working-directory: infra/elysium/factory
+    env:
+      APPLY: ${{ github.event_name == 'push' || inputs.apply }}
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/secrets
+        with:
+          scope: elysium
+          token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+
+      # As the providers and variables.tf name them (the justfile does the same)
+      - name: Pass the secrets on under the providers' names
+        working-directory: .
+        run: |
+          : "${ELYSIUM_TERRAFORM_GITHUB_TOKEN:?ELYSIUM_TERRAFORM_GITHUB_TOKEN isn't in 1Password (infra/elysium/README.md, CI)}"
+          {
+            echo "CLOUDFLARE_API_TOKEN=$ELYSIUM_CLOUDFLARE_API_TOKEN"
+            echo "GITHUB_TOKEN=$ELYSIUM_TERRAFORM_GITHUB_TOKEN"
+          } >> "$GITHUB_ENV"
+          # FACTORY_USERS is JSON over several lines, maybe: a delimiter, as GitHub has it for those
+          delimiter="EOF_$(openssl rand -hex 8)"
+          { echo "TF_VAR_factory_users<<$delimiter"; printf '%s\n' "$FACTORY_USERS"; echo "$delimiter"; } >> "$GITHUB_ENV"
+
+      # devenv.nix's Terraform, the same version
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.16.5
+          terraform_wrapper: false
+
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: projects/152555588938/locations/global/workloadIdentityPools/github/providers/github
+          service_account: elysium-terraform-ci@ogrodje-metaos.iam.gserviceaccount.com
+
+      - run: terraform init
+
+      # What changes, by address and action: the plan itself has the factory's people in it, and the repository is
+      # public. An apply is this plan, saved, not made again
+      - name: Plan
+        run: |
+          terraform plan -no-color -out=tfplan > plan.log || { tail -40 plan.log; exit 1; }
+          grep -E '^Plan:|^No changes' plan.log || true
+          {
+            echo "### infra/elysium/factory"
+            terraform show -json tfplan | jq -r '
+              [.resource_changes[] | select(.change.actions != ["no-op"])
+                | "- \(.change.actions | join("/")) `\(.address)`"] | if length == 0 then ["No changes."] else . end | .[]'
+          } >> "$GITHUB_STEP_SUMMARY"
+          rm plan.log
+
+      - if: env.APPLY == 'true'
+        name: Apply
+        run: |
+          terraform apply -no-color tfplan > apply.log || { tail -40 apply.log; exit 1; }
+          grep -E '^Apply complete' apply.log
+          rm apply.log
+
+      # The Canvases' settings now, as `just canvas-settings` gives them, with the cluster's kubeconfig from Vultr
+      - if: env.APPLY == 'true'
+        name: Give the Canvases their settings
+        run: |
+          api=https://api.vultr.com/v2/kubernetes/clusters
+          auth="Authorization: Bearer $VULTR_API_KEY"
+          id=$(curl -sSf -H "$auth" "$api?per_page=100" | jq -r '.vke_clusters[] | select(.label == "elysium") | .id')
+          export KUBECONFIG="$RUNNER_TEMP/elysium"
+          (umask 077; curl -sSf -H "$auth" "$api/$id/config" | jq -r .kube_config | base64 -d > "$KUBECONFIG")
+          job="canvas-settings-ci-$GITHUB_RUN_ID"
+          kubectl -n factory create job --from=cronjob/canvas-settings "$job"
+          if kubectl -n factory wait --for=condition=complete --timeout=5m "job/$job"; then status=0; else status=1; fi
+          kubectl -n factory logs "job/$job" | jq -r '"\(.message) \(.canvas // "") \(.done // [] | join("; "))"' || true
+          kubectl -n factory delete job "$job" --wait=false
+          rm -f "$KUBECONFIG"
+          exit "$status"

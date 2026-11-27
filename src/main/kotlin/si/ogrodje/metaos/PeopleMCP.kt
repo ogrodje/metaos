@@ -19,6 +19,7 @@ data class PersonDto(
     val twitterUrl: String? = null,
     val instagramUrl: String? = null,
     val facebookUrl: String? = null,
+    val githubUrl: String? = null,
     // Whether they're on Ogrodje's team, as the team says; none when their roles tell
     val team: Team? = null,
 )
@@ -40,7 +41,7 @@ data class CurrentUserDto(
 )
 
 fun Person.toDto() =
-    PersonDto(id, name, email, bio, homepageUrl, linkedinUrl, twitterUrl, instagramUrl, facebookUrl, team)
+    PersonDto(id, name, email, bio, homepageUrl, linkedinUrl, twitterUrl, instagramUrl, facebookUrl, githubUrl, team)
 
 /** The user a token belongs to, with their account and the person they are (Accounts.signedInPerson) */
 fun Jwt.toCurrentUserDto(accounts: Accounts) = CurrentUserDto(
@@ -148,7 +149,7 @@ class PeopleMCP(
             title = "Set person link",
             readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false
         ),
-        description = "Set or clear where a person can be found online: their homepage, LinkedIn, Twitter/X, Instagram or Facebook"
+        description = "Set or clear where a person can be found online: their homepage, LinkedIn, Twitter/X, Instagram, Facebook or GitHub"
     )
     fun setLink(
         @McpToolParam(description = "Person ID") personId: UUID,

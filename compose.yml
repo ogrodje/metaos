@@ -15,7 +15,7 @@ services:
     labels:
       org.springframework.boot.jdbc.parameters: '' # ssl=true&sslmode=require'
 
-  # One-shot: creates the "keycloak", "unleash" and "keycloak_preview" databases in the postgres service if missing
+  # One-shot: creates the "keycloak" and "unleash" databases in the postgres service if missing
   # (initdb scripts would only run on an empty data directory).
   keycloak-db-init:
     image: 'postgres:18-alpine'
@@ -32,7 +32,6 @@ services:
         until pg_isready -q; do sleep 1; done
         psql -tAc "SELECT 1 FROM pg_database WHERE datname = 'keycloak'" | grep -q 1 || createdb keycloak
         psql -tAc "SELECT 1 FROM pg_database WHERE datname = 'unleash'" | grep -q 1 || createdb unleash
-        psql -tAc "SELECT 1 FROM pg_database WHERE datname = 'keycloak_preview'" | grep -q 1 || createdb keycloak_preview
 
   # Identity provider / OAuth2 authorization server for the MCP endpoint, persisted in the "keycloak" database.
   # Realm "metaos" is imported from ./keycloak on first start only (existing realms are left untouched).
@@ -68,41 +67,6 @@ services:
       - '127.0.0.1:8180:8080'
     healthcheck:
       test: ['CMD-SHELL', "exec 3<>/dev/tcp/localhost/9000 && printf 'GET /health/ready HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q UP <&3"]
-      interval: 10s
-      timeout: 5s
-      retries: 30
-
-  # The previews' Keycloak (scripts/preview.sh, CLAUDE.md's Previews), only with `--profile preview`: this machine's
-  # previews sign in through it, each at its slot's address on the tailnet (https://<machine>.<tailnet>.ts.net:944N),
-  # where tailscale serve passes /auth/realms and /auth/resources on to it, never its admin console. It takes its
-  # hostname from each request (start-dev doesn't pin it), as said by tailscale serve's X-Forwarded-* headers, so each
-  # slot gets tokens with its own issuer. Its realm metaos is infra/keycloak/preview's; development's Keycloak above
-  # stays as it is
-  keycloak-preview:
-    profiles: ['preview']
-    build:
-      context: .
-      dockerfile: docker/keycloak.Dockerfile
-      target: dev
-    command: ['start-dev']
-    depends_on:
-      keycloak-db-init:
-        condition: service_completed_successfully
-    environment:
-      - KC_DB=postgres
-      - KC_DB_URL=jdbc:postgresql://postgres:5432/keycloak_preview
-      - KC_DB_USERNAME=${POSTGRES_USER}
-      - KC_DB_PASSWORD=${POSTGRES_PASSWORD}
-      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
-      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
-      - KC_HTTP_RELATIVE_PATH=/auth
-      # Only tailscale serve and this machine reach its port, so only they can say where a request came from
-      - KC_PROXY_HEADERS=xforwarded
-      - KC_HEALTH_ENABLED=true
-    ports:
-      - '127.0.0.1:8189:8080'
-    healthcheck:
-      test: ['CMD-SHELL', "exec 3<>/dev/tcp/localhost/9000 && printf 'GET /auth/health/ready HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q UP <&3"]
       interval: 10s
       timeout: 5s
       retries: 30

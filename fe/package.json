@@ -19,28 +19,28 @@
     "@fortawesome/free-regular-svg-icons": "^7.3.1",
     "@fortawesome/free-solid-svg-icons": "^7.3.1",
     "@fortawesome/vue-fontawesome": "^3.3.3",
-    "@newrelic/browser-agent": "1.324.0",
-    "@nuxtjs/i18n": "10.6.0",
+    "@newrelic/browser-agent": "1.324.1",
+    "@nuxtjs/i18n": "10.7.0",
     "@pinia/nuxt": "^1.0.3",
     "@vue/devtools-api": "^8.2.1",
-    "keycloak-js": "^26.2.4",
+    "keycloak-js": "^26.2.5",
     "markdown-it": "15.0.3",
-    "mediainfo.js": "0.3.8",
-    "nuxt": "^4.6.2",
+    "mediainfo.js": "0.3.9",
+    "nuxt": "^4.7.0",
     "pinia": "^4.1.0",
-    "unleash-proxy-client": "3.8.2",
-    "vue": "^3.5.44",
-    "vue-router": "^5.4.0"
+    "unleash-proxy-client": "3.8.3",
+    "vue": "^3.5.46",
+    "vue-router": "^5.5.1"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
-    "npm-run-all2": "^9.0.4",
+    "npm-run-all2": "^9.1.0",
     "rolldown": "~1.2.1",
-    "sass-embedded": "^1.106.1",
+    "sass-embedded": "^1.108.2",
     "typescript": "~6.0.0",
     "vite": "^8.3.5",
-    "vitest": "^5.0.5",
-    "vue-tsc": "^3.3.13"
+    "vitest": "^5.1.2",
+    "vue-tsc": "^3.3.14"
   },
   "engines": {
     "node": "^22.18.0 || >=24.12.0"

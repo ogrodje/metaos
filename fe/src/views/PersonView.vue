@@ -63,7 +63,7 @@ interface PersonPage {
 async function fetchPerson(id: string) {
   return graphql<PersonPage>(`query ($id: ID!) {
     person(id: $id) {
-      id name bio homepageUrl linkedinUrl twitterUrl instagramUrl facebookUrl avatar { ${IMAGE_FIELDS} }
+      id name bio homepageUrl linkedinUrl twitterUrl instagramUrl facebookUrl githubUrl avatar { ${IMAGE_FIELDS} }
       episodes { episode { ${EPISODE_FIELDS} ${LIST_PICTURE_FIELDS} } roles }
       recommended { ${EPISODE_FIELDS} }
       accounts { ${ACCOUNT_FIELDS} }

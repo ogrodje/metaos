@@ -1329,7 +1329,7 @@
       "set_person_avatar": "Make a picture a person's avatar: from Dropbox, Koofr, the web or an upload",
       "set_person_bio": "Set or clear the line about who a person is, e.g. their role and company",
       "set_person_email": "Set or clear a person's email; accounts that sign in with it are linked to them",
-      "set_person_link": "Set or clear their homepage, LinkedIn, Twitter/X, Instagram or Facebook",
+      "set_person_link": "Set or clear their homepage, LinkedIn, Twitter/X, Instagram, Facebook or GitHub",
       "set_person_team": "Say whether a person is on Ogrodje's team: its founder, active, not at the moment, or not on it, which orders the People page",
       "set_youtube_video_thumbnail": "Give a video on the channel one of its episode's thumbnails (A, B or C)",
       "start_image_upload": "Get a signed address to upload a picture straight to MetaOS's bucket, up to 50 MB, for setting it as an episode's picture, an avatar or a logo",

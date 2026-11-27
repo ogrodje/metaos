@@ -1352,6 +1352,7 @@ type Person {
     twitterUrl: String
     instagramUrl: String
     facebookUrl: String
+    githubUrl: String
     """
     The episodes they're on, each once with all of their roles, the latest first. Anyone not signed in gets only the
     released ones, without candidates.
