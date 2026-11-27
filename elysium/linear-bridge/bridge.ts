@@ -158,7 +158,7 @@ export function verifyWebhook(rawBody: Buffer, signature: string | undefined, se
 
 // --- Linear's API, as the app Elysium --------------------------------------------------------------------------------
 
-/** Elysium's install in Linear: the same in every token (canvas_settings.sh's, the justfile's) */
+/** Elysium's install in Linear: the same in every token (elysium/canvas-settings', the justfile's) */
 export const LINEAR_SCOPES = "read,write,app:assignable,app:mentionable";
 
 /** A Linear agent activity's content: https://linear.app/developers/agent-interaction */

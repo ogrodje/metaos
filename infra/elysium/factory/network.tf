@@ -64,7 +64,7 @@ resource "kubernetes_network_policy_v1" "canvas" {
     }
     policy_types = ["Ingress", "Egress"]
 
-    # cloudflared (access.tf) and the Linear bridge only, and `just canvas`, whose port-forward arrives on the pod's own
+    # cloudflared (access.tf), the Linear bridge and the settings' job only, and `just canvas`, whose port-forward arrives on the pod's own
     # localhost: so the session key in Canvas' page reaches no one else
     ingress {
       from {
@@ -75,6 +75,12 @@ resource "kubernetes_network_policy_v1" "canvas" {
       from {
         pod_selector {
           match_labels = local.linear_bridge_labels
+        }
+      }
+      # canvas_settings.tf's job, its settings
+      from {
+        pod_selector {
+          match_labels = local.canvas_settings_labels
         }
       }
       ports {
