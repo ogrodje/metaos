@@ -255,10 +255,24 @@ elysium-linear-token:
     printf '%s' "$token" | pbcopy
     echo "Elysium's Linear token ($viewer, $(( $(jq -r .expires_in <<<"$response") / 86400 )) days) is on the clipboard"
 
-# Canvas' credentials from 1Password (infra/elysium/factory/canvas_settings.sh): Elysium's GitHub token and git
-# identity, and the GitHub and Linear MCP servers with a new Linear token. Again monthly, as Linear's lasts 30 days
+# Every Canvas' settings (LLM, Elysium's identity, MCP servers, the previews' manager), now: the weekly CronJob
+# canvas-settings (infra/elysium/factory/canvas_settings.tf) run once. After a new Canvas, or a token set_secrets.sh changed
 canvas-settings:
-    infra/elysium/factory/canvas_settings.sh
+    #!/usr/bin/env bash
+    set -euo pipefail
+    k=(kubectl --kubeconfig "${ELYSIUM_KUBECONFIG:-$HOME/.kube/elysium}" -n factory)
+    [[ $("${k[@]}" config current-context) == vke-* ]] || { echo "Not Elysium's kubeconfig: just elysium-kubeconfig" >&2; exit 1; }
+    job="canvas-settings-$(date +%s)"
+    "${k[@]}" create job --from=cronjob/canvas-settings "$job" >/dev/null
+    trap '"${k[@]}" delete job "$job" --wait=false >/dev/null' EXIT
+    for i in $(seq 1 100); do
+      [ "$("${k[@]}" get job "$job" -o jsonpath='{.status.succeeded}')" = 1 ] && { "${k[@]}" logs "job/$job"; exit 0; }
+      [ -n "$("${k[@]}" get job "$job" -o jsonpath='{.status.failed}')" ] && break
+      sleep 3
+    done
+    "${k[@]}" logs "job/$job" >&2 || true
+    echo "canvas-settings didn't finish: kubectl -n factory get jobs" >&2
+    exit 1
 
 # LiteLLM's key, for Canvas' LLM settings (infra/elysium/README.md), onto the clipboard (macOS)
 litellm-key:

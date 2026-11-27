@@ -70,6 +70,32 @@ secretspec's scope `registry`); the factory's pods pull with a read-only one, th
 `factory/set_secrets.sh` makes once. For pushing from a laptop, `just registry-login` logs Docker in for an hour.
 Each login is a new one Vultr makes from `VULTR_API_KEY`; they last as long as the registry.
 
+## CI: the factory from GitHub Actions, once someone approves
+
+`infra/elysium/factory` is applied by **`.github/workflows/elysium-factory.yml`**: a pull request that changes it (or
+the bridge, the previews' manager or the settings' job, which it runs from ConfigMaps) plans it, its merge into master
+applies it and gives the Canvases their settings again. `elysium/cluster` stays by hand.
+
+Every job of it runs in GitHub's environment **`elysium`**, whose required reviewers approve it first, the plans too:
+a plan runs the change's own Terraform with the factory's credentials, and `elysium-og`, which opens pull requests and
+may merge them, mustn't have that run unseen. So: read the change, then approve (Actions, the run, Review deployments).
+Only such a job gets the state, as `elysium-terraform-ci` (`infra/gcp/ci.tf`, by the environment's subject, so not a
+pull request's own workflow), and secretspec's scope `elysium` from 1Password. The run's summary lists what changes, by
+address, never the plan: the repository is public. The environment isn't Terraform's, or the pipeline could take its own
+approval away; once, by hand:
+
+```sh
+gh api -X PUT repos/ogrodje/metaos/environments/elysium --input - <<<'{"reviewers":[{"type":"User","id":<your id>}],"prevent_self_review":false,"can_admins_bypass":false}'
+just infra gcp apply                          # elysium-terraform-ci
+secretspec set ELYSIUM_TERRAFORM_GITHUB_TOKEN # an owner's fine-grained token, ogrodje, Webhooks read/write only
+```
+
+`ELYSIUM_TERRAFORM_GITHUB_TOKEN` is for `github.tf`'s org webhook only. By hand, `just infra elysium/factory` still
+works as before, with gh's token.
+
+The Canvases' settings (`canvas_settings.tf`, `elysium/canvas-settings`) are a **CronJob, weekly**, from what the
+cluster has already, so Linear's 30-day token never runs out; `just canvas-settings` runs it at once.
+
 ## The factory
 
 Agent Canvas is OpenHands' single-tenant app (MIT): its UI, agent-server and automations in one pod, every agent of it
@@ -158,8 +184,8 @@ The agents are **Elysium** wherever they act, not whoever started them:
   with a client-credentials token it renews before it runs out. No agent holds a MetaOS credential, and none runs out
   under a long conversation. Its secret is `ELYSIUM_METAOS_CLIENT_SECRET`; without it the route is off.
 - **In Canvas**, all three as MCP servers (GitHub's and Linear's hosted ones, `github` and `linear`, and `metaos`) and
-  the secrets above, set by `just canvas-settings` (`factory/canvas_settings.sh`) through Canvas' API: **monthly**, for
-  Linear's token.
+  the secrets above, set through Canvas' API by the CronJob `canvas-settings` (`factory/canvas_settings.tf`,
+  `elysium/canvas-settings`): **weekly**, as Linear's token lasts 30 days, and at once with `just canvas-settings`.
 
 To turn MetaOS on, once Keycloak has the client (CI applies `keycloak/prod` on merge to master, or
 `just keycloak apply prod`):

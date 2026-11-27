@@ -55,6 +55,32 @@ resource "google_storage_bucket_iam_member" "terraform_ci_state" {
   }
 }
 
+# Elysium's factory (.github/workflows/elysium-factory.yml), its own account: only a job in GitHub's environment
+# elysium, which a person approves before it starts (infra/elysium/README.md, CI), gets it, by the subject GitHub gives
+# such a job, so a pull request's own workflow can't; and it reads and writes Elysium's states only
+resource "google_service_account" "elysium_ci" {
+  account_id   = "elysium-terraform-ci"
+  display_name = "Elysium Terraform (CI)"
+  description  = "GitHub Actions' Terraform for infra/elysium/factory, from environment elysium only (infra/gcp/ci.tf)"
+}
+
+resource "google_service_account_iam_member" "elysium_ci_github" {
+  service_account_id = google_service_account.elysium_ci.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "principal://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/subject/repo:ogrodje/metaos:environment:elysium"
+}
+
+resource "google_storage_bucket_iam_member" "elysium_ci_state" {
+  bucket = google_storage_bucket.tfstate.name
+  role   = "roles/storage.objectUser"
+  member = google_service_account.elysium_ci.member
+  condition {
+    title       = "elysium"
+    description = "Elysium's states only (infra/elysium), and listing the bucket, which is the bucket's"
+    expression  = "resource.name.startsWith(\"projects/_/buckets/${google_storage_bucket.tfstate.name}/objects/elysium/\") || resource.name == \"projects/_/buckets/${google_storage_bucket.tfstate.name}\""
+  }
+}
+
 output "ci_workload_identity_provider" {
   description = "For google-github-actions/auth's workload_identity_provider"
   value       = google_iam_workload_identity_pool_provider.github.name
@@ -63,4 +89,9 @@ output "ci_workload_identity_provider" {
 output "ci_service_account" {
   description = "For google-github-actions/auth's service_account"
   value       = google_service_account.terraform_ci.email
+}
+
+output "elysium_ci_service_account" {
+  description = "For elysium-factory.yml's google-github-actions/auth"
+  value       = google_service_account.elysium_ci.email
 }
