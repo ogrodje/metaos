@@ -3467,13 +3467,13 @@
       "readOnlyHint" : false,
       "title" : "Set person link"
     },
-    "description" : "Set or clear where a person can be found online: their homepage, LinkedIn, Twitter/X, Instagram or Facebook",
+    "description" : "Set or clear where a person can be found online: their homepage, LinkedIn, Twitter/X, Instagram, Facebook or GitHub",
     "inputSchema" : {
       "$schema" : "https://json-schema.org/draft/2020-12/schema",
       "properties" : {
         "network" : {
           "description" : "Personal website or social network the link points to",
-          "enum" : [ "HOMEPAGE", "LINKEDIN", "TWITTER", "INSTAGRAM", "FACEBOOK" ],
+          "enum" : [ "HOMEPAGE", "LINKEDIN", "TWITTER", "INSTAGRAM", "FACEBOOK", "GITHUB" ],
           "type" : "string"
         },
         "personId" : {

@@ -124,6 +124,7 @@ class Organisation(
             SocialNetwork.TWITTER -> twitterUrl = url
             SocialNetwork.INSTAGRAM -> instagramUrl = url
             SocialNetwork.FACEBOOK -> facebookUrl = url
+            SocialNetwork.GITHUB -> throw IllegalArgumentException("An organisation has no GitHub link")
         }
     }
 

@@ -1,6 +1,6 @@
 import type { IconDefinition, IconName } from '@fortawesome/fontawesome-svg-core'
 import {
-  faFacebook, faInstagram, faLinkedin, faPatreon, faSpotify, faXTwitter, faYoutube,
+  faFacebook, faGithub, faInstagram, faLinkedin, faPatreon, faSpotify, faXTwitter, faYoutube,
 } from '@fortawesome/free-brands-svg-icons'
 import { faGlobe, faPodcast } from '@fortawesome/free-solid-svg-icons'
 import type { Platform } from '@/episodes'
@@ -24,6 +24,7 @@ export const networks: Record<Network, { icon: IconDefinition, color: string }> 
   X: { icon: faXTwitter, color: '#000000' },
   Instagram: { icon: faInstagram, color: '#E4405F' },
   Facebook: { icon: faFacebook, color: '#0866FF' },
+  GitHub: { icon: faGithub, color: '#181717' },
 }
 
 /** Koofr's logo, which Font Awesome hasn't got, as one of its icons ('fak' is its prefix for custom ones) */

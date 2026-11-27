@@ -30,6 +30,7 @@ class Person(
     @Column(columnDefinition = "text") var twitterUrl: String? = null
     @Column(columnDefinition = "text") var instagramUrl: String? = null
     @Column(columnDefinition = "text") var facebookUrl: String? = null
+    @Column(columnDefinition = "text") var githubUrl: String? = null
 
     // Their picture in the public bucket (Images.kt)
     @Column(name = "avatar_image_id") var avatarImageId: UUID? = null
@@ -45,6 +46,7 @@ class Person(
             SocialNetwork.TWITTER -> twitterUrl = url
             SocialNetwork.INSTAGRAM -> instagramUrl = url
             SocialNetwork.FACEBOOK -> facebookUrl = url
+            SocialNetwork.GITHUB -> githubUrl = url
         }
     }
 
@@ -62,7 +64,8 @@ enum class SocialNetwork(private vararg val domains: String) {
     LINKEDIN("linkedin.com"),
     TWITTER("twitter.com", "x.com"),
     INSTAGRAM("instagram.com"),
-    FACEBOOK("facebook.com");
+    FACEBOOK("facebook.com"),
+    GITHUB("github.com");
 
     fun accepts(url: String): Boolean {
         val uri = runCatching { URI(url) }.getOrNull() ?: return false

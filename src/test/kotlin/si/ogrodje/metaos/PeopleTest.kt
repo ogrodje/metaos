@@ -55,11 +55,13 @@ class PeopleTest @Autowired constructor(
         peopleMCP.setLink(person, SocialNetwork.LINKEDIN, "https://si.linkedin.com/in/andraz")
         peopleMCP.setLink(person, SocialNetwork.TWITTER, "https://x.com/andraz")
         peopleMCP.setLink(person, SocialNetwork.INSTAGRAM, "https://www.instagram.com/andraz")
-        val linked = peopleMCP.setLink(person, SocialNetwork.FACEBOOK, "https://www.facebook.com/andraz")
+        peopleMCP.setLink(person, SocialNetwork.FACEBOOK, "https://www.facebook.com/andraz")
+        val linked = peopleMCP.setLink(person, SocialNetwork.GITHUB, "https://github.com/andraz")
         assertEquals(
             PersonDto(
                 person, "Andraž Vrhovec", null, "CTO @ Koofr", "http://andraz.example", "https://si.linkedin.com/in/andraz",
                 "https://x.com/andraz", "https://www.instagram.com/andraz", "https://www.facebook.com/andraz",
+                "https://github.com/andraz",
             ),
             linked,
         )
@@ -68,6 +70,8 @@ class PeopleTest @Autowired constructor(
         assertFailsWith<IllegalArgumentException> { peopleMCP.setLink(person, SocialNetwork.LINKEDIN, "http://www.linkedin.com/in/andraz") }
         assertFailsWith<IllegalArgumentException> { peopleMCP.setLink(person, SocialNetwork.TWITTER, "https://notlinkedin.com/andraz") }
         assertFailsWith<IllegalArgumentException> { peopleMCP.setLink(person, SocialNetwork.TWITTER, "andraz") }
+        assertFailsWith<IllegalArgumentException> { peopleMCP.setLink(person, SocialNetwork.GITHUB, "http://github.com/andraz") }
+        assertFailsWith<IllegalArgumentException> { peopleMCP.setLink(person, SocialNetwork.GITHUB, "https://notgithub.com/andraz") }
         assertFailsWith<IllegalArgumentException> { peopleMCP.setLink(person, SocialNetwork.HOMEPAGE, "ftp://andraz.example") }
         assertFailsWith<IllegalArgumentException> { peopleMCP.setBio(UUID.randomUUID(), "Nobody") }
 
@@ -75,6 +79,8 @@ class PeopleTest @Autowired constructor(
         val cleared = peopleMCP.setLink(person, SocialNetwork.TWITTER, null)
         assertEquals(null to null, cleared.bio to cleared.twitterUrl)
         assertEquals("https://www.facebook.com/andraz", cleared.facebookUrl)
+        assertEquals("https://github.com/andraz", cleared.githubUrl)
+        assertEquals(null, peopleMCP.setLink(person, SocialNetwork.GITHUB, null).githubUrl)
     }
 
     @Test

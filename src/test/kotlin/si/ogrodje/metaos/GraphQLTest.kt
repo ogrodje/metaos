@@ -494,6 +494,7 @@ class GraphQLTest @Autowired constructor(
         val guest = people.save(Person(name = "Čedo People", email = "cedo.people@example.com").apply {
             bio = "Engineer @ Somewhere"
             setSocialLink(SocialNetwork.LINKEDIN, "https://www.linkedin.com/in/cedo/")
+            setSocialLink(SocialNetwork.GITHUB, "https://github.com/cedo")
         })
         val host = people.save(Person(name = "dr. Ana People", email = null))
         val candidate = people.save(Person(name = "Cene People", email = null))
@@ -503,7 +504,7 @@ class GraphQLTest @Autowired constructor(
         episodePeople.save(EpisodePerson(episode = aired, person = host, role = Role.PRODUCER))
         episodePeople.save(EpisodePerson(episode = aired, person = host, role = Role.HOST))
         episodePeople.save(EpisodePerson(episode = aired, person = candidate, role = Role.CANDIDATE))
-        val query = "{ people { name bio linkedinUrl episodes { episode { code } roles } } }"
+        val query = "{ people { name bio linkedinUrl githubUrl episodes { episode { code } roles } } }"
         // Other tests' people are there too
         fun ours(answer: ResultActions) = JsonPath.read<List<String>>(answer.andReturn().response.contentAsString, "$.data.people[*].name")
             .filter { it.endsWith(" People") }
@@ -512,6 +513,7 @@ class GraphQLTest @Autowired constructor(
             .andExpect(jsonPath("$.errors").doesNotExist())
             .andExpect(jsonPath("$.data.people[?(@.name == 'Čedo People')].bio", contains("Engineer @ Somewhere")))
             .andExpect(jsonPath("$.data.people[?(@.name == 'Čedo People')].linkedinUrl", contains("https://www.linkedin.com/in/cedo/")))
+            .andExpect(jsonPath("$.data.people[?(@.name == 'Čedo People')].githubUrl", contains("https://github.com/cedo")))
             // The latest first, each once with all of the person's roles
             .andExpect(jsonPath("$.data.people[?(@.name == 'Čedo People')].episodes[*].episode.code", contains("gq-pp2", "gq-pp1")))
             .andExpect(jsonPath("$.data.people[?(@.name == 'dr. Ana People')].episodes[*].roles[*]", contains("HOST", "PRODUCER")))

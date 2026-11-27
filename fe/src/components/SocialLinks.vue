@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { networks } from '@/brands'
-import { type Network, type Person, socialLinks } from '@/people'
+import { type Network, type OnlineLinks, type Person, socialLinks } from '@/people'
 import { useLocale } from '@/useLocale'
 
 // Where a person is online, each in its brand's colour when pointed at
 const props = defineProps<{
-  person: Pick<Person, 'name' | 'homepageUrl' | 'linkedinUrl' | 'twitterUrl' | 'instagramUrl' | 'facebookUrl'>
+  person: Pick<Person, 'name'> & OnlineLinks
 }>()
 
 const { t } = useLocale()

@@ -88,7 +88,7 @@ private val SESSION_COLUMNS = linkedMapOf("name" to "Name", "date" to "Date", "l
 // A person's, but for their email, which their page doesn't show either
 private val PERSON_COLUMNS = linkedMapOf(
     "name" to "Name", "bio" to "Bio", "homepage_url" to "Website", "linkedin_url" to "LinkedIn", "twitter_url" to "X",
-    "instagram_url" to "Instagram", "facebook_url" to "Facebook", "avatar_image_id" to "Avatar", "team" to "Team",
+    "instagram_url" to "Instagram", "facebook_url" to "Facebook", "github_url" to "GitHub", "avatar_image_id" to "Avatar", "team" to "Team",
 )
 
 // An organisation's, its finance details too, as its history is the team's

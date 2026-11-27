@@ -25,6 +25,7 @@ export interface Person {
   twitterUrl: string | null
   instagramUrl: string | null
   facebookUrl: string | null
+  githubUrl: string | null
   avatar: Image | null
   // Whether they're on Ogrodje's team, as the team says; null when their roles tell (kindOf in lists.ts)
   team: Team | null
@@ -41,7 +42,7 @@ export function personPath(person: Pick<Person, 'id'>) {
 
 /** The fields of a Person, for a query */
 export const PERSON_FIELDS = `
-  id name bio homepageUrl linkedinUrl twitterUrl instagramUrl facebookUrl avatar { ${IMAGE_FIELDS} } team
+  id name bio homepageUrl linkedinUrl twitterUrl instagramUrl facebookUrl githubUrl avatar { ${IMAGE_FIELDS} } team
   episodes { episode { id code title } roles }
 `
 
@@ -51,12 +52,16 @@ const networks = {
   X: 'twitterUrl',
   Instagram: 'instagramUrl',
   Facebook: 'facebookUrl',
+  GitHub: 'githubUrl',
 } as const
 
 export type Network = keyof typeof networks
 
+/** What socialLinks reads: a person's links, or an organisation's, which has no GitHub */
+export type OnlineLinks = Omit<Pick<Person, (typeof networks)[Network]>, 'githubUrl'> & Partial<Pick<Person, 'githubUrl'>>
+
 /** Where a person is online: their website, then their social profiles */
-export function socialLinks(person: Pick<Person, (typeof networks)[Network]>) {
+export function socialLinks(person: OnlineLinks) {
   return (Object.keys(networks) as Network[]).flatMap((network) => {
     const url = person[networks[network]]
     return url ? [{ network, url }] : []

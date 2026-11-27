@@ -6,7 +6,7 @@ import type { Translate } from '@/i18n'
 // names, but not the descriptions. The names are the tools' own, in every language.
 
 /** The tools' version, as MetaOS gives it to assistants, which `just mcp-tools` writes (McpToolsTest) */
-export const TOOLS_VERSION = '1.8.0'
+export const TOOLS_VERSION = '1.9.0'
 
 export interface Tool {
   name: string
