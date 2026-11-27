@@ -220,6 +220,52 @@ registry-login:
       jq -r '.auths["ams.vultrcr.com"].auth' | base64 -d)
     printf '%s' "${login#*:}" | docker login ams.vultrcr.com --username "${login%%:*}" --password-stdin
 
+# CI's way into the Elysium cluster (.github/workflows/elysium-factory.yml), in place of Vultr's kubeconfig, which takes
+# the Vultr API key, limited to its owners' addresses: the service account elysium-terraform in kube-system,
+# cluster-admin as that kubeconfig is, and its token, the API's address and its CA into 1Password's vault Elysium
+# (secretspec's ELYSIUM_KUBE_*). Again replaces the token: the old one stops working
+elysium-ci-credentials:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    k=(kubectl --kubeconfig "${ELYSIUM_KUBECONFIG:-$HOME/.kube/elysium}")
+    [[ $("${k[@]}" config current-context) == vke-* ]] || { echo "Not Elysium's kubeconfig: just elysium-kubeconfig" >&2; exit 1; }
+    "${k[@]}" -n kube-system delete secret elysium-terraform-token --ignore-not-found >/dev/null
+    "${k[@]}" apply -f - >/dev/null <<'YAML'
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: elysium-terraform
+      namespace: kube-system
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: elysium-terraform
+    roleRef: { apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: cluster-admin }
+    subjects: [{ kind: ServiceAccount, name: elysium-terraform, namespace: kube-system }]
+    ---
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: elysium-terraform-token
+      namespace: kube-system
+      annotations: { kubernetes.io/service-account.name: elysium-terraform }
+    type: kubernetes.io/service-account-token
+    YAML
+    for i in $(seq 1 20); do
+      token=$("${k[@]}" -n kube-system get secret elysium-terraform-token -o jsonpath='{.data.token}' | base64 -d)
+      [ -n "$token" ] && break
+      sleep 1
+    done
+    [ -n "$token" ] || { echo "Kubernetes gave elysium-terraform no token" >&2; exit 1; }
+    reason="Elysium factory CI: the cluster as elysium-terraform (just elysium-ci-credentials)"
+    "${k[@]}" config view --minify --raw -o jsonpath='{.clusters[0].cluster.server}' |
+      secretspec set ELYSIUM_KUBE_API --from-file - --reason "$reason" >/dev/null
+    "${k[@]}" config view --minify --raw -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' | base64 -d |
+      secretspec set ELYSIUM_KUBE_CA --from-file - --reason "$reason" >/dev/null
+    printf '%s' "$token" | secretspec set ELYSIUM_KUBE_TOKEN --from-file - --reason "$reason" >/dev/null
+    echo "elysium-terraform's token, the API's address and its CA are in 1Password (vault Elysium)"
+
 # Elysium's Canvas image, as CI names it (.github/workflows/elysium.yml): the tag for infra/elysium/factory's
 # canvas_image once the workflow has pushed this Dockerfile
 canvas-image:

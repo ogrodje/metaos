@@ -9,8 +9,10 @@ name: Elysium's factory
 # infra/elysium/README.md, CI): a plan runs the change's own Terraform with the factory's credentials, and elysium-og,
 # which opens pull requests and may merge them, mustn't have that run unseen. So look at the change, then approve. Only
 # such a job gets the state, as elysium-terraform-ci (infra/gcp/ci.tf, by the environment's subject), and 1Password's
-# secretspec.toml scope elysium: VULTR_API_KEY, ELYSIUM_CLOUDFLARE_API_TOKEN, ELYSIUM_TERRAFORM_GITHUB_TOKEN (the org
-# webhook's) and FACTORY_USERS. The run's summary lists what changes, not the plan itself: the repository is public.
+# secretspec.toml scope elysium: the cluster as the service account elysium-terraform (ELYSIUM_KUBE_*, `just
+# elysium-ci-credentials`), CI's own Cloudflare token (ELYSIUM_CI_CLOUDFLARE_API_TOKEN), the org webhook's
+# (ELYSIUM_TERRAFORM_GITHUB_TOKEN) and FACTORY_USERS. Not Vultr's API key, an account key limited to its owners'
+# addresses, nor the Cloudflare token people use, which is too: a runner's address is anyone's. The run's summary lists what changes, not the plan itself: the repository is public.
 # Not elysium/cluster, which changes rarely and is applied by hand.
 on:
   pull_request:
@@ -76,13 +78,21 @@ jobs:
         run: |
           # No apostrophe in the message: inside "${...:?...}" bash takes one for a quote
           : "${ELYSIUM_TERRAFORM_GITHUB_TOKEN:?ELYSIUM_TERRAFORM_GITHUB_TOKEN is not in 1Password (infra/elysium/README.md, CI)}"
+          : "${ELYSIUM_CI_CLOUDFLARE_API_TOKEN:?ELYSIUM_CI_CLOUDFLARE_API_TOKEN is not in 1Password}"
+          : "${ELYSIUM_KUBE_TOKEN:?ELYSIUM_KUBE_TOKEN is not in 1Password: just elysium-ci-credentials}"
           {
-            echo "CLOUDFLARE_API_TOKEN=$ELYSIUM_CLOUDFLARE_API_TOKEN"
+            echo "CLOUDFLARE_API_TOKEN=$ELYSIUM_CI_CLOUDFLARE_API_TOKEN"
             echo "GITHUB_TOKEN=$ELYSIUM_TERRAFORM_GITHUB_TOKEN"
           } >> "$GITHUB_ENV"
-          # FACTORY_USERS is JSON over several lines, maybe: a delimiter, as GitHub has it for those
+          # Values over several lines (FACTORY_USERS' JSON, maybe; the cluster's): a delimiter, as GitHub has it for those
           delimiter="EOF_$(openssl rand -hex 8)"
-          { echo "TF_VAR_factory_users<<$delimiter"; printf '%s\n' "$FACTORY_USERS"; echo "$delimiter"; } >> "$GITHUB_ENV"
+          {
+            echo "TF_VAR_factory_users<<$delimiter"; printf '%s\n' "$FACTORY_USERS"; echo "$delimiter"
+            echo "TF_VAR_kubernetes<<$delimiter"
+            jq -nc --arg host "$ELYSIUM_KUBE_API" --arg ca "$ELYSIUM_KUBE_CA" --arg token "$ELYSIUM_KUBE_TOKEN" \
+              '{host: $host, ca: $ca, token: $token}'
+            echo "$delimiter"
+          } >> "$GITHUB_ENV"
 
       # devenv.nix's Terraform, the same version
       - uses: hashicorp/setup-terraform@v4
@@ -118,19 +128,24 @@ jobs:
           grep -E '^Apply complete' apply.log
           rm apply.log
 
-      # The Canvases' settings now, as `just canvas-settings` gives them, with the cluster's kubeconfig from Vultr
+      # The Canvases' settings now, as `just canvas-settings` gives them, as the service account elysium-terraform
       - if: env.APPLY == 'true'
         name: Give the Canvases their settings
         run: |
-          api=https://api.vultr.com/v2/kubernetes/clusters
-          auth="Authorization: Bearer $VULTR_API_KEY"
-          id=$(curl -sSf -H "$auth" "$api?per_page=100" | jq -r '.vke_clusters[] | select(.label == "elysium") | .id')
           export KUBECONFIG="$RUNNER_TEMP/elysium"
-          (umask 077; curl -sSf -H "$auth" "$api/$id/config" | jq -r .kube_config | base64 -d > "$KUBECONFIG")
+          (
+            umask 077
+            printf '%s\n' "$ELYSIUM_KUBE_CA" > "$RUNNER_TEMP/elysium-ca.pem"
+            kubectl config set-cluster elysium --server="$ELYSIUM_KUBE_API" \
+              --certificate-authority="$RUNNER_TEMP/elysium-ca.pem" --embed-certs >/dev/null
+            kubectl config set-credentials elysium-terraform --token="$ELYSIUM_KUBE_TOKEN" >/dev/null
+            kubectl config set-context elysium --cluster=elysium --user=elysium-terraform >/dev/null
+            kubectl config use-context elysium >/dev/null
+          )
           job="canvas-settings-ci-$GITHUB_RUN_ID"
           kubectl -n factory create job --from=cronjob/canvas-settings "$job"
           if kubectl -n factory wait --for=condition=complete --timeout=5m "job/$job"; then status=0; else status=1; fi
           kubectl -n factory logs "job/$job" | jq -r '"\(.message) \(.canvas // "") \(.done // [] | join("; "))"' || true
           kubectl -n factory delete job "$job" --wait=false
-          rm -f "$KUBECONFIG"
+          rm -f "$KUBECONFIG" "$RUNNER_TEMP/elysium-ca.pem"
           exit "$status"
