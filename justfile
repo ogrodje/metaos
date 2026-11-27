@@ -216,6 +216,39 @@ canvas-key:
       cat /home/openhands/.openhands/agent-canvas/api-key.txt | pbcopy
     @echo "Canvas' session key is on the clipboard"
 
+# Elysium in Linear: OAuth app "Elysium" in workspace ogrodje (Settings > API), private to it, with client credentials.
+# Its client ID isn't secret; its client secret is ELYSIUM_LINEAR_CLIENT_SECRET (secretspec.toml)
+elysium_linear_client_id := "1fad2d2ffaf2bf8a19da97b44790cdff"
+
+# Linear then sends the browser to agent.ogrodje.dev/linear/callback, where nothing answers yet, which is fine: the
+# install is the consent. Elysium is then its own user, which can be @mentioned and delegated issues, taking no seat.
+# Installs Elysium in Linear as an agent (actor=app): opens the consent page, for a workspace admin
+elysium-linear-install:
+    open "https://linear.app/oauth/authorize?client_id={{elysium_linear_client_id}}&redirect_uri=https%3A%2F%2Fagent.ogrodje.dev%2Flinear%2Fcallback&response_type=code&scope=read,write,app:assignable,app:mentionable&actor=app&prompt=consent"
+
+# Client credentials: actor app, 30 days, no refresh. A new one each run; the old ones keep working until they
+# expire, or until the client secret is rotated.
+# Elysium's Linear token onto the clipboard (macOS), for Canvas' Linear MCP server (https://mcp.linear.app/mcp, Bearer)
+elysium-linear-token:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    response=$(curl -sS https://api.linear.app/oauth/token \
+      --data-urlencode grant_type=client_credentials \
+      --data-urlencode "scope=read,write" \
+      --data-urlencode client_id={{elysium_linear_client_id}} \
+      --data-urlencode "client_secret=${ELYSIUM_LINEAR_CLIENT_SECRET:?ELYSIUM_LINEAR_CLIENT_SECRET: secretspec set ELYSIUM_LINEAR_CLIENT_SECRET}")
+    token=$(jq -r '.access_token // empty' <<<"$response")
+    [ -n "$token" ] || { jq '{error, error_description}' <<<"$response" >&2; exit 1; }
+    viewer=$(curl -sS https://api.linear.app/graphql -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
+      -d '{"query":"{ viewer { name } organization { name } }"}' | jq -r '"\(.data.viewer.name) in \(.data.organization.name)"')
+    printf '%s' "$token" | pbcopy
+    echo "Elysium's Linear token ($viewer, $(( $(jq -r .expires_in <<<"$response") / 86400 )) days) is on the clipboard"
+
+# Canvas' credentials from 1Password (infra/elysium/factory/canvas_settings.sh): Elysium's GitHub token and git
+# identity, and the GitHub and Linear MCP servers with a new Linear token. Again monthly, as Linear's lasts 30 days
+canvas-settings:
+    infra/elysium/factory/canvas_settings.sh
+
 # LiteLLM's key, for Canvas' LLM settings (infra/elysium/README.md), onto the clipboard (macOS)
 litellm-key:
     KUBECONFIG="${ELYSIUM_KUBECONFIG:-$HOME/.kube/elysium}" kubectl get secret -n factory litellm \

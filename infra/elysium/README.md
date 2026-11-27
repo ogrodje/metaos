@@ -71,6 +71,26 @@ out, the same without it, and a new session key if they had it (delete `api-key.
 
 `just canvas` still port-forwards it, as before.
 
+### Elysium in GitHub and Linear
+
+The agents are **Elysium** wherever they act, not whoever started them:
+
+- **GitHub: the account `elysium-og`** (Elysium), a member of `ogrodje` in team `elysium`, which has Write on every
+  repository: push, open and merge pull requests, edit workflows. Not Admin. Its fine-grained token
+  (`ELYSIUM_GITHUB_TOKEN`: all of ogrodje, contents, pull requests, issues, workflows and actions read/write, a year) is
+  Canvas' `GITHUB_TOKEN`, and commits carry `GIT_AUTHOR_*`/`GIT_COMMITTER_*` of Elysium with elysium-og's noreply
+  address. A new repository needs adding to the team. Not a GitHub App: Canvas gives a conversation its token for its
+  whole run, and an App's last an hour.
+- **Linear: the app "Elysium"** (Settings > API, private to workspace ogrodje, client credentials on), installed as an
+  agent (`actor=app`, `just elysium-linear-install`): its own user, which can be @mentioned and delegated issues, with
+  no seat. Its token (client credentials, 30 days) is minted from `ELYSIUM_LINEAR_CLIENT_SECRET`.
+- **In Canvas**, both as MCP servers (GitHub's and Linear's hosted ones, `github` and `linear`) and the secrets above,
+  set by `just canvas-settings` (`factory/canvas_settings.sh`) through Canvas' API: **monthly**, for Linear's token.
+
+Not yet: a Linear issue delegated to Elysium, or a mention of it, starting a conversation, as Cyrus does. That needs
+something answering Linear's agent-session webhooks (`Linear-Signature`, within 5 seconds) and handing them to Canvas,
+reachable past Access.
+
 LiteLLM is the only thing that holds the providers' keys; Canvas has LiteLLM's key. Without a database it has no
 budgets of its own yet, so the spend limits are the providers', on the workspace and the project the keys are of.
 
