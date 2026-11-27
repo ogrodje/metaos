@@ -74,7 +74,8 @@ jobs:
       - name: Pass the secrets on under the providers' names
         working-directory: .
         run: |
-          : "${ELYSIUM_TERRAFORM_GITHUB_TOKEN:?ELYSIUM_TERRAFORM_GITHUB_TOKEN isn't in 1Password (infra/elysium/README.md, CI)}"
+          # No apostrophe in the message: inside "${...:?...}" bash takes one for a quote
+          : "${ELYSIUM_TERRAFORM_GITHUB_TOKEN:?ELYSIUM_TERRAFORM_GITHUB_TOKEN is not in 1Password (infra/elysium/README.md, CI)}"
           {
             echo "CLOUDFLARE_API_TOKEN=$ELYSIUM_CLOUDFLARE_API_TOKEN"
             echo "GITHUB_TOKEN=$ELYSIUM_TERRAFORM_GITHUB_TOKEN"
