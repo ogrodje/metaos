@@ -76,6 +76,23 @@ Four aren't CI's: `gcp` can give anyone anything in the project, so only its own
 own; and `elysium/`'s stacks can replace the cluster's nodes, or the cluster, and their states open it to an admin. An infra change merged with an app change is applied beside the app's deploy, not before it: one the app needs
 first goes in a pull request of its own.
 
+### CI's secrets
+
+CI loads what it needs from 1Password (`.github/actions/secrets`, a secretspec scope) with a service account's token,
+`OP_SERVICE_ACCOUNT_TOKEN`, which is **an environment's, never the repository's**: a repository's secret is every
+workflow's, on every branch, so a branch anyone with Write pushes (`elysium-og` too) could have read all of a vault
+with a workflow, or Terraform, of its own. An environment's is only its jobs', after its rules:
+
+| Environment | Its token | Who may use it |
+|---|---|---|
+| `production` | "MetaOS CI", Ogrodje-Prod, read only | jobs on `master` only (its branch policy): the deploy, the images, `terraform.yml`'s applies |
+| `review` | the same | any branch, once a reviewer approves the job: pull requests' plans, a branch's images |
+| `elysium` | "Elysium CI", vault Elysium only, read only | once a reviewer approves: `elysium-factory.yml`, plans and applies (`elysium/README.md`, CI) |
+
+A job picks `production` on `master` and `review` elsewhere (`${{ github.ref == 'refs/heads/master' && 'production' ||
+'review' }}`), so a pull request's job that has a secret waits for a person, who looks at the change first. Changing a
+token is `gh secret set OP_SERVICE_ACCOUNT_TOKEN --env <environment> --repo ogrodje/metaos`.
+
 ## The first time
 
 The states' bucket is made by a stack, so the first applies go in this order:

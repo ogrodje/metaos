@@ -10,7 +10,8 @@ name: Terraform
 #
 # Terraform reaches the states in Cloud Storage as metaos-terraform-ci, through Workload Identity Federation, so with
 # no key to keep (infra/gcp/ci.tf), and each stack's provider with production's secrets, from 1Password
-# (.github/actions/secrets, secretspec.toml's scope `terraform`, with the repository's OP_SERVICE_ACCOUNT_TOKEN):
+# (.github/actions/secrets, secretspec.toml's scope `terraform`, with OP_SERVICE_ACCOUNT_TOKEN, environment production's
+# on master and review's, which someone approves first, on a pull request):
 # KEYCLOAK_ADMIN_USERNAME and KEYCLOAK_ADMIN_PASSWORD, NEW_RELIC_USER_KEY (a User API key, passed on as
 # NEW_RELIC_API_KEY, as the justfile does) and CLOUDFLARE_API_TOKEN. Only an apply is a deployment to production; a plan
 # uses the secrets without being one (`deployment: false`). Pull requests from forks and Dependabot get no secrets, so
@@ -103,8 +104,10 @@ jobs:
       (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # CI's 1Password token is an environment's (infra/README.md, CI's secrets): production's on master, and review's,
+    # which waits until someone approves the job, for a pull request's plan: it runs the change's own Terraform
     environment:
-      name: production
+      name: ${{ github.ref == 'refs/heads/master' && 'production' || 'review' }}
       deployment: ${{ github.event_name == 'push' || inputs.apply == true }}
     strategy:
       fail-fast: false

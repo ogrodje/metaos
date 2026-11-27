@@ -5,8 +5,8 @@ name: Elysium's Canvas image
 # pushed to Vultr's registry as elysium-canvas:<Canvas' version>-<the Dockerfile's hash>, which `just canvas-image` says
 # too, and as latest from master. A Dockerfile whose image is there already isn't built again.
 #
-# Secrets: as deploy.yml's, the repository's OP_SERVICE_ACCOUNT_TOKEN, with which it loads secretspec.toml's scope
-# registry:
+# Secrets: as deploy.yml's, OP_SERVICE_ACCOUNT_TOKEN, environment production's on master and review's (once someone
+# approves) on an elysium/ branch, with which it loads secretspec.toml's scope registry:
 #   VULTR_REGISTRY_USERNAME / VULTR_REGISTRY_PASSWORD  Vultr's registry: a push login that doesn't run out
 
 on:
@@ -28,6 +28,11 @@ jobs:
     name: elysium-canvas
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    # CI's 1Password token is an environment's, not the repository's (infra/README.md, CI's secrets): production's on
+    # master, and on any other branch review's, which waits until someone approves the job
+    environment:
+      name: ${{ github.ref == 'refs/heads/master' && 'production' || 'review' }}
+      deployment: false
     steps:
       - uses: actions/checkout@v7
 
