@@ -10,6 +10,7 @@ Nothing in it is set up by hand or by a script: a change to it is a change here,
 | [`newrelic/`](newrelic)       | New Relic: the browser apps, uptime checks, alerts and where they go, the dashboard       | Cloud Storage          | CI, on merge |
 | [`cloudflare/`](cloudflare)   | Zone `ogrodje.si`, as far as MetaOS goes: its five names (the apex and www too), the zone's cache, configuration and redirect rules, Smart Tiered Caching | Cloud Storage          | CI, on merge |
 | [`tailscale/`](tailscale)     | The tailnet's policy file, all of it. **Private:** never in git, never in CI (below)     | Cloud Storage          | `just infra tailscale <command>`, on a machine that has the file |
+| [`elysium/`](elysium/README.md) | Elysium, the Vultr cluster MetaOS moves to, and the software factory in it: `elysium/cluster`, `elysium/factory` | Cloud Storage, which CI can't read | `just infra elysium/<stack> <command>`, by hand only |
 
 ## Public and private
 
@@ -44,7 +45,8 @@ module where the environments share an account.
 
 Every stack's state is in the bucket `ogrodje-metaos-tfstate` (`gcp/main.tf`), under the stack's name, with
 Terraform's lock beside it: versioned, the 20 latest versions of each kept, and older ones 90 days. States have secrets
-in them, so only the project's owners and CI read it. Development's Keycloak is the exception: its state is in
+in them, so only the project's owners and CI read it, and CI not Elysium's, under `elysium/`, which hold what opens
+its cluster to an admin (`gcp/ci.tf`). Development's Keycloak is the exception: its state is in
 `keycloak/dev/terraform.tfstate`, on the developer's machine, as the Keycloak it describes is.
 
 ## Signing in
@@ -56,6 +58,7 @@ in them, so only the project's owners and CI read it. Development's Keycloak is 
 | New Relic                                   | `NEW_RELIC_USER_KEY`, a User API key                 | `NEW_RELIC_API_KEY`           |
 | Cloudflare                                  | `CLOUDFLARE_API_TOKEN`: zone `ogrodje.si`, Zone Read, DNS Edit, Zone Settings Edit, Cache Rules Edit, Config Rules Edit, Single Redirect Edit | The same secret |
 | Tailscale                                   | `TAILSCALE_OAUTH_CLIENT_ID`, `TAILSCALE_OAUTH_CLIENT_SECRET`: the OAuth client "MetaOS Terraform" (Trust credentials) with Policy File write, Devices Core read, Devices Routes read | Not in CI |
+| Vultr (`elysium/`)                          | `VULTR_API_KEY`, its access control allowing your address; the cluster with the kubeconfig Vultr gives for it | Not in CI |
 
 ## CI
 
@@ -68,9 +71,9 @@ change to the workflow plans, and applies, all three.
 tflint checks every stack, CI's and the others, on every change to `infra/` (`.tflint.hcl`: Terraform's
 recommended rules, and Google's for `gcp`); `just tflint` does the same locally, with devenv's tflint.
 
-Three aren't CI's: `gcp` can give anyone anything in the project, so only its owners apply it, themselves;
-`tailscale`'s policy file is private, so not in the repository CI checks out; and `keycloak/dev` is each developer's
-own. An infra change merged with an app change is applied beside the app's deploy, not before it: one the app needs
+Four aren't CI's: `gcp` can give anyone anything in the project, so only its owners apply it, themselves;
+`tailscale`'s policy file is private, so not in the repository CI checks out; `keycloak/dev` is each developer's
+own; and `elysium/`'s stacks can replace the cluster's nodes, or the cluster, and their states open it to an admin. An infra change merged with an app change is applied beside the app's deploy, not before it: one the app needs
 first goes in a pull request of its own.
 
 ## The first time

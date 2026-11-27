@@ -165,12 +165,62 @@ infra stack command *ARGS:
       newrelic) export NEW_RELIC_API_KEY="${NEW_RELIC_USER_KEY:?NEW_RELIC_USER_KEY, a User API key}" ;;
       cloudflare) : "${CLOUDFLARE_API_TOKEN:?}" ;;
       tailscale) : "${TAILSCALE_OAUTH_CLIENT_ID:?}" "${TAILSCALE_OAUTH_CLIENT_SECRET:?}" ;;
-      *) echo "gcp, newrelic, cloudflare or tailscale (Keycloak's is just keycloak)" >&2; exit 2 ;;
+      elysium/cluster) : "${VULTR_API_KEY:?VULTR_API_KEY: secretspec set VULTR_API_KEY}" ;;
+      elysium/factory)
+        : "${VULTR_API_KEY:?VULTR_API_KEY: secretspec set VULTR_API_KEY}"
+        # ogrodje.dev's Cloudflare account, not ogrodje.si's, whose token CLOUDFLARE_API_TOKEN otherwise is
+        export CLOUDFLARE_API_TOKEN="${ELYSIUM_CLOUDFLARE_API_TOKEN:?ELYSIUM_CLOUDFLARE_API_TOKEN: secretspec set ELYSIUM_CLOUDFLARE_API_TOKEN}"
+        export TF_VAR_access_emails="${FACTORY_ACCESS_EMAILS:?FACTORY_ACCESS_EMAILS: secretspec set FACTORY_ACCESS_EMAILS}" ;;
+      *) echo "gcp, newrelic, cloudflare, tailscale, elysium/cluster or elysium/factory (Keycloak's is just keycloak)" >&2; exit 2 ;;
     esac
     export GOOGLE_OAUTH_ACCESS_TOKEN="${GOOGLE_OAUTH_ACCESS_TOKEN:-$(gcloud auth print-access-token)}"
     cd infra/{{stack}}
     terraform init -input=false >/dev/null
     terraform "{{command}}" {{ARGS}}
+
+# Elysium's admin kubeconfig (infra/elysium), from Vultr, into ~/.kube/elysium (or ELYSIUM_KUBECONFIG): outside the
+# repository, and readable by you only. Then `KUBECONFIG=~/.kube/elysium kubectl ...`, or k9s with --kubeconfig
+elysium-kubeconfig:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    api=https://api.vultr.com/v2/kubernetes/clusters
+    auth="Authorization: Bearer ${VULTR_API_KEY:?VULTR_API_KEY: secretspec set VULTR_API_KEY}"
+    id=$(curl -sSf -H "$auth" "$api?per_page=100" | jq -r '.vke_clusters[] | select(.label == "elysium") | .id')
+    [ -n "$id" ] || { echo "No VKE cluster labelled elysium: just infra elysium/cluster apply" >&2; exit 1; }
+    file="${ELYSIUM_KUBECONFIG:-$HOME/.kube/elysium}"
+    mkdir -p "$(dirname "$file")"
+    umask 077
+    curl -sSf -H "$auth" "$api/$id/config" | jq -r .kube_config | base64 -d > "$file"
+    echo "$file: cluster $id"
+
+# Agent Canvas, the factory's UI (infra/elysium/README.md), on http://localhost:8800/canvas/ for as long as this runs:
+# a port-forward, as nothing else reaches it. It asks for its session key, which it made on its first start and keeps
+# on its volume: this puts it on the clipboard (macOS), and never in the terminal
+canvas port="8800":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    export KUBECONFIG="${ELYSIUM_KUBECONFIG:-$HOME/.kube/elysium}"
+    key=/home/openhands/.openhands/agent-canvas/api-key.txt
+    if command -v pbcopy >/dev/null; then
+      kubectl exec -n factory canvas-0 -- cat "$key" | pbcopy
+      echo "Canvas' session key is on the clipboard, for when the page asks for it"
+    else
+      echo "Canvas' session key: kubectl exec -n factory canvas-0 -- cat $key"
+    fi
+    echo "http://localhost:{{port}}/canvas/"
+    kubectl port-forward -n factory svc/canvas {{port}}:8000
+
+# Canvas' session key onto the clipboard (macOS), for a browser that opens https://agent.ogrodje.dev the first time
+canvas-key:
+    KUBECONFIG="${ELYSIUM_KUBECONFIG:-$HOME/.kube/elysium}" kubectl exec -n factory canvas-0 -- \
+      cat /home/openhands/.openhands/agent-canvas/api-key.txt | pbcopy
+    @echo "Canvas' session key is on the clipboard"
+
+# LiteLLM's key, for Canvas' LLM settings (infra/elysium/README.md), onto the clipboard (macOS)
+litellm-key:
+    KUBECONFIG="${ELYSIUM_KUBECONFIG:-$HOME/.kube/elysium}" kubectl get secret -n factory litellm \
+      -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d | pbcopy
+    @echo "LiteLLM's key is on the clipboard"
 
 # tflint over every stack in infra/ (infra/.tflint.hcl), as CI does; the first run installs its plugins
 tflint:
