@@ -1,5 +1,6 @@
 # The Canvases (canvas/, ../README.md "Team and personal Canvases"): the team's at agent.ogrodje.dev, which everyone in
-# FACTORY_USERS opens, and one of each person's own at agent-<name>.ogrodje.dev, which only they do. A Canvas' settings,
+# FACTORY_USERS opens, and, with personal_canvases on (off for now, to spare the node), one of each person's own at
+# agent-<name>.ogrodje.dev, which only they do. A Canvas' settings,
 # MCP servers, secrets, conversations and automations are its own: in a person's, their own accounts (e.g. MetaOS'
 # MCP server signed in as them); in the team's, service identities only. Each browser adds the ones it may open as
 # backends, and switches between them.
@@ -16,8 +17,8 @@ locals {
   users = jsondecode(var.factory_users)
   # The names aren't secret, the addresses are: so for_each over the one, and the other only where it's needed
   names = nonsensitive(sort(keys(local.users)))
-  # The team's first
-  canvas_names = concat(["team"], local.names)
+  # The team's first, and the people's own if they have them
+  canvas_names = concat(["team"], var.personal_canvases ? local.names : [])
 
   canvases = merge(
     {
@@ -25,9 +26,10 @@ locals {
         k8s_name       = "canvas"
         hostname       = local.agent_hostname
         emails         = [for n in local.names : local.users[n].email]
-        volume_size    = "20Gi"
-        memory_request = "1536Mi"
-        memory_limit   = "8Gi"
+        volume_size    = var.team_volume_size
+        cache_size     = "100Gi"
+        memory_request = var.personal_canvases ? "1536Mi" : "2Gi"
+        memory_limit   = var.personal_canvases ? "8Gi" : "12Gi"
       }
     },
     {
@@ -36,6 +38,7 @@ locals {
         hostname       = "agent-${n}.ogrodje.dev"
         emails         = [local.users[n].email]
         volume_size    = "15Gi"
+        cache_size     = "40Gi"
         memory_request = "1Gi"
         memory_limit   = "6Gi"
       }
@@ -66,9 +69,16 @@ module "canvas" {
   service_account       = kubernetes_service_account_v1.canvas.metadata[0].name
   storage_class         = var.storage_class
   volume_size           = local.canvases[each.key].volume_size
+  cache_size            = local.canvases[each.key].cache_size
   memory_request        = local.canvases[each.key].memory_request
   memory_limit          = local.canvases[each.key].memory_limit
   cloudflare_account_id = local.cloudflare_account_id
+}
+
+# The team's volume, which the StatefulSet's template made, is Terraform's own now, so that it can grow in place
+import {
+  to = module.canvas["team"].kubernetes_persistent_volume_claim_v1.home
+  id = "factory/home-canvas-0"
 }
 
 # The one Canvas there was is the team's now, with its volume

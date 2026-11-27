@@ -18,3 +18,15 @@ variable "storage_class" {
   type        = string
   default     = "vultr-block-storage"
 }
+
+variable "personal_canvases" {
+  description = "A Canvas of each person's own in FACTORY_USERS, beside the team's (canvas.tf). Off: everyone works in the team's, Linear's and GitHub's requests too"
+  type        = bool
+  default     = false
+}
+
+variable "team_volume_size" {
+  description = "The team Canvas' volume: settings, conversations, the agents' checkouts. It grows in place, never shrinks"
+  type        = string
+  default     = "50Gi"
+}

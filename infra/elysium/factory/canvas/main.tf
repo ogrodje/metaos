@@ -1,7 +1,9 @@
 # One Agent Canvas (github.com/OpenHands/OpenHands, MIT): its UI, agent-server and automations in one pod, one volume,
 # at https://<hostname>, which Cloudflare Access opens to `emails` only (../README.md, "Team and personal Canvases").
 # As Canvas' chart (helm/agent-canvas there) has it, which isn't published, with what the chart has no place for: the
-# factory node, and the session key from Kubernetes.
+# factory node, the session key from Kubernetes, and two kinds of disk: its volume (Vultr's NVMe block storage, which
+# lasts), for its settings, conversations and the agents' checkouts, and the node's own disk, free and fast but gone
+# when the pod restarts, for the build tools' caches.
 #
 # Canvas has no users of its own: whoever reaches port 8000 with its session key drives its agents. So only cloudflared,
 # after Access, and the Linear bridge reach it (../network.tf), and the key, which Terraform makes, Canvas puts into its
@@ -59,6 +61,11 @@ variable "volume_size" {
   type = string
 }
 
+variable "cache_size" {
+  description = "How much of the node's own disk the build tools' caches may take (Gradle's, Maven's, npm's): emptied when the pod restarts"
+  type        = string
+}
+
 variable "memory_request" {
   type = string
 }
@@ -73,13 +80,18 @@ variable "cloudflare_account_id" {
 
 locals {
   labels = { "app.kubernetes.io/name" = "canvas", "app.kubernetes.io/instance" = var.name }
-  # Under /home/openhands, each on its own directory of the one volume: settings, secrets, conversations and the
-  # automations' SQLite (.openhands), the agents' checkouts (workspace), and Gradle's caches, so a build doesn't
-  # download the world each time. Not ~/.cache, which the image ships things in
+  # Under /home/openhands, each on its own directory of the volume: settings, secrets, conversations, the agents'
+  # checkouts (.openhands, whose agent-canvas/workspaces they're in) and the automations' SQLite, and workspace
   mounts = {
     ".openhands" = "openhands"
     "workspace"  = "workspace"
-    ".gradle"    = "gradle"
+  }
+  # And of the node's disk: the build tools' caches, so a build doesn't download the world each time; refilled after a
+  # restart. Not ~/.cache, which the image ships things in
+  caches = {
+    ".gradle" = "gradle"
+    ".m2"     = "m2"
+    ".npm"    = "npm"
   }
 }
 
@@ -187,6 +199,15 @@ resource "kubernetes_stateful_set_v1" "canvas" {
             }
           }
 
+          dynamic "volume_mount" {
+            for_each = local.caches
+            content {
+              name       = "caches"
+              mount_path = "/home/openhands/${volume_mount.key}"
+              sub_path   = volume_mount.value
+            }
+          }
+
           startup_probe {
             http_get {
               path = "/alive"
@@ -216,28 +237,41 @@ resource "kubernetes_stateful_set_v1" "canvas" {
             timeout_seconds = 5
           }
         }
-      }
-    }
 
-    volume_claim_template {
-      metadata {
-        name = "home"
-      }
+        volume {
+          name = "home"
+          persistent_volume_claim {
+            claim_name = kubernetes_persistent_volume_claim_v1.home.metadata[0].name
+          }
+        }
 
-      spec {
-        access_modes       = ["ReadWriteOnce"]
-        storage_class_name = var.storage_class
-
-        resources {
-          requests = { storage = var.volume_size }
+        volume {
+          name = "caches"
+          empty_dir {
+            size_limit = var.cache_size
+          }
         }
       }
     }
 
-    # The volume outlives the StatefulSet: a new one of the same name takes it up again
-    persistent_volume_claim_retention_policy {
-      when_deleted = "Retain"
-      when_scaled  = "Retain"
+  }
+}
+
+# Its volume, Terraform's own rather than the StatefulSet's template's, so that a bigger size grows it in place
+# (vultr-block-storage allows that; it never shrinks). Named as the template named it, which the team's was made by
+resource "kubernetes_persistent_volume_claim_v1" "home" {
+  metadata {
+    name      = "home-${var.k8s_name}-0"
+    namespace = var.namespace
+    labels    = local.labels
+  }
+
+  spec {
+    access_modes       = ["ReadWriteOnce"]
+    storage_class_name = var.storage_class
+
+    resources {
+      requests = { storage = var.volume_size }
     }
   }
 }

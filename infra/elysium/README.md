@@ -55,9 +55,22 @@ stacks may rely on:
 ## The factory
 
 Agent Canvas is OpenHands' single-tenant app (MIT): its UI, agent-server and automations in one pod, every agent of it
-in that pod and on its one volume, with no users of its own. So there's one per person, and one for the team.
+in that pod and on its one volume, with no users of its own. So there's one for the team, and, when it's worth the
+memory, one of each person's own (`personal_canvases`, off for now: `factory/variables.tf`).
 
 ### Team and personal Canvases
+
+**For now there's only the team's**, at https://agent.ogrodje.dev, for everyone in `FACTORY_USERS`, Linear's and
+GitHub's requests too: one Canvas leaves the factory node to the agents' builds (up to 12 GiB of memory). Its storage:
+
+- **its volume**, Vultr NVMe block storage (`team_volume_size`, 50 GiB): settings, conversations, the agents'
+  checkouts (`~/.openhands/agent-canvas/workspaces`). It lasts, and grows in place with a bigger size (never shrinks):
+  Terraform has it itself, not the StatefulSet's template, for that;
+- **the node's own disk** for the build tools' caches (`~/.gradle`, `~/.m2`, `~/.npm`, up to 100 GiB): free and fast,
+  emptied when the pod restarts, after which the next build fills them again.
+
+With `personal_canvases` on (`-var personal_canvases=true`, or its default changed), each person also gets their own,
+as follows, and the team's becomes nobody's for Linear and GitHub, whose requests then run in the asker's.
 
 | | The team's, **https://agent.ogrodje.dev** | A person's, **https://agent-&lt;name&gt;.ogrodje.dev** |
 |---|---|---|

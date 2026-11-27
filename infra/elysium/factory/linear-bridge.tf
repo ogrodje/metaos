@@ -12,16 +12,16 @@ locals {
   linear_bridge_labels = { "app.kubernetes.io/name" = "linear-bridge" }
   linear_bridge_source = file("${path.module}/../../../elysium/linear-bridge/bridge.ts")
 
-  # Whose Canvas is whose: a request runs in its asker's, by Linear email or GitHub login. The team's has none, so none
-  # runs there
+  # Whose Canvas is whose: a request runs in its asker's, by Linear email or GitHub login. With personal Canvases, the
+  # team's is nobody's, so none runs there; without, it's everyone's
   linear_bridge_canvases = jsonencode([
     for name in local.canvas_names : {
       name      = name
       url       = module.canvas[name].service_url
       key       = module.canvas[name].session_key
       publicUrl = module.canvas[name].public_url
-      emails    = name == "team" ? [] : [lower(local.users[name].email)]
-      github    = name == "team" ? [] : [lower(local.users[name].github)]
+      emails    = name != "team" ? [lower(local.users[name].email)] : var.personal_canvases ? [] : [for n in local.names : lower(local.users[n].email)]
+      github    = name != "team" ? [lower(local.users[name].github)] : var.personal_canvases ? [] : [for n in local.names : lower(local.users[n].github)]
     }
   ])
 }
