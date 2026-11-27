@@ -24,6 +24,10 @@ terraform {
       source  = "cloudflare/cloudflare"
       version = "~> 5.29"
     }
+    github = {
+      source  = "integrations/github"
+      version = "~> 6.13"
+    }
   }
 
   # Under elysium/, which CI's service account can't read (../../gcp/ci.tf): it holds LiteLLM's master key
@@ -38,6 +42,11 @@ provider "vultr" {}
 # ogrodje.dev's account (access.tf), with ELYSIUM_CLOUDFLARE_API_TOKEN, which the justfile passes as
 # CLOUDFLARE_API_TOKEN
 provider "cloudflare" {}
+
+# The ogrodje organization (github.tf), as you: GITHUB_TOKEN, gh's, from the justfile
+provider "github" {
+  owner = "ogrodje"
+}
 
 # The cluster by its label, not from elysium/cluster's state, and its kubeconfig from Vultr, as an admin's: this stack
 # changes nothing but what's in the cluster

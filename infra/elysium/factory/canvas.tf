@@ -1,13 +1,46 @@
-# OpenHands' Agent Canvas (github.com/OpenHands/OpenHands, MIT): its UI, agent-server and automations in one pod, one
-# volume. As its chart (helm/agent-canvas there) has it, which isn't published, so it's here instead, with what the
-# chart has no place for: the factory node, and later Sysbox' runtime class, for Docker in the agents' builds.
+# The Canvases (canvas/, ../README.md "Team and personal Canvases"): the team's at agent.ogrodje.dev, which everyone in
+# FACTORY_USERS opens, and one of each person's own at agent-<name>.ogrodje.dev, which only they do. A Canvas' settings,
+# MCP servers, secrets, conversations and automations are its own: in a person's, their own accounts (e.g. MetaOS'
+# MCP server signed in as them); in the team's, service identities only. Each browser adds the ones it may open as
+# backends, and switches between them.
 #
-# One tenant, no sign-in: whoever reaches port 8000 drives the agents, so nothing publishes it (`just canvas`), and
-# every agent shares the pod and its volume. Its LLM is set in its UI, once (../README.md): the agent-server has no
-# environment variables for it, and keeps it encrypted on the volume.
+# Who's who is FACTORY_USERS, from 1Password, never in this public repository: {"<name>": {"email": "<email>", "github":
+# "<login>"}, ...}: their Linear and Access email and their GitHub login, whose requests the bridge runs in their Canvas.
+# A name is a Canvas' and its address' (lowercase letters and digits). Adding someone: their entry, then
+# `just infra elysium/factory apply` and `just canvas-settings`.
 
 locals {
+  # Every Canvas' pods, whoever's (canvas/ adds app.kubernetes.io/instance), for the NetworkPolicies
   canvas_labels = { "app.kubernetes.io/name" = "canvas" }
+
+  users = jsondecode(var.factory_users)
+  # The names aren't secret, the addresses are: so for_each over the one, and the other only where it's needed
+  names = nonsensitive(sort(keys(local.users)))
+  # The team's first
+  canvas_names = concat(["team"], local.names)
+
+  canvases = merge(
+    {
+      team = {
+        k8s_name       = "canvas"
+        hostname       = local.agent_hostname
+        emails         = [for n in local.names : local.users[n].email]
+        volume_size    = "20Gi"
+        memory_request = "1536Mi"
+        memory_limit   = "8Gi"
+      }
+    },
+    {
+      for n in local.names : n => {
+        k8s_name       = "canvas-${n}"
+        hostname       = "agent-${n}.ogrodje.dev"
+        emails         = [local.users[n].email]
+        volume_size    = "15Gi"
+        memory_request = "1Gi"
+        memory_limit   = "6Gi"
+      }
+    },
+  )
 }
 
 resource "kubernetes_service_account_v1" "canvas" {
@@ -20,159 +53,46 @@ resource "kubernetes_service_account_v1" "canvas" {
   automount_service_account_token = false
 }
 
-resource "kubernetes_stateful_set_v1" "canvas" {
-  metadata {
-    name      = "canvas"
-    namespace = local.namespace
-    labels    = local.canvas_labels
-  }
+module "canvas" {
+  source   = "./canvas"
+  for_each = toset(local.canvas_names)
 
-  spec {
-    service_name = kubernetes_service_v1.canvas.metadata[0].name
-    replicas     = 1
-
-    selector {
-      match_labels = local.canvas_labels
-    }
-
-    template {
-      metadata {
-        labels = local.canvas_labels
-      }
-
-      spec {
-        service_account_name            = kubernetes_service_account_v1.canvas.metadata[0].name
-        automount_service_account_token = false
-        node_selector                   = { "ogrodje.si/pool" = local.pool }
-
-        toleration {
-          key      = "ogrodje.si/pool"
-          operator = "Equal"
-          value    = local.pool
-          effect   = "NoSchedule"
-        }
-
-        # The image's user, openhands; fs_group gives it the volume
-        security_context {
-          run_as_user     = 10001
-          run_as_group    = 10001
-          run_as_non_root = true
-          fs_group        = 10001
-        }
-
-        container {
-          name  = "canvas"
-          image = "ghcr.io/openhands/agent-canvas:1.46.0"
-
-          port {
-            name           = "http"
-            container_port = 8000
-          }
-
-          env {
-            name  = "PORT"
-            value = "8000"
-          }
-          # Automations' packages on the volume, not in a cloud bucket
-          env {
-            name  = "FILE_STORE"
-            value = "local"
-          }
-
-          # The agents' builds are what take the memory: MetaOS' Gradle and Kotlin daemons want a few GB of their own
-          resources {
-            requests = { cpu = "1", memory = "4Gi" }
-            limits   = { memory = "12Gi" }
-          }
-
-          dynamic "volume_mount" {
-            for_each = local.canvas_mounts
-            content {
-              name       = "home"
-              mount_path = "/home/openhands/${volume_mount.key}"
-              sub_path   = volume_mount.value
-            }
-          }
-
-          startup_probe {
-            http_get {
-              path = "/alive"
-              port = "http"
-            }
-            period_seconds    = 5
-            timeout_seconds   = 5
-            failure_threshold = 60
-          }
-
-          liveness_probe {
-            http_get {
-              path = "/alive"
-              port = "http"
-            }
-            period_seconds    = 30
-            timeout_seconds   = 5
-            failure_threshold = 5
-          }
-
-          readiness_probe {
-            http_get {
-              path = "/alive"
-              port = "http"
-            }
-            period_seconds  = 10
-            timeout_seconds = 5
-          }
-        }
-      }
-    }
-
-    # What survives a restart: settings, secrets, conversations and the automations' SQLite (.openhands), the agents'
-    # checkouts (workspace), and Gradle's caches, so a build doesn't download the world each time. Not ~/.cache, which
-    # the image ships things in
-    volume_claim_template {
-      metadata {
-        name = "home"
-      }
-
-      spec {
-        access_modes       = ["ReadWriteOnce"]
-        storage_class_name = var.storage_class
-
-        resources {
-          requests = { storage = "20Gi" }
-        }
-      }
-    }
-
-    persistent_volume_claim_retention_policy {
-      when_deleted = "Retain"
-      when_scaled  = "Retain"
-    }
-  }
+  name                  = each.key
+  k8s_name              = local.canvases[each.key].k8s_name
+  hostname              = local.canvases[each.key].hostname
+  emails                = local.canvases[each.key].emails
+  namespace             = local.namespace
+  pool                  = local.pool
+  service_account       = kubernetes_service_account_v1.canvas.metadata[0].name
+  storage_class         = var.storage_class
+  volume_size           = local.canvases[each.key].volume_size
+  memory_request        = local.canvases[each.key].memory_request
+  memory_limit          = local.canvases[each.key].memory_limit
+  cloudflare_account_id = local.cloudflare_account_id
 }
 
-locals {
-  # Under /home/openhands, each on its own directory of the one volume
-  canvas_mounts = {
-    ".openhands" = "openhands"
-    "workspace"  = "workspace"
-    ".gradle"    = "gradle"
-  }
+# The one Canvas there was is the team's now, with its volume
+moved {
+  from = kubernetes_stateful_set_v1.canvas
+  to   = module.canvas["team"].kubernetes_stateful_set_v1.canvas
 }
 
-resource "kubernetes_service_v1" "canvas" {
-  metadata {
-    name      = "canvas"
-    namespace = local.namespace
-  }
+moved {
+  from = kubernetes_service_v1.canvas
+  to   = module.canvas["team"].kubernetes_service_v1.canvas
+}
 
-  spec {
-    selector = local.canvas_labels
+moved {
+  from = cloudflare_zero_trust_access_policy.factory_team
+  to   = module.canvas["team"].cloudflare_zero_trust_access_policy.canvas
+}
 
-    port {
-      name        = "http"
-      port        = 8000
-      target_port = "http"
-    }
-  }
+moved {
+  from = cloudflare_zero_trust_access_application.agent
+  to   = module.canvas["team"].cloudflare_zero_trust_access_application.canvas
+}
+
+moved {
+  from = cloudflare_dns_record.agent
+  to   = cloudflare_dns_record.canvas["team"]
 }

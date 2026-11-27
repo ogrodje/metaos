@@ -1,11 +1,14 @@
-variable "access_emails" {
-  description = "Who Cloudflare Access lets into agent.ogrodje.dev, comma-separated: FACTORY_ACCESS_EMAILS, from 1Password (secretspec.toml), never in this public repository"
+variable "factory_users" {
+  description = "Who has a Canvas, and gets into the team's: {\"<name>\": {\"email\": \"<email>\", \"github\": \"<login>\"}, ...}. FACTORY_USERS, from 1Password (secretspec.toml), never in this public repository"
   type        = string
   sensitive   = true
 
   validation {
-    condition     = length([for e in split(",", var.access_emails) : e if trimspace(e) != ""]) > 0
-    error_message = "At least one email: secretspec set FACTORY_ACCESS_EMAILS."
+    condition = alltrue([
+      for name, user in jsondecode(var.factory_users) :
+      can(regex("^[a-z][a-z0-9]{0,19}$", name)) && can(regex("@", user.email)) && can(regex("^[A-Za-z0-9-]+$", user.github))
+    ]) && length(jsondecode(var.factory_users)) > 0
+    error_message = "FACTORY_USERS: a JSON object of names (lowercase letters and digits, from a letter) to {email, github}, at least one."
   }
 }
 

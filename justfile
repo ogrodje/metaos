@@ -170,7 +170,9 @@ infra stack command *ARGS:
         : "${VULTR_API_KEY:?VULTR_API_KEY: secretspec set VULTR_API_KEY}"
         # ogrodje.dev's Cloudflare account, not ogrodje.si's, whose token CLOUDFLARE_API_TOKEN otherwise is
         export CLOUDFLARE_API_TOKEN="${ELYSIUM_CLOUDFLARE_API_TOKEN:?ELYSIUM_CLOUDFLARE_API_TOKEN: secretspec set ELYSIUM_CLOUDFLARE_API_TOKEN}"
-        export TF_VAR_access_emails="${FACTORY_ACCESS_EMAILS:?FACTORY_ACCESS_EMAILS: secretspec set FACTORY_ACCESS_EMAILS}" ;;
+        export TF_VAR_factory_users="${FACTORY_USERS:?FACTORY_USERS: secretspec set FACTORY_USERS}"
+        # The ogrodje organization's webhook (github.tf), as you: gh's token, with admin:org_hook
+        export GITHUB_TOKEN="${GITHUB_TOKEN:-$(gh auth token)}" ;;
       *) echo "gcp, newrelic, cloudflare, tailscale, elysium/cluster or elysium/factory (Keycloak's is just keycloak)" >&2; exit 2 ;;
     esac
     export GOOGLE_OAUTH_ACCESS_TOKEN="${GOOGLE_OAUTH_ACCESS_TOKEN:-$(gcloud auth print-access-token)}"
@@ -193,48 +195,29 @@ elysium-kubeconfig:
     curl -sSf -H "$auth" "$api/$id/config" | jq -r .kube_config | base64 -d > "$file"
     echo "$file: cluster $id"
 
-# Agent Canvas, the factory's UI (infra/elysium/README.md), on http://localhost:8800/canvas/ for as long as this runs:
-# a port-forward, as nothing else reaches it. It asks for its session key, which it made on its first start and keeps
-# on its volume: this puts it on the clipboard (macOS), and never in the terminal
-canvas port="8800":
+# A Canvas (infra/elysium/README.md), the team's or a person's, on http://localhost:<port>/canvas/ for as long as this
+# runs: a port-forward, past Cloudflare Access, e.g. when it's down. Its page carries its session key
+canvas name="team" port="8800":
     #!/usr/bin/env bash
     set -euo pipefail
-    export KUBECONFIG="${ELYSIUM_KUBECONFIG:-$HOME/.kube/elysium}"
-    key=/home/openhands/.openhands/agent-canvas/api-key.txt
-    if command -v pbcopy >/dev/null; then
-      kubectl exec -n factory canvas-0 -- cat "$key" | pbcopy
-      echo "Canvas' session key is on the clipboard, for when the page asks for it"
-    else
-      echo "Canvas' session key: kubectl exec -n factory canvas-0 -- cat $key"
-    fi
+    service=canvas; [ "{{name}}" = team ] || service="canvas-{{name}}"
     echo "http://localhost:{{port}}/canvas/"
-    kubectl port-forward -n factory svc/canvas {{port}}:8000
-
-# Canvas' session key onto the clipboard (macOS), for a browser that opens https://agent.ogrodje.dev the first time
-canvas-key:
-    KUBECONFIG="${ELYSIUM_KUBECONFIG:-$HOME/.kube/elysium}" kubectl exec -n factory canvas-0 -- \
-      cat /home/openhands/.openhands/agent-canvas/api-key.txt | pbcopy
-    @echo "Canvas' session key is on the clipboard"
+    KUBECONFIG="${ELYSIUM_KUBECONFIG:-$HOME/.kube/elysium}" kubectl port-forward -n factory "svc/$service" {{port}}:8000
 
 # Elysium in Linear: OAuth app "Elysium" in workspace ogrodje (Settings > API), private to it, with client credentials.
 # Its client ID isn't secret; its client secret is ELYSIUM_LINEAR_CLIENT_SECRET (secretspec.toml)
 elysium_linear_client_id := "1fad2d2ffaf2bf8a19da97b44790cdff"
 
-# Linear then sends the browser to agent.ogrodje.dev/linear/callback, where nothing answers yet, which is fine: the
-# install is the consent. Elysium is then its own user, which can be @mentioned and delegated issues, taking no seat.
-# Installs Elysium in Linear as an agent (actor=app): opens the consent page, for a workspace admin
-elysium-linear-install:
-    open "https://linear.app/oauth/authorize?client_id={{elysium_linear_client_id}}&redirect_uri=https%3A%2F%2Fagent.ogrodje.dev%2Flinear%2Fcallback&response_type=code&scope=read,write,app:assignable,app:mentionable&actor=app&prompt=consent"
-
-# Client credentials: actor app, 30 days, no refresh. A new one each run; the old ones keep working until they
-# expire, or until the client secret is rotated.
+# Client credentials: actor app, 30 days, no refresh. Its scopes are Elysium's install in Linear: with app:assignable
+# and app:mentionable it's an Agent, which can be delegated issues and mentioned, taking no seat; the same in every
+# token, as Linear doesn't change an install's scopes. A new one each run; the old ones work until they expire.
 # Elysium's Linear token onto the clipboard (macOS), for Canvas' Linear MCP server (https://mcp.linear.app/mcp, Bearer)
 elysium-linear-token:
     #!/usr/bin/env bash
     set -euo pipefail
     response=$(curl -sS https://api.linear.app/oauth/token \
       --data-urlencode grant_type=client_credentials \
-      --data-urlencode "scope=read,write" \
+      --data-urlencode "scope=read,write,app:assignable,app:mentionable" \
       --data-urlencode client_id={{elysium_linear_client_id}} \
       --data-urlencode "client_secret=${ELYSIUM_LINEAR_CLIENT_SECRET:?ELYSIUM_LINEAR_CLIENT_SECRET: secretspec set ELYSIUM_LINEAR_CLIENT_SECRET}")
     token=$(jq -r '.access_token // empty' <<<"$response")

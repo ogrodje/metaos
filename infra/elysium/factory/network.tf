@@ -64,11 +64,17 @@ resource "kubernetes_network_policy_v1" "canvas" {
     }
     policy_types = ["Ingress", "Egress"]
 
-    # cloudflared only (access.tf), and `just canvas`, whose port-forward arrives on the pod's own localhost
+    # cloudflared (access.tf) and the Linear bridge only, and `just canvas`, whose port-forward arrives on the pod's own
+    # localhost: so the session key in Canvas' page reaches no one else
     ingress {
       from {
         pod_selector {
           match_labels = local.cloudflared_labels
+        }
+      }
+      from {
+        pod_selector {
+          match_labels = local.linear_bridge_labels
         }
       }
       ports {
@@ -184,6 +190,70 @@ resource "kubernetes_network_policy_v1" "cloudflared" {
       ports {
         protocol = "TCP"
         port     = "8000"
+      }
+    }
+
+    egress {
+      to {
+        pod_selector {
+          match_labels = local.linear_bridge_labels
+        }
+      }
+      ports {
+        protocol = "TCP"
+        port     = "8080"
+      }
+    }
+  }
+}
+
+# The Linear bridge: Linear's deliveries from cloudflared; the Canvases' API, and Linear's over HTTPS
+resource "kubernetes_network_policy_v1" "linear_bridge" {
+  metadata {
+    name      = "linear-bridge"
+    namespace = local.namespace
+  }
+
+  spec {
+    pod_selector {
+      match_labels = local.linear_bridge_labels
+    }
+    policy_types = ["Ingress", "Egress"]
+
+    ingress {
+      from {
+        pod_selector {
+          match_labels = local.cloudflared_labels
+        }
+      }
+      ports {
+        protocol = "TCP"
+        port     = "8080"
+      }
+    }
+
+    egress {
+      to {
+        pod_selector {
+          match_labels = local.canvas_labels
+        }
+      }
+      ports {
+        protocol = "TCP"
+        port     = "8000"
+      }
+    }
+
+    egress {
+      to {
+        ip_block {
+          cidr   = "0.0.0.0/0"
+          except = local.private_ranges
+        }
+      }
+      ports {
+        protocol = "TCP"
+        port     = "443"
       }
     }
   }
