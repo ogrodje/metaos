@@ -50,7 +50,9 @@ stacks may rely on:
    app's webhook (`https://hooks.ogrodje.dev/linear/webhook`, agent session events) with its signing secret,
    `ELYSIUM_LINEAR_WEBHOOK_SECRET`.
 7. `just infra elysium/factory apply`, `infra/elysium/factory/set_secrets.sh`, then `just canvas-settings`, which gives
-   every Canvas its LLM (Claude Sonnet 5.5, through LiteLLM), GitHub and Linear.
+   every Canvas its LLM (Claude Sonnet 5.5, through LiteLLM, streamed), its agent profile (up to 4 tool calls of a step
+   at once, e.g. terminal commands, each in a tmux pane of its own), GitHub and Linear. Settings changed in Canvas'
+   own UI since, it puts back.
 
 ## Images: Vultr's registry
 
