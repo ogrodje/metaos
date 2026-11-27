@@ -17,7 +17,7 @@ keeps what's on it, looking every hour, and sends an episode's video there from 
 private video, which a person publishes. It also lists Slovenia's tech, developer and startup events,
 as the old ogrodje.si's Dogodki page did, which it gathers every hour from the pages of the organisations that hold
 them (Meetup, Eventbrite, iCal, Luma, their websites) in a workflow, through the scrapers, a pod of its own that works
-on it as Temporal's worker; they were [Goo](https://github.com/ogrodje/goo)'s. A weekly Temporal workflow sends the coming week's public events to Ogrodje's Discord through a channel webhook. Postgres also
+on it as Temporal's worker; they were [Goo](https://github.com/ogrodje/goo)'s. The front-end also serves them as a calendar that calendar apps subscribe to (`/dogodki.ics`). A weekly Temporal workflow sends the coming week's public events to Ogrodje's Discord through a channel webhook. Postgres also
 tells MetaOS what changed, which it passes on to the open pages, so they show it without being reloaded. Pictures everyone may see, like episodes'
 thumbnails from Dropbox and people's avatars from Hygraph or anywhere on the web, MetaOS copies to its public bucket in
 Google Cloud Storage, from which browsers load them at media.ogrodje.si, cached by Cloudflare; the team uploads an

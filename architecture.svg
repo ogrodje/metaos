@@ -63,12 +63,14 @@
   <text class="m" x="36" y="332">New Relic's agent: errors,</text>
   <text class="m" x="36" y="348">page loads</text>
 
-  <!-- The front-end: renders the pages anyone may see, from MetaOS's API, as someone who isn't signed in -->
+  <!-- The front-end: renders the pages anyone may see, from MetaOS's API, as someone who isn't signed in, and the
+       upcoming events as a calendar that calendar apps subscribe to (/dogodki.ics) -->
   <rect class="box" x="410" y="136" width="180" height="70" rx="8"/>
-  <text class="t" x="426" y="158">metaos-web</text>
-  <text class="m" x="574" y="158" text-anchor="end">Nuxt</text>
-  <text class="m" x="426" y="178">renders the public pages,</text>
-  <text class="m" x="426" y="194">as for one not signed in</text>
+  <text class="t" x="426" y="156">metaos-web</text>
+  <text class="m" x="574" y="156" text-anchor="end">Nuxt</text>
+  <text class="m" x="426" y="172">renders the public pages,</text>
+  <text class="m" x="426" y="186">as for one not signed in,</text>
+  <text class="m" x="426" y="200">and events for calendar apps</text>
 
   <!-- MCP clients -->
   <rect class="box" x="20" y="470" width="180" height="96" rx="8"/>

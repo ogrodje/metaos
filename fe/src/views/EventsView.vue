@@ -2,7 +2,10 @@
 import { computed, ref, watch } from 'vue'
 import { I18nT } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
+import { useHead, useRuntimeConfig } from '#imports'
+import { calendarName, calendarPath, regionOf, subscribeLinks } from '@/calendar'
 import { keepUnchanged, useLiveRefresh } from '@/changes'
+import CalendarMenu from '@/components/CalendarMenu.vue'
 import ChipGroup from '@/components/ChipGroup.vue'
 import EventForm from '@/components/EventForm.vue'
 import EventPick from '@/components/EventPick.vue'
@@ -15,7 +18,7 @@ import PageHeader from '@/components/PageHeader.vue'
 import SelectFilter from '@/components/SelectFilter.vue'
 import {
   ALL_REGIONS, bucketTitle, byBucket, dayOf, EVENT_FIELDS, eventText, firstEvents, inRegion, type ListedEvent, regionOptions,
-  SHOWN, type Shown, shownOptions, TEAM_EVENTS, type TeamEvent,
+  REGIONS, SHOWN, type Shown, shownOptions, TEAM_EVENTS, type TeamEvent,
 } from '@/events'
 import { useEventsRefresh } from '@/eventsRefresh'
 import { graphql } from '@/graphql'
@@ -32,7 +35,8 @@ import { useLocale } from '@/useLocale'
 // are as their organisers write them). Everyone sees the same, so the server renders it. Once the page knows it's the
 // team's, it loads them again with the hidden ones and what's the team's, to hide, pick, add and refresh them.
 // Filtered by region and to Ogrodje's picks (OG-71), and found as you type, in the address, e.g.
-// /dogodki?region=gorenjska&show=promoted, on what's loaded.
+// /dogodki?region=gorenjska&show=promoted, on what's loaded. Add to calendar subscribes a calendar to them, filtered by
+// region and to the picks as the page is (/dogodki.ics, calendar.ts, CalendarMenu.vue).
 const auth = useAuthStore()
 const { t, dateLocale, path } = useLocale()
 const events = ref<(ListedEvent | TeamEvent)[]>()
@@ -104,6 +108,16 @@ const filtering = computed(() => region.value !== ALL_REGIONS || show.value !== 
 const shown = computed(() => (events.value ?? []).filter((event) =>
   inRegion(event, region.value) && (show.value === 'all' || event.promoted) && matches(eventText(event), find.value)))
 
+// The events as a calendar to subscribe to, with the page's region and picks, not what's typed: by its whole address,
+// the site's, as the server renders it too, and by its name, as the calendar itself says it. Add to calendar asks in
+// which calendar (CalendarMenu.vue)
+const { siteUrl } = useRuntimeConfig().public
+const calendarUrl = computed(() => siteUrl + calendarPath(region.value, show.value))
+const calendarTitle = computed(() => calendarName(regionOf(region.value, REGIONS), show.value, (each) => t(`events.regions.${each}`)))
+useHead({
+  link: () => [{ key: 'events-calendar', rel: 'alternate', type: 'text/calendar', title: t('events.calendar.feed'), href: calendarUrl.value }],
+})
+
 // Today in Ljubljana, as the page is rendered; the parts and the picks' Today and Tomorrow go by it
 const today = dayOf(new Date().toISOString())
 
@@ -139,15 +153,18 @@ const picks = computed(() => (show.value === 'all' && !find.value.trim() ? picke
         </template>
         <template #channel><strong>#🗓-dogodki</strong></template>
       </I18nT>
-      <template v-if="auth.team" #actions>
-        <button type="button" class="button" :aria-disabled="refreshing || refreshStarting || undefined"
-                @click="startRefresh()">
-          {{ refreshing || refreshStarting ? t('events.team.refreshing') : t('events.team.refresh') }}
-        </button>
-        <button type="button" class="button" :class="{ primary: !adding }" :aria-expanded="adding" aria-controls="add-event"
-                @click="adding = !adding">
-          {{ adding ? t('common.cancel') : t('events.team.add') }}
-        </button>
+      <template #actions>
+        <CalendarMenu :links="subscribeLinks(calendarUrl, calendarTitle)" :copy="calendarUrl"/>
+        <template v-if="auth.team">
+          <button type="button" class="button" :aria-disabled="refreshing || refreshStarting || undefined"
+                  @click="startRefresh()">
+            {{ refreshing || refreshStarting ? t('events.team.refreshing') : t('events.team.refresh') }}
+          </button>
+          <button type="button" class="button" :class="{ primary: !adding }" :aria-expanded="adding" aria-controls="add-event"
+                  @click="adding = !adding">
+            {{ adding ? t('common.cancel') : t('events.team.add') }}
+          </button>
+        </template>
       </template>
     </PageHeader>
 

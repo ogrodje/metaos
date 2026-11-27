@@ -279,6 +279,24 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   also gets the hidden ones, dimmed, and on each its region (`RegionSelect.vue`: Automatic, what its place or its
   organisation tells, or one chosen), Hide, Pick and Edit (Edit only for its own), Add event and Refresh; an
   organisation's form has its region too.
+- The events are a calendar to subscribe to too, `/dogodki.ics` (iCalendar, [`fe/src/calendar.ts`](fe/src/calendar.ts),
+  written by hand; `fe/server/routes/dogodki.ics.ts`, as the sitemap is): the upcoming events that aren't hidden, as
+  the API gives them to someone who isn't signed in, filtered as the page is (`?region=gorenjska&show=promoted`; a
+  region there isn't is a 400), in Slovenian only. Cloudflare keeps it a quarter of an hour (its own `Cache-Control`,
+  not in development); apps are asked to read it every hour, and Google Calendar does when it likes. An event is its
+  ID (`UID`, `<id>@ogrodje.si`), its times as instants in UTC, its place, its organiser, description and where it's
+  announced, and its page. One without a start time is its days in Ljubljana, whole, to its end's day, as the page
+  says them (`eventTimes`): ends are written several ways (the team's own at 23:59 of the last day, Katapult's at
+  midnight as it starts, the iCal scraper's 00:01 to 23:59), and all are that day; only a scraper's `onlyDays` end, the
+  day after the last, is a day too long, on the page too. An end without a time isn't made up: left out on the same
+  day, and days later the event is its days. Add to calendar in the page's heading asks in which calendar
+  (`CalendarMenu.vue`, a button that shows and hides its links, as the user menu), as no one link does it for all:
+  Google Calendar's and Outlook on the web's own addresses that ask there to add it (`googleCalendarUrl`, and
+  `outlookCalendarUrl`, Microsoft 365's and Outlook.com's apart, as each signs in only its own accounts), the app on
+  the device (`webcal://`, Apple's or Outlook), or its address, copied; all with the page's region and picks, and the
+  page names it (`<link rel="alternate" type="text/calendar">`). With `?event=<ID>` it's that event alone, a past one
+  too but not a hidden one, as a file an app adds rather than subscribes to (`attachment`; no filters with it, and one
+  that isn't there is a 404).
 - An event's page, `/dogodki/<ID>` (`EventView.vue`, OG-68), is anyone's, a past one's too, but a hidden one's,
   which is the team's and not found for anyone else, as one that isn't there: a workspace, its title with its
   organisation's badge, Featured and Past in its lead; in its panel when it is (its weekday and date in Ljubljana, and
@@ -287,7 +305,10 @@ yarn test       # the tests in src/**/__tests__, with vitest (also ./gradlew feT
   and where it's online; its name leads to its website, for the team to its page), and More from this organiser (`moreFromOrganiser`:
   up to three of its organisation's other events that aren't hidden, those still to come the soonest first, then the
   past ones, the latest first, each with its date and whether it's past); its description in the main column, its
-  paragraphs as written (`paragraphs`). The sitemap has the upcoming ones'. The Events page itself stays the upcoming
+  paragraphs as written (`paragraphs`). Under where it's announced, Add to calendar adds it alone, unless it's over or
+  hidden (`CalendarMenu.vue` with `eventLinks`): Google Calendar's, Outlook on the web's two and Yahoo's own pages that
+  make an event of what their address says (`googleEventUrl`, `outlookEventUrl`, `yahooEventUrl`: when it is as the
+  calendar has it, `eventSpan`, and the start of its description), or its file (`/dogodki.ics?event=<ID>`). The sitemap has the upcoming ones'. The Events page itself stays the upcoming
   ones.
 - The People page, `/people`, lists everyone by name (Slovenian order, past a "dr."), from the `people` query: who they
   are, and links to their website and social profiles (`PersonCard.vue`). The team first, under rules as the rest, with
@@ -1314,7 +1335,9 @@ Where there's no `just` (a Canvas), `preview/preview.sh up` and so on.
   to the previews' manager (`elysium/previews/manager.ts`), which runs them in the slot's pod: the boot jar and the
   front-end on the images production runs them on, with a Postgres of its own, which Flyway migrates and
   `preview/seed.sql` fills when it's new: made-up shows, people, a session and episodes at each stage, nobody's real
-  data. Whatever the agent adds on top stays until `--fresh` or `down`. In a Canvas, `PREVIEWS_URL` and
+  data; but for the Events page's organisations and events, a copy of production's public ones (taken through MetaOS' MCP,
+  `list_organisations` and `list_events`, with long descriptions cut short and the dates moved to as far from the day
+  it's loaded as they were), so the calendar's links meet real titles, places, diacritics and multi-day events. Whatever the agent adds on top stays until `--fresh` or `down`. In a Canvas, `PREVIEWS_URL` and
   `PREVIEWS_TOKEN` (its secrets) say where the manager is; elsewhere, Elysium's kubeconfig (`just elysium-kubeconfig`)
   reaches it through a port-forward. A preview gets no secrets: no Drive, Dropbox, Koofr, Patreon, YouTube, agents
   (OpenRouter), Temporal or Unleash (the flags' defaults), so it changes nothing real. Cloud Storage is the one it
