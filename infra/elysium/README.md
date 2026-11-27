@@ -111,8 +111,25 @@ The agents are **Elysium** wherever they act, not whoever started them:
   Agent: its tokens, client credentials, are asked for with `app:assignable` and `app:mentionable` as well as `read`
   and `write`, and those scopes are its install, so it's its own user, which can be @mentioned and delegated issues, with
   no seat. Its token (client credentials, 30 days) is minted from `ELYSIUM_LINEAR_CLIENT_SECRET`.
-- **In Canvas**, both as MCP servers (GitHub's and Linear's hosted ones, `github` and `linear`) and the secrets above,
-  set by `just canvas-settings` (`factory/canvas_settings.sh`) through Canvas' API: **monthly**, for Linear's token.
+- **MetaOS: Keycloak's client `elysium`** (`infra/keycloak/realm/elysium.tf`), a service account that's staff, as
+  MetaOS' own agents' `metaos-agents` is: its tokens get `mcp:tools`, and what it changes is in MetaOS' history as
+  `elysium` (its tokens' `preferred_username`, which Keycloak would make `service-account-elysium`). Canvas signs in to an MCP server only with a person's OAuth, in their browser, so the bridge
+  does it instead: Canvas' `metaos` server is the bridge's `/mcp/metaos`, inside the cluster only (NetworkPolicy lets
+  only the Canvases reach it, the tunnel doesn't route it), which passes each request on to `https://ogrodje.si/mcp`
+  with a client-credentials token it renews before it runs out. No agent holds a MetaOS credential, and none runs out
+  under a long conversation. Its secret is `ELYSIUM_METAOS_CLIENT_SECRET`; without it the route is off.
+- **In Canvas**, all three as MCP servers (GitHub's and Linear's hosted ones, `github` and `linear`, and `metaos`) and
+  the secrets above, set by `just canvas-settings` (`factory/canvas_settings.sh`) through Canvas' API: **monthly**, for
+  Linear's token.
+
+To turn MetaOS on, once Keycloak has the client (CI applies `keycloak/prod` on merge to master, or
+`just keycloak apply prod`):
+
+```sh
+just keycloak output prod -raw elysium_client_secret | secretspec set ELYSIUM_METAOS_CLIENT_SECRET --from-file -
+infra/elysium/factory/set_secrets.sh   # the bridge gets it, and restarts
+just canvas-settings                   # Canvas gets the metaos MCP server
+```
 
 ### The bridge: Elysium in Linear and on pull requests
 

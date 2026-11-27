@@ -1,6 +1,7 @@
 // `node --test elysium/linear-bridge/`: the bridge against fakes of Linear, GitHub and Canvas
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
+import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { describe, it } from "node:test";
 import {
@@ -10,6 +11,7 @@ import {
   finalActivity,
   githubPrompt,
   linearEventKey,
+  MetaOS,
   promptFor,
   pullRequestIn,
   requestOf,
@@ -502,6 +504,104 @@ describe("the HTTP endpoints", () => {
       assert.deepEqual(handled.sort(), ["github", "linear"]);
     } finally {
       http.close();
+    }
+  });
+});
+
+describe("MetaOS' MCP server, as Elysium's service account", () => {
+  /** Keycloak and MetaOS, as far as the bridge sees them: tokens by client credentials, and an MCP server that wants one */
+  async function upstreams() {
+    const seen = { tokens: 0, mcp: [] as { authorization?: string; session?: string; body: string }[] };
+    let valid = "t1";
+    const keycloak = createServer((request, response) => {
+      let body = "";
+      request.on("data", (c) => (body += c)).on("end", () => {
+        const form = new URLSearchParams(body);
+        if (form.get("grant_type") !== "client_credentials" || form.get("client_secret") !== "s3cret") {
+          return response.writeHead(401).end(JSON.stringify({ error: "unauthorized_client" }));
+        }
+        seen.tokens++;
+        response.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ access_token: valid, expires_in: 1800 }));
+      });
+    });
+    const mcp = createServer((request, response) => {
+      let body = "";
+      request.on("data", (c) => (body += c)).on("end", () => {
+        seen.mcp.push({ authorization: request.headers.authorization, session: request.headers["mcp-session-id"] as string, body });
+        if (request.headers.authorization !== `Bearer ${valid}`) return response.writeHead(401).end();
+        response.writeHead(200, { "Content-Type": "text/event-stream", "Mcp-Session-Id": "s1", "Set-Cookie": "x=y" });
+        response.write("event: message\ndata: {\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}\n\n");
+        response.end();
+      });
+    });
+    await Promise.all([keycloak, mcp].map((s) => new Promise<void>((r) => s.listen(0, "127.0.0.1", r))));
+    const at = (s: ReturnType<typeof createServer>) => `http://127.0.0.1:${(s.address() as AddressInfo).port}`;
+    return {
+      seen,
+      rotate: (token: string) => void (valid = token),
+      metaos: { mcpUrl: `${at(mcp)}/mcp`, tokenUrl: `${at(keycloak)}/token`, clientId: "elysium", clientSecret: "s3cret" },
+      close: () => [keycloak, mcp].forEach((s) => s.close()),
+    };
+  }
+
+  it("passes the agent's request on with a token of its own, not the agent's, and streams the answer back", async () => {
+    const up = await upstreams();
+    // @ts-expect-error: the bridge isn't used here
+    const http = server({ ...config, metaos: up.metaos }, {});
+    await new Promise<void>((r) => http.listen(0, r));
+    const url = `http://127.0.0.1:${(http.address() as AddressInfo).port}/mcp/metaos`;
+    try {
+      const call = (headers: Record<string, string> = {}) =>
+        fetch(url, {
+          method: "POST",
+          body: '{"jsonrpc":"2.0","id":1,"method":"tools/list"}',
+          headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream", ...headers },
+        });
+
+      const first = await call({ Authorization: "Bearer the-agents-own" });
+      assert.equal(first.status, 200);
+      assert.equal(first.headers.get("mcp-session-id"), "s1");
+      assert.equal(first.headers.get("set-cookie"), null);
+      assert.match(await first.text(), /"result":\{\}/);
+      assert.equal(up.seen.mcp[0].authorization, "Bearer t1");
+      assert.equal(up.seen.mcp[0].body, '{"jsonrpc":"2.0","id":1,"method":"tools/list"}');
+
+      // The same token while it lasts, the session passed on
+      await (await call({ "Mcp-Session-Id": "s1" })).text();
+      assert.equal(up.seen.tokens, 1);
+      assert.equal(up.seen.mcp[1].session, "s1");
+
+      // A token MetaOS turns down: a new one, once
+      up.rotate("t2");
+      assert.equal((await call()).status, 200);
+      assert.equal(up.seen.tokens, 2);
+      assert.equal(up.seen.mcp.at(-1)?.authorization, "Bearer t2");
+
+      // Not through Cloudflare, and not without MetaOS configured
+      assert.equal((await call({ "cf-connecting-ip": "203.0.113.9" })).status, 404);
+    } finally {
+      http.close();
+      up.close();
+    }
+  });
+
+  it("is off without MetaOS' configuration, and says so when Keycloak won't give a token", async () => {
+    // @ts-expect-error: the bridge isn't used here
+    const off = server(config, {});
+    await new Promise<void>((r) => off.listen(0, r));
+    const up = await upstreams();
+    // @ts-expect-error: the bridge isn't used here
+    const wrong = server(config, {}, new MetaOS({ ...up.metaos, clientSecret: "wrong" }));
+    await new Promise<void>((r) => wrong.listen(0, r));
+    try {
+      assert.equal((await fetch(`http://127.0.0.1:${(off.address() as AddressInfo).port}/mcp/metaos`, { method: "POST", body: "{}" })).status, 404);
+      const refused = await fetch(`http://127.0.0.1:${(wrong.address() as AddressInfo).port}/mcp/metaos`, { method: "POST", body: "{}" });
+      assert.equal(refused.status, 502);
+      assert.equal(up.seen.mcp.length, 0);
+    } finally {
+      off.close();
+      wrong.close();
+      up.close();
     }
   });
 });

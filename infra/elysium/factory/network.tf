@@ -95,6 +95,19 @@ resource "kubernetes_network_policy_v1" "canvas" {
       }
     }
 
+    # MetaOS' MCP server, through the bridge, which signs in to it as Elysium (linear-bridge.tf)
+    egress {
+      to {
+        pod_selector {
+          match_labels = local.linear_bridge_labels
+        }
+      }
+      ports {
+        protocol = "TCP"
+        port     = "8080"
+      }
+    }
+
     # The internet, on any port: git over SSH, registries and whatever else a build reaches for
     egress {
       to {
@@ -207,7 +220,8 @@ resource "kubernetes_network_policy_v1" "cloudflared" {
   }
 }
 
-# The Linear bridge: Linear's deliveries from cloudflared; the Canvases' API, and Linear's over HTTPS
+# The bridge: Linear's and GitHub's deliveries from cloudflared, and the Canvases' calls to MetaOS' MCP server; the
+# Canvases' API, and Linear's, GitHub's, MetaOS' and its Keycloak's over HTTPS
 resource "kubernetes_network_policy_v1" "linear_bridge" {
   metadata {
     name      = "linear-bridge"
@@ -224,6 +238,11 @@ resource "kubernetes_network_policy_v1" "linear_bridge" {
       from {
         pod_selector {
           match_labels = local.cloudflared_labels
+        }
+      }
+      from {
+        pod_selector {
+          match_labels = local.canvas_labels
         }
       }
       ports {

@@ -9,6 +9,10 @@
 //   on one Elysium opened. The bridge reacts with 👀, continues the conversation the pull request came from if it's in
 //   that person's Canvas, or starts one there, and posts the agent's last message on the pull request.
 //
+// And a third thing: MetaOS' MCP server for the Canvases' agents, at /mcp/metaos inside the cluster only, which the
+// bridge passes on to with a token of Elysium's own service account (Keycloak's client elysium), new before the last
+// runs out: so no agent holds a MetaOS credential, and none runs out under a long conversation.
+//
 // Only for the people in FACTORY_USERS, each in their own Canvas, with its agent profile (its LLM, MCP servers and
 // secrets, so their accounts): someone else's request runs nowhere, and never in the team's. The bridge keeps no state
 // of its own: a conversation's ID is its Linear session's, and its tags say which pull request it's on, so a restart
@@ -45,9 +49,20 @@ export interface Config {
   /** Elysium on GitHub, whom a mention asks */
   githubLogin: string;
   canvases: CanvasTarget[];
+  /** MetaOS' MCP server and Elysium's service account in its Keycloak; the /mcp/metaos route is off without them */
+  metaos?: MetaOSConfig;
   /** Hard cost ceiling of one conversation, in USD */
   maxBudgetPerRun: number;
   pollMs: number;
+}
+
+export interface MetaOSConfig {
+  /** e.g. https://ogrodje.si/mcp */
+  mcpUrl: string;
+  /** Keycloak's token endpoint, e.g. https://metaos-auth.ogrodje.si/realms/metaos/protocol/openid-connect/token */
+  tokenUrl: string;
+  clientId: string;
+  clientSecret: string;
 }
 
 export function configFromEnv(env: NodeJS.ProcessEnv): Config {
@@ -72,6 +87,15 @@ export function configFromEnv(env: NodeJS.ProcessEnv): Config {
       emails: c.emails.map((e) => e.toLowerCase()),
       github: (c.github ?? []).map((l) => l.toLowerCase()),
     })),
+    metaos:
+      env.METAOS_MCP_URL && env.METAOS_TOKEN_URL && env.METAOS_CLIENT_ID && env.METAOS_CLIENT_SECRET
+        ? {
+            mcpUrl: env.METAOS_MCP_URL,
+            tokenUrl: env.METAOS_TOKEN_URL,
+            clientId: env.METAOS_CLIENT_ID,
+            clientSecret: env.METAOS_CLIENT_SECRET,
+          }
+        : undefined,
     maxBudgetPerRun: Number(env.MAX_BUDGET_PER_RUN ?? 10),
     pollMs: Number(env.POLL_MS ?? 3000),
   };
@@ -368,6 +392,70 @@ export class GitHub {
 
   async comment(repo: string, number: number, body: string): Promise<void> {
     await this.#request("POST", `/repos/${repo}/issues/${number}/comments`, { body });
+  }
+}
+
+// --- MetaOS' MCP server, as Elysium's service account ----------------------------------------------------------------
+
+/** What of an MCP request and response is passed on (Streamable HTTP): not the agent's own Authorization, if any */
+const MCP_REQUEST_HEADERS = ["content-type", "accept", "mcp-session-id", "mcp-protocol-version", "last-event-id"];
+const MCP_RESPONSE_HEADERS = ["content-type", "mcp-session-id", "cache-control"];
+
+export class MetaOS {
+  #config: MetaOSConfig;
+  #token: string | undefined;
+  #expiresAt = 0;
+
+  constructor(config: MetaOSConfig) {
+    this.#config = config;
+  }
+
+  /** A client-credentials token of Keycloak's client elysium, new a minute before the last one runs out. */
+  async #accessToken(): Promise<string> {
+    if (this.#token && Date.now() < this.#expiresAt - 60_000) return this.#token;
+    const response = await fetch(this.#config.tokenUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "client_credentials",
+        client_id: this.#config.clientId,
+        client_secret: this.#config.clientSecret,
+      }),
+    });
+    const body = (await response.json()) as { access_token?: string; expires_in?: number; error?: string };
+    if (!response.ok || !body.access_token) throw new Error(`MetaOS token: ${response.status} ${body.error ?? ""}`);
+    this.#token = body.access_token;
+    this.#expiresAt = Date.now() + (body.expires_in ?? 300) * 1000;
+    return this.#token;
+  }
+
+  /** The agent's MCP request, on to MetaOS with the token; its answer back as it comes, a stream of events too. */
+  async proxy(request: IncomingMessage, response: ServerResponse, body: Buffer, retried = false): Promise<void> {
+    const headers: Record<string, string> = { Authorization: `Bearer ${await this.#accessToken()}` };
+    for (const name of MCP_REQUEST_HEADERS) {
+      const value = header(request, name);
+      if (value) headers[name] = value;
+    }
+    const method = request.method ?? "GET";
+    const upstream = await fetch(this.#config.mcpUrl, {
+      method,
+      headers,
+      body: ["GET", "HEAD", "DELETE"].includes(method) ? undefined : body,
+    });
+    // A token MetaOS turned down (e.g. Keycloak's keys rotated): once more with a new one
+    if (upstream.status === 401 && !retried) {
+      await upstream.body?.cancel();
+      this.#token = undefined;
+      return this.proxy(request, response, body, true);
+    }
+    const out: Record<string, string> = {};
+    for (const name of MCP_RESPONSE_HEADERS) {
+      const value = upstream.headers.get(name);
+      if (value) out[name] = value;
+    }
+    response.writeHead(upstream.status, out);
+    if (upstream.body) for await (const chunk of upstream.body) response.write(chunk);
+    response.end();
   }
 }
 
@@ -943,10 +1031,29 @@ function header(request: IncomingMessage, name: string): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
-export function server(config: Config, bridge: Bridge): Server {
+export function server(
+  config: Config,
+  bridge: Bridge,
+  metaos: MetaOS | null = config.metaos ? new MetaOS(config.metaos) : null,
+): Server {
   return createServer(async (request: IncomingMessage, response: ServerResponse) => {
     const reply = (status: number, text: string) => response.writeHead(status, { "Content-Type": "text/plain" }).end(text);
     if (request.method === "GET" && request.url === "/healthz") return reply(200, "ok");
+    // MetaOS' MCP server, for the Canvases only: the tunnel doesn't route it, NetworkPolicy lets only them reach it, and
+    // anything that came through Cloudflare anyway is turned away
+    if (metaos && (request.url === "/mcp/metaos" || request.url?.startsWith("/mcp/metaos?"))) {
+      if (header(request, "cf-connecting-ip") || header(request, "cf-ray")) return reply(404, "not found");
+      const body = await readBody(request);
+      if (!body) return reply(413, "too large");
+      try {
+        await metaos.proxy(request, response, body);
+      } catch (error) {
+        log("metaos proxy failed", { error: String(error) });
+        if (!response.headersSent) reply(502, "MetaOS isn't answering");
+        else response.end();
+      }
+      return;
+    }
     const github = request.url === "/github/webhook" && config.githubWebhookSecret;
     if (request.method !== "POST" || (request.url !== "/linear/webhook" && !github)) return reply(404, "not found");
     const body = await readBody(request);
@@ -979,7 +1086,9 @@ if (import.meta.main) {
   const config = configFromEnv(process.env);
   const bridge = new Bridge(config);
   const http = server(config, bridge);
-  http.listen(config.port, () => log("listening", { port: config.port, github: !!config.githubWebhookSecret }));
+  http.listen(config.port, () =>
+    log("listening", { port: config.port, github: !!config.githubWebhookSecret, metaos: !!config.metaos }),
+  );
   bridge.resumeRunning().catch((e) => log("resume failed", { error: String(e) }));
   process.on("SIGTERM", () => http.close(() => process.exit(0)));
 }

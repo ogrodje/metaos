@@ -12,6 +12,7 @@
 #   ELYSIUM_LINEAR_CLIENT_SECRET   the Linear app Elysium's client secret: the bridge's tokens
 #   ELYSIUM_LINEAR_WEBHOOK_SECRET  its webhook's signing secret: what the bridge checks Linear's deliveries with
 #   ELYSIUM_GITHUB_TOKEN           elysium-og's token: the bridge's 👀 and answers on pull requests
+#   ELYSIUM_METAOS_CLIENT_SECRET   optional, Keycloak's client elysium's: MetaOS' MCP server for the Canvases, as it
 set -euo pipefail
 
 : "${PROD_ANTHROPIC_API_KEY:?PROD_ANTHROPIC_API_KEY: secretspec set PROD_ANTHROPIC_API_KEY}"
@@ -31,6 +32,7 @@ kubectl create secret generic linear-bridge-linear -n "$NS" \
   --from-literal=LINEAR_CLIENT_SECRET="$ELYSIUM_LINEAR_CLIENT_SECRET" \
   --from-literal=LINEAR_WEBHOOK_SECRET="$ELYSIUM_LINEAR_WEBHOOK_SECRET" \
   --from-literal=GITHUB_TOKEN="$ELYSIUM_GITHUB_TOKEN" \
+  --from-literal=METAOS_CLIENT_SECRET="${ELYSIUM_METAOS_CLIENT_SECRET:-}" \
   --dry-run=client -o yaml | kubectl apply -f -
 
 for deployment in litellm linear-bridge; do

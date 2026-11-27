@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # Every Canvas' settings that Elysium gives it (../README.md, "Team and personal Canvases"), which Canvas keeps,
 # encrypted, on its volume rather than in Kubernetes: so neither Terraform nor set_secrets.sh, but its API. The same in
-# each, the team's and everyone's own; what a person connects themselves (e.g. MetaOS' MCP server, as them) it leaves
-# alone. Idempotent: after a new Canvas, after a token changes, and monthly, for Linear's, which lasts 30 days. New
+# each, the team's and everyone's own; what a person connects themselves it leaves alone. Idempotent: after a new Canvas, after a token changes, and monthly, for Linear's, which lasts 30 days. New
 # conversations get the change; running ones keep what they started with.
 #
 #   LLM (Customize > LLM):          claude-sonnet-5-5, Claude Sonnet 5.5 through LiteLLM, with its key; the agent
@@ -10,7 +9,8 @@
 #   Secrets (Settings > Secrets),   GITHUB_TOKEN, elysium-og's, which git and gh push, open and merge PRs with;
 #   exported to every agent:        GIT_AUTHOR_*/GIT_COMMITTER_*: Elysium, with elysium-og's noreply address
 #   MCP servers (Customize > MCP):  github, GitHub's hosted server as elysium-og; linear, Linear's as the app Elysium,
-#                                   with a new client-credentials token each run
+#                                   with a new client-credentials token each run; metaos, MetaOS' (Ogrodje's) as
+#                                   Keycloak's service account elysium, through the bridge, which holds its token
 #
 # From the environment: secretspec.toml's ELYSIUM_GITHUB_TOKEN and ELYSIUM_LINEAR_CLIENT_SECRET, which the devenv shell
 # has (or `secretspec run -P default -- infra/elysium/factory/canvas_settings.sh`). Into each Canvas through its API,
@@ -50,9 +50,10 @@ secret() { # POD NAME VALUE DESCRIPTION
     call "$1" PUT /settings/secrets "secret $2" >/dev/null
 }
 
-mcp() { # POD NAME URL TOKEN: updated if the Canvas has it, added if not
+mcp() { # POD NAME URL [TOKEN]: updated if the Canvas has it, added if not; without a token, none
   local body out
-  body=$(jq -n --arg u "$3" --arg t "$4" '{url: $u, transport: "http", auth: {strategy: "bearer", value: $t}, enabled: true}')
+  body=$(jq -n --arg u "$3" --arg t "${4:-}" '{url: $u, transport: "http", enabled: true,
+    auth: (if $t == "" then {strategy: "none"} else {strategy: "bearer", value: $t} end)}')
   out=$(api "$1" PATCH "/settings/mcp/$2" <<<"$body")
   if [[ ${out##*$'\n'} == 404 ]]; then
     call "$1" POST "/settings/mcp/$2" "MCP server $2" <<<"$body" >/dev/null
@@ -105,6 +106,7 @@ for pod in $pods; do
 
   mcp "$pod" github https://api.githubcopilot.com/mcp/ "$ELYSIUM_GITHUB_TOKEN"
   mcp "$pod" linear https://mcp.linear.app/mcp "$linear"
-  echo "$pod: LLM, secrets, MCP servers github and linear"
+  mcp "$pod" metaos http://linear-bridge.factory.svc.cluster.local:8080/mcp/metaos
+  echo "$pod: LLM, secrets, MCP servers github, linear and metaos"
 done
 echo "Linear's token lasts until $(date -v+30d +%Y-%m-%d 2>/dev/null || date -d +30days +%Y-%m-%d): run this again before then"

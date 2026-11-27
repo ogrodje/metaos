@@ -21,3 +21,10 @@ output "agents_client_secret" {
   value       = keycloak_openid_client.metaos_agents.client_secret
   sensitive   = true
 }
+
+# Elysium's client secret, which Keycloak made (elysium.tf): ELYSIUM_METAOS_CLIENT_SECRET, for its bridge
+output "elysium_client_secret" {
+  description = "elysium's client secret"
+  value       = keycloak_openid_client.elysium.client_secret
+  sensitive   = true
+}

@@ -116,14 +116,29 @@ resource "kubernetes_deployment_v1" "linear_bridge" {
             value = "10"
           }
 
+          # MetaOS' MCP server, which the Canvases reach through the bridge at /mcp/metaos, as Keycloak's client elysium
+          # (infra/keycloak/realm/elysium.tf), whose secret is set_secrets.sh's METAOS_CLIENT_SECRET: off without it
+          env {
+            name  = "METAOS_MCP_URL"
+            value = "https://ogrodje.si/mcp"
+          }
+          env {
+            name  = "METAOS_TOKEN_URL"
+            value = "https://metaos-auth.ogrodje.si/realms/metaos/protocol/openid-connect/token"
+          }
+          env {
+            name  = "METAOS_CLIENT_ID"
+            value = "elysium"
+          }
+
           env_from {
             secret_ref {
               name = kubernetes_secret_v1.linear_bridge.metadata[0].name
             }
           }
 
-          # set_secrets.sh's: LINEAR_CLIENT_SECRET, LINEAR_WEBHOOK_SECRET, and GITHUB_TOKEN, Elysium's (elysium-og's), to
-          # answer on GitHub with. The bridge doesn't start without the first two
+          # set_secrets.sh's: LINEAR_CLIENT_SECRET, LINEAR_WEBHOOK_SECRET, GITHUB_TOKEN, Elysium's (elysium-og's), to
+          # answer on GitHub with, and METAOS_CLIENT_SECRET. The bridge doesn't start without the first two
           env_from {
             secret_ref {
               name     = "linear-bridge-linear"
