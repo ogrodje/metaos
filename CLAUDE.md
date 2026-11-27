@@ -844,7 +844,7 @@ to the end through restarts and deploys, retrying what failed.
   The `temporal` health check asks its frontend every hour; it's not in the app's readiness, so MetaOS answers while
   Temporal is down.
 - In production, Temporal is a server of its own in `metaos-prod`
-  ([`deployment-temporal.yaml`](k8s/base/deployment-temporal.yaml), `temporalio/server`, 1.32.1), all its services in
+  ([`deployment-temporal.yaml`](k8s/base/deployment-temporal.yaml), `temporalio/server`, 1.32.2), all its services in
   one pod, configured by environment variables alone (its embedded config template), in databases of the shared CNPG
   cluster: `metaos_temporal` and `metaos_temporal_visibility`, owned by role `metaos_temporal`, as Keycloak's are
   (`k8s/set_secrets.sh`). Its `schema` init container (`temporalio/admin-tools`, the same version) sets their schemas up

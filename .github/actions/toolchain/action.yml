@@ -48,7 +48,7 @@ runs:
     # devenv's yarn-berry; Node 26 has no Corepack
     - if: inputs.node == 'true'
       shell: bash
-      run: npm install --global --no-audit --no-fund @yarnpkg/cli-dist@4.18.1
+      run: npm install --global --no-audit --no-fund @yarnpkg/cli-dist@4.19.0
 
     # fe/'s node_modules as yarn.lock has them, so `yarn install` has nothing to do unless it changed
     - if: inputs.node == 'true'

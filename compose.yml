@@ -74,7 +74,7 @@ services:
   # Temporal, which runs MetaOS's workflows (Workflows.kt): its development server, from Temporal's CLI, with its own
   # SQLite in a volume and its web UI, http://localhost:8233. MetaOS connects with TEMPORAL_ADDRESS=localhost:7233.
   temporal:
-    image: 'temporalio/temporal:1.9.1'
+    image: 'temporalio/temporal:1.10.1'
     command: ['server', 'start-dev', '--ip', '0.0.0.0', '--db-filename', '/home/temporal/temporal.db']
     ports:
       - '127.0.0.1:7233:7233'

@@ -25,7 +25,7 @@ Status (2026-10-19): everything is written and verified locally. Nothing is depl
 
 ```
 docker/Dockerfile            the app: boot jar on distroless Java 25, Spring Boot layers, runs as non-root
-docker/keycloak.Dockerfile   Keycloak 26.8.1, optimized build, with MetaOS's provider (keycloak/remember-me)
+docker/keycloak.Dockerfile   Keycloak 26.8.2, optimized build, with MetaOS's provider (keycloak/remember-me)
 docker/web.Dockerfile        the front-end: Nuxt's build (fe/.output) on distroless Node 26, runs as non-root
 .dockerignore                allowlist: only the boot jar, the provider's sources and fe/.output enter the build context
 k8s/base/

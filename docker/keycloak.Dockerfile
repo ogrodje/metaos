@@ -1,6 +1,6 @@
 # Keycloak for MetaOS: an optimized build with MetaOS's own provider (keycloak/remember-me). compose.yml runs its dev
 # stage, so both have the same Keycloak. Realm metaos is Terraform's (infra/keycloak), not imported from a file.
-ARG KEYCLOAK=quay.io/keycloak/keycloak:26.8.1
+ARG KEYCLOAK=quay.io/keycloak/keycloak:26.8.2
 
 # The provider, compiled against the Keycloak it goes in, as Keycloak's image has no JDK (its Java is 21). Jars run
 # anywhere, so it's built on the build's own platform. No manifest (which names the JDK's build) and a fixed date: the

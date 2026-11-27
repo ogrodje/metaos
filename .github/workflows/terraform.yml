@@ -149,7 +149,7 @@ jobs:
       # devenv.nix's Terraform, the same version
       - uses: hashicorp/setup-terraform@v4
         with:
-          terraform_version: 1.16.5
+          terraform_version: 1.17.2
           terraform_wrapper: false
 
       - uses: google-github-actions/auth@v3

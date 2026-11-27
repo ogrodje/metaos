@@ -145,7 +145,7 @@ kubectl -n metaos-prod port-forward deploy/metaos 9090 &
 curl -s localhost:9090/actuator/health
 kubectl -n metaos-prod logs deploy/temporal -c schema               # its schema, set up or as it was
 kubectl -n metaos-prod get job temporal-namespace                    # namespace default made
-kubectl -n metaos-prod run temporal-cli --rm -it --restart=Never --image=temporalio/admin-tools:1.32.1 \
+kubectl -n metaos-prod run temporal-cli --rm -it --restart=Never --image=temporalio/admin-tools:1.32.2 \
   --env TEMPORAL_ADDRESS=temporal:7233 -- temporal task-queue describe --task-queue metaos   # MetaOS's pods poll it
 # and patreon-gateway the patreon one, likewise (--task-queue patreon)
 curl -s localhost:9090/actuator/health/unleash                       # MetaOS has its flags from Unleash (port-forward above)
