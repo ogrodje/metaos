@@ -13,6 +13,9 @@
 #   ELYSIUM_LINEAR_WEBHOOK_SECRET  its webhook's signing secret: what the bridge checks Linear's deliveries with
 #   ELYSIUM_GITHUB_TOKEN           elysium-og's token: the bridge's 👀 and answers on pull requests
 #   ELYSIUM_METAOS_CLIENT_SECRET   optional, Keycloak's client elysium's: MetaOS' MCP server for the Canvases, as it
+#   GOOGLE_STORAGE_KEY             optional, development's buckets' key (secretspec's dev): the previews' uploads
+#   VULTR_API_KEY                  the Vultr registry's read-only login, vultr-registry, which the Canvas' image is
+#                                  pulled with: made once, as one lasts as long as the registry
 set -euo pipefail
 
 : "${PROD_ANTHROPIC_API_KEY:?PROD_ANTHROPIC_API_KEY: secretspec set PROD_ANTHROPIC_API_KEY}"
@@ -34,6 +37,30 @@ kubectl create secret generic linear-bridge-linear -n "$NS" \
   --from-literal=GITHUB_TOKEN="$ELYSIUM_GITHUB_TOKEN" \
   --from-literal=METAOS_CLIENT_SECRET="${ELYSIUM_METAOS_CLIENT_SECRET:-}" \
   --dry-run=client -o yaml | kubectl apply -f -
+
+# The previews' (previews.tf): development's buckets, which are for this, and their key, so a preview takes uploads as
+# development does; never another bucket's
+if [ -n "${GOOGLE_STORAGE_KEY:-}" ]; then
+  kubectl create secret generic previews-storage -n previews \
+    --from-literal=GOOGLE_STORAGE_KEY="$GOOGLE_STORAGE_KEY" \
+    --from-literal=METAOS_STORAGE_BUCKET=ogrodje-metaos-dev \
+    --from-literal=METAOS_MEDIA_BUCKET=ogrodje-metaos-public-dev \
+    --dry-run=client -o yaml | kubectl apply -f -
+fi
+
+# The Vultr registry's (ams.vultrcr.com/ogrodje), read only, for the pods that run our own images: once, as Vultr
+# gives a new login each time it's asked and none of them runs out
+if ! kubectl get secret vultr-registry -n "$NS" >/dev/null 2>&1; then
+  : "${VULTR_API_KEY:?VULTR_API_KEY: secretspec set VULTR_API_KEY}"
+  vultr="Authorization: Bearer $VULTR_API_KEY"
+  registry=$(curl -sSf -H "$vultr" https://api.vultr.com/v2/registries | jq -r '.registries[] | select(.name == "ogrodje") | .id')
+  login=$(mktemp)
+  trap 'rm -f "$login"' EXIT
+  curl -sSf -X OPTIONS -H "$vultr" \
+    "https://api.vultr.com/v2/registry/$registry/docker-credentials?expiry_seconds=0&read_write=false" >"$login"
+  kubectl create secret generic vultr-registry -n "$NS" --type=kubernetes.io/dockerconfigjson \
+    --from-file=.dockerconfigjson="$login"
+fi
 
 for deployment in litellm linear-bridge; do
   kubectl rollout restart "deployment/$deployment" -n "$NS"

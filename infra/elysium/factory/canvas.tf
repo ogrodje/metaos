@@ -68,6 +68,8 @@ module "canvas" {
   pool                  = local.pool
   service_account       = kubernetes_service_account_v1.canvas.metadata[0].name
   storage_class         = var.storage_class
+  image                 = var.canvas_image
+  image_pull_secrets    = startswith(var.canvas_image, "ams.vultrcr.com/") ? ["vultr-registry"] : []
   volume_size           = local.canvases[each.key].volume_size
   cache_size            = local.canvases[each.key].cache_size
   memory_request        = local.canvases[each.key].memory_request

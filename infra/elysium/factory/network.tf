@@ -108,6 +108,37 @@ resource "kubernetes_network_policy_v1" "canvas" {
       }
     }
 
+    # The previews' manager (preview/preview.sh) and their slots, to check one (previews.tf)
+    egress {
+      to {
+        namespace_selector {
+          match_labels = { "kubernetes.io/metadata.name" = local.previews_namespace }
+        }
+        pod_selector {
+          match_labels = local.previews_manager_labels
+        }
+      }
+      ports {
+        protocol = "TCP"
+        port     = "8080"
+      }
+    }
+
+    egress {
+      to {
+        namespace_selector {
+          match_labels = { "kubernetes.io/metadata.name" = local.previews_namespace }
+        }
+        pod_selector {
+          match_labels = local.preview_labels
+        }
+      }
+      ports {
+        protocol = "TCP"
+        port     = "3000"
+      }
+    }
+
     # The internet, on any port: git over SSH, registries and whatever else a build reaches for
     egress {
       to {
@@ -206,6 +237,37 @@ resource "kubernetes_network_policy_v1" "cloudflared" {
       }
     }
 
+    # The previews' slots and their Keycloak (previews.tf)
+    egress {
+      to {
+        namespace_selector {
+          match_labels = { "kubernetes.io/metadata.name" = local.previews_namespace }
+        }
+        pod_selector {
+          match_labels = local.preview_labels
+        }
+      }
+      ports {
+        protocol = "TCP"
+        port     = "3000"
+      }
+    }
+
+    egress {
+      to {
+        namespace_selector {
+          match_labels = { "kubernetes.io/metadata.name" = local.previews_namespace }
+        }
+        pod_selector {
+          match_labels = local.previews_keycloak_label
+        }
+      }
+      ports {
+        protocol = "TCP"
+        port     = "8080"
+      }
+    }
+
     egress {
       to {
         pod_selector {
@@ -260,6 +322,22 @@ resource "kubernetes_network_policy_v1" "linear_bridge" {
       ports {
         protocol = "TCP"
         port     = "8000"
+      }
+    }
+
+    # The previews' manager: a pull request closed is its preview done (previews.tf)
+    egress {
+      to {
+        namespace_selector {
+          match_labels = { "kubernetes.io/metadata.name" = local.previews_namespace }
+        }
+        pod_selector {
+          match_labels = local.previews_manager_labels
+        }
+      }
+      ports {
+        protocol = "TCP"
+        port     = "8080"
       }
     }
 

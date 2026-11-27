@@ -61,6 +61,17 @@ variable "volume_size" {
   type = string
 }
 
+variable "image" {
+  description = "Its image: Elysium's (elysium/canvas/Dockerfile), Canvas' with MetaOS' development tools"
+  type        = string
+}
+
+variable "image_pull_secrets" {
+  description = "Secrets its image is pulled with, e.g. vultr-registry (../set_secrets.sh)"
+  type        = list(string)
+  default     = []
+}
+
 variable "cache_size" {
   description = "How much of the node's own disk the build tools' caches may take (Gradle's, Maven's, npm's): emptied when the pod restarts"
   type        = string
@@ -139,6 +150,13 @@ resource "kubernetes_stateful_set_v1" "canvas" {
         automount_service_account_token = false
         node_selector                   = { "ogrodje.si/pool" = var.pool }
 
+        dynamic "image_pull_secrets" {
+          for_each = var.image_pull_secrets
+          content {
+            name = image_pull_secrets.value
+          }
+        }
+
         toleration {
           key      = "ogrodje.si/pool"
           operator = "Equal"
@@ -156,7 +174,7 @@ resource "kubernetes_stateful_set_v1" "canvas" {
 
         container {
           name  = "canvas"
-          image = "ghcr.io/openhands/agent-canvas:1.46.0"
+          image = var.image
 
           port {
             name           = "http"

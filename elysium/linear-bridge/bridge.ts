@@ -13,6 +13,9 @@
 // bridge passes on to with a token of Elysium's own service account (Keycloak's client elysium), new before the last
 // runs out: so no agent holds a MetaOS credential, and none runs out under a long conversation.
 //
+// And a fourth: a pull request of MetaOS' merged or closed, from the same webhook, is its branch's preview done with,
+// which the previews' manager (elysium/previews) is told, so it's stopped and cleared.
+//
 // Only for the people in FACTORY_USERS, each in their own Canvas, with its agent profile (its LLM, MCP servers and
 // secrets, so their accounts): someone else's request runs nowhere, and never in the team's. The bridge keeps no state
 // of its own: a conversation's ID is its Linear session's, and its tags say which pull request it's on, so a restart
@@ -51,6 +54,8 @@ export interface Config {
   canvases: CanvasTarget[];
   /** MetaOS' MCP server and Elysium's service account in its Keycloak; the /mcp/metaos route is off without them */
   metaos?: MetaOSConfig;
+  /** The previews' manager (elysium/previews), told when a pull request of MetaOS' closes, so its preview is cleared */
+  previews?: { url: string; token: string };
   /** Hard cost ceiling of one conversation, in USD */
   maxBudgetPerRun: number;
   pollMs: number;
@@ -96,6 +101,7 @@ export function configFromEnv(env: NodeJS.ProcessEnv): Config {
             clientSecret: env.METAOS_CLIENT_SECRET,
           }
         : undefined,
+    previews: env.PREVIEWS_URL && env.PREVIEWS_TOKEN ? { url: env.PREVIEWS_URL, token: env.PREVIEWS_TOKEN } : undefined,
     maxBudgetPerRun: Number(env.MAX_BUDGET_PER_RUN ?? 10),
     pollMs: Number(env.POLL_MS ?? 3000),
   };
@@ -393,6 +399,30 @@ export class GitHub {
   async comment(repo: string, number: number, body: string): Promise<void> {
     await this.#request("POST", `/repos/${repo}/issues/${number}/comments`, { body });
   }
+}
+
+// --- Previews --------------------------------------------------------------------------------------------------------
+
+/**
+ * The branch whose pull request was merged or closed, if it's MetaOS' own (not a fork's, whose branch names aren't
+ * ours): its preview is done with (elysium/previews).
+ */
+export function closedBranch(event: string, payload: Record<string, any>): string | null {
+  if (event !== "pull_request" || payload.action !== "closed") return null;
+  const pr = payload.pull_request;
+  if (payload.repository?.full_name !== "ogrodje/metaos" || pr?.head?.repo?.full_name !== "ogrodje/metaos") return null;
+  return pr.head.ref ?? null;
+}
+
+export async function previewsDone(previews: { url: string; token: string }, branch: string): Promise<void> {
+  const response = await fetch(`${previews.url}/closed`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${previews.token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ branch }),
+  });
+  const body = (await response.json().catch(() => ({}))) as { down?: number[]; error?: string };
+  if (!response.ok) throw new Error(`previews: ${response.status} ${body.error ?? ""}`);
+  if (body.down?.length) log("previews done with", { branch, slots: body.down });
 }
 
 // --- MetaOS' MCP server, as Elysium's service account ----------------------------------------------------------------
@@ -1066,7 +1096,15 @@ export function server(
         return reply(401, "invalid signature");
       }
       const event = header(request, "x-github-event") ?? "";
-      const asked = requestOf(event, header(request, "x-github-delivery") ?? randomUUID(), JSON.parse(body.toString("utf8")), config.githubLogin);
+      const payload = JSON.parse(body.toString("utf8"));
+      // A pull request merged or closed: its branch's preview is done with
+      const closed = config.previews ? closedBranch(event, payload) : null;
+      if (closed) {
+        reply(202, "previews told");
+        void previewsDone(config.previews!, closed).catch((e) => log("previews failed", { branch: closed, error: String(e) }));
+        return;
+      }
+      const asked = requestOf(event, header(request, "x-github-delivery") ?? randomUUID(), payload, config.githubLogin);
       reply(202, asked ? "on it" : "nothing to do");
       if (asked) void bridge.handleGitHub(asked);
       return;

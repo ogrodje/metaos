@@ -1,9 +1,10 @@
-# Previews: compose.yml's keycloak-preview, which the previews on one machine sign in through (CLAUDE.md's Previews,
-# scripts/preview.sh). Each machine has its own, as development's, so its state stays on that machine (terraform.tfstate
-# here, not committed): `just keycloak adopt preview` the first time, then `just keycloak apply preview`.
+# Previews: the previews' Keycloak in Elysium (infra/elysium/factory/previews.tf), which every preview slot signs in
+# through, at https://preview-N.ogrodje.dev/auth (CLAUDE.md's Previews). Reached through a port-forward, which the
+# justfile starts, as its console is never routed: `just keycloak adopt preview` the first time, then
+# `just keycloak apply preview`. Its state is in Cloud Storage, beside Elysium's, as there's one of it.
 #
-# A preview's slots are fixed, so their addresses are too: slot N is https://<this machine's tailnet name>:944N, which
-# metaos-ui's redirect URIs name here once, rather than each preview adding its own.
+# A preview's slots are fixed, so their addresses are too, which metaos-ui's redirect URIs name here once, rather than
+# each preview adding its own.
 terraform {
   required_version = ">= 1.9"
 
@@ -13,22 +14,28 @@ terraform {
       version = "~> 5.10"
     }
   }
+
+  backend "gcs" {
+    bucket = "ogrodje-metaos-tfstate"
+    prefix = "elysium/previews-keycloak"
+  }
 }
 
 locals {
-  # Under /auth, as tailscale serve passes only that path on to it (compose.yml); import.sh signs in here too
+  # The port-forward the justfile starts, under /auth as the slots have it; import.sh signs in here too
   keycloak_url = "http://localhost:8189/auth"
-  slot_urls    = [for port in var.slot_ports : "https://${var.host}:${port}"]
+  slot_urls    = [for n in range(1, var.slots + 1) : "https://preview-${n}.ogrodje.dev"]
 }
 
-# compose.yml's admin
+# Its admin, whose password Terraform made (infra/elysium/factory: secret keycloak in namespace previews), which the
+# justfile reads
 provider "keycloak" {
   url       = trimsuffix(local.keycloak_url, "/auth")
   base_path = "/auth"
   realm     = "master"
   client_id = "admin-cli"
-  username  = "admin"
-  password  = "admin"
+  username  = var.keycloak_admin_username
+  password  = var.keycloak_admin_password
 }
 
 module "realm" {
@@ -40,18 +47,24 @@ module "realm" {
   metaos_ui_url        = local.slot_urls[0]
   metaos_ui_other_urls = slice(local.slot_urls, 1, length(local.slot_urls))
 
-  # dev / dev, staff: previews are on the tailnet only. No Google or Discord, which don't know the previews' addresses,
-  # and no email, so a preview sends none
+  # dev / dev, staff: previews are behind Cloudflare Access, for the team only. No Google or Discord, which don't know
+  # the previews' addresses, and no email, so a preview sends none
   dev_user = true
 }
 
-variable "host" {
-  description = "This machine's name on the tailnet, e.g. nuc8.folk-decibel.ts.net (TF_VAR_host; the justfile asks tailscale)"
-  type        = string
+variable "slots" {
+  description = "How many slots there are, as infra/elysium/factory's preview_slots"
+  type        = number
+  default     = 2
 }
 
-variable "slot_ports" {
-  description = "The slots' HTTPS ports on it, as scripts/preview.sh serves them"
-  type        = list(number)
-  default     = [9441, 9442]
+variable "keycloak_admin_username" {
+  type    = string
+  default = "admin"
+}
+
+variable "keycloak_admin_password" {
+  description = "The previews' Keycloak's admin's (TF_VAR_keycloak_admin_password; the justfile reads it from the cluster)"
+  type        = string
+  sensitive   = true
 }

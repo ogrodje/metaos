@@ -137,9 +137,19 @@ keycloak command env *ARGS:
       prod) export TF_VAR_keycloak_admin_username="${KEYCLOAK_ADMIN_USERNAME:?}" \
               TF_VAR_keycloak_admin_password="${KEYCLOAK_ADMIN_PASSWORD:?}" \
               GOOGLE_OAUTH_ACCESS_TOKEN="${GOOGLE_OAUTH_ACCESS_TOKEN:-$(gcloud auth print-access-token)}" ;;
-      # The previews' (compose.yml's keycloak-preview), at this machine's name on the tailnet
-      preview) export KEYCLOAK_ADMIN_USERNAME=admin KEYCLOAK_ADMIN_PASSWORD=admin \
-                 TF_VAR_host="$(tailscale status --json | jq -r '.Self.DNSName | rtrimstr(".")')" ;;
+      # The previews' Keycloak in Elysium (infra/elysium/factory/previews.tf), through a port-forward, as its console is
+      # never routed; its admin's password from the cluster, its state in Cloud Storage
+      preview)
+        kube=(kubectl --kubeconfig "${ELYSIUM_KUBECONFIG:-$HOME/.kube/elysium}")
+        [[ $("${kube[@]}" config current-context) == vke-* ]] || { echo "Not Elysium's kubeconfig: just elysium-kubeconfig" >&2; exit 1; }
+        password=$("${kube[@]}" -n previews get secret keycloak -o jsonpath='{.data.KC_BOOTSTRAP_ADMIN_PASSWORD}' | base64 -d)
+        export KEYCLOAK_ADMIN_USERNAME=admin KEYCLOAK_ADMIN_PASSWORD="$password" TF_VAR_keycloak_admin_password="$password" \
+          GOOGLE_OAUTH_ACCESS_TOKEN="${GOOGLE_OAUTH_ACCESS_TOKEN:-$(gcloud auth print-access-token)}"
+        "${kube[@]}" -n previews rollout status deployment/keycloak --timeout=5m >/dev/null
+        "${kube[@]}" -n previews port-forward svc/keycloak 8189:8080 >/dev/null &
+        forward=$!
+        trap 'kill "$forward" 2>/dev/null' EXIT
+        for i in $(seq 1 30); do curl -fsS -o /dev/null http://localhost:8189/auth/realms/master && break; sleep 1; done ;;
       *) echo "dev, prod or preview" >&2; exit 2 ;;
     esac
     # How Keycloak sends email, in development and production: secretspec.toml's KEYCLOAK_SMTP_* (OG-61). Previews send none
@@ -150,8 +160,9 @@ keycloak command env *ARGS:
     fi
     cd infra/keycloak/{{env}}
     terraform init -input=false >/dev/null
-    if [ "{{command}}" = adopt ]; then exec ../import.sh {{env}}; fi
-    if [ "{{command}}" = smtp-password ]; then exec ../smtp-password.sh {{env}}; fi
+    # Not exec: the previews' port-forward stops when they're done
+    if [ "{{command}}" = adopt ]; then ../import.sh {{env}}; exit; fi
+    if [ "{{command}}" = smtp-password ]; then ../smtp-password.sh {{env}}; exit; fi
     terraform "{{command}}" {{ARGS}}
 
 # A stack in infra/ with no environments of its own (infra/README.md): `just infra newrelic plan`, `just infra gcp
@@ -194,6 +205,23 @@ elysium-kubeconfig:
     umask 077
     curl -sSf -H "$auth" "$api/$id/config" | jq -r .kube_config | base64 -d > "$file"
     echo "$file: cluster $id"
+
+# The Vultr registry's push login (ams.vultrcr.com/ogrodje, infra/elysium/cluster/registry.tf), into Docker for an
+# hour: for pushing an image built here. Its pods pull with a read-only one (factory/set_secrets.sh: vultr-registry)
+registry-login:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    auth="Authorization: Bearer ${VULTR_API_KEY:?VULTR_API_KEY: secretspec set VULTR_API_KEY}"
+    id=$(curl -sSf -H "$auth" https://api.vultr.com/v2/registries | jq -r '.registries[] | select(.name == "ogrodje") | .id')
+    login=$(curl -sSf -X OPTIONS -H "$auth" \
+      "https://api.vultr.com/v2/registry/$id/docker-credentials?expiry_seconds=3600&read_write=true" |
+      jq -r '.auths["ams.vultrcr.com"].auth' | base64 -d)
+    printf '%s' "${login#*:}" | docker login ams.vultrcr.com --username "${login%%:*}" --password-stdin
+
+# Elysium's Canvas image, as CI names it (.github/workflows/elysium.yml): the tag for infra/elysium/factory's
+# canvas_image once the workflow has pushed this Dockerfile
+canvas-image:
+    @echo "ams.vultrcr.com/ogrodje/elysium-canvas:$(sed -n 's/^ARG CANVAS=.*://p' elysium/canvas/Dockerfile)-$(git hash-object elysium/canvas/Dockerfile | cut -c1-8)"
 
 # A Canvas (infra/elysium/README.md), the team's or a person's, on http://localhost:<port>/canvas/ for as long as this
 # runs: a port-forward, past Cloudflare Access, e.g. when it's down. Its page carries its session key

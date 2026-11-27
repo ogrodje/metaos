@@ -20,5 +20,6 @@ resource "github_organization_webhook" "bridge" {
   }
 
   active = true
-  events = ["issue_comment", "pull_request_review", "pull_request_review_comment"]
+  # pull_request for its closing: its branch's preview is done with (previews.tf)
+  events = ["issue_comment", "pull_request", "pull_request_review", "pull_request_review_comment"]
 }

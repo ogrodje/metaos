@@ -8,6 +8,7 @@ import {
   actionOf,
   agentText,
   Bridge,
+  closedBranch,
   finalActivity,
   githubPrompt,
   linearEventKey,
@@ -602,6 +603,54 @@ describe("MetaOS' MCP server, as Elysium's service account", () => {
       off.close();
       wrong.close();
       up.close();
+    }
+  });
+});
+
+describe("previews", () => {
+  const closed = (merged: boolean, head = "ogrodje/metaos", repo = "ogrodje/metaos") => ({
+    action: "closed",
+    repository: { full_name: repo },
+    pull_request: { merged, head: { ref: "elysium/og-1", repo: { full_name: head } } },
+  });
+
+  it("a pull request of MetaOS' merged or closed is its branch's preview done with; not a fork's, nor another repository's", () => {
+    assert.equal(closedBranch("pull_request", closed(true)), "elysium/og-1");
+    assert.equal(closedBranch("pull_request", closed(false)), "elysium/og-1");
+    assert.equal(closedBranch("pull_request", { ...closed(true), action: "opened" }), null);
+    assert.equal(closedBranch("pull_request", closed(true, "someone/metaos")), null);
+    assert.equal(closedBranch("pull_request", closed(true, "ogrodje/goo", "ogrodje/goo")), null);
+    assert.equal(closedBranch("issue_comment", closed(true)), null);
+  });
+
+  it("the bridge tells the previews' manager, signed deliveries only", async () => {
+    const told: { auth?: string; body: string }[] = [];
+    const manager = createServer((request, response) => {
+      let body = "";
+      request.on("data", (c) => (body += c)).on("end", () => {
+        told.push({ auth: request.headers.authorization, body });
+        response.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ down: [1] }));
+      });
+    });
+    await new Promise<void>((r) => manager.listen(0, "127.0.0.1", r));
+    const previews = { url: `http://127.0.0.1:${(manager.address() as AddressInfo).port}`, token: "pt" };
+    // @ts-expect-error: the bridge isn't used here
+    const http = server({ ...config, previews }, {});
+    await new Promise<void>((r) => http.listen(0, r));
+    const url = `http://127.0.0.1:${(http.address() as AddressInfo).port}/github/webhook`;
+    try {
+      const body = JSON.stringify(closed(true));
+      const headers = { "x-hub-signature-256": `sha256=${sign(body, "gh_wh_test")}`, "x-github-event": "pull_request", "x-github-delivery": "d1" };
+      const answer = await fetch(url, { method: "POST", body, headers });
+      assert.equal(answer.status, 202);
+      await until(() => told.length === 1);
+      assert.deepEqual(told[0], { auth: "Bearer pt", body: '{"branch":"elysium/og-1"}' });
+      const forged = await fetch(url, { method: "POST", body, headers: { ...headers, "x-hub-signature-256": "sha256=00" } });
+      assert.equal(forged.status, 401);
+      assert.equal(told.length, 1);
+    } finally {
+      http.close();
+      manager.close();
     }
   });
 });

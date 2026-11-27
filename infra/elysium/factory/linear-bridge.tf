@@ -46,6 +46,7 @@ resource "kubernetes_secret_v1" "linear_bridge" {
   data = {
     CANVASES              = local.linear_bridge_canvases
     LINEAR_CLIENT_ID      = "1fad2d2ffaf2bf8a19da97b44790cdff" # OAuth app "Elysium" in Linear's workspace ogrodje
+    PREVIEWS_TOKEN        = random_password.previews_token.result
     GITHUB_WEBHOOK_SECRET = random_password.github_webhook.result
   }
 }
@@ -131,6 +132,12 @@ resource "kubernetes_deployment_v1" "linear_bridge" {
             value = "elysium"
           }
 
+          # The previews' manager (previews.tf), told when a pull request of MetaOS' closes; PREVIEWS_TOKEN is below
+          env {
+            name  = "PREVIEWS_URL"
+            value = "http://${kubernetes_service_v1.previews_manager.metadata[0].name}.${local.previews_namespace}.svc.cluster.local:8080"
+          }
+
           env_from {
             secret_ref {
               name = kubernetes_secret_v1.linear_bridge.metadata[0].name
@@ -195,6 +202,11 @@ resource "kubernetes_deployment_v1" "linear_bridge" {
 
   # It waits for set_secrets.sh's secret, the first time
   wait_for_rollout = false
+
+  # set_secrets.sh restarts it with `kubectl rollout restart`, which stamps the time on it
+  lifecycle {
+    ignore_changes = [spec[0].template[0].metadata[0].annotations["kubectl.kubernetes.io/restartedAt"]]
+  }
 }
 
 resource "kubernetes_service_v1" "linear_bridge" {

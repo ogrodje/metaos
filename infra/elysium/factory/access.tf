@@ -3,6 +3,7 @@
 # (secretspec.toml), which the justfile hands the provider:
 #
 #   agent.ogrodje.dev, agent-<name>.ogrodje.dev  the Canvases (canvas.tf), each behind Cloudflare Access for its people
+#   preview-N.ogrodje.dev                        the previews' slots (previews.tf), behind Access for the team
 #   hooks.ogrodje.dev/linear/webhook, /github/webhook
 #                                                the bridge (linear-bridge.tf), for Linear's and GitHub's signed
 #                                                deliveries: no Access, as they can't sign in; the signature is the check
@@ -49,6 +50,8 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "factory" {
           }
         }
       }],
+      # The previews' slots (previews.tf)
+      local.preview_ingress,
       [
         {
           hostname = local.hooks_hostname

@@ -7,7 +7,8 @@
 #   LLM (Customize > LLM):          claude-sonnet-5-5, Claude Sonnet 5.5 through LiteLLM, with its key; the agent
 #                                   profile using it
 #   Secrets (Settings > Secrets),   GITHUB_TOKEN, elysium-og's, which git and gh push, open and merge PRs with;
-#   exported to every agent:        GIT_AUTHOR_*/GIT_COMMITTER_*: Elysium, with elysium-og's noreply address
+#   exported to every agent:        GIT_AUTHOR_*/GIT_COMMITTER_*: Elysium, with elysium-og's noreply address;
+#                                   PREVIEWS_URL/PREVIEWS_TOKEN: the previews' manager, for MetaOS' preview/preview.sh
 #   MCP servers (Customize > MCP):  github, GitHub's hosted server as elysium-og; linear, Linear's as the app Elysium,
 #                                   with a new client-credentials token each run; metaos, MetaOS' (Ogrodje's) as
 #                                   Keycloak's service account elysium, through the bridge, which holds its token
@@ -64,6 +65,7 @@ mcp() { # POD NAME URL [TOKEN]: updated if the Canvas has it, added if not; with
 }
 
 litellm_key=$(kubectl get secret -n "$NS" litellm -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)
+previews_token=$(kubectl get secret -n previews previews-manager -o jsonpath='{.data.PREVIEWS_TOKEN}' | base64 -d)
 noreply="$GITHUB_ID+$GITHUB_LOGIN@users.noreply.github.com"
 
 # Linear's client-credentials token: the app as actor, 30 days, no refresh; one for every Canvas. Its scopes are
@@ -103,6 +105,9 @@ for pod in $pods; do
   secret "$pod" GIT_COMMITTER_NAME Elysium "Commits are Elysium's"
   secret "$pod" GIT_AUTHOR_EMAIL "$noreply" "$GITHUB_LOGIN's noreply address, so GitHub attributes commits to it"
   secret "$pod" GIT_COMMITTER_EMAIL "$noreply" "$GITHUB_LOGIN's noreply address, so GitHub attributes commits to it"
+  secret "$pod" PREVIEWS_URL http://manager.previews.svc.cluster.local:8080 \
+    "Elysium's previews' manager, for MetaOS' preview/preview.sh (up, ls, logs, down)"
+  secret "$pod" PREVIEWS_TOKEN "$previews_token" "The previews' manager's token, with PREVIEWS_URL"
 
   mcp "$pod" github https://api.githubcopilot.com/mcp/ "$ELYSIUM_GITHUB_TOKEN"
   mcp "$pod" linear https://mcp.linear.app/mcp "$linear"

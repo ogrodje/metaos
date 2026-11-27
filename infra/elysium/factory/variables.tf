@@ -30,3 +30,15 @@ variable "team_volume_size" {
   type        = string
   default     = "50Gi"
 }
+
+variable "canvas_image" {
+  description = "The Canvases' image: Elysium's (elysium/canvas/Dockerfile), which CI pushes to the Vultr registry; `just canvas-image` says its tag"
+  type        = string
+  default     = "ghcr.io/openhands/agent-canvas:1.46.0"
+}
+
+variable "preview_slots" {
+  description = "How many previews can run at once (previews.tf): preview-1.ogrodje.dev and on, each up to 2.25 GiB"
+  type        = number
+  default     = 2
+}

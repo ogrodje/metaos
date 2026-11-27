@@ -52,6 +52,22 @@ stacks may rely on:
 7. `just infra elysium/factory apply`, `infra/elysium/factory/set_secrets.sh`, then `just canvas-settings`, which gives
    every Canvas its LLM (Claude Sonnet 5.5, through LiteLLM), GitHub and Linear.
 
+## Images: Vultr's registry
+
+Elysium's images are in **`ams.vultrcr.com/ogrodje`**, Vultr's registry beside the cluster (`cluster/registry.tf`,
+private, the free plan's 10 GB; 20 GB is $5 a month). **CI pushes them**, as it does to the tailnet's registry:
+
+- **MetaOS'** (`metaos`, `metaos-web`, `keycloak`, `patreon-gateway`, `scrapers`): `deploy.yml` pushes each to both
+  registries with the same tags. Production still pulls from the tailnet's until MetaOS moves here.
+- **Elysium's Canvas** (`elysium-canvas`, `elysium/canvas/Dockerfile`: Canvas with MetaOS' development tools):
+  `elysium.yml`, when its Dockerfile changes on master or an `elysium/` branch, tagged `<Canvas' version>-<the
+  Dockerfile's hash>`; `just canvas-image` says the tag, which goes into the factory's `canvas_image`.
+
+CI pushes with a login that doesn't run out, `VULTR_REGISTRY_USERNAME`/`VULTR_REGISTRY_PASSWORD` (1Password,
+secretspec's scope `registry`); the factory's pods pull with a read-only one, the secret `vultr-registry`, which
+`factory/set_secrets.sh` makes once. For pushing from a laptop, `just registry-login` logs Docker in for an hour.
+Each login is a new one Vultr makes from `VULTR_API_KEY`; they last as long as the registry.
+
 ## The factory
 
 Agent Canvas is OpenHands' single-tenant app (MIT): its UI, agent-server and automations in one pod, every agent of it
@@ -96,6 +112,27 @@ Canvas but not its volume (`home-canvas-<name>-0`, kept until deleted by hand). 
 of the factory node's 15, and up to 6 (the team's 8) while building.
 
 `just canvas [name]` port-forwards a Canvas, e.g. when Access is down.
+
+### Previews
+
+MetaOS as an agent built it, at **`https://preview-N.ogrodje.dev`**, behind Access for the team (`factory/previews.tf`,
+CLAUDE.md's Previews for how agents use them). What nuc8's tailnet previews were, here:
+
+- **`preview/preview.sh up`** builds the boot jar and `fe/.output` where the agent works and uploads them, with
+  `preview/seed.sql`, to the **previews' manager** (`elysium/previews/manager.ts`), which puts them into the agent's
+  slot, or a free one, and starts its pod: the jar and the front-end on production's images, with a Postgres of its
+  own, seeded once MetaOS has made its schema. In a Canvas, its secrets `PREVIEWS_URL` and `PREVIEWS_TOKEN` (set by
+  `canvas-settings`) say where the manager is; on a laptop, Elysium's kubeconfig reaches it through a port-forward.
+- **Done is cleared**: `preview down`, the branch's pull request merged or closed (the GitHub webhook's
+  `pull_request`, which the bridge passes on), or a day nobody updated it. The pod stops; its build and database go.
+- **Sign-in** is `dev` / `dev`, through the previews' own Keycloak (stock Keycloak, its data a file; realm `metaos`
+  from `infra/keycloak/preview`, `just keycloak adopt|apply preview` through a port-forward). cloudflared passes each
+  slot's `/auth/realms/metaos` and `/auth/resources` to it, never its console, so its tokens carry the slot's issuer.
+- **Kept apart**: namespace `previews`, restricted, below the agents in priority and in a quota; the slots reach
+  Keycloak's keys and Google's Cloud Storage (the dev buckets, `previews-storage` from `set_secrets.sh`), nothing else;
+  only cloudflared and the Canvases reach them. The manager may only scale the slots' Deployments and read their pods.
+- **Two slots** (`preview_slots`), each up to 2.25 GiB; a third is that and its address in `infra/keycloak/preview` and
+  the dev buckets' CORS (`infra/gcp`).
 
 ### Elysium in GitHub and Linear
 
