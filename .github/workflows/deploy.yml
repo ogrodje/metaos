@@ -14,6 +14,9 @@ name: Build and Deploy
 #   DOCKER_REGISTRY_USERNAME / DOCKER_REGISTRY_PASSWORD  the registry
 #   VULTR_REGISTRY_USERNAME / VULTR_REGISTRY_PASSWORD    Vultr's registry: a push login that doesn't run out
 # The kubeconfig is the Tailscale operator's, which has no credential (tag:ci's identity is), so the deploy writes it.
+#
+# 1Password's service account is rate-limited, and every job reading its secrets from it was a run's six reads times its
+# jobs: the `secrets` job reads them once, and the jobs that need them open its encrypted artifact (secrets-unpack).
 
 on:
   push:
@@ -51,8 +54,26 @@ jobs:
       - name: Test the app
         run: ./gradlew --build-cache test -PtestForks=3
 
+  # The one job that asks 1Password, for the `registry` scope: the images' and the deploy's jobs open what it shares. Its
+  # environment is theirs, as the token (and so the bundle's passphrase) is the environment's
+  secrets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: ${{ github.ref == 'refs/heads/master' && 'production' || 'review' }}
+      deployment: false
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/secrets
+        with:
+          scope: registry
+          token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          share: true
+
   image:
     name: ${{ matrix.image }}
+    needs: secrets
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # CI's 1Password token is an environment's, not the repository's (infra/README.md, CI's secrets): production's on
@@ -100,7 +121,7 @@ jobs:
           # `git describe` needs the tags, which a shallow clone omits
           fetch-depth: 0
 
-      - uses: ./.github/actions/secrets
+      - uses: ./.github/actions/secrets-unpack
         with:
           scope: registry
           token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
@@ -214,7 +235,7 @@ jobs:
           cache-to: ${{ matrix.cache && format('type=gha,scope={0},mode=max', matrix.image) || '' }}
 
   deploy:
-    needs: [ test, image ]
+    needs: [ test, secrets, image ]
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -224,7 +245,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: ./.github/actions/secrets
+      - uses: ./.github/actions/secrets-unpack
         with:
           scope: registry
           token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}

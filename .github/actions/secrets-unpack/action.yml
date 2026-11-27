@@ -1,0 +1,36 @@
+name: Secrets, unpacked
+description: >-
+  Loads a scope that an earlier job of the run shared (.github/actions/secrets with `share`) into this job's
+  environment, masked in its log: later steps read them as env vars (`env.NAME`), as with secrets itself, but without
+  asking 1Password again. The job needs that one (`needs`), and the same environment, for the token.
+
+inputs:
+  scope:
+    description: secretspec.toml's scope that was shared, e.g. registry
+    required: true
+  token:
+    description: The service account's token (secrets.OP_SERVICE_ACCOUNT_TOKEN), which the bundle is encrypted with
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/download-artifact@v8
+      with:
+        name: secrets-${{ inputs.scope }}
+        path: ${{ runner.temp }}/secrets-${{ inputs.scope }}
+
+    # Each value is masked before any of them is exported, a line at a time as add-mask takes one; the bundle's JSON
+    # only ever lives in this shell's memory
+    - name: Load the ${{ inputs.scope }} secrets
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.token }}
+        BUNDLE: ${{ runner.temp }}/secrets-${{ inputs.scope }}/bundle.gpg
+      run: |
+        set -euo pipefail
+        json=$(gpg --batch --quiet --pinentry-mode loopback --passphrase-fd 3 --decrypt "$BUNDLE" 3<<< "$TOKEN")
+        jq -r 'to_entries[].value | split("\n")[] | select(length > 0)' <<< "$json" \
+          | while IFS= read -r line; do echo "::add-mask::$line"; done
+        delimiter="ghadelimiter_$(cat /proc/sys/kernel/random/uuid)"
+        jq -r --arg d "$delimiter" 'to_entries[] | "\(.key)<<\($d)\n\(.value)\n\($d)"' <<< "$json" >> "$GITHUB_ENV"
