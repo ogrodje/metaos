@@ -3,8 +3,9 @@
 # signed with a secret only it and the bridge have. The bridge acts only on a mention of @elysium-og, or changes
 # requested on a pull request Elysium opened, by someone in FACTORY_USERS: the repositories are public.
 #
-# Applied as you, an owner of ogrodje: the justfile hands the provider gh's token, which needs admin:org_hook
-# (`gh auth refresh -h github.com -s admin:org_hook`).
+# Applied with ELYSIUM_TERRAFORM_GITHUB_TOKEN, by CI and the justfile alike: an owner's fine-grained token for ogrodje
+# with organization webhooks only. Only that, never gh's: GitHub shows a webhook only to the kind of token that made it
+# (an OAuth app's, gh's, sees only its own), so another would find none and make a second one.
 
 resource "random_password" "github_webhook" {
   length  = 40

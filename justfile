@@ -183,7 +183,9 @@ infra stack command *ARGS:
         export CLOUDFLARE_API_TOKEN="${ELYSIUM_CLOUDFLARE_API_TOKEN:?ELYSIUM_CLOUDFLARE_API_TOKEN: secretspec set ELYSIUM_CLOUDFLARE_API_TOKEN}"
         export TF_VAR_factory_users="${FACTORY_USERS:?FACTORY_USERS: secretspec set FACTORY_USERS}"
         # The ogrodje organization's webhook (github.tf), as you: gh's token, with admin:org_hook
-        export GITHUB_TOKEN="${GITHUB_TOKEN:-$(gh auth token)}" ;;
+        # The org webhook's own token, as CI's: GitHub shows a webhook only to the kind of token that made it, so gh's
+        # and this one would each make their own (infra/elysium/factory/github.tf)
+        export GITHUB_TOKEN="${ELYSIUM_TERRAFORM_GITHUB_TOKEN:?ELYSIUM_TERRAFORM_GITHUB_TOKEN, the org webhook token (secretspec)}" ;;
       *) echo "gcp, newrelic, cloudflare, tailscale, elysium/cluster or elysium/factory (Keycloak's is just keycloak)" >&2; exit 2 ;;
     esac
     export GOOGLE_OAUTH_ACCESS_TOKEN="${GOOGLE_OAUTH_ACCESS_TOKEN:-$(gcloud auth print-access-token)}"
