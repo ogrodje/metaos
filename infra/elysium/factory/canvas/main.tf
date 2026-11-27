@@ -89,6 +89,12 @@ variable "cloudflare_account_id" {
   type = string
 }
 
+variable "git_identity" {
+  description = "Whose the agents' commits are: Elysium, with elysium-og's noreply address, so GitHub attributes them to it"
+  type        = object({ name = string, email = string })
+  default     = { name = "Elysium", email = "361901225+elysium-og@users.noreply.github.com" }
+}
+
 locals {
   labels = { "app.kubernetes.io/name" = "canvas", "app.kubernetes.io/instance" = var.name }
   # Under /home/openhands, each on its own directory of the volume: settings, secrets, conversations, the agents'
@@ -122,6 +128,24 @@ resource "kubernetes_secret_v1" "session" {
   }
 }
 
+# The agents' git identity, as git's system config, which every git in the pod reads, rather than as Canvas' secrets
+# (GIT_AUTHOR_NAME, ...): Canvas hides a secret's value wherever it appears in what an agent says, so every "Elysium" in
+# a reply read <secret-hidden>
+resource "kubernetes_config_map_v1" "gitconfig" {
+  metadata {
+    name      = "${var.k8s_name}-gitconfig"
+    namespace = var.namespace
+  }
+
+  data = {
+    gitconfig = <<-EOT
+      [user]
+      	name = ${var.git_identity.name}
+      	email = ${var.git_identity.email}
+    EOT
+  }
+}
+
 resource "kubernetes_stateful_set_v1" "canvas" {
   metadata {
     name      = var.k8s_name
@@ -142,6 +166,8 @@ resource "kubernetes_stateful_set_v1" "canvas" {
         labels = local.labels
         annotations = {
           "ogrodje.si/session-key" = sha256(random_password.session_key.result)
+          # A subPath mount isn't updated in place: a new identity restarts the pod
+          "ogrodje.si/gitconfig" = sha256(kubernetes_config_map_v1.gitconfig.data.gitconfig)
         }
       }
 
@@ -217,6 +243,13 @@ resource "kubernetes_stateful_set_v1" "canvas" {
             }
           }
 
+          volume_mount {
+            name       = "gitconfig"
+            mount_path = "/etc/gitconfig"
+            sub_path   = "gitconfig"
+            read_only  = true
+          }
+
           dynamic "volume_mount" {
             for_each = local.caches
             content {
@@ -260,6 +293,13 @@ resource "kubernetes_stateful_set_v1" "canvas" {
           name = "home"
           persistent_volume_claim {
             claim_name = kubernetes_persistent_volume_claim_v1.home.metadata[0].name
+          }
+        }
+
+        volume {
+          name = "gitconfig"
+          config_map {
+            name = kubernetes_config_map_v1.gitconfig.metadata[0].name
           }
         }
 

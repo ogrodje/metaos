@@ -10,7 +10,7 @@ import type { Config } from "./settings.ts";
 type Call = { method: string; path: string; key?: string; body: any };
 
 /** A Canvas that knows no MCP servers yet and has no active agent profile, unless told otherwise */
-async function fakeCanvas(state: { mcp: Set<string>; active?: string; failSecrets?: boolean }) {
+async function fakeCanvas(state: { mcp: Set<string>; active?: string; failSecrets?: boolean; secretsGone?: boolean }) {
   const calls: Call[] = [];
   const server = createServer(async (request: IncomingMessage, response) => {
     let text = "";
@@ -23,6 +23,7 @@ async function fakeCanvas(state: { mcp: Set<string>; active?: string; failSecret
     if (call.method === "GET" && call.path === "/api/agent-profiles") return reply(200, { profiles: [] });
     if (call.method === "POST" && call.path === "/api/agent-profiles/default") return reply(200, { id: "ap-1" });
     if (call.method === "PUT" && call.path === "/api/settings/secrets") return reply(state.failSecrets ? 500 : 200);
+    if (call.method === "DELETE" && call.path.startsWith("/api/settings/secrets/")) return reply(state.secretsGone ? 404 : 200);
     if (mcp && call.method === "PATCH") return state.mcp.has(mcp[1]) ? reply(200) : reply(404, { detail: "no such server" });
     if (mcp && call.method === "POST") {
       state.mcp.add(mcp[1]);
@@ -52,7 +53,7 @@ function configFor(canvases: { name: string; url: string }[], linearUrl: string,
   return {
     canvases: canvases.map((c) => ({ ...c, key: `key-${c.name}` })),
     litellm: { url: "http://litellm:4000", key: "llm-key", model: "litellm_proxy/anthropic/claude-sonnet-5-5", profile: "claude-sonnet-5-5" },
-    github: { token: "gh-token", login: "elysium-og", id: "361901225", mcpUrl: "https://api.githubcopilot.com/mcp/" },
+    github: { token: "gh-token", login: "elysium-og", mcpUrl: "https://api.githubcopilot.com/mcp/" },
     linear: { clientId: "lin-id", clientSecret: linearSecret, tokenUrl: linearUrl, mcpUrl: "https://mcp.linear.app/mcp" },
     previews: { url: "http://manager.previews:8080", token: "pv-token" },
     metaosMcpUrl: "http://linear-bridge:8080/mcp/metaos",
@@ -84,13 +85,18 @@ describe("a Canvas' settings", () => {
       const secrets = canvas.calls.filter((c) => c.path === "/api/settings/secrets").map((c) => [c.body.name, c.body.value]);
       assert.deepEqual(Object.fromEntries(secrets), {
         GITHUB_TOKEN: "gh-token",
-        GIT_AUTHOR_NAME: "Elysium",
-        GIT_COMMITTER_NAME: "Elysium",
-        GIT_AUTHOR_EMAIL: "361901225+elysium-og@users.noreply.github.com",
-        GIT_COMMITTER_EMAIL: "361901225+elysium-og@users.noreply.github.com",
         PREVIEWS_URL: "http://manager.previews:8080",
         PREVIEWS_TOKEN: "pv-token",
       });
+
+      // The git identity isn't a secret any more, which Canvas would hide in replies: what earlier runs set is removed
+      const removed = canvas.calls.filter((c) => c.method === "DELETE").map((c) => c.path);
+      assert.deepEqual(removed, [
+        "/api/settings/secrets/GIT_AUTHOR_NAME",
+        "/api/settings/secrets/GIT_COMMITTER_NAME",
+        "/api/settings/secrets/GIT_AUTHOR_EMAIL",
+        "/api/settings/secrets/GIT_COMMITTER_EMAIL",
+      ]);
 
       const added = canvas.calls.filter((c) => c.method === "POST" && c.path.startsWith("/api/settings/mcp/"));
       assert.deepEqual(added.map((c) => [c.path.split("/").pop(), c.body.auth]), [
@@ -105,7 +111,7 @@ describe("a Canvas' settings", () => {
 
   it("again: the profile it has stays active, and the MCP servers it has are updated, not added twice", async () => {
     const linear = await fakeLinear();
-    const canvas = await fakeCanvas({ mcp: new Set(["github", "linear", "metaos"]), active: "ap-9" });
+    const canvas = await fakeCanvas({ mcp: new Set(["github", "linear", "metaos"]), active: "ap-9", secretsGone: true });
     try {
       assert.equal(await run(configFor([{ name: "team", url: canvas.url }], linear.url)), true);
       const paths = canvas.calls.map((c) => `${c.method} ${c.path}`);
