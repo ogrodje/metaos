@@ -42,3 +42,14 @@ variable "preview_slots" {
   type        = number
   default     = 2
 }
+
+variable "kubernetes" {
+  description = "The cluster's API, its CA certificate (PEM) and a token, in place of Vultr's kubeconfig: CI's, the service account elysium-terraform's (`just elysium-ci-credentials`). Unset, Vultr's, with VULTR_API_KEY"
+  type = object({
+    host  = string
+    ca    = string
+    token = string
+  })
+  default   = null
+  sensitive = true
+}

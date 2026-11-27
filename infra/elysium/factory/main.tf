@@ -49,8 +49,12 @@ provider "github" {
 }
 
 # The cluster by its label, not from elysium/cluster's state, and its kubeconfig from Vultr, as an admin's: this stack
-# changes nothing but what's in the cluster
+# changes nothing but what's in the cluster. Not in CI, whose runners Vultr's API key (an account key, limited to its
+# owners' addresses) doesn't let in: there, var.kubernetes, the service account elysium-terraform's token
+# (`just elysium-ci-credentials`)
 data "vultr_kubernetes" "elysium" {
+  count = local.from_vultr ? 1 : 0
+
   filter {
     name   = "label"
     values = ["elysium"]
@@ -58,20 +62,25 @@ data "vultr_kubernetes" "elysium" {
 }
 
 data "vultr_kubernetes_kubeconfig" "elysium" {
-  cluster_id = data.vultr_kubernetes.elysium.id
+  count      = local.from_vultr ? 1 : 0
+  cluster_id = data.vultr_kubernetes.elysium[0].id
 }
 
 locals {
-  kubeconfig = yamldecode(base64decode(data.vultr_kubernetes_kubeconfig.elysium.kube_config))
-  cluster    = local.kubeconfig.clusters[0].cluster
-  user       = local.kubeconfig.users[0].user
+  from_vultr = nonsensitive(var.kubernetes == null)
+  kubeconfig = local.from_vultr ? yamldecode(base64decode(data.vultr_kubernetes_kubeconfig.elysium[0].kube_config)) : null
+  # VKE's kubeconfig signs in with a token, not a client certificate
+  kube = local.from_vultr ? {
+    host  = local.kubeconfig.clusters[0].cluster.server
+    ca    = base64decode(local.kubeconfig.clusters[0].cluster["certificate-authority-data"])
+    token = local.kubeconfig.users[0].user.token
+  } : var.kubernetes
 }
 
-# VKE's kubeconfig signs in with a token, not a client certificate
 provider "kubernetes" {
-  host                   = local.cluster.server
-  cluster_ca_certificate = base64decode(local.cluster["certificate-authority-data"])
-  token                  = local.user.token
+  host                   = local.kube.host
+  cluster_ca_certificate = local.kube.ca
+  token                  = local.kube.token
 }
 
 locals {

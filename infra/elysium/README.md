@@ -90,7 +90,11 @@ just infra gcp apply                          # elysium-terraform-ci
 secretspec set ELYSIUM_TERRAFORM_GITHUB_TOKEN # an owner's fine-grained token, ogrodje, Webhooks read/write only
 ```
 
-`ELYSIUM_TERRAFORM_GITHUB_TOKEN` is for `github.tf`'s org webhook only. By hand, `just infra elysium/factory` still
+CI reaches the cluster as the service account `elysium-terraform` (`just elysium-ci-credentials`, `ELYSIUM_KUBE_*`),
+not with Vultr's kubeconfig, and Cloudflare with a token of its own (`ELYSIUM_CI_CLOUDFLARE_API_TOKEN`, the same
+permissions as `ELYSIUM_CLOUDFLARE_API_TOKEN`): Vultr's API key and the Cloudflare token people use only work from their
+owners' addresses, and a runner's address is anyone's. `ELYSIUM_TERRAFORM_GITHUB_TOKEN` is for `github.tf`'s org
+webhook only. By hand, `just infra elysium/factory` still
 works as before, with gh's token.
 
 The Canvases' settings (`canvas_settings.tf`, `elysium/canvas-settings`) are a **CronJob, weekly**, from what the
