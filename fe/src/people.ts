@@ -57,8 +57,11 @@ const networks = {
 
 export type Network = keyof typeof networks
 
+/** What socialLinks reads: a person's links, or an organisation's, which has no GitHub */
+export type OnlineLinks = Omit<Pick<Person, (typeof networks)[Network]>, 'githubUrl'> & Partial<Pick<Person, 'githubUrl'>>
+
 /** Where a person is online: their website, then their social profiles */
-export function socialLinks(person: Pick<Person, (typeof networks)[Network]>) {
+export function socialLinks(person: OnlineLinks) {
   return (Object.keys(networks) as Network[]).flatMap((network) => {
     const url = person[networks[network]]
     return url ? [{ network, url }] : []
