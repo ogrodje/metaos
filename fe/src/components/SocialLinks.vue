@@ -6,7 +6,7 @@ import { useLocale } from '@/useLocale'
 
 // Where a person is online, each in its brand's colour when pointed at
 const props = defineProps<{
-  person: Pick<Person, 'name' | 'homepageUrl' | 'linkedinUrl' | 'twitterUrl' | 'instagramUrl' | 'facebookUrl'>
+  person: Pick<Person, 'name' | 'homepageUrl' | 'linkedinUrl' | 'twitterUrl' | 'instagramUrl' | 'facebookUrl' | 'githubUrl'>
 }>()
 
 const { t } = useLocale()
