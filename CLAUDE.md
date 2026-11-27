@@ -1335,7 +1335,9 @@ Where there's no `just` (a Canvas), `preview/preview.sh up` and so on.
   to the previews' manager (`elysium/previews/manager.ts`), which runs them in the slot's pod: the boot jar and the
   front-end on the images production runs them on, with a Postgres of its own, which Flyway migrates and
   `preview/seed.sql` fills when it's new: made-up shows, people, a session and episodes at each stage, nobody's real
-  data. Whatever the agent adds on top stays until `--fresh` or `down`. In a Canvas, `PREVIEWS_URL` and
+  data; but for the Events page's organisations and events, a copy of production's public ones (taken through MetaOS' MCP,
+  `list_organisations` and `list_events`, with long descriptions cut short and the dates moved to as far from the day
+  it's loaded as they were), so the calendar's links meet real titles, places, diacritics and multi-day events. Whatever the agent adds on top stays until `--fresh` or `down`. In a Canvas, `PREVIEWS_URL` and
   `PREVIEWS_TOKEN` (its secrets) say where the manager is; elsewhere, Elysium's kubeconfig (`just elysium-kubeconfig`)
   reaches it through a port-forward. A preview gets no secrets: no Drive, Dropbox, Koofr, Patreon, YouTube, agents
   (OpenRouter), Temporal or Unleash (the flags' defaults), so it changes nothing real. Cloud Storage is the one it
