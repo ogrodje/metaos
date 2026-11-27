@@ -67,7 +67,9 @@ resource "google_service_account" "elysium_ci" {
 resource "google_service_account_iam_member" "elysium_ci_github" {
   service_account_id = google_service_account.elysium_ci.name
   role               = "roles/iam.workloadIdentityUser"
-  member             = "principal://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/subject/repo:ogrodje/metaos:environment:elysium"
+  # GitHub's immutable subject, which this repository has (its OIDC customization, use_immutable_subject): the
+  # owner's and the repository's IDs with their names, so a repository renamed or made again elsewhere isn't this one
+  member = "principal://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/subject/repo:ogrodje@117724002/metaos@1425356701:environment:elysium"
 }
 
 resource "google_storage_bucket_iam_member" "elysium_ci_state" {
