@@ -93,6 +93,12 @@ A job picks `production` on `master` and `review` elsewhere (`${{ github.ref == 
 'review' }}`), so a pull request's job that has a secret waits for a person, who looks at the change first. Changing a
 token is `gh secret set OP_SERVICE_ACCOUNT_TOKEN --env <environment> --repo ogrodje/metaos`.
 
+The service account is rate-limited by 1Password, so a run that has many jobs asks it once: `deploy.yml`'s `secrets` job
+loads the scope with `share: true`, which puts it in an artifact encrypted with the environment's token (the repository
+is public, so its artifacts are too), and the images' and the deploy's jobs open it (`.github/actions/secrets-unpack`).
+That job's environment is theirs, so on a branch, where it's `review`, the approval is asked for twice: for it, then for
+the jobs after it. The artifact lasts a day: re-running a run's jobs after that, re-run the whole run.
+
 ## The first time
 
 The states' bucket is made by a stack, so the first applies go in this order:
