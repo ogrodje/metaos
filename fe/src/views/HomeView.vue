@@ -154,7 +154,7 @@ usePageMeta(() => ({
 </script>
 
 <template>
-  <main class="content">
+  <main class="content home-page">
     <h1 class="visually-hidden">{{ t('pages.home') }}</h1>
 
     <!-- Signed in, what's being made, and of it first what needs attention; at the side how many are at each stage, the
@@ -253,6 +253,10 @@ usePageMeta(() => ({
 <style scoped lang="scss">
 @use '../assets/page';
 @use '../assets/pictures';
+
+:global(body:has(.home-page)) {
+  background: red;
+}
 
 // What's being made, and at the side the releases and what the team did lately
 .home {
