@@ -44,10 +44,10 @@ class EventsDigestTest {
         kotlin.test.assertTrue(posts.size > 1)
         for (post in posts) {
             kotlin.test.assertTrue(post.content.length <= 2000)
-            kotlin.test.assertTrue("**torek, 31. 3.**" in post.content)
+            kotlin.test.assertTrue("## Torek 31.3." in post.content.lines())
             kotlin.test.assertTrue(post.embeds.isEmpty())
         }
-        assertEquals(events.map { "Ljubljana · 18:00 [${it.title}](<${it.url}>)" },
+        assertEquals(events.map { "Ljubljana · 18:00 [Klub] [${it.title}](<${it.url}>)" },
             posts.flatMap { it.content.lines() }.filter { it.startsWith("Ljubljana · ") })
     }
 
@@ -58,7 +58,7 @@ class EventsDigestTest {
         val posts = previewMessages(monday, events)
         assertEquals(2, posts.size)
         assertEquals(listOf(6, 6), posts.map { post -> post.content.lines().count { "](<" in it } })
-        kotlin.test.assertTrue(posts.last().content.startsWith("**sreda, 1. 4.**"))
+        kotlin.test.assertTrue(posts.last().content.startsWith("## Sreda 1.4."))
     }
 
     @Test fun `five per post and an explicit notice for an empty week`() {

@@ -107,6 +107,9 @@ private fun previewLocation(event: Event): String {
     return label.replace(Regex("""\s+"""), " ").take(80)
 }
 
+private fun String.previewText(limit: Int) = replace(Regex("""\s+"""), " ").take(limit)
+    .map { if (it in """\[]*_~`|""") "\\$it" else it.toString() }.joinToString("")
+
 internal fun previewMessages(monday: LocalDate, upcoming: List<Event>): List<DigestMessage> {
     val events = weekEvents(monday, upcoming)
     if (events.isEmpty()) return digestMessages(monday, emptyList())
@@ -114,24 +117,24 @@ internal fun previewMessages(monday: LocalDate, upcoming: List<Event>): List<Dig
     val posts = mutableListOf<DigestMessage>()
     var content = heading
     val days = linkedMapOf<String, MutableList<String>>()
-    val dayFormat = DateTimeFormatter.ofPattern("EEEE, d. M.", java.util.Locale.forLanguageTag("sl"))
+    val dayFormat = DateTimeFormatter.ofPattern("EEEE d.M.", java.util.Locale.forLanguageTag("sl"))
     for (event in events) {
         val start = event.startsAt.atZoneSameInstant(LJUBLJANA)
         val ongoing = start.toLocalDate() < monday
-        val day = if (ongoing) "Še traja" else start.format(dayFormat)
+        val day = if (ongoing) "Še traja" else start.format(dayFormat).replaceFirstChar { it.titlecase() }
         val time = if (!ongoing && event.hasStartTime) start.format(DateTimeFormatter.ofPattern("HH:mm ")) else ""
-        val title = event.title.replace(Regex("""\s+"""), " ").take(240)
-            .map { if (it in """\[]*_~`|""") "\\$it" else it.toString() }.joinToString("")
+        val title = event.title.previewText(240)
+        val organiser = event.organisation.name.previewText(160)
         val link = event.url?.takeIf { url ->
             url.length <= 900 && (url.startsWith("https://") || url.startsWith("http://")) &&
                 url.none { it.isWhitespace() || it in "<>" }
         }
             ?: "https://ogrodje.si/dogodki/${checkNotNull(event.id)}"
-        val line = "${previewLocation(event)} · $time[$title](<$link>)"
+        val line = "${previewLocation(event)} · ${time}[$organiser] [$title](<$link>)"
         days.getOrPut(day) { mutableListOf() }.add(line)
     }
     for ((day, lines) in days) {
-        val label = "**$day**"
+        val label = "## $day"
         val sectionLength = label.length + lines.sumOf { it.length + 1 }
         if (sectionLength <= 2000 && content.length + 2 + sectionLength > 2000) {
             posts.add(DigestMessage(content, emptyList()))
