@@ -36,6 +36,31 @@ class EventsDigestTest {
         assertEquals("2026-03-31 18:00 – 20:00", digestMessages(monday, listOf(event)).single().embeds.single().fields.first().value)
     }
 
+    @Test fun `compact previews keep all events and repeat the day across message breaks`() {
+        val events = (1..30).map { number ->
+            event("2026-03-31T16:00:00Z").apply { locationAddress = "Večna pot 113, 1000 Ljubljana"; title = "Dogodek $number " + "x".repeat(100) }
+        }
+        val posts = previewMessages(monday, events)
+        kotlin.test.assertTrue(posts.size > 1)
+        for (post in posts) {
+            kotlin.test.assertTrue(post.content.length <= 2000)
+            kotlin.test.assertTrue("## Torek 31.3." in post.content.lines())
+            kotlin.test.assertTrue(post.embeds.isEmpty())
+        }
+        assertEquals(events.map { "Ljubljana · 18:00 [Klub] [${it.title}](<${it.url}>)" },
+            posts.flatMap { it.content.lines() }.filter { it.startsWith("Ljubljana · ") })
+    }
+
+    @Test fun `a day that fits on its own moves together to the next post`() {
+        val events = listOf("2026-03-31", "2026-04-01").flatMap { date ->
+            List(6) { event("${date}T10:00:00Z").apply { title = "x".repeat(180) } }
+        }
+        val posts = previewMessages(monday, events)
+        assertEquals(2, posts.size)
+        assertEquals(listOf(6, 6), posts.map { post -> post.content.lines().count { "](<" in it } })
+        kotlin.test.assertTrue(posts.last().content.startsWith("## Sreda 1.4."))
+    }
+
     @Test fun `five per post and an explicit notice for an empty week`() {
         val messages = digestMessages(monday, List(6) { event("2026-03-31T12:00:00Z") })
         assertEquals(listOf(5, 1), messages.map { it.embeds.size })

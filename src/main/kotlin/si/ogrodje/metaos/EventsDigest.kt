@@ -51,14 +51,18 @@ private fun OffsetDateTime.digestTime(timed: Boolean): String {
     return if (timed) local.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) else local.toLocalDate().toString()
 }
 
-internal fun digestMessages(monday: LocalDate, upcoming: List<Event>): List<DigestMessage> {
+private fun weekEvents(monday: LocalDate, upcoming: List<Event>): List<Event> {
     val from = monday.atStartOfDay(LJUBLJANA).toInstant()
     val end = monday.plusWeeks(1).atStartOfDay(LJUBLJANA).toInstant()
     val (new, ongoing) = upcoming.filter {
         !it.organisation.archived && it.hiddenAt == null && it.startsAt.toInstant() < end && it.upcoming(from)
     }.partition { it.startsAt.toInstant() >= from }
-    val ordered = new.sortedWith(compareBy({ it.startsAt.toInstant() }, { it.id })) +
+    return new.sortedWith(compareBy({ it.startsAt.toInstant() }, { it.id })) +
         ongoing.sortedWith(compareBy({ it.endsAt!!.toInstant() }, { it.id }))
+}
+
+internal fun digestMessages(monday: LocalDate, upcoming: List<Event>): List<DigestMessage> {
+    val ordered = weekEvents(monday, upcoming)
     val period = "**$monday** do **${monday.plusDays(6)}**"
     if (ordered.isEmpty()) return listOf(DigestMessage("Za obdobje od $period nismo našli nobenega dogodka.", emptyList()))
     return ordered.chunked(5).mapIndexed { index, batch ->
@@ -87,9 +91,75 @@ internal fun digestMessages(monday: LocalDate, upcoming: List<Event>): List<Dige
     }
 }
 
+private fun previewLocation(event: Event): String {
+    val place = event.place()
+    val region = event.region()
+    if (region == Region.ONLINE || (place?.address == null && place?.name?.let(::isOnline) == true)) return "Na spletu"
+    val address = place?.address.orEmpty()
+    val postalTown = Regex("""(?:^|,\s*)\d{4}\s+([^,–]+)""")
+        .find(address.ifBlank { place?.name.orEmpty() })?.groupValues?.get(1)?.trim()
+    val town = postalTown ?: address.substringAfterLast(',', "").trim().takeIf { it.isNotBlank() }
+    val label = when {
+        region == Region.ABROAD -> listOfNotNull(region.label, town ?: place?.name).joinToString(" · ")
+        town != null -> town
+        else -> region?.label ?: "Kraj ni naveden"
+    }
+    return label.replace(Regex("""\s+"""), " ").take(80)
+}
+
+private fun String.previewText(limit: Int) = replace(Regex("""\s+"""), " ").take(limit)
+    .map { if (it in """\[]*_~`|""") "\\$it" else it.toString() }.joinToString("")
+
+internal fun previewMessages(monday: LocalDate, upcoming: List<Event>): List<DigestMessage> {
+    val events = weekEvents(monday, upcoming)
+    if (events.isEmpty()) return digestMessages(monday, emptyList())
+    val heading = "Dogodki za obdobje **$monday** do **${monday.plusDays(6)}**."
+    val posts = mutableListOf<DigestMessage>()
+    var content = heading
+    val days = linkedMapOf<String, MutableList<String>>()
+    val dayFormat = DateTimeFormatter.ofPattern("EEEE d.M.", java.util.Locale.forLanguageTag("sl"))
+    for (event in events) {
+        val start = event.startsAt.atZoneSameInstant(LJUBLJANA)
+        val ongoing = start.toLocalDate() < monday
+        val day = if (ongoing) "Še traja" else start.format(dayFormat).replaceFirstChar { it.titlecase() }
+        val time = if (!ongoing && event.hasStartTime) start.format(DateTimeFormatter.ofPattern("HH:mm ")) else ""
+        val title = event.title.previewText(240)
+        val organiser = event.organisation.name.previewText(160)
+        val link = event.url?.takeIf { url ->
+            url.length <= 900 && (url.startsWith("https://") || url.startsWith("http://")) &&
+                url.none { it.isWhitespace() || it in "<>" }
+        }
+            ?: "https://ogrodje.si/dogodki/${checkNotNull(event.id)}"
+        val line = "${previewLocation(event)} · ${time}[$organiser] [$title](<$link>)"
+        days.getOrPut(day) { mutableListOf() }.add(line)
+    }
+    for ((day, lines) in days) {
+        val label = "## $day"
+        val sectionLength = label.length + lines.sumOf { it.length + 1 }
+        if (sectionLength <= 2000 && content.length + 2 + sectionLength > 2000) {
+            posts.add(DigestMessage(content, emptyList()))
+            content = ""
+        }
+        for ((index, line) in lines.withIndex()) {
+            val prefix = when {
+                content.isEmpty() -> label
+                index == 0 -> "\n\n$label"
+                else -> ""
+            }
+            if (content.length + prefix.length + 1 + line.length > 2000) {
+                posts.add(DigestMessage(content, emptyList()))
+                content = label
+            } else content += prefix
+            content += "\n$line"
+        }
+    }
+    return posts + DigestMessage(content, emptyList())
+}
+
 @ActivityInterface
 interface DigestActivities {
     fun prepareDigest(monday: String): List<DigestMessage>
+    fun preparePreview(monday: String): List<DigestMessage>
     /** Milliseconds before a rejected, rate-limited request may be retried, or zero on success. */
     fun postDigest(message: DigestMessage, sample: Boolean): Long
 }
@@ -107,6 +177,11 @@ class DigestActivitiesImpl(
         return digestMessages(week, events.upcoming(week.atStartOfDay(LJUBLJANA).toInstant()))
     }
 
+    override fun preparePreview(monday: String): List<DigestMessage> {
+        val week = LocalDate.parse(monday)
+        return previewMessages(week, events.upcoming(week.atStartOfDay(LJUBLJANA).toInstant()))
+    }
+
     override fun postDigest(message: DigestMessage, sample: Boolean): Long {
         val url = if (sample) testUrl else liveUrl
         require(url.isNotBlank()) { "Discord webhook is missing for the selected destination" }
@@ -121,7 +196,8 @@ class DigestWebhook(private val json: JsonMapper) {
     fun send(url: String, message: DigestMessage): Long {
         val request = HttpRequest.newBuilder(URI.create(url + (if ('?' in url) "&" else "?") + "wait=true"))
             .timeout(Duration.ofSeconds(20)).header("Content-Type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(message))).build()
+            .POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(mapOf("content" to message.content, "embeds" to message.embeds,
+                "allowed_mentions" to mapOf("parse" to emptyList<String>()))))).build()
         // Exceptions from the HTTP client may include the secret URL. Never put them in workflow history.
         val response = try {
             http.send(request, HttpResponse.BodyHandlers.ofString())
@@ -181,7 +257,10 @@ class EventsDigestWorkflowImpl : EventsDigestWorkflow {
         val cutoff = week.atTime(12, 0).atZone(LJUBLJANA).toInstant().toEpochMilli()
         fun remaining() = Duration.ofMillis((cutoff - Workflow.currentTimeMillis()).coerceAtLeast(0))
         if (!sample && remaining().isZero) return
-        val messages = activities(if (sample) 5 else 0, if (sample) Duration.ofMinutes(10) else remaining()).prepareDigest(monday)
+        val lookup = activities(if (sample) 5 else 0, if (sample) Duration.ofMinutes(10) else remaining())
+        // Histories created before the compact layout replay their original lookup.
+        val compact = Workflow.getVersion("compact-preview", Workflow.DEFAULT_VERSION, 1) == 1
+        val messages = if (compact) lookup.preparePreview(monday) else lookup.prepareDigest(monday)
         for ((index, message) in messages.withIndex()) {
             while (sample || Workflow.currentTimeMillis() < cutoff) {
                 val delay = try {
@@ -218,19 +297,34 @@ class EventsDigestWorkflowImpl : EventsDigestWorkflow {
 class EventsDigests(
     private val client: ObjectProvider<WorkflowClient>,
     @Value("\${DISCORD_EVENTS_WEBHOOK:}") private val liveUrl: String,
+    @Value("\${DISCORD_EVENTS_TEST_WEBHOOK:}") private val testUrl: String,
 ) {
     @Scheduled(fixedDelay = 5, timeUnit = TimeUnit.MINUTES)
     fun weekly() {
         if (liveUrl.isBlank()) return
         val monday = digestWeek(Instant.now()) ?: return
+        start(monday, "events-digest-$monday", false)
+    }
+
+    @Scheduled(fixedDelay = 5, timeUnit = TimeUnit.MINUTES)
+    fun dailyPreview() {
+        if (testUrl.isBlank()) return
+        val now = Instant.now().atZone(LJUBLJANA)
+        if (now.hour < 9) return
+        val today = now.toLocalDate()
+        val monday = today.with(java.time.temporal.TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+        start(monday, "events-digest-preview-$today", true)
+    }
+
+    private fun start(monday: LocalDate, id: String, sample: Boolean) {
         val workflows = client.ifAvailable ?: return
         val workflow = workflows.newWorkflowStub(EventsDigestWorkflow::class.java, WorkflowOptions.newBuilder()
-            .setTaskQueue(WORKFLOWS_QUEUE).setWorkflowId("events-digest-$monday")
+            .setTaskQueue(WORKFLOWS_QUEUE).setWorkflowId(id)
             .setWorkflowIdReusePolicy(WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE).build())
         try {
-            WorkflowClient.start(workflow::publish, monday.toString(), false)
+            WorkflowClient.start(workflow::publish, monday.toString(), sample)
         } catch (_: WorkflowExecutionAlreadyStarted) {
-            // Both pods, and every later tick in the catch-up window, share this week's ID.
+            // Both pods, and every later tick in the catch-up window, share the same ID.
         }
     }
 }
