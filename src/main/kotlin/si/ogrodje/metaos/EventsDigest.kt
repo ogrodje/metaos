@@ -258,7 +258,8 @@ class EventsDigestWorkflowImpl : EventsDigestWorkflow {
         fun remaining() = Duration.ofMillis((cutoff - Workflow.currentTimeMillis()).coerceAtLeast(0))
         if (!sample && remaining().isZero) return
         val lookup = activities(if (sample) 5 else 0, if (sample) Duration.ofMinutes(10) else remaining())
-        val compact = sample && Workflow.getVersion("compact-preview", Workflow.DEFAULT_VERSION, 1) == 1
+        // Histories created before the compact layout replay their original lookup.
+        val compact = Workflow.getVersion("compact-preview", Workflow.DEFAULT_VERSION, 1) == 1
         val messages = if (compact) lookup.preparePreview(monday) else lookup.prepareDigest(monday)
         for ((index, message) in messages.withIndex()) {
             while (sample || Workflow.currentTimeMillis() < cutoff) {

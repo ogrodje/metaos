@@ -333,7 +333,8 @@ Only Kubernetes maps the production vault names to the application's webhook var
 With Temporal enabled and `DISCORD_EVENTS_TEST_WEBHOOK` set, MetaOS sends the current
 Monday–Sunday list to the test channel on the first five-minute check at or after
 09:00 Ljubljana time. Restarts and replicas share one workflow ID per local day
-within the same Temporal namespace.
+within the same Temporal namespace. The weekly live post, daily test post, and manual sample
+use the same day headings and linked event list.
 
 To try a branch locally:
 
